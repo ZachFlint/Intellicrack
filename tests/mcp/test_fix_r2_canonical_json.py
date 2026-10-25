@@ -2,10 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2: the canonical JSON that sizes, fingerprints and consents to server schemas works at any depth, byte for byte as before.
+"""The canonical JSON that sizes, fingerprints and consents to server schemas works at any depth, byte for byte as before.
 
-``canonical_json`` used to be :func:`json.dumps`, which recurses in C. Python 3.13 stops C recursion at 3000 levels on Windows and
-10000 elsewhere, so a server's schema nested past that made listing its tools raise ``RecursionError``. The encoder is now iterative;
+``canonical_json`` is not :func:`json.dumps`, which recurses in C. Python 3.13 stops C recursion at 3000 levels on Windows and
+10000 elsewhere, so a server's schema nested past that makes listing its tools raise ``RecursionError``. The encoder is iterative;
 these gates check it writes exactly what :func:`json.dumps` wrote for every value it could encode -- a stored launch-consent digest
 depends on those bytes -- and that nesting past every platform's limit is encoded, measured and fingerprinted.
 """

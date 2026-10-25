@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for the docked tool-output panel's layout with the Hex Editor tab active (S19-D02)."""
+"""Tests for the docked tool-output panel's layout with the Hex Editor tab active."""

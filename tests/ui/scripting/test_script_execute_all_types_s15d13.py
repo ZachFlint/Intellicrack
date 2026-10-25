@@ -5,10 +5,8 @@
 
 """Live-drive gates for the Scripts panel Execute button, all five script types.
 
-S15-D13 was originally diagnosed as "no executor injected, ``script_execute``
-signal unconnected", which was retired as stale once the executor was wired on
-both routes. What that retirement never established is the part these gates
-cover: that pressing Execute actually reaches
+The executor is wired on both routes. These gates prove that pressing Execute
+actually reaches
 ``ToolOutputPanel._execute_script`` for **every** script type, and that a tool
 which is not connected produces a surfaced diagnostic rather than a silent
 nothing, a hang, or a fabricated success.

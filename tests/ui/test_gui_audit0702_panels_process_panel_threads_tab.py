@@ -2,23 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""GUI-audit regression gates for :mod:`intellicrack.ui.panels.process_panel.threads_tab`.
+"""Gates for :mod:`intellicrack.ui.panels.process_panel.threads_tab` register editing and wait status.
 
-Finding M27: the register table's ``Register`` name column (0) was built with
-a plain ``QTableWidgetItem`` and no ``setFlags`` restriction, so it kept Qt's
-default ``ItemIsEditable`` flag even though ``_on_write_registers`` trusts
-``name_item.text()`` verbatim as the dict key sent to
-``bridge.set_thread_context``. A stray double-click edit could silently
-corrupt the write-back key. The fix strips ``ItemIsEditable`` from the name
-cell while leaving the Hex/Decimal value cells editable.
+The register table's ``Register`` name column (0) must not keep Qt's default ``ItemIsEditable`` flag. ``_on_write_registers``
+trusts ``name_item.text()`` verbatim as the dict key sent to ``bridge.set_thread_context``, so a stray double-click edit could
+silently corrupt the write-back key. The name cell is made non-editable while the Hex/Decimal value cells stay editable.
 
-Finding M60: the wait-status ``QLabel`` had no word wrap and the time-wait
-error handler's only user-visible surface was ``setText(f"Wait failed:
-{exc}")`` with no tooltip and no ``QMessageBox`` fallback, so a long bridge
-error message was silently clipped with no way to read the rest. The fix
-adds ``setWordWrap(True)`` to the label, sets a matching tooltip on both the
-success and failure paths, and pops a ``QMessageBox.warning`` with the full
-exception text on failure.
+The wait-status ``QLabel`` must word-wrap. The time-wait error handler must also set a matching tooltip on both the success and failure
+paths and pop a ``QMessageBox.warning`` with the full exception text, since a long bridge error message otherwise has no way to be read.
 
 Each test drives the real :class:`ThreadsTab` widget and its production
 callback closures with real result data. Only the async dispatch shim
@@ -126,7 +117,7 @@ def _select_first_thread_row(tab: ThreadsTab, tid: int) -> None:
 
 
 class TestM27RegisterNameNotEditable:
-    """M27: the register table's name column must not be user-editable."""
+    """The register table's name column must not be user-editable."""
 
     def test_m27_register_name_item_is_not_editable(
         self,
@@ -135,9 +126,9 @@ class TestM27RegisterNameNotEditable:
     ) -> None:
         """Refreshing registers writes a name cell whose ``ItemIsEditable`` flag is stripped.
 
-        Pre-fix ``_refresh_registers`` built column 0 with a bare
-        ``QTableWidgetItem(str(reg_name))`` and never called ``setFlags``,
-        so it kept Qt's default ``ItemIsEditable`` flag and a user could
+        ``_refresh_registers`` must not build column 0 as a bare
+        ``QTableWidgetItem(str(reg_name))`` without ``setFlags``,
+        which keeps Qt's default ``ItemIsEditable`` flag, so a user could
         double-click the cell and retype the register name that
         ``_on_write_registers`` later trusts verbatim as the bridge
         dictionary key.
@@ -171,7 +162,7 @@ class TestM27RegisterNameNotEditable:
     ) -> None:
         """Hex and Decimal value cells stay editable so register writes still work.
 
-        The fix must only restrict column 0; columns 1 and 2 are the
+        Only column 0 may be restricted; columns 1 and 2 are the
         intended write-back editing surface for ``_on_write_registers`` and
         must not regress to read-only.
 
@@ -232,13 +223,13 @@ class TestM27RegisterNameNotEditable:
 
 
 class TestM60WaitStatusErrorSurfacing:
-    """M60: the wait-status label wraps and errors get a tooltip plus dialog."""
+    """The wait-status label wraps and errors get a tooltip plus dialog."""
 
     def test_m60_wait_status_label_has_word_wrap_enabled(self, tab: ThreadsTab) -> None:
         """The wait-status ``QLabel`` wraps long text instead of clipping it.
 
-        Pre-fix ``self._wait_status = QLabel("")`` never called
-        ``setWordWrap(True)``, so a long single-line error string overflowed
+        ``self._wait_status = QLabel("")`` must call
+        ``setWordWrap(True)``, since otherwise a long single-line error string overflows
         the label's fixed-in-place layout with no wrapping.
 
         Args:
@@ -253,11 +244,9 @@ class TestM60WaitStatusErrorSurfacing:
     ) -> None:
         """A time-wait failure surfaces the full exception text via tooltip and dialog.
 
-        Pre-fix ``_on_error`` only did
-        ``self._wait_status.setText(f"Wait failed: {exc}")`` with no
-        ``setToolTip`` call and no ``QMessageBox``, so the label was the
-        only (clippable) surface for a long bridge error message. The fix
-        also sets a matching tooltip and pops a
+        ``_on_error`` must do more than set the label text.
+        ``self._wait_status.setText(f"Wait failed: {exc}")`` alone leaves the label as the
+        only (clippable) surface for a long bridge error message, so it must also call ``setToolTip`` and pop a
         ``QMessageBox.warning`` carrying the full exception text.
 
         Args:
@@ -295,7 +284,7 @@ class TestM60WaitStatusErrorSurfacing:
     ) -> None:
         """A successful time-wait also sets a tooltip matching the status text.
 
-        The success path was changed alongside the failure path so hovering
+        The success path must be changed alongside the failure path so hovering
         over a long-but-successful status message also recovers the full
         text.
 

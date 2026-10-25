@@ -5,8 +5,8 @@
 
 """``enumerate_threads`` is answered by one helper script that lives as long as the session does.
 
-The bridge used to answer ``enumerate_threads`` with a script it created and unloaded for the call.
-In the sandbox, following a thread that had just been created, straight after such a call, left the
+Listings are answered by one helper script that stays loaded for the session.
+In the sandbox, following a thread that had just been created, straight after a listing, left the
 agent unresponsive in a third to a half of the sequences: ``Stalker.follow`` hung, or the later unfollow
 was acknowledged and the script could not be unloaded. The cause is the unload of a script that has just
 listed the threads, and keeping one helper loaded for the life of the session removed all but a residual

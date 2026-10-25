@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Critical-coverage tests for the third slice of ``intellicrack.bridges.hex_editor``.
+"""Coverage tests for ``intellicrack.bridges.hex_editor``.
 
 The slice spans the bit-editing, selection, search, analysis, template, pattern, bookmark, transform and patch-export mixins plus the
 bookmark sidecar helpers. Every test drives the real ``HexEditorBridge`` against an in-memory ``intellicrack_hexcore.HexDocument`` or files

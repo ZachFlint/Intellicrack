@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 32: servers are told which folders the operator works in, and told again when that changes.
+"""Servers are told which folders the operator works in, and told again when that changes.
 
 The protocol gates connect Intellicrack's real connection to a real ``MCPServer`` whose tool asks for the client's roots, on 2026-07-28
 over stdio (where the question rides ``InputRequiredResult``) and 2025-11-25 over SSE (a standalone ``roots/list``, and

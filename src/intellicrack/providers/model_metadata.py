@@ -215,8 +215,8 @@ def _first_int(entry: dict[str, Any], keys: Sequence[str]) -> int | None:
 def ingest_model_entry(entry: dict[str, Any]) -> IngestedModel | None:
     """Read one model entry into the capability fields it actually states.
 
-    This is the generic form of what the OpenRouter provider used to do by
-    hand. Nothing here is asserted unless the payload says it: an entry that
+    This is the generic form of the per-field parsing the OpenRouter
+    provider performs. Nothing here is asserted unless the payload says it: an entry that
     mentions no context length leaves ``context_window`` unset, so the preset
     default survives instead of being replaced by an invented number.
 

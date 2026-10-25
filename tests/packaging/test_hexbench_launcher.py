@@ -9,11 +9,11 @@ The installer ships the Hexbench editor as package *source* under
 ``{app}\hexbench`` and runs it on the bundled ``{app}\runtime`` rather than
 freezing a second interpreter into the payload. Three separate things have to
 agree for the Start-menu shortcut to actually open an editor, and each of them
-failed silently before:
+can fail silently:
 
-* The ``.iss`` must install a shortcut target that exists. It previously pointed
-  at ``{app}\hexbench\hexbench.exe``, a file no build step has ever produced,
-  so the installed shortcut was dead.
+* The ``.iss`` must install a shortcut target that exists. It must not point
+  at ``{app}\hexbench\hexbench.exe``, a file no build step produces,
+  or the installed shortcut is dead.
 * The bootstrapper must put the *parent* of the package on ``PYTHONPATH``. The
   editor resolves its ``static`` tree from its own ``__file__``, so it has to be
   imported as a module of the package; a path pointing inside the package makes
@@ -111,7 +111,7 @@ def _make_fake_install(root: Path) -> Path:
     return root
 
 
-# --- The stream contract: the spawn must not strip the child's handles --------
+# The stream contract: the spawn must not strip the child's handles
 #
 # This is asserted against the command and flags the launcher actually builds
 # rather than by spawning a probe and reading its streams. A probe cannot decide
@@ -208,7 +208,7 @@ def test_launcher_uses_create_no_window_and_never_detaches(tmp_path: Path, monke
     assert hexbench_launcher.creation_flags() == subprocess.CREATE_NO_WINDOW
 
 
-# --- The import contract: -m hexbench must resolve from the computed root -----
+# The import contract: -m hexbench must resolve from the computed root
 
 
 def test_package_root_is_the_parent_of_the_package(tmp_path: Path) -> None:
@@ -262,7 +262,7 @@ def test_module_actually_imports_from_the_computed_root() -> None:
     assert "hex editor" in completed.stdout.lower(), f"unexpected --help output:\n{completed.stdout}"
 
 
-# --- The environment contract -------------------------------------------------
+# The environment contract
 
 
 def test_child_env_points_pythonpath_at_the_package_root(tmp_path: Path) -> None:
@@ -323,7 +323,7 @@ def test_child_env_does_not_mutate_the_process_environment(tmp_path: Path) -> No
     assert dict(os.environ) == before
 
 
-# --- Failure reporting --------------------------------------------------------
+# Failure reporting
 
 
 def test_launch_reports_and_fails_when_the_runtime_is_absent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -365,13 +365,13 @@ def test_launch_reports_and_fails_when_the_package_is_absent(tmp_path: Path, mon
     assert "package not found" in reported[0]
 
 
-# --- The installer contract ---------------------------------------------------
+# The installer contract
 
 
 def test_iss_shortcut_target_is_a_file_the_build_produces() -> None:
     r"""Real gate: the Hexbench shortcut points at the staged launcher exe.
 
-    The regression this replaces shipped a shortcut to
+    The shortcut must not point at
     ``{app}\hexbench\hexbench.exe``, which no build step produces. The target
     must be the ``Hexbench.exe`` the stager builds and drops at the install
     root, and it must be installed by a ``[Files]`` entry gated on the same

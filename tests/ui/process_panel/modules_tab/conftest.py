@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Shared fixtures for audit4 B5 modules tab tests."""
+"""Shared fixtures for modules tab tests."""
 
 from __future__ import annotations
 

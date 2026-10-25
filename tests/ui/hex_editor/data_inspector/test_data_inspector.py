@@ -2,28 +2,25 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit4 C3: hex editor data inspector mixin.
+"""Regression tests: hex editor data inspector mixin.
 
 These tests guard against three regressions in
 :class:`~intellicrack.ui.panels.hex_editor.data_inspector.DataInspectorMixin`:
 
-* **F-0003** -- Bit-toggle writes via ``document.set_bit`` must publish
+* Bit-toggle writes via ``document.set_bit`` must publish
   :meth:`HexDocumentState.notify_data_modified` so bridge subscribers
-  learn about the mutation.  The pre-audit code returned after the write
-  without notifying.
+  learn about the mutation.
 
-* **F-0011** -- ``_on_encode_text`` must surface ``"No document open"``
+* ``_on_encode_text`` must surface ``"No document open"``
   when no document is attached and must never fall back to the
   class-level ``hexcore.HexDocument.encode_text_to_bytes`` static
-  encoder.  The pre-audit fallback silently produced bytes without a
-  live document, misrepresenting the panel state.
+  encoder, which would silently produce bytes without a live document
+  and misrepresent the panel state.
 
-* **F-0016** -- ``_update_bit_buttons`` must iterate all 8 bit buttons
-  even when one button's ``document.get_bit`` raises.  The pre-audit
-  code returned early on the first exception, leaving the remaining
-  buttons stale.  Failed buttons must be rendered in a distinct error
-  state (label ``"?"``, disabled) while successful buttons are updated
-  normally.
+* ``_update_bit_buttons`` must iterate all 8 bit buttons
+  even when one button's ``document.get_bit`` raises.  Failed buttons
+  must be rendered in a distinct error state (label ``"?"``, disabled)
+  while successful buttons are updated normally.
 """
 
 from __future__ import annotations
@@ -414,14 +411,11 @@ def _make_bit_buttons(count: int = 8) -> list[QPushButton]:
 
 @pytest.mark.usefixtures("qapp")
 class TestCommitInt32FiresNotifyDataModified:
-    """F-0003: bit-toggle must fire ``notify_data_modified`` after a successful write.
+    """Bit-toggle must fire ``notify_data_modified`` after a successful write.
 
-    The test name mirrors the unit manifest requirement
-    ``test_commit_int32_fires_notify_data_modified``.  Although the
-    data-inspector mixin does not expose a distinct int32 write path
+    The data-inspector mixin does not expose a distinct int32 write path
     (inline typed-field commits are done via the bit editor for single
-    bytes), the audit finding at lines 170-206 explicitly targets
-    ``_on_bit_toggled``.  The test verifies the notify is fired with the
+    bytes), so this targets ``_on_bit_toggled``.  The test verifies the notify is fired with the
     correct offset, length 1, and a source containing the
     ``"data_inspector"`` namespace.
     """
@@ -506,11 +500,11 @@ class TestCommitInt32FiresNotifyDataModified:
 
 @pytest.mark.usefixtures("qapp")
 class TestEncodeTextNoDocSurfacesError:
-    """F-0011: ``_on_encode_text`` must surface an error when no document is open.
+    """``_on_encode_text`` must surface an error when no document is open.
 
-    The pre-audit code fell back to ``hexcore.HexDocument.encode_text_to_bytes``
-    (the class-level static method) and produced bytes silently even when no
-    document was attached.  The fix must set the output label to the literal
+    It must not fall back to ``hexcore.HexDocument.encode_text_to_bytes``
+    (the class-level static method), which produces bytes silently even when no
+    document is attached.  It must set the output label to the literal
     string ``"No document open"`` and must NOT produce any hex output.
     """
 
@@ -538,9 +532,8 @@ class TestEncodeTextNoDocSurfacesError:
     def test_no_fallback_bytes_generated(qapp: QApplication) -> None:
         """The output label must not contain a hex string when no document is open.
 
-        The pre-audit code produced bytes via the class-level encoder.
-        With the fix, the label must be the error string and not any
-        hex-encoded form of the input text.
+        The label must be the error string and not any hex-encoded form of
+        the input text.
 
         Args:
             qapp: Qt application fixture used for widget construction.
@@ -586,12 +579,11 @@ class TestEncodeTextNoDocSurfacesError:
 
 @pytest.mark.usefixtures("qapp")
 class TestEncodeTextWithDocRoutesThroughBridge:
-    """F-0011: ``_on_encode_text`` must route through bridge's ``encode_text`` when a doc is open.
+    """``_on_encode_text`` must route through bridge's ``encode_text`` when a doc is open.
 
-    The pre-audit code called ``document.encode_text_to_bytes`` (or the
-    class-level static) directly.  The fix must call
-    ``bridge.encode_text(text, encoding)`` via ``run_bridge_coroutine``
-    and display the resulting hex string.
+    It must call ``bridge.encode_text(text, encoding)`` via
+    ``run_bridge_coroutine`` (not ``document.encode_text_to_bytes`` or the
+    class-level static) and display the resulting hex string.
     """
 
     @staticmethod
@@ -673,10 +665,10 @@ class TestEncodeTextWithDocRoutesThroughBridge:
 
 @pytest.mark.usefixtures("qapp")
 class TestUpdateBitButtonsContinuesPastError:
-    """F-0016: ``_update_bit_buttons`` must update all 8 bits even when one raises.
+    """``_update_bit_buttons`` must update all 8 bits even when one raises.
 
-    The pre-audit code returned early on the first ``get_bit`` exception,
-    leaving all subsequent buttons with stale values.  The fix must:
+    Returning early on the first ``get_bit`` exception would leave all
+    subsequent buttons with stale values.  The handler must:
 
     * Continue iterating all buttons after a per-bit error.
     * Render the failed button in an error state: label ``"?"``, disabled.
@@ -764,9 +756,8 @@ class TestUpdateBitButtonsContinuesPastError:
     def test_early_error_does_not_prevent_later_bits_being_updated(qapp: QApplication) -> None:
         """Error on bit 7 (first iterated, MSB) must not block bits 6 through 0.
 
-        This is the direct regression check: the pre-audit ``return``
-        statement on the first error would have silenced updates to all
-        subsequent buttons.
+        This is the direct regression check: a ``return`` statement on the
+        first error would silence updates to all subsequent buttons.
 
         Args:
             qapp: Qt application fixture used for widget construction.

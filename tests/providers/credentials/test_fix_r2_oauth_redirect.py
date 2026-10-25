@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 22: a provider's OAuth sign-in completes whatever loopback path and port its redirect URI names.
+"""A provider's OAuth sign-in completes whatever loopback path and port its redirect URI names.
 
 The gates run :meth:`OAuthManager.run_authorization_flow` against a real authorization server with PKCE and a real token endpoint. The
 browser is played by a thread that follows the authorization page's redirect to the real loopback callback server, exactly as a browser

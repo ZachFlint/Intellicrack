@@ -2,37 +2,36 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit5 U5 ui-mainwindow fixes.
+"""Regression tests for the ui-mainwindow app-shell wiring.
 
-Each test exercises one finding from audit5.md (ui-app-core) and is designed
-to fail against the unfixed code path and pass after the corresponding
-remediation in :mod:`intellicrack.ui.app` and :mod:`intellicrack.ui.xpu_status`.
+Each test fails when the behaviour it names regresses in :mod:`intellicrack.ui.app`
+or :mod:`intellicrack.ui.xpu_status`.
 
-Findings covered:
+Behaviours covered:
 
-* F-0002 - "Save Patched Binary..." now resolves the hex editor through
+* "Save Patched Binary..." resolves the hex editor through
   :meth:`ToolOutputPanel.get_embedded_tool` instead of ``get_panel``.
-* F-0003 - Sandbox panel "active widget" lookup now goes through
+* Sandbox panel "active widget" lookup goes through
   :meth:`ToolOutputPanel.get_panel` instead of ``get_active_tool_widget``.
-* F-0004 - ``XPUStatusDialog`` is wired into the Help menu via the
+* ``XPUStatusDialog`` is wired into the Help menu via the
   ``XPU Status...`` action triggering :meth:`MainWindow._on_xpu_status`.
-* F-0006 - ``_on_view_scripts`` surfaces the script panel state through the
+* ``_on_view_scripts`` surfaces the script panel state through the
   application status bar.
-* F-0007 / F-0008 - "Tool Status..." and "Configure Tools..." both flow the
+* "Tool Status..." and "Configure Tools..." both flow the
   live tool registry to their dialogs and wire the dialog signals.
-* F-0009 - ``_on_open_sandbox`` no longer constructs a throwaway
+* ``_on_open_sandbox`` does not construct a throwaway
   ``SandboxConfigDialog`` purely to call ``is_sandbox_available``.
-* F-0010 - ``_apply_provider_settings`` disconnects providers the user has
+* ``_apply_provider_settings`` disconnects providers the user has
   disabled, in addition to reconnecting enabled ones.
-* F-0011..F-0019 - Orphan signals on PreferencesDialog,
+* Orphan signals on PreferencesDialog,
   SessionManagerDialog, ProviderConfigDialog, ModelSelectionDialog,
   SandboxConfigDialog, SandboxMonitorWidget, ToolConfigDialog,
-  ToolSettingsWidget, and ToolOutputPanel are now wired to MainWindow slots.
-* F-0023 - ``_on_browse_models_result`` constructs ``ModelSelectionDialog``
+  ToolSettingsWidget, and ToolOutputPanel are wired to MainWindow slots.
+* ``_on_browse_models_result`` constructs ``ModelSelectionDialog``
   with the active provider's name and discovery context.
-* F-0025 - ``_on_provider_changed`` calls
+* ``_on_provider_changed`` calls
   :meth:`ProviderRegistry.set_active` for connected providers.
-* F-0026 - ``_refresh_system_status`` stops the periodic status timer after
+* ``_refresh_system_status`` stops the periodic status timer after
   a configurable threshold of consecutive failures and reports through the
   status bar.
 """
@@ -118,9 +117,7 @@ def _no_exec(_self: object) -> int:
     return 0
 
 
-# ---------------------------------------------------------------------------
 # Helper widgets / doubles - intentionally minimal to avoid heavy bridging
-# ---------------------------------------------------------------------------
 
 
 class _RecordingHexPanel(QWidget):
@@ -398,9 +395,7 @@ class _NoopSignal:
         """
 
 
-# ---------------------------------------------------------------------------
-# F-0002 - Save Patched Binary resolves through embedded_tools
-# ---------------------------------------------------------------------------
+# Save Patched Binary resolves through embedded_tools
 
 
 class TestSavePatchedBinaryFindsHexEditor:
@@ -411,7 +406,7 @@ class TestSavePatchedBinaryFindsHexEditor:
         qapp: QCoreApplication,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Pre-fix: pulled from ``panels`` (empty) and showed "No hex editor"; post-fix: pulled from ``embedded_tools``.
+        """The hex editor is looked up in ``embedded_tools``, not ``panels``.
 
         Args:
             qapp: Qt application fixture (singleton).
@@ -458,9 +453,7 @@ class TestSavePatchedBinaryFindsHexEditor:
         assert "No hex editor" in recorder.calls[0][1]
 
 
-# ---------------------------------------------------------------------------
-# F-0003 - sandbox lookup uses get_panel
-# ---------------------------------------------------------------------------
+# Sandbox lookup uses get_panel
 
 
 class TestSandboxPanelLookupUsesPanels:
@@ -472,8 +465,8 @@ class TestSandboxPanelLookupUsesPanels:
     ) -> None:
         """``_on_open_sandbox_panel`` calls ``tool_panel.get_panel("sandbox")`` at runtime.
 
-        The pre-fix code called ``get_active_tool_widget("sandbox")`` (a removed
-        API); the post-fix code calls ``get_panel("sandbox")``.  This test
+        The slot must call ``get_panel("sandbox")`` and not the removed
+        ``get_active_tool_widget`` API.  This test
         exercises the live call path: a stub :class:`ToolPanel` records every
         ``get_panel`` invocation, and the test asserts that ``"sandbox"`` was
         actually requested.  A broken implementation that silently no-ops or
@@ -553,9 +546,7 @@ class TestSandboxPanelLookupUsesPanels:
         assert "sandbox" in get_panel_calls, f"expected get_panel('sandbox') to be called; recorded calls: {get_panel_calls}"
 
 
-# ---------------------------------------------------------------------------
-# F-0004 - XPUStatusDialog wired into Help menu
-# ---------------------------------------------------------------------------
+# XPUStatusDialog wired into Help menu
 
 
 class TestXPUStatusMenuWiring:
@@ -608,9 +599,7 @@ class TestXPUStatusMenuWiring:
         assert len(exec_count) == 1
 
 
-# ---------------------------------------------------------------------------
-# F-0006 - _on_view_scripts surfaces script state through status bar
-# ---------------------------------------------------------------------------
+# _on_view_scripts surfaces script state through status bar
 
 
 class _ScriptToolPanelWithDraft:
@@ -690,9 +679,7 @@ class TestViewScriptsSurfacesState:
         assert any("no script" in msg.lower() for msg in recorder.emissions)
 
 
-# ---------------------------------------------------------------------------
-# F-0007 / F-0008 - Tool Status / Configure Tools take registry
-# ---------------------------------------------------------------------------
+# Tool Status / Configure Tools take registry
 
 
 class _OrchestratorWithRegistry:
@@ -710,8 +697,7 @@ class _OrchestratorWithRegistry:
 class TestToolDialogsReceiveRegistry:
     """``_on_tool_status`` and ``_on_configure_tools`` flow the live registry.
 
-    These tests replace the previous source-inspection gates with runtime
-    behavioral gates: each test patches the dialog constructor in the
+    These are runtime behavioral gates: each test patches the dialog constructor in the
     ``app_module`` namespace and asserts that it is called with
     ``tool_registry=`` pointing to the holder's real registry object, not a
     surrogate.  A broken ``_on_tool_status`` that omits the keyword argument
@@ -893,9 +879,7 @@ class TestToolDialogsReceiveRegistry:
         )
 
 
-# ---------------------------------------------------------------------------
-# F-0009 - _on_open_sandbox does not construct throwaway dialog
-# ---------------------------------------------------------------------------
+# _on_open_sandbox does not construct throwaway dialog
 
 
 class TestOpenSandboxAvoidsDialogProbe:
@@ -1039,9 +1023,7 @@ class TestOpenSandboxAvoidsDialogProbe:
         )
 
 
-# ---------------------------------------------------------------------------
-# F-0010 - _apply_provider_settings disconnects disabled providers
-# ---------------------------------------------------------------------------
+# _apply_provider_settings disconnects disabled providers
 
 
 class TestApplyProviderSettingsHandlesDisabled:
@@ -1156,9 +1138,7 @@ class TestApplyProviderSettingsHandlesDisabled:
         assert "1 disabled" in last_emission, f"expected '1 disabled' in status emission for one disabled provider; got {last_emission!r}"
 
 
-# ---------------------------------------------------------------------------
-# F-0011..F-0019 - Orphan-signal wiring (consumer-side in app.py)
-# ---------------------------------------------------------------------------
+# Orphan-signal wiring (consumer-side in app.py)
 
 
 class TestOrphanSignalWiringRuntime:
@@ -1170,8 +1150,7 @@ class TestOrphanSignalWiringRuntime:
     of the connected slot - a status-bar emission with an independently computed
     string, a replaced ``_config`` object, a combo selection, or a rebuilt
     manager instance. A broken connection (wrong target, dead branch, removed
-    ``.connect``) produces no side-effect and fails the assertion, which the
-    prior source-substring checks could not detect.
+    ``.connect``) produces no side-effect and fails the assertion.
     """
 
     @staticmethod
@@ -1532,9 +1511,7 @@ class TestPreferencesAppliedSlotUpdatesConfig:
         assert holder.cache_called is True
 
 
-# ---------------------------------------------------------------------------
-# F-0023 - ModelSelectionDialog gets provider context
-# ---------------------------------------------------------------------------
+# ModelSelectionDialog gets provider context
 
 
 class TestModelSelectionDialogGetsContext:
@@ -1656,9 +1633,7 @@ class TestModelSelectionDialogGetsContext:
         assert "discovery" in kw, f"expected 'discovery' kwarg; got keys {list(kw)}"
 
 
-# ---------------------------------------------------------------------------
-# F-0025 - _on_provider_changed activates connected providers
-# ---------------------------------------------------------------------------
+# _on_provider_changed activates connected providers
 
 
 class _ProviderDouble:
@@ -1856,9 +1831,7 @@ class TestProviderChangedSetsActive:
         assert registry.set_active_calls == [provider_ids.OPENAI]
 
 
-# ---------------------------------------------------------------------------
-# F-0026 - _refresh_system_status disables timer after threshold
-# ---------------------------------------------------------------------------
+# _refresh_system_status disables timer after threshold
 
 
 class _TimerDouble:
@@ -1944,8 +1917,8 @@ class TestRefreshSystemStatusFailureThreshold:
     def test_threshold_exceeded_stops_timer() -> None:
         """Successive error callbacks stop the timer once the threshold is reached.
 
-        Drives the GUI-thread error slot ``_on_system_status_error`` (M2 moved
-        the failure accounting off the blocking timer path into this slot).
+        Drives the GUI-thread error slot ``_on_system_status_error``, which owns
+        the failure accounting.
         """
         holder = _build_refresh_holder(failure_count=0)
         threshold: int = getattr(app_module, "_STATUS_REFRESH_FAILURE_THRESHOLD")
@@ -1978,9 +1951,9 @@ class TestRefreshSystemStatusFailureThreshold:
 
     @staticmethod
     def test_refresh_dispatches_async_and_never_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
-        """M2 gate: the 30s timer path uses the async worker, never the blocking runner.
+        """The 30s timer path uses the async worker, never the blocking runner.
 
-        Fails against the pre-fix code, which called the blocking
+        The timer path must not call the blocking
         ``run_bridge_coroutine`` on the GUI/timer thread.
         """
         dispatched: list[str] = []
@@ -2005,9 +1978,7 @@ class TestRefreshSystemStatusFailureThreshold:
         assert getattr(holder, "_status_refresh_in_flight") is True
 
 
-# ---------------------------------------------------------------------------
 # Integration: real MainWindow construction wires Help menu and signals
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture

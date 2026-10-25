@@ -5,10 +5,7 @@
 
 """L1/L2/L3 gate tests for the x64dbg ``restart`` feature and the ``disassemble_at`` dispatch fix.
 
-Covers ``audit/bridge-completeness/agent-01-x64dbg-execution-control.md`` row 4
-(restart, previously MISSING at all three layers) and the dispatch defect
-documented in ``audit/bridge-completeness/agent-02-x64dbg-state-manipulation.md``
-("Orphan / defect note"): the registered tool-def was named
+Covers the ``restart`` feature and the ``disassemble_at`` dispatch defect. The registered tool-def was named
 ``x64dbg.disassemble`` while the only matching bridge method was
 ``disassemble_at``, so every AI/orchestration call to ``x64dbg.disassemble``
 raised ``ToolError`` unconditionally, and would additionally have failed the
@@ -17,14 +14,12 @@ raised ``ToolError`` unconditionally, and would additionally have failed the
 
 Regression coverage:
 
-* G-restart -- a real ``restart()`` method re-issues ``InitDebug`` against
+* A real ``restart()`` method re-issues ``InitDebug`` against
   the bridge's own stored ``_binary_path``/``_launch_args`` and verifies the
   debugger actually returned to a paused state before reporting success. A
   registered ``x64dbg.restart`` tool-def makes it AI-dispatchable, and a
   toolbar "Restart" button wires it into the panel.
-* G-disassemble -- the tool-def name was renamed from ``x64dbg.disassemble``
-  to ``x64dbg.disassemble_at`` (matching the real method), and
-  ``X64DbgBridge`` now declares ``supports_static_analysis=True`` so the
+* The ``x64dbg.disassemble_at`` tool-def name matches the real method and ``X64DbgBridge`` declares ``supports_static_analysis=True`` so the
   capability gate in ``ToolRegistry.execute_tool_call`` no longer blocks it.
 """
 
@@ -246,7 +241,7 @@ class TestRestartToolDefL2:
     Falsifiable: removing the ``ToolFunction(name="x64dbg.restart", ...)``
     entry from the tool-def property makes the containment assertion fail;
     if the tool-def were re-added under a name not matching the real method
-    (repeating the historical ``disassemble``/``disassemble_at`` mismatch),
+    (repeating the ``disassemble``/``disassemble_at`` mismatch),
     the dispatch test would raise ``ToolError`` instead of returning.
     """
 

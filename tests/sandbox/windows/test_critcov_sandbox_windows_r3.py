@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Third-pass coverage for the Windows Sandbox backend, written from facts measured in the test container.
+"""Coverage for the Windows Sandbox backend, written from facts measured in the container.
 
 Windows Sandbox never starts here. Programs the backend would find on the host or in the guest are copies
 of System32 programs placed under the names it searches for, on a ``PATH`` the test controls: ``tree.com`` as

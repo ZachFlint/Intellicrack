@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit7 F-0021: minidump must target the analysis PID.
+"""Minidump must target the analysis PID.
 
-Pre-fix, :meth:`WindowsSandbox.dump_memory` ran a PowerShell snippet that
+:meth:`WindowsSandbox.dump_memory` must not run a PowerShell snippet that
 invoked ``MiniDumpWriteDump`` with ``GetCurrentProcess()``. That dumps the
 PowerShell host that the dispatcher spawned, *not* the analysis target — so
 every dump produced was an empty (from the analyst's perspective) PowerShell
@@ -246,7 +246,7 @@ def _make_dump_handler(
 
 
 class TestF0021DumpMemoryRequiresTargetPid:
-    """F-0021: ``dump_memory`` must reject calls without a valid ``target_pid``.
+    """``dump_memory`` must reject calls without a valid ``target_pid``.
 
     These tests exercise the guard clauses in the real
     :meth:`WindowsSandbox.dump_memory` implementation.  No commands are
@@ -323,10 +323,10 @@ class TestF0021DumpMemoryRequiresTargetPid:
 
 
 class TestF0021DumpMemoryUsesOpenProcessAndTargetPid:
-    """F-0021: the generated PowerShell script must use ``OpenProcess`` against ``target_pid``.
+    """The generated PowerShell script must use ``OpenProcess`` against ``target_pid``.
 
     The recording handler captures the full script text dispatched by the
-    production code.  Assertions on the script text verify that the F-0021
+    production code.  Assertions on the script text verify that the fix
     fix is in place: the script uses ``OpenProcess($targetPid)`` and not
     ``GetCurrentProcess()``, embeds the exact target PID, includes
     handle cleanup in a ``finally`` block, and uses the correct access mask.
@@ -488,7 +488,7 @@ class TestF0021DumpMemoryUsesOpenProcessAndTargetPid:
 
 
 class TestF0021DumpMemoryProducesPIDMatchingMinidump:
-    """F-0021: the resulting minidump must carry the target PID, not the host PID.
+    """The resulting minidump must carry the target PID, not the host PID.
 
     The handler embeds a PID that is chosen INDEPENDENTLY by the test (not
     extracted from the script).  The assertions then verify:
@@ -544,7 +544,7 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         The primary gate is the script content emitted by the real production
         code: the dispatched PowerShell must contain ``$targetPid = <N>;`` and
         ``OpenProcess`` and must NOT contain ``GetCurrentProcess()``.  These
-        assertions are falsifiable --- reverting the F-0021 fix in production
+        assertions are falsifiable --- reverting the fix in production
         (i.e. replacing ``OpenProcess($targetPid)`` with ``GetCurrentProcess()``)
         would make ``assert "GetCurrentProcess()" not in dispatched`` fail
         immediately.
@@ -615,17 +615,6 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         respective PID, must contain ``OpenProcess``, and must not contain
         ``GetCurrentProcess()``.
 
-        Falsifiability: reverting the F-0021 fix in
-        ``src/intellicrack/sandbox/windows.py`` by replacing
-        ``$handle = [MiniDumper]::OpenProcess($access, $false, $targetPid);``
-        with ``$handle = [MiniDumper]::GetCurrentProcess();`` would cause both
-        ``assert "GetCurrentProcess()" not in dispatched_a`` and
-        ``assert "GetCurrentProcess()" not in dispatched_b`` to fail immediately.
-        Additionally, removing the ``f"$targetPid = {target_pid};"`` f-string
-        from the script template would cause both ``script_pid_match_a`` and
-        ``script_pid_match_b`` to be ``None``, failing the ``assert … is not None``
-        guards before any PID comparison is attempted.
-
         Args:
             tmp_path: Pytest temporary directory fixture.
         """
@@ -691,7 +680,7 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
 
 
 class TestF0021DumpMemoryErrorPaths:
-    """F-0021: error paths in ``dump_memory`` must surface correct exceptions.
+    """Error paths in ``dump_memory`` must surface correct exceptions.
 
     These tests verify that production code correctly propagates errors from
     the recording sandbox to the caller, and that the various precondition
@@ -769,7 +758,7 @@ class TestF0021DumpMemoryErrorPaths:
 
 
 class TestF0021BridgeRequiresTargetPidForWindows:
-    """F-0021: bridge ``memory_dump`` must require ``target_pid`` for Windows instances.
+    """Bridge ``memory_dump`` must require ``target_pid`` for Windows instances.
 
     These tests wire a :class:`_RecordingSandbox` into a real
     :class:`SandboxBridge` via

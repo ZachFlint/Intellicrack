@@ -485,12 +485,12 @@ _MIN_PRINTABLE_ORD: Final[int] = 0x20
 def validate_key_format(provider: str, api_key: str) -> str | None:
     """Validate an API key's shape without assuming whose key it is.
 
-    The previous rule rejected any key that did not start with the prefix the
-    built-in provider of that name uses. That was wrong the moment a provider
-    id could name any endpoint at all: a corporate gateway in front of
+    A key is not checked against the prefix the built-in provider of that
+    name uses, since a provider id can name any endpoint: a corporate gateway
+    in front of
     Anthropic issues its own keys, an Azure deployment issues its own, and a
     LiteLLM proxy issues whatever its operator configured. Rejecting those
-    made the endpoint unusable for a cosmetic reason.
+    would make the endpoint unusable for a cosmetic reason.
 
     What remains are the two shapes no endpoint accepts: a key that is empty
     once trimmed, and one carrying whitespace or control characters, which
@@ -740,7 +740,7 @@ class CredentialLoader:
     def mapping_for(cls, provider: str) -> ProviderCredentialMapping:
         """Return the environment-variable mapping one instance reads.
 
-        A built-in provider keeps its historical variable names, so ``.env``
+        A built-in provider keeps its existing variable names, so ``.env``
         files stay byte-compatible. A registered user-defined instance reads
         the mapping registered for it, which adds its preset's key variable as
         an alias. Every other instance id derives its variables from itself,

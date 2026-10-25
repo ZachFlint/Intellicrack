@@ -81,22 +81,22 @@ _CODE_SPLIT_RATIO_BOTTOM: Final[int] = 300
 _MAIN_SPLIT_RATIO_LEFT: Final[int] = 600
 _MAIN_SPLIT_RATIO_RIGHT: Final[int] = 250
 
-# Genuine floor for the bottom data-tabs pane (S20-D09/S20-D14): the previous
-# 32px value was smaller than any real tab page could use, so QSplitter's
-# qSmartMinSize() (which lets an explicit minimumSize override a widget's
-# computed layout minimum outright) let the splitter crush whichever data
-# tab was active into overlapping, unusable slivers. Every densely packed
-# data tab (Scripting, Analysis Extras) now also carries its own internal
-# scrollable floor, so this constant only needs to keep the pane itself from
-# collapsing below a usable height -- overflow within the active tab scrolls.
+# Genuine floor for the bottom data-tabs pane: a floor smaller than any real
+# tab page could use lets QSplitter's qSmartMinSize() (which lets an explicit
+# minimumSize override a widget's computed layout minimum outright) crush
+# whichever data tab is active into overlapping, unusable slivers. Every
+# densely packed data tab (Scripting, Analysis Extras) also carries its own
+# internal scrollable floor, so this constant only needs to keep the pane
+# itself from collapsing below a usable height -- overflow within the active
+# tab scrolls.
 _DATA_TABS_MIN_HEIGHT: Final[int] = 220
 
-# Floor for the Scripting tab's scrollable viewport (S20-D14): the editor,
-# output, decompiler-options, and analysis-configuration rows previously had
-# no shared scroll boundary, so a short docked pane forced Qt's layout to
-# shrink several of them below their own minimum size hint, which is what
-# produced literally overlapping widgets (Run-over-Output, Simplification
-# style-over-Analysis-Configuration, and the rest of S20-D14's Ghidra rows).
+# Floor for the Scripting tab's scrollable viewport: the editor, output,
+# decompiler-options, and analysis-configuration rows need a shared scroll
+# boundary, otherwise a short docked pane forces Qt's layout to shrink several
+# of them below their own minimum size hint, which produces overlapping
+# widgets (Run-over-Output, Simplification style-over-Analysis-Configuration,
+# and the rest of the Ghidra rows).
 _SCRIPTING_TAB_SCROLL_MIN_HEIGHT: Final[int] = 240
 
 _ADDRESS_INPUT_MAX_WIDTH: Final[int] = 160
@@ -307,10 +307,6 @@ class GhidraPanel(AnalysisPanelBase):
             except (RuntimeError, ConnectionError, OSError):
                 _logger.exception("ghidra_shutdown_failed", bridge_type="ghidra")
 
-    # ------------------------------------------------------------------
-    # Code Tabs
-    # ------------------------------------------------------------------
-
     def _create_code_tabs(self) -> QTabWidget:
         """Create decompiled, disassembly, PCode, and CFG code tabs.
 
@@ -373,10 +369,6 @@ class GhidraPanel(AnalysisPanelBase):
         self._install_tab_overflow_with_stable_targets(tabs)
         return tabs
 
-    # ------------------------------------------------------------------
-    # Data Tabs
-    # ------------------------------------------------------------------
-
     def _create_data_tabs(self) -> QTabWidget:
         """Create all data analysis tabs.
 
@@ -432,17 +424,16 @@ class GhidraPanel(AnalysisPanelBase):
 
         self._install_tab_overflow_with_stable_targets(tabs)
         # install_tab_overflow() sets ElideRight on the tab bar; this pane's own
-        # contract (established elsewhere and covered by
-        # tests/ui/test_ghidra_panel_data_tabs_overflow.py) is ElideNone so tab
-        # labels are never truncated, only reachable via scroll buttons or the
-        # corner menu install_tab_overflow() also adds -- restore it last.
+        # contract is ElideNone so tab labels are never truncated, only
+        # reachable via scroll buttons or the corner menu install_tab_overflow()
+        # also adds -- restore it last.
         if data_tab_bar is not None:
             data_tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
         return tabs
 
     @staticmethod
     def _install_tab_overflow_with_stable_targets(tabs: QTabWidget) -> QToolButton:
-        """Install the shared tab-overflow corner menu with corrected jump targets.
+        """Install the shared tab-overflow corner menu with per-entry jump targets.
 
         ``install_tab_overflow`` (``intellicrack.ui.panels.process_panel.tab_overflow``,
         owned by the Process panel domain) connects each menu entry's
@@ -510,10 +501,6 @@ class GhidraPanel(AnalysisPanelBase):
             action.triggered.disconnect()
             action.triggered.connect(_jump_to_tab)
 
-    # ------------------------------------------------------------------
-    # Tab 4: XRefs
-    # ------------------------------------------------------------------
-
     def _create_xrefs_tab(self) -> QWidget:
         """Create the XRefs tab with an editable reference table.
 
@@ -558,10 +545,6 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(ref_form2)
 
         return container
-
-    # ------------------------------------------------------------------
-    # Tab 5: Labels / Bookmarks
-    # ------------------------------------------------------------------
 
     def _create_labels_bookmarks_tab(self) -> QWidget:
         """Create the Labels and Bookmarks tab.
@@ -651,10 +634,6 @@ class GhidraPanel(AnalysisPanelBase):
 
         return splitter
 
-    # ------------------------------------------------------------------
-    # Tab 6: Structures
-    # ------------------------------------------------------------------
-
     def _create_structures_tab(self) -> QWidget:
         """Create the Structures tab.
 
@@ -713,10 +692,6 @@ class GhidraPanel(AnalysisPanelBase):
 
         return container
 
-    # ------------------------------------------------------------------
-    # Tab 7: Memory
-    # ------------------------------------------------------------------
-
     def _create_memory_tab(self) -> QWidget:
         """Create the Memory tab.
 
@@ -724,7 +699,7 @@ class GhidraPanel(AnalysisPanelBase):
         overlay controls stack to a combined minimum height that exceeds the
         docked pane, so the container is hosted in a vertically scrolling
         :class:`QScrollArea` to keep every section legible and reachable
-        instead of overdrawing its neighbours.
+        instead of overdrawing its neighbors.
 
         Returns:
             QWidget: Scroll area hosting the memory map, read/write controls,
@@ -912,10 +887,6 @@ class GhidraPanel(AnalysisPanelBase):
         rename_comment_row.addWidget(self._set_block_comment_btn)
         layout.addLayout(rename_comment_row)
 
-    # ------------------------------------------------------------------
-    # Tab 8: Segments / Program
-    # ------------------------------------------------------------------
-
     def _create_segments_program_tab(self) -> QWidget:
         """Create the Segments and Program Info tab.
 
@@ -964,10 +935,6 @@ class GhidraPanel(AnalysisPanelBase):
 
         return container
 
-    # ------------------------------------------------------------------
-    # Tab 9: Call Graph
-    # ------------------------------------------------------------------
-
     def _create_call_graph_tab(self) -> QWidget:
         """Create the Call Graph tab.
 
@@ -1011,10 +978,6 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(btn_row)
 
         return container
-
-    # ------------------------------------------------------------------
-    # Tab 10: Comments
-    # ------------------------------------------------------------------
 
     def _create_comments_tab(self) -> QWidget:
         """Create the Comments tab.
@@ -1068,10 +1031,6 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(refresh_row)
 
         return container
-
-    # ------------------------------------------------------------------
-    # Tab 11: Symbols
-    # ------------------------------------------------------------------
 
     def _create_symbols_tab(self) -> QWidget:
         """Create the Symbols tab.
@@ -1181,10 +1140,6 @@ class GhidraPanel(AnalysisPanelBase):
 
         return container
 
-    # ------------------------------------------------------------------
-    # Tab 12: Scripting
-    # ------------------------------------------------------------------
-
     def _create_scripting_tab(self) -> QWidget:
         """Create the Scripting tab.
 
@@ -1193,9 +1148,9 @@ class GhidraPanel(AnalysisPanelBase):
         exceed the docked pane, so the container is hosted in a vertically
         scrolling viewport (:func:`make_scrollable`) to keep every row
         legible and reachable instead of Qt shrinking several of them
-        below their own minimum size hint, which is what produced the
-        overlapping controls in S20-D14 (Run over Output, Simplification
-        style over Analysis Configuration, and the rest of that row).
+        below their own minimum size hint, which produces overlapping
+        controls (Run over Output, Simplification style over Analysis
+        Configuration, and the rest of that row).
 
         Returns:
             QWidget: Scroll area hosting the script editor, output view,
@@ -1293,10 +1248,6 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(analyze_timeout_row)
 
         return make_scrollable(container, min_height=_SCRIPTING_TAB_SCROLL_MIN_HEIGHT)
-
-    # ------------------------------------------------------------------
-    # Tab: Data Types
-    # ------------------------------------------------------------------
 
     def _create_data_types_tab(self) -> QWidget:
         """Create the Data Types tab with get/set forms.
@@ -1522,10 +1473,6 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status(f"Set data type error: {exc}")
         _logger.warning("ghidra_set_data_type_gui_failed", error=str(exc))
 
-    # ------------------------------------------------------------------
-    # Functions Sidebar
-    # ------------------------------------------------------------------
-
     def _create_functions_sidebar(self) -> QWidget:
         """Create the functions list sidebar with context menu and create form.
 
@@ -1595,10 +1542,6 @@ class GhidraPanel(AnalysisPanelBase):
 
         return container
 
-    # ------------------------------------------------------------------
-    # Address helper
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _parse_address(text: str) -> int | None:
         """Parse a hex or decimal address string.
@@ -1615,10 +1558,6 @@ class GhidraPanel(AnalysisPanelBase):
         except (ValueError, TypeError):
             _logger.warning("ghidra_parse_address_invalid_input", input_text=text)
             return None
-
-    # ------------------------------------------------------------------
-    # Bridge wiring
-    # ------------------------------------------------------------------
 
     def set_bridge(self, bridge: GhidraBridge) -> None:
         """Set the GhidraBridge instance for analysis.
@@ -1683,10 +1622,6 @@ class GhidraPanel(AnalysisPanelBase):
         self._redo_btn.setEnabled(ready)
         self._byte_search_btn.setEnabled(ready)
 
-    # ------------------------------------------------------------------
-    # Binary load
-    # ------------------------------------------------------------------
-
     def load_binary(self, binary_path: Path) -> bool:
         """Load a binary for analysis.
 
@@ -1733,10 +1668,6 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status(f"Load failed: {exc}")
         _logger.warning("ghidra_load_failed", path=binary_path.name, error=str(exc))
         self._sync_toolbar_state()
-
-    # ------------------------------------------------------------------
-    # Connect / Disconnect
-    # ------------------------------------------------------------------
 
     def _on_connect(self) -> None:
         """Connect to Ghidra bridge."""
@@ -1809,10 +1740,6 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status(f"Disconnect failed: {exc}")
         _logger.warning("ghidra_disconnect_failed", error=str(exc))
         self._sync_toolbar_state()
-
-    # ------------------------------------------------------------------
-    # Load / Analyze / Headless
-    # ------------------------------------------------------------------
 
     def _on_load_binary(self) -> None:
         """Open file dialog and load selected binary."""
@@ -1992,10 +1919,6 @@ class GhidraPanel(AnalysisPanelBase):
         _logger.warning("ghidra_headless_batch_failed", error=str(exc))
         self._headless_batch_btn.setEnabled(True)
 
-    # ------------------------------------------------------------------
-    # Undo / Redo
-    # ------------------------------------------------------------------
-
     def _on_undo(self) -> None:
         """Undo the last Ghidra action."""
         bridge = self._require_connected()
@@ -2025,10 +1948,6 @@ class GhidraPanel(AnalysisPanelBase):
             logger=_logger,
             level="info",
         )
-
-    # ------------------------------------------------------------------
-    # Byte search
-    # ------------------------------------------------------------------
 
     def _on_search_bytes(self) -> None:
         """Search for a byte pattern from the toolbar input."""
@@ -2073,10 +1992,6 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status(f"Byte search failed: {exc}")
         _logger.warning("ghidra_byte_search_failed", error=str(exc))
 
-    # ------------------------------------------------------------------
-    # Debug Info
-    # ------------------------------------------------------------------
-
     def _on_import_debug_info(self) -> None:
         """Import debug information (PDB/DWARF) into current program."""
         bridge = self._require_connected()
@@ -2100,10 +2015,6 @@ class GhidraPanel(AnalysisPanelBase):
             level="info",
             file_path=file_path,
         )
-
-    # ------------------------------------------------------------------
-    # Diff Programs
-    # ------------------------------------------------------------------
 
     def _on_diff_programs(self) -> None:
         """Compare current program with another program file."""
@@ -2151,10 +2062,6 @@ class GhidraPanel(AnalysisPanelBase):
             self._script_output.setPlainText(str(result))
         self._set_status("Diff complete")
 
-    # ------------------------------------------------------------------
-    # Overlay Space
-    # ------------------------------------------------------------------
-
     def _on_create_overlay_space(self) -> None:
         """Create a new overlay address space."""
         bridge = self._require_connected()
@@ -2174,10 +2081,6 @@ class GhidraPanel(AnalysisPanelBase):
             level="info",
             name=name,
         )
-
-    # ------------------------------------------------------------------
-    # Functions
-    # ------------------------------------------------------------------
 
     def _on_refresh_functions(self) -> None:
         """Refresh the functions list from bridge."""
@@ -2575,10 +2478,6 @@ class GhidraPanel(AnalysisPanelBase):
         )
         self._set_status(f"{label} failed: {error}")
 
-    # ------------------------------------------------------------------
-    # Create Function
-    # ------------------------------------------------------------------
-
     def _on_create_function(self) -> None:
         """Create a new function at the specified address."""
         bridge = self._require_connected()
@@ -2600,10 +2499,6 @@ class GhidraPanel(AnalysisPanelBase):
             address=hex(addr),
             name=name,
         )
-
-    # ------------------------------------------------------------------
-    # Function Context Menu
-    # ------------------------------------------------------------------
 
     def _on_func_context_menu(self, pos: QPoint) -> None:
         """Show context menu for function tree items.
@@ -2929,10 +2824,6 @@ class GhidraPanel(AnalysisPanelBase):
             is_inline=is_inline,
         )
 
-    # ------------------------------------------------------------------
-    # Imports / Exports
-    # ------------------------------------------------------------------
-
     def _refresh_imports(self) -> None:
         """Refresh the imports table from bridge."""
         bridge = self._require_connected()
@@ -3013,10 +2904,6 @@ class GhidraPanel(AnalysisPanelBase):
             self._exports_table.setItem(row, 1, QTableWidgetItem(str(getattr(exp, "ordinal", 0))))
             self._exports_table.setItem(row, 2, QTableWidgetItem(f"0x{getattr(exp, 'address', 0):X}"))
 
-    # ------------------------------------------------------------------
-    # Strings
-    # ------------------------------------------------------------------
-
     def search_strings(self, pattern: str) -> None:
         """Search for strings matching pattern and populate table.
 
@@ -3069,10 +2956,6 @@ class GhidraPanel(AnalysisPanelBase):
         """Trigger string search from the search input."""
         if pattern := self._string_search_input.text().strip():
             self.search_strings(pattern)
-
-    # ------------------------------------------------------------------
-    # XRefs
-    # ------------------------------------------------------------------
 
     def show_xrefs(self, address: int) -> None:
         """Show cross-references to and from an address.
@@ -3195,10 +3078,6 @@ class GhidraPanel(AnalysisPanelBase):
             from_addr=hex(from_addr),
             to_addr=hex(to_addr),
         )
-
-    # ------------------------------------------------------------------
-    # Labels / Bookmarks
-    # ------------------------------------------------------------------
 
     def _on_set_label(self) -> None:
         """Set a label at the specified address.
@@ -3494,10 +3373,6 @@ class GhidraPanel(AnalysisPanelBase):
         if chosen is remove_action:
             self._on_remove_bookmark()
 
-    # ------------------------------------------------------------------
-    # Structures
-    # ------------------------------------------------------------------
-
     def _on_add_struct_field(self) -> None:
         """Prompt user to add a field to the pending structure definition."""
         field_name, ok1 = QInputDialog.getText(self, self.tr("Add Field"), self.tr("Field name:"))
@@ -3593,10 +3468,6 @@ class GhidraPanel(AnalysisPanelBase):
             address=hex(resolved_addr),
             structure_name=struct_name,
         )
-
-    # ------------------------------------------------------------------
-    # Memory
-    # ------------------------------------------------------------------
 
     def _on_refresh_memory_map(self) -> None:
         """Refresh the memory map table from bridge."""
@@ -3964,10 +3835,6 @@ class GhidraPanel(AnalysisPanelBase):
             name2=name2,
         )
 
-    # ------------------------------------------------------------------
-    # Segments / Program Info
-    # ------------------------------------------------------------------
-
     def _on_refresh_segments(self) -> None:
         """Refresh the segments table from bridge."""
         bridge = self._require_connected()
@@ -4024,7 +3891,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Apply program info to the info table.
 
         Accepts either a plain ``dict`` or a dataclass instance; anything else
-        is reported as an error row rather than silently serialising bound
+        is reported as an error row rather than silently serializing bound
         method references from ``dir()``.
 
         Args:
@@ -4076,10 +3943,6 @@ class GhidraPanel(AnalysisPanelBase):
             program_name=name,
             image_base=image_base,
         )
-
-    # ------------------------------------------------------------------
-    # Call Graph
-    # ------------------------------------------------------------------
 
     def _on_build_call_graph(self) -> None:
         """Build a call graph for the address in the call graph tab."""
@@ -4223,10 +4086,6 @@ class GhidraPanel(AnalysisPanelBase):
             item = QTreeWidgetItem([f"0x{addr_int:X}", f"0x{addr_int:X}"])
             self._call_graph_tree.addTopLevelItem(item)
 
-    # ------------------------------------------------------------------
-    # Comments
-    # ------------------------------------------------------------------
-
     def _on_add_comment(self) -> None:
         """Add a comment at the specified address."""
         bridge = self._require_connected()
@@ -4350,10 +4209,6 @@ class GhidraPanel(AnalysisPanelBase):
                 self._comments_table.setItem(row, 2, QTableWidgetItem(str(cmt.get("comment", ""))))
         finally:
             self._comments_table.setUpdatesEnabled(True)
-
-    # ------------------------------------------------------------------
-    # Symbols / Namespaces / Equates / Relocations / External Functions
-    # ------------------------------------------------------------------
 
     def _on_search_symbols(self) -> None:
         """Search symbols by name and optional type filter."""
@@ -4555,10 +4410,6 @@ class GhidraPanel(AnalysisPanelBase):
             function_name=func_name,
             address=hex(addr) if addr is not None else None,
         )
-
-    # ------------------------------------------------------------------
-    # Scripting
-    # ------------------------------------------------------------------
 
     def _on_run_script(self) -> None:
         """Run the script in the editor without parameters."""

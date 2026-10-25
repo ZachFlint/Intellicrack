@@ -167,7 +167,7 @@ class TestExtendedRegisterTableWiring:
         """``_refresh_state()`` must render ``xmm0`` with the plugin's real hex value.
 
         Falsifiable: if ``_refresh_extended_registers`` were never wired
-        into ``_refresh_state`` (a DEAD-CONTROL table), the FPU/SIMD
+        into ``_refresh_state`` (an unwired table), the FPU/SIMD
         table would stay empty forever and this assertion would time out.
 
         Args:

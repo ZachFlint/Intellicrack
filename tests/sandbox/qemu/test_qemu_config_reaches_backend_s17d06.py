@@ -2,14 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D06: the configured QEMU disk image must reach the backend.
+"""Gates: the configured QEMU disk image must reach the backend.
 
-Before this fix ``SandboxBridge.create`` had no ``qemu_config`` parameter and
-never passed one, so ``SandboxManager.create`` always received ``None`` and the
-QEMU backend booted with ``QEMUConfig.image_path is None``. Every QEMU sandbox
-creation from the GUI therefore failed inside ``_build_qemu_command``, making
-the whole QEMU backend - and with it Snapshots, VM Display, Pause/Continue and
-Pending Messages - unreachable from the application on any host.
+``SandboxBridge.create`` must forward ``qemu_config`` so that ``SandboxManager.create`` does not
+receive ``None`` and the QEMU backend does not boot with ``QEMUConfig.image_path is None``, which
+makes ``_build_qemu_command`` fail and leaves Snapshots, VM Display, Pause/Continue and Pending
+Messages unreachable from the application.
 
 These tests drive the real chain end to end: a real JSON settings document on
 disk, the real settings loader, the real bridge, and the real QEMU command
@@ -238,7 +236,7 @@ class _BackendBuildingManager(SandboxManager):
         instance.is_busy = mark_busy
         # Registered exactly as the real create does, and marked running, so
         # the inherited run_binary can genuinely find it: a manager that never
-        # registered anything would make the reuse assertion unfalsifiable.
+        # registered anything would make the reuse assertion vacuous.
         instance.state.status = "running"
         self._instances[instance.id] = instance
         return instance
@@ -370,7 +368,7 @@ class TestBridgeForwardsQemuConfig:
     def test_configured_image_appears_in_the_real_launch_argv(self, tmp_path: Path) -> None:
         """A disk image passed to the bridge reaches the real QEMU command line.
 
-        This is the end-to-end S17-D06 gate: bridge -> manager -> backend ->
+        This is the end-to-end gate: bridge -> manager -> backend ->
         argv. If the bridge drops ``qemu_config`` the backend has no image and
         ``_build_qemu_command`` raises instead of producing a ``-drive``.
 
@@ -457,15 +455,13 @@ class TestBridgeForwardsQemuConfig:
 
 
 class TestRunBinaryForwardsQemuConfig:
-    """S17-D28/D29: the run path must carry the same configuration as create.
+    """The run path must carry the same configuration as create.
 
-    ``SandboxBridge.create`` was given ``qemu_config`` when S17-D06 was fixed,
-    but ``run_binary`` was left calling ``SandboxManager.run_binary`` without
-    it - and without ``reuse_instance``, which that method has always accepted.
-    Found live on 2026-08-05: with a QEMU sandbox running and its guest agent
-    answering, "Run in Sandbox" reported *Failed to start sandbox* because the
-    run booted a **second** virtual machine and built its command line from a
-    default ``QEMUConfig`` whose ``image_path`` is None.
+    ``SandboxBridge.run_binary`` has to pass ``qemu_config`` and ``reuse_instance`` to
+    ``SandboxManager.run_binary``. Otherwise, with a QEMU sandbox running and its guest agent
+    answering, "Run in Sandbox" reports *Failed to start sandbox* because the run boots a
+    **second** virtual machine and builds its command line from a default ``QEMUConfig`` whose
+    ``image_path`` is None.
 
     ``SandboxManager.run_binary`` is the real one here; only the host probe and
     the guest boot are replaced, so what the bridge forwards is what a real
@@ -551,8 +547,8 @@ class TestRunBinaryForwardsQemuConfig:
     def test_a_run_without_the_config_still_cannot_boot(self, tmp_path: Path) -> None:
         """Omitting the config leaves the run's backend with no image.
 
-        This is the state the live failure was in, pinned so the forwarding
-        cannot quietly become a default that hides a missing image.
+        Pinned so the forwarding cannot quietly become a default that hides a
+        missing image.
 
         Args:
             tmp_path: Per-test temporary directory.

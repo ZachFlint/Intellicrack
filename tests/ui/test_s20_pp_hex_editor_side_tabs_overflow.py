@@ -3,28 +3,25 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for the Hex Editor share of S20-D16/S20-D17 -- clipped side-tab bar.
+"""Gate for the clipped side-tab bar on the Hex Editor panel.
 
 ``HexEditorPanel._create_content`` (src/intellicrack/ui/panels/hex_editor/panel.py)
-builds ``self._side_tabs`` with 19 tabs (Inspector through VA Mapping) hosted in
-a narrow horizontal splitter pane beside the hex view. Pre-fix, the tab bar only
-carried ``ElideNone``/``setExpanding(False)``/``setUsesScrollButtons(True)``, so
-at the audit's ~530px docked width a user could only page through the bar one
-scroll-chevron click at a time with no indication of what the remaining tabs
-were named, matching the S20-D16 sweep's "multi-level sub-tab bars ... clipped
-off the right edge" finding.
+builds ``self._side_tabs`` with 19 tabs (Inspector through VA Mapping) hosted in a narrow
+horizontal splitter pane beside the hex view. The tab bar carries only
+``ElideNone``/``setExpanding(False)``/``setUsesScrollButtons(True)``, so at a ~530px docked
+width a user can only page through the bar one scroll-chevron click at a time, with no
+indication of what the remaining tabs are named. Multi-level sub-tab bars must not be
+clipped off the right edge.
 
-The fix reuses the Process panel's already-established ``install_tab_overflow``
-helper (``intellicrack.ui.panels.process_panel.tab_overflow``), which every
-``ProcessPanel`` sub-tab and (per ``tests/ui/test_s20_g1_tab_overflow_menu.py``)
-both ``GhidraPanel`` tab strips already rely on: it adds a corner
-``QToolButton`` whose menu lists every tab by name and jumps straight to it on
-one click, regardless of how the tab bar itself renders. Because
-``install_tab_overflow`` also sets ``ElideRight`` on the tab bar, and this
-panel's own established contract (this file and
-``tests/ui/test_gui_audit0702_panels_hex_editor_panel.py``) is ``ElideNone`` so
-labels are never truncated, the fix restores ``ElideNone`` immediately after
-installing the overflow menu -- mirroring ``GhidraPanel._create_data_tabs``.
+The panel reuses the Process panel's ``install_tab_overflow`` helper
+(``intellicrack.ui.panels.process_panel.tab_overflow``), which every ``ProcessPanel``
+sub-tab and (per ``tests/ui/test_s20_g1_tab_overflow_menu.py``) both ``GhidraPanel`` tab
+strips already rely on. It adds a corner ``QToolButton`` whose menu lists every tab by
+name and jumps straight to it on one click, regardless of how the tab bar itself renders.
+Because ``install_tab_overflow`` also sets ``ElideRight`` on the tab bar, and this panel's
+contract (this file and ``tests/ui/test_gui_audit0702_panels_hex_editor_panel.py``) is
+``ElideNone`` so labels are never truncated, the panel restores ``ElideNone`` immediately
+after installing the overflow menu, mirroring ``GhidraPanel._create_data_tabs``.
 
 Every assertion drives the real corner button and menu installed on a live,
 fully constructed ``HexEditorPanel`` under an offscreen ``QApplication`` -- no

@@ -4,9 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real Qt-dispatch coverage for ``ProviderSettingsWidget._open_resource_url``.
 
-The prior regression test patched ``QDesktopServices.openUrl`` -- the very
-capability claimed to be validated -- and only asserted the mock recorded a
-call. These tests instead register a *real* in-process URL handler through
+These tests register a *real* in-process URL handler through
 :meth:`QDesktopServices.setUrlHandler`. Clicking a Resources button then runs
 the real ``_open_resource_url`` body, which calls the real
 ``QDesktopServices.openUrl``; Qt's own dispatcher delivers the URL to the

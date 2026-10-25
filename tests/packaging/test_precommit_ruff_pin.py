@@ -6,11 +6,11 @@
 r"""Falsifiable gates on the ``.pre-commit-config.yaml`` hook pins.
 
 The pre-commit framework is only useful while the ruff it downloads can read the
-project's own ruff configuration. That contract silently broke once already: the
-config pinned ``astral-sh/ruff-pre-commit`` at ``v0.12.11`` while
-``[tool.ruff] lint.ignore`` in ``pyproject.toml`` grew a selector that only ruff
-0.16+ understands, so both the ``ruff-check`` and ``ruff-format`` hooks aborted
-with ``Unknown rule selector`` on every run. Nothing caught it because commits go
+project's own ruff configuration. Drift between the two breaks it silently: a pin
+of ``astral-sh/ruff-pre-commit`` at ``v0.12.11`` with a
+``[tool.ruff] lint.ignore`` selector that only ruff
+0.16+ understands makes both the ``ruff-check`` and ``ruff-format`` hooks abort
+with ``Unknown rule selector`` on every run, and nothing reports it because commits go
 through ``--no-verify``.
 
 These gates hold the contract from both directions:

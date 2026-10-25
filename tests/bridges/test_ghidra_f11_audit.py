@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for F11 error-handling blocks in :class:`GhidraBridge`.
+"""Tests for error-handling blocks in :class:`GhidraBridge`.
 
 These tests exercise the real exception-to-:class:`ToolError` translation
 that ``define_structure`` and ``create_function`` perform when the attached

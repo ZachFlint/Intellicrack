@@ -5,10 +5,7 @@
 
 """Tests for :class:`AnalysisAggregator` over real binaries.
 
-This module previously mocked the entire bridge layer (``MagicMock`` registry
-and ``AsyncMock`` bridge methods), so the aggregation pipeline was never
-exercised against real analysis data. It now drives the production aggregator
-against genuine compiled binaries:
+The tests drive the production aggregator against genuine compiled binaries:
 
 * The pre-loaded :class:`BinaryInfo` is parsed from a real Windows System32 PE
   (``kernel32.dll``) with ``lief`` and the production ``extract_imports`` /

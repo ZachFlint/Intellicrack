@@ -1394,7 +1394,7 @@ class _MetadataProbeBridge(CutterBridge):
 
 
 class TestEntryPointBug:
-    """Verify entry point is not double-added with baddr (Bug 2 fix)."""
+    """Verify entry point is not double-added with baddr."""
 
     @pytest.mark.asyncio
     async def test_entry_point_not_double_baddr(self) -> None:
@@ -1444,7 +1444,7 @@ def _short_path(path: str) -> str:
 
 
 class TestSaveBinary:
-    """Verify save_binary sends wtf command (Bug 3 fix)."""
+    """Verify save_binary uses the wcf command."""
 
     @pytest.mark.asyncio
     async def test_sends_wcf_command(

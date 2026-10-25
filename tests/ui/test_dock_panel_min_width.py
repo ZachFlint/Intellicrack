@@ -2,29 +2,29 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for audit N2 -- docked tool panels clipped at default dock width.
+"""Gates for docked tool panels clipped at default dock width.
 
-Before the fix, ``ToolOutputPanel``'s left dock column (hosting the
+``ToolOutputPanel``'s left dock column (hosting the
 Frida/Cutter/Ghidra tabs) and right dock column (function list/xref panel)
-each carried a static ``setMinimumWidth`` floor with no relationship to what
-the embedded content actually needs to render without clipping -- the Frida
+must be sized from the embedded content, not only a static ``setMinimumWidth`` floor
+with no relationship to what the content needs to render without clipping. The Frida
 panel alone has a ``minimumSizeHint`` of ~991px, far above both the static
-240px floor and the 600px default split. Because ``main_splitter`` disables
-child collapsing but never raises its floor to match, the splitter was free
-to squeeze the active tab narrower than it could render.
+240px floor and the 600px default split. ``main_splitter`` disables child collapsing
+but does not raise its floor to match, so the splitter is free to squeeze the active
+tab narrower than it can render.
 
-The fix keeps the static constants as an absolute floor but layers a real
+The static constants are kept as an absolute floor, with a real
 measurement on top: the right column's floor is computed once from its
 fixed children's own ``minimumSizeHint``, and the left column's floor is
 resynced on every tab change to the currently active tab's real
 ``minimumSizeHint``.
 
-S19-D02 later refined the left floor with a width-aware cap: pinning the
+A width-aware cap refines the left floor: pinning the
 floor to a tab's raw ``minimumSizeHint`` unconditionally combines with the
 right column's own minimum to exceed the splitter's available width, which
-froze every handle and pushed the right column off-screen. The floor is now
+would freeze every handle and push the right column off-screen. The floor is
 ``min(content_minimum, splitter_width - right_minimum - handle_slack)`` once
-the splitter width is known, so N2's content-covering floor still applies
+the splitter width is known, so the content-covering floor still applies
 when the window is wide enough, but a window narrower than the content needs
 keeps the handle movable (with scroll relief) instead of freezing it.
 
@@ -62,7 +62,7 @@ def _tab_index(panel: ToolOutputPanel, title: str) -> int:
 
 @pytest.mark.usefixtures("qapp")
 class TestLeftPanelMinWidthTracksActiveTab:
-    """Tests for N2: the docked left column's min-width floor must track the active tab's real content."""
+    """The docked left column's min-width floor must track the active tab's real content."""
 
     @staticmethod
     def test_frida_tab_floor_covers_content_when_window_is_wide() -> None:
@@ -71,10 +71,9 @@ class TestLeftPanelMinWidthTracksActiveTab:
         Frida's embedded panel carries multi-column tables and control rows
         whose natural minimum width is far above the static
         ``_LEFT_MIN_WIDTH`` constant (240px). With room to spare (the
-        S19-D02 width-aware cap does not bind), the active-tab sync must
+        the width-aware cap does not bind), the active-tab sync must
         still raise the floor to the tab's real content minimum so the
-        splitter cannot squeeze the Frida panel narrower than it renders
-        (N2, preserved).
+        splitter cannot squeeze the Frida panel narrower than it renders.
         """
         panel = ToolOutputPanel()
         panel.add_frida_tab()
@@ -84,7 +83,7 @@ class TestLeftPanelMinWidthTracksActiveTab:
         assert widget is not None
 
         # Make the window comfortably wider than the content minimum plus the
-        # right column, so the D02 cap leaves the full content floor in place.
+        # right column, so the width cap leaves the full content floor in place.
         wide = widget.minimumSizeHint().width() + panel.right_panel.minimumWidth() + 400
         panel.show()
         panel.resize(wide, 900)
@@ -110,7 +109,7 @@ class TestLeftPanelMinWidthTracksActiveTab:
         ghidra_widget = panel.tab_widget.widget(ghidra_index)
         assert ghidra_widget is not None
 
-        # Keep the window wide enough that the D02 cap never binds, so the
+        # Keep the window wide enough that the width cap never binds, so the
         # floor is driven purely by the active tab's content minimum.
         widest = max(frida_widget.minimumSizeHint().width(), ghidra_widget.minimumSizeHint().width())
         panel.show()
@@ -129,7 +128,7 @@ class TestLeftPanelMinWidthTracksActiveTab:
 
     @staticmethod
     def test_splitter_stays_movable_when_forced_narrow() -> None:
-        """Forcing the panel narrower than the active tab needs keeps the handle movable (S19-D02).
+        """Forcing the panel narrower than the active tab needs keeps the handle movable.
 
         End-to-end check through the real Qt layout engine (QSplitter with
         ``setChildrenCollapsible(False)``): with the Frida tab active and the
@@ -137,7 +136,7 @@ class TestLeftPanelMinWidthTracksActiveTab:
         the width-aware cap must let the left column fall below Frida's raw
         ``minimumSizeHint().width()`` so the child minimums fit inside the
         splitter and every handle can still move. Pinning the floor to the
-        raw content minimum (the pre-D02 behavior) would force the left
+        raw content minimum would force the left
         section to Frida's full width, overflow the splitter, and freeze the
         handle -- this test falsifies that regression.
         """
@@ -156,7 +155,7 @@ class TestLeftPanelMinWidthTracksActiveTab:
         QApplication.processEvents()
 
         sizes = panel.main_splitter.sizes()
-        # The left section is allowed below the raw content minimum (D02 cap),
+        # The left section is allowed below the raw content minimum (width cap),
         # and the sections fit inside the splitter (no off-screen overflow).
         assert sizes[0] < required_width
         assert sum(sizes) <= panel.main_splitter.width()
@@ -171,7 +170,7 @@ class TestLeftPanelMinWidthTracksActiveTab:
 
 @pytest.mark.usefixtures("qapp")
 class TestRightPanelMinWidthCoversContent:
-    """Tests for N2: the docked right column's min-width floor must cover its real content."""
+    """The docked right column's min-width floor must cover its real content."""
 
     @staticmethod
     def test_right_panel_floor_covers_function_list_and_xref_panel() -> None:
@@ -189,7 +188,7 @@ class TestRightPanelMinWidthCoversContent:
 
 @pytest.mark.usefixtures("qapp")
 class TestLeftPanelMinWidthFallsBackForPlainTabs:
-    """Tests for N2: a lightweight, non-tool tab still gets a sane floor."""
+    """A lightweight, non-tool tab still gets a sane floor."""
 
     @staticmethod
     def test_plain_widget_tab_uses_static_floor_when_it_has_no_natural_minimum() -> None:

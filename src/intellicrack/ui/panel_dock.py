@@ -96,9 +96,9 @@ class DetachedPanelWindow(QMainWindow):
         toolbar.addWidget(redock_btn)
 
         self.setCentralWidget(panel)
-        # ``removeTab`` hid the panel before it was reparented here; a tool
+        # ``removeTab`` hides the panel before it is reparented here, and a tool
         # panel (Ghidra/Frida/Cutter) would otherwise render a blank body until
-        # re-dock. Force it visible and re-laid-out immediately (F3 / F18).
+        # re-dock. Force it visible and re-laid-out immediately.
         panel.setVisible(True)
         panel.show()
         panel.updateGeometry()

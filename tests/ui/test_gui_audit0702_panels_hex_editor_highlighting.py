@@ -2,31 +2,25 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for GUI audit findings H6 and M6 in ``hex_editor/highlighting.py``.
+"""Gates for background pattern-highlight scans in ``hex_editor/highlighting.py``.
 
-H6 -- ``HighlightingMixin.refresh_pattern_highlights`` previously ran a
-synchronous, whole-document ``search_hex`` scan on the Qt GUI thread for
-every active pattern-type highlight rule, and it did so on *every single*
-``HexEditorWidget.data_changed`` emission -- i.e. on every byte edit made in
-the hex view (wired via ``HexEditorPanel._on_data_changed``). The fix moves
-the scan onto a background ``GenericCallableWorker`` thread and coalesces any
-refresh requested while one is already in flight into a single follow-up
-pass, so rapid successive edits never block the event loop and never queue
-an unbounded number of background scans.
+The pattern-highlight refresh must not run ``HighlightingMixin.refresh_pattern_highlights`` as a synchronous, whole-document
+``search_hex`` scan on the Qt GUI thread for every active pattern-type highlight rule. That scan would otherwise run on *every single*
+``HexEditorWidget.data_changed`` emission, i.e. on every byte edit made in the hex view (wired via
+``HexEditorPanel._on_data_changed``). The scan runs on a background ``GenericCallableWorker`` thread, and any refresh
+requested while one is already in flight coalesces into a single follow-up pass, so rapid successive edits never block the
+event loop and never queue an unbounded number of background scans.
 
-M6 -- ``HighlightingMixin._resolve_pattern_rule`` (the pattern-rule
-resolution path reached from the "Add Rule" button, prior to any bridge
-dispatch) previously called the same blocking ``search_hex`` synchronously
-on the GUI thread. The fix splits this into
-``_on_add_pattern_highlight_rule``, which resolves the pattern's offsets on
-a background ``GenericCallableWorker`` thread and only dispatches the
-``add_highlight_rule`` bridge RPC once those offsets are available.
+``HighlightingMixin._resolve_pattern_rule`` (the pattern-rule resolution path reached from the "Add Rule" button, prior to any
+bridge dispatch) must not call the blocking ``search_hex`` synchronously on the GUI thread. Resolution is split into
+``_on_add_pattern_highlight_rule``, which resolves the pattern's offsets on a background ``GenericCallableWorker`` thread
+and only dispatches the ``add_highlight_rule`` bridge RPC once those offsets are available.
 
 Every test below drives the real ``HighlightingMixin`` handlers on a real
 ``HexEditorPanel`` bound to a real ``intellicrack_hexcore.HexDocument``
 wrapped so that ``search_hex`` is measurably slow and records which thread
 invoked it -- letting each test tell a non-blocking, worker-thread dispatch
-apart from the pre-fix synchronous, GUI-thread scan by both elapsed wall-clock
+apart from a synchronous, GUI-thread scan by both elapsed wall-clock
 time and the recorded caller thread.
 """
 
@@ -398,21 +392,17 @@ def _make_panel(document: object, bridge: HexEditorBridge | None = None) -> HexE
 
 
 class TestH6RefreshPatternHighlightsAsyncDispatch:
-    """H6: pattern-highlight refresh runs off the GUI thread and coalesces bursts of edits."""
+    """Pattern-highlight refresh runs off the GUI thread and coalesces bursts of edits."""
 
     def test_h6_byte_edit_triggers_refresh_without_blocking_gui_thread(self, qapp: QApplication) -> None:
         """A single byte edit dispatches the pattern rescan without blocking the caller.
 
-        Pre-fix, ``refresh_pattern_highlights`` (invoked synchronously from
-        ``_on_data_changed`` on every ``data_changed`` emission) called
-        ``search_hex`` directly on the GUI thread, so typing a single hex
-        digit would not return control to the caller until the whole-document
-        scan (here, ``_DELAY_S``) had completed, and the rule's offsets would
-        already be updated by the time the call returned. Post-fix, the scan
-        runs on a background ``GenericCallableWorker`` thread, so the edit
-        handler returns in a small fraction of the delay and the rule's
-        offsets remain the stale pre-refresh value until the Qt event loop is
-        pumped and the worker's result signal is delivered.
+        ``refresh_pattern_highlights`` (invoked synchronously from
+        ``_on_data_changed`` on every ``data_changed`` emission) must not call
+        ``search_hex`` directly on the GUI thread: typing a single hex digit would not return control to the caller until the whole-document
+        scan (here, ``_DELAY_S``) had completed, and the rule's offsets would already be updated by the time the call returned.
+        The scan runs on a background ``GenericCallableWorker`` thread, so the edit handler returns in a small fraction of the delay and
+        the rule's offsets remain the stale pre-refresh value until the Qt event loop is pumped and the worker's result signal is delivered.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -454,9 +444,9 @@ class TestH6RefreshPatternHighlightsAsyncDispatch:
     def test_h6_rapid_edits_coalesce_into_bounded_search_calls(self, qapp: QApplication) -> None:
         """Three edits made while a rescan is in flight collapse into exactly one follow-up scan.
 
-        Pre-fix, each of the three edits synchronously ran its own
+        Without coalescing, each of the three edits would synchronously run its own
         whole-document ``search_hex`` call inline (three scans total, each on
-        the caller's thread). Post-fix, the first edit starts a background
+        the caller's thread). With the worker, the first edit starts a background
         worker; because ``QThread.isRunning()`` is already true the instant
         ``start()`` returns, the second and third edits observe it still
         running and only set a pending-refresh flag instead of starting their
@@ -516,7 +506,7 @@ class TestH6RefreshPatternHighlightsAsyncDispatch:
 
 
 class TestM6AddPatternHighlightRuleAsyncDispatch:
-    """M6: resolving a pattern highlight rule's offsets runs off the GUI thread."""
+    """Resolving a pattern highlight rule's offsets runs off the GUI thread."""
 
     def test_m6_add_pattern_rule_returns_before_search_completes_and_dispatches_resolved_offsets(
         self,
@@ -524,11 +514,11 @@ class TestM6AddPatternHighlightRuleAsyncDispatch:
     ) -> None:
         """Clicking 'Add Rule' for a Pattern condition returns immediately and later persists real offsets.
 
-        Pre-fix, ``_resolve_pattern_rule`` called ``search_hex`` directly on
+        ``_resolve_pattern_rule`` must not call ``search_hex`` directly on
         the GUI thread from ``_on_add_highlight_rule`` before any bridge
         dispatch, so the click handler would not return -- and the
         ``add_highlight_rule`` bridge RPC would not even be sent -- until the
-        whole-document scan (here, ``_DELAY_S``) had completed. Post-fix, the
+        whole-document scan (here, ``_DELAY_S``) had completed. With the worker, the
         scan runs on a background ``GenericCallableWorker`` thread and the
         bridge RPC is only dispatched once real offsets are resolved, so the
         handler returns almost immediately, the bridge has recorded no rule
@@ -588,11 +578,9 @@ class TestM6AddPatternHighlightRuleAsyncDispatch:
     ) -> None:
         """A failing pattern search warns the user asynchronously and never reaches the bridge.
 
-        Pre-fix, a ``search_hex`` failure inside ``_resolve_pattern_rule``
-        raised synchronously on the GUI thread and ``QMessageBox.warning`` was
-        already invoked, on the calling thread, by the time
-        ``_on_add_highlight_rule`` returned -- after blocking for the full
-        ``_DELAY_S``. Post-fix, the failure is delivered via the background
+        A ``search_hex`` failure inside ``_resolve_pattern_rule`` must not raise synchronously on the GUI thread, or
+        ``QMessageBox.warning`` would already be invoked on the calling thread by the time ``_on_add_highlight_rule``
+        returned, after blocking for the full ``_DELAY_S``. The failure must instead be delivered via the background
         worker's ``call_error`` signal to ``_on_pattern_rule_search_error``,
         so the handler returns almost immediately, no warning has been
         recorded yet, and the bridge never receives an ``add_highlight_rule``

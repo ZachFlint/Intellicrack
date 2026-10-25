@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 35: the chat browses a running server's resources and prompts, completes their arguments, and inserts them.
+"""The chat browses a running server's resources and prompts, completes their arguments, and inserts them.
 
 The service gate assembles the real MCP service over private configuration, trust, approval and credential files, starts a real
 ``MCPServer`` on each protocol generation, and opens the browser the chat's button opens. It lists the server's resources and templates,

@@ -1100,7 +1100,7 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
     executes the source, and returns the captured output plus the names of
     any non-callable user variables.
 
-    The replacement ``print`` builtin honours the standard ``file=`` keyword:
+    The replacement ``print`` builtin honors the standard ``file=`` keyword:
 
     * ``file=None`` (the default) writes to the captured stdout sink.
     * ``file=sys.stderr`` writes to a separate stderr sink.
@@ -1161,7 +1161,7 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
         file: object = None,
         flush: bool = False,
     ) -> None:
-        """Replacement for ``print`` honouring ``file=`` redirection.
+        """Replacement for ``print`` honoring ``file=`` redirection.
 
         Args:
             *values: Values to print.
@@ -1177,7 +1177,7 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
         Raises:
             _SandboxViolationError: If ``file`` is a string filename that
                 escapes the per-script tempdir.
-            TypeError: If ``file`` is not ``None``, a recognised stdio handle,
+            TypeError: If ``file`` is not ``None``, a recognized stdio handle,
                 a string filename, or a writable file-like object.
         """
         text = (sep or " ").join(str(v) for v in values) + (end or "\n")

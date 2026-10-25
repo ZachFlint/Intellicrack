@@ -2,25 +2,19 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""GUI-audit regression gates for :mod:`intellicrack.ui.panels.x64dbg_panel`.
+"""Regression gates for :mod:`intellicrack.ui.panels.x64dbg_panel`.
 
-Each test encodes one finding from the debugger-panel GUI audit and fails
-against the pre-fix code:
+Each test pins one behaviour of the debugger panel and fails against the defective code:
 
-* H2 - ``_on_debug_event`` ran on the bridge event thread and used
-  ``QTimer.singleShot`` (which needs a Qt event loop on the calling thread) to
-  schedule an off-thread widget refresh. The fixed panel marshals the event
-  through a ``pyqtSignal`` connected to a GUI-thread slot, so the refresh runs
-  on the thread that owns the widgets.
-* M7 - ``_apply_registers`` always rendered the 64-bit register-name set, so a
-  32-bit target showed bogus ``r8``..``r15`` rows and mislabelled ``eax`` as
-  ``rax``. The fixed panel selects the register set from ``_is_64bit``.
-* LOW stale-view - ``_apply_registers`` / ``_apply_disassembly`` early-returned
-  on an empty result, leaving stale content on screen. The fixed panel clears
-  the view.
-* LOW embed-poll - the panel could not cancel the outstanding embed poll loop,
-  so its callback could fire against a torn-down ``embed_host``. The fixed
-  panel owns the poll timer, guards the callback, and cancels on teardown.
+* ``_on_debug_event`` must not call ``QTimer.singleShot`` from the bridge event thread,
+  which has no Qt event loop. The event is marshalled through a ``pyqtSignal`` connected
+  to a GUI-thread slot, so the refresh runs on the thread that owns the widgets.
+* ``_apply_registers`` must select the register set from ``_is_64bit``. Always rendering
+  the 64-bit set shows bogus ``r8``..``r15`` rows and labels ``eax`` as ``rax`` on 32-bit targets.
+* Empty results must clear the view. ``_apply_registers`` and ``_apply_disassembly``
+  must not early-return on an empty result, which would leave stale content on screen.
+* Teardown must cancel the embed poll loop. The panel owns the poll timer and guards
+  its callback, so the callback cannot fire against a torn-down ``embed_host``.
 """
 
 from __future__ import annotations
@@ -256,7 +250,7 @@ class _X64DbgProbe(X64DbgPanel):
 
 @pytest.fixture
 def probe(qapp: QApplication) -> Iterator[_X64DbgProbe]:
-    """Create an X64DbgPanel probe for GUI-audit tests.
+    """Create an X64DbgPanel probe for debugger panel regression tests.
 
     Args:
         qapp: Session QApplication fixture ensuring Qt is initialised.
@@ -271,10 +265,10 @@ def probe(qapp: QApplication) -> Iterator[_X64DbgProbe]:
 
 
 def test_h2_debug_event_emits_signal_without_singleshot(probe: _X64DbgProbe, monkeypatch: pytest.MonkeyPatch) -> None:
-    """H2: ``_on_debug_event`` marshals via signal, never ``QTimer.singleShot``.
+    """``_on_debug_event`` marshals via signal, never ``QTimer.singleShot``.
 
-    Pre-fix the handler called ``QTimer.singleShot`` from the bridge event
-    thread; post-fix it emits ``_debug_event_received``. This gate fails if the
+    The handler must emit ``_debug_event_received`` rather than call
+    ``QTimer.singleShot`` from the bridge event thread. This gate fails if the
     signal is not emitted or if ``QTimer.singleShot`` is used again.
 
     Args:
@@ -299,7 +293,7 @@ def test_h2_debug_event_emits_signal_without_singleshot(probe: _X64DbgProbe, mon
 
 
 def test_h2_ignored_event_types_do_not_emit(probe: _X64DbgProbe) -> None:
-    """H2: only refresh-worthy debug events are marshalled.
+    """Only refresh-worthy debug events are marshalled.
 
     Args:
         probe: The X64DbgPanel probe under test.
@@ -313,12 +307,12 @@ def test_h2_ignored_event_types_do_not_emit(probe: _X64DbgProbe) -> None:
 
 
 def test_h2_refresh_runs_on_gui_thread_when_event_from_worker(probe: _X64DbgProbe, qapp: QApplication) -> None:
-    """H2: an event raised off-thread refreshes on the GUI thread.
+    """An event raised off-thread refreshes on the GUI thread.
 
     The debug event is raised from a non-GUI worker thread. The connected slot
     must run on the thread that owns the QApplication (the GUI thread), proving
-    the queued-signal marshalling works. Pre-fix, ``QTimer.singleShot`` from a
-    worker thread with no event loop never fired, so no refresh occurred.
+    the queued-signal marshalling works. A ``QTimer.singleShot`` from a worker thread with
+    no event loop never fires, so no refresh would occur.
 
     Args:
         probe: The X64DbgPanel probe under test.
@@ -348,10 +342,10 @@ def test_h2_refresh_runs_on_gui_thread_when_event_from_worker(probe: _X64DbgProb
 
 
 def test_m7_32bit_registers_use_32bit_names(probe: _X64DbgProbe) -> None:
-    """M7: a 32-bit target renders 32-bit register names and no r8..r15.
+    """A 32-bit target renders 32-bit register names and no r8..r15.
 
-    Pre-fix the panel always used the 64-bit register list, so 32-bit targets
-    showed bogus ``r8``..``r15`` rows and labelled the accumulator ``rax``.
+    The panel must not use the 64-bit register list for 32-bit targets, which would show
+    bogus ``r8``..``r15`` rows and label the accumulator ``rax``.
 
     Args:
         probe: The X64DbgPanel probe under test.
@@ -368,7 +362,7 @@ def test_m7_32bit_registers_use_32bit_names(probe: _X64DbgProbe) -> None:
 
 
 def test_m7_32bit_values_read_from_normalised_state(probe: _X64DbgProbe) -> None:
-    """M7: 32-bit rows read real values and render 8 hex digits.
+    """32-bit rows read real values and render 8 hex digits.
 
     Args:
         probe: The X64DbgPanel probe under test.
@@ -382,7 +376,7 @@ def test_m7_32bit_values_read_from_normalised_state(probe: _X64DbgProbe) -> None
 
 
 def test_m7_64bit_registers_unchanged(probe: _X64DbgProbe) -> None:
-    """M7: the 64-bit path still renders the full 64-bit register set.
+    """The 64-bit path still renders the full 64-bit register set.
 
     Args:
         probe: The X64DbgPanel probe under test.
@@ -399,9 +393,9 @@ def test_m7_64bit_registers_unchanged(probe: _X64DbgProbe) -> None:
 
 
 def test_stale_view_registers_cleared_on_empty(probe: _X64DbgProbe) -> None:
-    """LOW stale-view: an empty register result clears the register table.
+    """An empty register result clears the register table.
 
-    Pre-fix ``_apply_registers`` early-returned on None, leaving stale rows.
+    ``_apply_registers`` must not early-return on None, which would leave stale rows.
 
     Args:
         probe: The X64DbgPanel probe under test.
@@ -416,9 +410,9 @@ def test_stale_view_registers_cleared_on_empty(probe: _X64DbgProbe) -> None:
 
 
 def test_stale_view_disassembly_cleared_on_empty(probe: _X64DbgProbe) -> None:
-    """LOW stale-view: an empty disassembly result clears the view.
+    """An empty disassembly result clears the view.
 
-    Pre-fix ``_apply_disassembly`` early-returned on an empty result, leaving
+    ``_apply_disassembly`` must not early-return on an empty result, which would leave
     stale disassembly text (for example after an invalid instruction pointer).
 
     Args:
@@ -435,10 +429,10 @@ def test_stale_view_disassembly_cleared_on_empty(probe: _X64DbgProbe) -> None:
 
 
 def test_embed_cleanup_cancels_and_stops_poll_timer(probe: _X64DbgProbe) -> None:
-    """LOW embed-poll: teardown cancels and stops the outstanding poll timer.
+    """Teardown cancels and stops the outstanding poll timer.
 
-    Pre-fix ``_cleanup`` never touched the embed poll loop, so its callback
-    could fire against a torn-down ``embed_host``.
+    ``_cleanup`` must cancel the embed poll loop, so its callback cannot fire against
+    a torn-down ``embed_host``.
 
     Args:
         probe: The X64DbgPanel probe under test.
@@ -454,7 +448,7 @@ def test_embed_cleanup_cancels_and_stops_poll_timer(probe: _X64DbgProbe) -> None
 
 
 def test_embed_poll_tick_aborts_when_cancelled(probe: _X64DbgProbe) -> None:
-    """LOW embed-poll: a cancelled poll tick stops without embedding.
+    """A cancelled poll tick stops without embedding.
 
     Args:
         probe: The X64DbgPanel probe under test.
@@ -469,10 +463,10 @@ def test_embed_poll_tick_aborts_when_cancelled(probe: _X64DbgProbe) -> None:
 
 
 def test_embed_window_ready_guarded_after_cancel(probe: _X64DbgProbe) -> None:
-    """LOW embed-poll: the embed callback no-ops once cancelled.
+    """The embed callback no-ops once cancelled.
 
-    Pre-fix the embed callback had no cancellation guard and would install the
-    container even after the panel began teardown.
+    The embed callback must check the cancellation flag, so it does not install the
+    container after the panel begins teardown.
 
     Args:
         probe: The X64DbgPanel probe under test.

@@ -4,9 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Falsifiable offline gates for OpenAI provider offline transforms.
 
-Wave-2d audit remediation for section-09-cloud-providers.md.
-
-Covers four operations that had NO or FAKE offline coverage:
+Covers four operations that lacked real offline coverage:
 
 * ``_is_chat_model`` — table-driven against OpenAI's published model-type list.
 * ``_infer_context_window`` — exact context-window integers from OpenAI docs.

@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""FridaBridge wave-2c offline gate tests: ObjC and Java runtime families.
+"""FridaBridge offline gate tests: ObjC and Java runtime families.
 
-Exercises the eleven operations that had 0 % prior coverage:
+Exercises the eleven operations:
 ``objc_enumerate_classes``, ``objc_enumerate_protocols``,
 ``objc_enumerate_loaded_classes``, ``objc_choose``,
 ``objc_get_class_methods``, ``objc_hook_method``,
@@ -140,8 +140,7 @@ class _FakeScript:
 class _CapturingFakeSession:
     """``frida.core.Session`` substitute that records script sources.
 
-    Unlike the standard ``_FakeSession`` helpers used elsewhere, this
-    variant retains the JavaScript source passed to ``create_script``
+    This variant retains the JavaScript source passed to ``create_script``
     so tests can inspect the exact script the bridge generated.
     """
 
@@ -571,7 +570,7 @@ def test_objc_hook_method_happy_path_framing_and_result() -> None:
     - The class name ``'NSURLSession'`` must appear in the JS via
       ``ObjC.classes['NSURLSession']``.
     - The method selector ``'dataTaskWithURL:'`` must appear as the
-      key used to look up ``.implementation``.
+      key that looks up ``.implementation``.
 
     Oracle for parsed result:
     - ``hook.target`` must equal ``'NSURLSession.dataTaskWithURL:'``

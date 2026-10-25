@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S18-D04: the start path must outwait the agent's serve cadence.
+"""The start path must outwait the agent's serve cadence.
 
 Measured live against a Windows 11 QEMU guest under WHPX: the guest booted,
 virtio-net came up with ``10.0.2.15``, and ``agent.ps1`` bound and listened on
@@ -23,7 +23,7 @@ real socket, wrote its readiness ping into it, gave up two seconds later and
 threw the socket away while the agent was still working towards it. A healthy,
 listening agent was declared unreachable for the whole timeout.
 
-The fix widens the per-attempt budget the start path hands ``connect``. Three
+The start path widens the per-attempt budget it hands ``connect``. Three
 properties are gated here: the one that fix delivers, and the two that stop it
 costing more than it is worth.
 

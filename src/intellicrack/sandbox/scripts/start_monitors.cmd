@@ -39,7 +39,7 @@ set "PID_LIST=%MON_LOGDIR%\monitors.pids"
 set "ERR_FILE=%MON_LOGDIR%\start_monitors.errors.log"
 set "GATE_REPORT=%MON_LOGDIR%\.start_monitors.gate"
 
-rem Truncate previous PID file before tracking this session's children.
+rem Truncate the PID file before tracking this session's children.
 type nul > "%PID_LIST%"
 if errorlevel 1 (
     >&2 echo [start_monitors] cannot write PID file: %PID_LIST%

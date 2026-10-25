@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression test for finding M9: float numeric search must not truncate to int.
+"""Float numeric search must not truncate to int.
 
-Pre-fix, ``execute_numeric_search`` always routed native searches through
-``search_numeric(int(min_val), ...)``. A Float search for ``1.5`` was therefore
-coerced to ``int(1.5) == 1`` and matched the integer bit pattern ``01 00 00 00``
-rather than the IEEE-754 f32 bytes of ``1.5`` (``00 00 C0 3F``). This test builds
+``execute_numeric_search`` must not route native float searches through
+``search_numeric(int(min_val), ...)``. That would coerce a Float search for ``1.5``
+to ``int(1.5) == 1`` and match the integer bit pattern ``01 00 00 00`` instead of
+the IEEE-754 f32 bytes of ``1.5`` (``00 00 C0 3F``). This test builds
 a real ``HexDocument`` containing both byte patterns and asserts that a float
 search finds the IEEE-754 location and does *not* match the integer-1 location.
 """
@@ -75,7 +75,7 @@ def _float_search(document: object) -> list[tuple[int, int]]:
 
 
 class TestFloatNumericSearch:
-    """M9: a Float search must match IEEE-754 bytes, never the truncated integer."""
+    """A Float search must match IEEE-754 bytes, never the truncated integer."""
 
     @staticmethod
     def test_float_search_finds_ieee754_offset() -> None:

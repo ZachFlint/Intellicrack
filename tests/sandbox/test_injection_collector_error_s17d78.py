@@ -3,12 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for S17-D78: the injection monitor's own failure is not an injection.
+"""The injection monitor's own failure is not an injection.
 
 ``injection_monitor.ps1`` has no channel but its own data log in which to
 report that its ETW trace session died, so several of its failure paths call
 ``Write-InjectionRecord`` with ``-SourceName 'tracer'`` and
-``-InjectionType 'ERROR'``. :func:`parse_injection_log` used to hand those
+``-InjectionType 'ERROR'``. :func:`parse_injection_log` must not hand those
 rows to the report as genuine injection events, and :func:`match_behaviors`
 turned each one into a *critical* ``T1055`` "Process Injection" finding
 against whatever the sandbox happened to be running. On the live Windows 11

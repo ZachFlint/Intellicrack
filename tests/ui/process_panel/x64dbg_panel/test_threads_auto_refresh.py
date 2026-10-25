@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for audit7 F-0012: ThreadsTab auto-refresh of thread combos.
+"""Tests for ThreadsTab auto-refresh of thread combos.
 
 The unit verifies that ``ThreadsTab`` exposes an auto-refresh toggle button
 and a ``QTimer``-backed 3-second polling cycle, mirroring the pattern used
@@ -196,7 +196,7 @@ def counting_tab(qapp: QApplication) -> Generator[_CountingThreadsTab]:
 
 
 class TestF0012ThreadsTabAutoRefresh:
-    """F-0012: ThreadsTab must auto-refresh its thread combos via a QTimer."""
+    """ThreadsTab must auto-refresh its thread combos via a QTimer."""
 
     def test_auto_refresh_button_exists_and_is_checkable(self, counting_tab: _CountingThreadsTab) -> None:
         """The toolbar must expose a checkable Auto-Refresh toggle button.

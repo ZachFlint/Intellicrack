@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""End-to-end tests for new X64DbgBridge methods (Phases 3, 4, 7).
+"""End-to-end tests for X64DbgBridge methods.
 
 Tests validate:
 - find_pattern hex parsing with and without wildcards
@@ -92,7 +92,7 @@ class TestToolDefinitionCompleteness:
         assert len(tool_def.functions) >= _EXPECTED_NEW_TOOL_COUNT
 
     def test_new_tool_functions_defined(self, bridge: X64DbgBridge) -> None:
-        """Verify all Phase-4 and Phase-7 tool functions are defined.
+        """Verify the remaining tool functions are defined.
 
         Args:
             bridge: X64DbgBridge fixture.
@@ -755,13 +755,7 @@ class TestNewPipeDependentMethods:
     async def test_set_exception_config(self, bridge: X64DbgBridge) -> None:
         """Verify set_exception_config raises when pipe not connected.
 
-        Uses ``handling="break"`` rather than ``"ignore"``: ``"ignore"``
-        now raises a mode-specific ``ToolError`` before the method ever
-        touches the pipe (x64dbg has no scriptable command for it), which
-        would satisfy this same regex for an unrelated reason and no
-        longer exercise the generic disconnected-pipe contract this test
-        targets. ``"break"`` reaches ``_send_pipe_command`` and is
-        rejected there instead.
+        Uses ``handling="break"`` rather than ``"ignore"``. ``"ignore"`` raises a mode-specific ``ToolError`` before the method touches the pipe (x64dbg has no scriptable command for it), which would satisfy this regex for an unrelated reason. ``"break"`` reaches ``_send_pipe_command`` and is rejected there instead.
 
         Args:
             bridge: X64DbgBridge fixture.

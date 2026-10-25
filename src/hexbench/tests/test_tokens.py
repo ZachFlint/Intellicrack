@@ -5,20 +5,20 @@
 
 """What the stylesheet sweep was allowed to remove, and what it was not.
 
-``static/app.css`` carried tokens nothing read and rules nothing rendered, and
-the sweep that removed them had to distinguish two things that look identical
-from inside the stylesheet: a token no file anywhere references, and a token
-referenced only from outside CSS. ``--hb-chart-ink`` was the first kind and is
-gone. ``--hb-chart-axis`` is the second -- ``static/charts.js`` reads it through
-``getComputedStyle`` to paint a canvas axis, so nothing in the stylesheet
-mentions it and deleting it would leave the axis grey with no error anywhere.
+``static/app.css`` must not keep tokens nothing reads or rules nothing renders. A
+cleanup of either has to distinguish two things that look identical from inside
+the stylesheet: a token no file anywhere references, and a token referenced only
+from outside CSS. ``--hb-chart-axis`` is the second kind -- ``static/charts.js``
+reads it through ``getComputedStyle`` to paint a canvas axis, so nothing in the
+stylesheet mentions it and deleting it would leave the axis grey with no error
+anywhere.
 
 So the gate runs in both directions. Every deleted name is asserted absent, and
 every surviving name that *looks* deletable is asserted both still defined here
 and still read by the file that actually reads it, proved by reading that file
 rather than by assuming it does. The rule checks are symmetric for the same
-reason: ``.hb-strip-cell`` and ``.hb-minimap`` had to go, ``.hb-strip-axis`` and
-the whole histogram block had to stay, and over-deleting is exactly as much a
+reason: ``.hb-strip-cell`` and ``.hb-minimap`` must not appear, ``.hb-strip-axis`` and
+the whole histogram block must stay, and over-deleting is exactly as much a
 regression as under-deleting.
 
 Each scanner carries a control, because a matcher that has silently stopped
@@ -220,7 +220,7 @@ class TokensWithNoCssReaderSurviveTests(Assertions, unittest.TestCase):
 
 
 class BlankScreenTokensSurviveTests(Assertions, unittest.TestCase):
-    """The two type-scale steps the blank screen brought back into use."""
+    """The two type-scale steps the blank-screen rule reads."""
 
     def test_every_blank_screen_token_is_still_defined(self) -> None:
         """A rule reading an undeclared token renders at the browser's default size."""
@@ -239,7 +239,7 @@ class BlankScreenTokensSurviveTests(Assertions, unittest.TestCase):
 
 
 class DeletedRulesStayDeletedTests(Assertions, unittest.TestCase):
-    """The sweep had to remove two rule families and leave two others untouched."""
+    """The two removed rule families must stay gone, and two others must stay untouched."""
 
     def test_no_deleted_rule_family_reappears(self) -> None:
         """Nothing renders these selectors, so a stylesheet naming them is carrying dead rules."""

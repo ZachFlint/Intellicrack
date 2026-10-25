@@ -441,11 +441,10 @@ def guard_modal_dialogs(request: pytest.FixtureRequest, monkeypatch: pytest.Monk
     platform used inside the Docker test sandbox a modal dialog can never be
     dismissed, so any handler that reaches one blocks its test forever and --
     because the whole tree runs in a single process -- stalls the entire
-    ``tests/ui`` gate. A faulthandler dump caught exactly this: the main
-    thread parked inside ``ModulesTab._on_error``
-    (``src/intellicrack/ui/panels/process_panel/modules_tab.py``), which a
-    failed async bridge callback drives into a blocking
-    ``QMessageBox.warning`` call.
+    ``tests/ui`` gate. For example, a failed async bridge callback drives
+    ``ModulesTab._on_error``
+    (``src/intellicrack/ui/panels/process_panel/modules_tab.py``) into a
+    blocking ``QMessageBox.warning`` call that parks the main thread.
 
     This installs the same non-blocking stand-ins as
     ``tests/bridges/completeness/conftest.py``: ``QMessageBox`` statics

@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit 5 regression tests for U9 ToolConfirmationDialog fix (F-0020)."""
+"""Tests for ToolConfirmationDialog."""

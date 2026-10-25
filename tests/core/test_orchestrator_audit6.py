@@ -3,38 +3,37 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit 6 CORE-B and CORE-C regression tests for ``intellicrack.core.orchestrator``.
+"""Regression tests for ``intellicrack.core.orchestrator``.
 
-These tests target the findings owned by work units CORE-B (agent loop /
-session / tool registry seams) and CORE-C (binary parsing + cancellation /
-shutdown future marshalling):
+These tests target the agent loop, session, tool registry, binary parsing,
+cancellation and shutdown future marshalling seams:
 
-CORE-B findings:
+Agent loop and session:
 
-* F-0001 - ``load_session`` must mark the loaded session as current and start
+* ``load_session`` must mark the loaded session as current and start
   the auto-save task (currently bypasses both via ``SessionManager.get``).
-* F-0002 - System prompt must list the bridges actually registered with the
+* System prompt must list the bridges actually registered with the
   ``ToolRegistry`` rather than a hardcoded set.
-* F-0004 - Token estimator must use ``tiktoken`` (not ``len // 4``).
-* F-0005 - User message must only persist after the agent loop succeeds.
-* F-0011 - ``_validate_tool_schemas`` must raise ``ToolError`` on broken
+* Token estimator must use ``tiktoken`` (not ``len // 4``).
+* User message must only persist after the agent loop succeeds.
+* ``_validate_tool_schemas`` must raise ``ToolError`` on broken
   schemas instead of forwarding them to the provider.
-* F-0019 - Missing context window must raise ``ToolError`` instead of
+* Missing context window must raise ``ToolError`` instead of
   silently sending unbounded history.
 
-CORE-C findings:
+Binary parsing and cancellation:
 
-* F-0003 - ``_extract_imports`` / ``_extract_exports`` silently dropped
+* ``_extract_imports`` / ``_extract_exports`` silently dropped
   Mach-O binaries because no isinstance branch handled
   :class:`lief.MachO.Binary`.
-* F-0015 - ``_extract_imports`` for ELF binaries enumerated only PLT
+* ``_extract_imports`` for ELF binaries enumerated only PLT
   relocations and missed every imported data symbol or eagerly bound
   function.
-* F-0012 - ``_is_destructive_operation`` used substring matching, which
+* ``_is_destructive_operation`` used substring matching, which
   produced false positives (``frida.get_hooks``) and false negatives
   (``sandbox.destroy``, ``sandbox.snapshot_restore``,
   ``process.terminate``).
-* F-0013 - :meth:`Orchestrator.shutdown` and :meth:`Orchestrator.cancel`
+* :meth:`Orchestrator.shutdown` and :meth:`Orchestrator.cancel`
   raced pending confirmation futures, leaving them orphaned and able to
   hang teardown indefinitely.
 
@@ -305,7 +304,7 @@ def _pack_elf_dynamic_entries(layout: dict[str, int], libc_name_offset: int) -> 
 
 
 def _pack_elf_header(sht_offset: int) -> bytes:
-    """Pack the ELF64 header for the audit6 fixture.
+    """Pack the ELF64 header for the test fixture.
 
     Args:
         sht_offset: File offset of the section header table.
@@ -735,11 +734,11 @@ def _make_orchestrator(tmp_path: Path) -> Orchestrator:
 
 
 def test_extract_imports_macho_returns_dyld_symbols(tmp_path: Path) -> None:
-    """Verify F-0003: Mach-O imports are no longer silently dropped.
+    """Verify Mach-O imports are not silently dropped.
 
-    On clean ``main`` ``_extract_imports`` had no isinstance branch for
-    ``lief.MachO.Binary`` and returned ``[]`` for every Mach-O. The fix
-    walks ``binary.imported_symbols`` so dyld-resolved imports surface.
+    ``_extract_imports`` walks ``binary.imported_symbols`` so dyld-resolved
+    imports surface. Without an isinstance branch for ``lief.MachO.Binary``,
+    every Mach-O would yield ``[]``.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -756,7 +755,7 @@ def test_extract_imports_macho_returns_dyld_symbols(tmp_path: Path) -> None:
 
 
 def test_extract_exports_macho_returns_trie_entries(tmp_path: Path) -> None:
-    """Verify F-0003: Mach-O exports are no longer silently dropped.
+    """Verify Mach-O exports are not silently dropped.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -773,11 +772,11 @@ def test_extract_exports_macho_returns_trie_entries(tmp_path: Path) -> None:
 
 
 def test_extract_imports_elf_includes_non_plt_dynamic_symbols(tmp_path: Path) -> None:
-    """Verify F-0015: ELF imports include all dynamic symbols, not just PLT.
+    """Verify ELF imports include all dynamic symbols, not just PLT.
 
-    The pre-fix code iterated ``binary.pltgot_relocations`` only, which
-    missed lazily-bound functions on ``BIND_NOW`` binaries and every
-    imported data symbol. The fix walks ``imported_symbols`` instead.
+    Walking ``binary.pltgot_relocations`` alone would miss lazily-bound functions
+    on ``BIND_NOW`` binaries and every imported data symbol, so the production
+    code walks ``imported_symbols`` instead.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -836,30 +835,28 @@ def test_extract_exports_pe_walks_export_directory(tmp_path: Path) -> None:
 
 
 def test_classify_tool_call_read_only_with_hook_substring() -> None:
-    """Verify F-0012: ``frida.get_hooks`` is no longer flagged destructive.
+    """Verify ``frida.get_hooks`` is not flagged destructive.
 
-    The old substring matcher contained ``"hook"`` and therefore flagged
-    every method whose name contained the string ``"hook"`` -- including
-    the read-only enumerator ``frida.get_hooks``. The new exact-match
-    classifier returns ``"read_only"``.
+    Substring matching on ``"hook"`` would flag every method whose name contains
+    that string, including the read-only enumerator ``frida.get_hooks``. The
+    exact-match classifier returns ``"read_only"``.
     """
     call = ToolCall(id="t-1", tool_name="frida", function_name="frida.get_hooks", arguments={})
     assert classify_tool_call(call) == "read_only"
 
 
 def test_classify_tool_call_sandbox_destroy_destructive() -> None:
-    """Verify F-0012: ``sandbox.destroy`` is now correctly destructive.
+    """Verify ``sandbox.destroy`` is classified as destructive.
 
-    The pre-fix substring set did not contain ``"destroy"``, so this real
-    destructive op silently bypassed confirmation. The new explicit set
-    classifies it correctly.
+    The explicit destructive set must contain ``"destroy"``, otherwise this real
+    destructive op silently bypasses confirmation.
     """
     call = ToolCall(id="t-2", tool_name="sandbox", function_name="sandbox.destroy", arguments={})
     assert classify_tool_call(call) == "destructive"
 
 
 def test_classify_tool_call_sandbox_snapshot_restore_destructive() -> None:
-    """Verify F-0012: ``sandbox.snapshot_restore`` is destructive."""
+    """Verify ``sandbox.snapshot_restore`` is destructive."""
     call = ToolCall(
         id="t-3",
         tool_name="sandbox",
@@ -870,11 +867,10 @@ def test_classify_tool_call_sandbox_snapshot_restore_destructive() -> None:
 
 
 def test_classify_tool_call_process_terminate_destructive() -> None:
-    """Verify F-0012: ``process.terminate`` (the kill-process verb) is destructive.
+    """Verify ``process.terminate`` (the kill-process verb) is destructive.
 
-    The audit cited ``process.kill_process`` as a missed destructive op.
-    The actual function name in the production bridge is
-    ``process.terminate``; both verbs are state-changing. Here we cover
+    The production bridge names this operation ``process.terminate``, not
+    ``process.kill_process``; both verbs are state-changing. Here we cover
     the real one.
     """
     call = ToolCall(
@@ -927,13 +923,12 @@ def test_bridge_destructive_methods_cover_all_registered_bridges() -> None:
 
 @pytest.mark.asyncio
 async def test_cancel_marshals_pending_confirmation_future(tmp_path: Path) -> None:
-    """Verify F-0013: ``cancel`` cancels in-flight confirmation futures.
+    """Verify ``cancel`` cancels in-flight confirmation futures.
 
-    Pre-fix, ``cancel`` called ``future.set_result(False)``, which masked
-    cancellation as "user declined" and left no signal to distinguish
-    cancellation from a real decline. The fix calls ``future.cancel()``
-    so the awaiter receives ``CancelledError`` and translates it to
-    ``False`` in :meth:`Orchestrator.request_confirmation`.
+    ``cancel`` must call ``future.cancel()``, not ``future.set_result(False)``:
+    the latter masks cancellation as "user declined" and leaves no signal to
+    tell the two apart. The awaiter receives ``CancelledError`` and translates
+    it to ``False`` in :meth:`Orchestrator.request_confirmation`.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -979,14 +974,13 @@ async def test_cancel_marshals_pending_confirmation_future(tmp_path: Path) -> No
 
 @pytest.mark.asyncio
 async def test_shutdown_cancels_pending_confirmation_without_hanging(tmp_path: Path) -> None:
-    """Verify F-0013: ``shutdown`` cancels pending futures and never hangs.
+    """Verify ``shutdown`` cancels pending futures and never hangs.
 
-    Pre-fix, ``shutdown`` did not explicitly marshal pending confirmation
-    futures. If the user closed the window with a confirmation dialog
-    open, the orchestrator coroutine awaiting the future would block
-    forever and ``shutdown`` would deadlock waiting for tools to drain.
-    The fix calls the internal marshal helper first so every awaiter
-    unwinds before further teardown.
+    ``shutdown`` marshals pending confirmation futures first. Otherwise, closing
+    the window with a confirmation dialog open leaves the awaiting coroutine
+    blocked forever, and ``shutdown`` deadlocks waiting for tools to drain. The
+    internal marshal helper runs first so every awaiter unwinds before further
+    teardown.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -1076,11 +1070,11 @@ async def test_cancel_is_idempotent_when_no_pending_confirmation(tmp_path: Path)
 
 
 def test_orchestrator_destructive_op_for_frida_get_hooks_is_false(tmp_path: Path) -> None:
-    """End-to-end: ``frida.get_hooks`` no longer triggers confirmation.
+    """End-to-end: ``frida.get_hooks`` does not trigger confirmation.
 
     This is the public-API analogue of
     :func:`test_classify_tool_call_read_only_with_hook_substring` - it
-    drives the same defect through :meth:`Orchestrator.is_destructive_operation`
+    drives the same case through :meth:`Orchestrator.is_destructive_operation`
     so the regression suite covers the live integration path.
 
     Args:
@@ -1092,7 +1086,7 @@ def test_orchestrator_destructive_op_for_frida_get_hooks_is_false(tmp_path: Path
 
 
 def test_orchestrator_destructive_op_for_sandbox_destroy_is_true(tmp_path: Path) -> None:
-    """End-to-end: ``sandbox.destroy`` now triggers destructive confirmation.
+    """End-to-end: ``sandbox.destroy`` triggers destructive confirmation.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -1103,7 +1097,7 @@ def test_orchestrator_destructive_op_for_sandbox_destroy_is_true(tmp_path: Path)
 
 
 def test_orchestrator_destructive_op_for_sandbox_snapshot_restore_is_true(tmp_path: Path) -> None:
-    """End-to-end: ``sandbox.snapshot_restore`` now triggers destructive confirmation.
+    """End-to-end: ``sandbox.snapshot_restore`` triggers destructive confirmation.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -1510,7 +1504,7 @@ class _AutoStopSessionManager:
 
 @pytest.mark.asyncio
 async def test_load_session_marks_current_and_starts_autosave(tmp_path: Path) -> None:
-    """F-0001: ``load_session`` must mark the session current and start auto-save.
+    """``load_session`` must mark the session current and start auto-save.
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -1535,7 +1529,7 @@ async def test_load_session_marks_current_and_starts_autosave(tmp_path: Path) ->
 
 @pytest.mark.asyncio
 async def test_system_prompt_lists_only_registered_tools(tmp_path: Path) -> None:
-    """F-0002: System prompt must enumerate only the bridges actually registered.
+    """System prompt must enumerate only the bridges actually registered.
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -1560,7 +1554,7 @@ async def test_system_prompt_lists_only_registered_tools(tmp_path: Path) -> None
 
 
 def test_estimate_tokens_uses_tiktoken_for_openai() -> None:
-    """F-0004: Token estimator must agree with tiktoken's ``o200k_base`` for OpenAI."""
+    """Token estimator must agree with tiktoken's ``o200k_base`` for OpenAI."""
     sample = "function calculate_license_token(input) { return SHA256(input ^ 0xDEADBEEF); }"
 
     naive = len(sample) // 4
@@ -1573,7 +1567,7 @@ def test_estimate_tokens_uses_tiktoken_for_openai() -> None:
 
 
 def test_estimate_tokens_uses_cl100k_for_anthropic() -> None:
-    """F-0004: Anthropic estimation must use the conservative cl100k_base encoding.
+    """Anthropic estimation must use the conservative cl100k_base encoding.
 
     The encoding comes from the model's capability record, so the tokenizer is
     resolved the way the orchestrator resolves it before counting.
@@ -1590,13 +1584,13 @@ def test_estimate_tokens_uses_cl100k_for_anthropic() -> None:
 
 
 def test_estimate_tokens_handles_empty_string() -> None:
-    """F-0004: Empty input must produce zero tokens for any provider."""
+    """Empty input must produce zero tokens for any provider."""
     assert Orchestrator.estimate_tokens("", provider_ids.OPENAI) == 0
     assert Orchestrator.estimate_tokens("", provider_ids.ANTHROPIC) == 0
 
 
 def test_trim_messages_raises_when_context_window_missing() -> None:
-    """F-0019: ``trim_messages_to_context_window(None)`` must raise ``ToolError``.
+    """``trim_messages_to_context_window(None)`` must raise ``ToolError``.
 
     Sending unbounded history when the provider does not advertise a context
     window is a runaway-cost defect; the orchestrator must reject the request
@@ -1612,7 +1606,7 @@ def test_trim_messages_raises_when_context_window_missing() -> None:
 
 
 def test_trim_messages_uses_provider_specific_encoding() -> None:
-    """F-0004: Provider-specific token counting must drive trimming decisions.
+    """Provider-specific token counting must drive trimming decisions.
 
     A high-token-density payload (alternating CJK + punctuation) tokenises
     very differently from ``len // 4``. The trimmer must remove the user
@@ -1642,7 +1636,7 @@ def test_trim_messages_uses_provider_specific_encoding() -> None:
 
 @pytest.mark.asyncio
 async def test_user_message_not_persisted_on_loop_failure(tmp_path: Path) -> None:
-    """F-0005: Failure must leave the on-disk session unchanged.
+    """Failure must leave the on-disk session unchanged.
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -1674,7 +1668,7 @@ async def test_user_message_not_persisted_on_loop_failure(tmp_path: Path) -> Non
 
 @pytest.mark.asyncio
 async def test_user_message_persisted_on_loop_success(tmp_path: Path) -> None:
-    """F-0005 control case: successful loop must persist the user message.
+    """Control case: successful loop must persist the user message.
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -1697,7 +1691,7 @@ async def test_user_message_persisted_on_loop_success(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_broken_tool_schema_raises_tool_error(tmp_path: Path) -> None:
-    """F-0011: A bridge that advertises a broken schema must raise ``ToolError``.
+    """A bridge that advertises a broken schema must raise ``ToolError``.
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -1730,7 +1724,7 @@ async def test_broken_tool_schema_raises_tool_error(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_missing_context_window_raises_tool_error(tmp_path: Path) -> None:
-    """F-0019: Missing context window must raise ``ToolError`` before sending.
+    """Missing context window must raise ``ToolError`` before sending.
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -1756,7 +1750,7 @@ async def test_missing_context_window_raises_tool_error(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_context_window_override_bypasses_provider_lookup(tmp_path: Path) -> None:
-    """F-0019 control case: configured override must satisfy the loop.
+    """Control case: configured override must satisfy the loop.
 
     Args:
         tmp_path: Pytest temporary directory.

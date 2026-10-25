@@ -5,12 +5,11 @@
 
 r"""Real-data coverage for :mod:`intellicrack.sandbox.analysis`.
 
-Audit shard 12 (Category 3) flagged that every analysis test
-(``detect_c2_patterns``, ``extract_iocs``, ``generate_timeline``,
-``match_behaviors``, ``diff_reports``) ran on hand-crafted fixtures and
-never on data captured from a real monitored run.
+The analysis functions (``detect_c2_patterns``, ``extract_iocs``,
+``generate_timeline``, ``match_behaviors``, ``diff_reports``) are exercised on
+data captured from a real monitored run rather than hand-crafted fixtures.
 
-These tests close that gap end-to-end on Windows:
+These tests run end-to-end on Windows:
 
 * They run the *real* inline ``WindowsSandbox`` process and network
   monitor sources under ``pwsh`` against the live kernel.
@@ -469,12 +468,11 @@ def _stdlib_is_private(ip: str) -> bool:
 async def test_extract_iocs_from_real_process_paths(tmp_path: Path) -> None:
     r"""``extract_iocs`` extracts and deduplicates IOCs from real+injected artefacts.
 
-    The original test was not falsifiable: with only System32 processes and
-    loopback connections, ``extract_iocs`` legitimately returns ``[]``, making
-    every loop-body assertion vacuously pass and the deduplication check
-    ``0 == 0`` trivially true.
+    With only System32 processes and loopback connections, ``extract_iocs``
+    legitimately returns ``[]``, which would make every loop-body assertion
+    vacuously pass and the deduplication check ``0 == 0`` trivially true.
 
-    This version drives the extractor end-to-end with a real captured
+    The test therefore drives the extractor end-to-end with a real captured
     ``ExecutionReport`` whose ``file_changes`` and ``registry_changes`` are
     augmented with two deterministic sentinel entries:
 
@@ -517,17 +515,6 @@ async def test_extract_iocs_from_real_process_paths(tmp_path: Path) -> None:
        exclusively — not the production ``_is_private_ip`` — so mutations to
        the private-IP filter are independently caught by oracle 2 rather than
        being masked by a circular self-check.
-
-    Falsifiability proof (static):
-    * Deleting ``_add_ioc("ipv4", match.group(1), source, ctx)`` in
-      ``_scan_text`` → ``8.8.8.8`` and ``1.1.1.1`` absent from ``iocs`` →
-      oracle 1 fails.
-    * Deleting ``_add_ioc("url", match.group(1), source, ctx)`` in
-      ``_scan_text`` → URL absent → oracle 1 fails.
-    * Removing ``if ioc_type == "ipv4" and _is_private_ip(value): return``
-      → ``192.168.254.253`` appears in IOC values → oracle 2 fails.
-    * Removing ``if key in seen: return`` → two ``("ipv4", "8.8.8.8")``
-      entries in ``iocs`` → oracle 3 count exceeds 1 → fails.
 
     Args:
         tmp_path: Pytest temp directory.

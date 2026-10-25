@@ -3,34 +3,33 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 U8 tests for ``core.script_gen`` remediation.
+"""Tests for ``core.script_gen``.
 
-Validates the nine fixes applied to
+Validates the behaviour of
 ``src/intellicrack/core/script_gen.py``:
 
-* F-0001 - ``ScriptGenerator`` is now stateful (validator instance,
+* ``ScriptGenerator`` is stateful (validator instance,
   output directory, lazy API-reference cache) while keeping the no-arg
   constructor that existing callers rely on.
-* F-0003 - ``ScriptValidator.validate`` no longer reports success for
+* ``ScriptValidator.validate`` does not report success for
   languages without a real validator; ``R2_COMMANDS`` and
   ``X64DBG_SCRIPT`` return ``(False, "no validator for ...")`` and
   leave ``Script.verified`` as ``False``.
-* F-0004 - ``validate_java`` strips string literals, character
+* ``validate_java`` strips string literals, character
   literals, line comments, and block comments before keyword and
   brace-balance checks so ``import``/``public``/``void run(`` cannot
   be satisfied by tokens inside strings or comments and brace counts
   ignore braces inside string literals.
-* F-0006 - ``ScriptManager.reload_script`` honors the path recorded
+* ``ScriptManager.reload_script`` honors the path recorded
   by ``save_script`` (including subdirectory writes).
-* F-0007 - ``Script.save`` emits the success log only AFTER the file
+* ``Script.save`` emits the success log only after the file
   is written, and emits a distinct failure log when the write raises.
-* F-0010 - ``validate_javascript`` only logs ``temp_file_cleaned``
+* ``validate_javascript`` only logs ``temp_file_cleaned``
   when the unlink call returns successfully.
-* F-0012 - ``ScriptManager.execute`` is implemented and runs scripts
+* ``ScriptManager.execute`` runs scripts
   through the language-appropriate runner (Python/Node/r2/Ghidra/x64dbg).
-* F-0013 - ``Script.created_at`` is a tz-aware UTC datetime so it can
+* ``Script.created_at`` is a tz-aware UTC datetime so it can
   be subtracted from other tz-aware timestamps without ``TypeError``.
-* F-0014 - The apologetic comments in ``reload_script`` are gone.
 """
 
 from __future__ import annotations
@@ -80,7 +79,7 @@ def _event_names(records: Sequence[Mapping[str, Any]]) -> list[str]:
     return [str(rec.get("event", "")) for rec in records]
 
 
-# --- F-0001: ScriptGenerator stateful ---
+# ScriptGenerator stateful
 
 
 def test_script_generator_default_construction_holds_validator() -> None:
@@ -165,7 +164,7 @@ def test_script_generator_generate_helpers_dispatch_correctly() -> None:
     assert "x64dbg_script" in gen.generate_x64dbg(ctx)
 
 
-# --- F-0003: ScriptValidator returns False for unknown languages ---
+# ScriptValidator returns False for unknown languages
 
 
 @pytest.mark.parametrize(
@@ -193,7 +192,7 @@ def test_validator_returns_false_for_unsupported(language: ScriptLanguage) -> No
     assert script.verified is False
 
 
-# --- F-0004: validate_java token-aware checks ---
+# validate_java token-aware checks
 
 
 def test_strip_java_strings_and_comments_removes_string_braces() -> None:
@@ -261,7 +260,7 @@ def test_validator_java_void_run_in_comment_is_ignored() -> None:
     assert "void run(" in error
 
 
-# --- F-0006: reload_script honors subdir saves ---
+# reload_script honors subdir saves
 
 
 def test_reload_script_round_trips_subdir_save(tmp_path: Path) -> None:
@@ -312,7 +311,7 @@ def test_reload_script_falls_back_to_canonical_path(tmp_path: Path) -> None:
     assert reloaded.content == "x = 2"
 
 
-# --- F-0007: Script.save logging order ---
+# Script.save logging order
 
 
 def test_script_save_emits_success_log_only_after_write(tmp_path: Path) -> None:
@@ -371,7 +370,7 @@ def test_script_save_failure_logs_failure_not_success(tmp_path: Path) -> None:
     assert script.saved_path is None
 
 
-# --- F-0010: validate_javascript temp file logs in correct order ---
+# validate_javascript temp file logs in correct order
 
 
 def _require_node() -> None:
@@ -532,7 +531,7 @@ def test_validate_javascript_unlink_failure_suppresses_cleaned_log() -> None:
     assert captured_path.get("failed") == created, captured_path
 
 
-# --- F-0012: ScriptManager.execute runs Python scripts ---
+# ScriptManager.execute runs Python scripts
 
 
 def test_script_manager_execute_python_returns_exit_code(tmp_path: Path) -> None:
@@ -696,7 +695,7 @@ def test_script_manager_execute_command_for_python_uses_active_interpreter(
     assert cmd[0] == sys.executable
 
 
-# --- F-0013: Script.created_at is tz-aware UTC ---
+# Script.created_at is tz-aware UTC
 
 
 def test_script_created_at_is_tz_aware() -> None:
@@ -713,7 +712,7 @@ def test_script_created_at_is_tz_aware() -> None:
     assert delta.total_seconds() >= 0
 
 
-# --- ScriptManager() default scripts_dir ---
+# ScriptManager() default scripts_dir
 
 
 def test_script_manager_no_args_default_scripts_dir() -> None:

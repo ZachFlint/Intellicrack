@@ -3,30 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave 5 RPC-command gates: pipe-based bridge operations.
+"""RPC-command gates: pipe-based bridge operations.
 
-Each test drives the real bridge method through a ``_FakePipeClient`` that
-records every ``(command, params)`` pair sent and returns scripted responses.
-No production code is patched or replaced — only the named-pipe transport
-boundary is faked.
+Each test drives the real bridge method through a ``_FakePipeClient`` that records every ``(command, params)`` pair sent and returns scripted responses. No production code is patched or replaced; only the named-pipe transport boundary is faked.
 
-Findings closed:
-    7   get_stack_trace — frame field mapping from raw plugin dicts
-    8   get_labels — RPC framing and address-range filtering
-    9   get_comments — RPC framing and address-range filtering
-    10  set_exception_config — exact SetExceptionBPX command string
-    11  find_references — exact ref_search framing and passthrough
-    12  find_string_references — exact ref_search framing and passthrough
-    13  get_function_cfg — exact cfg framing and dict passthrough
-    14  clear_database — db_clear RPC path
-    15  remove_watch — watch_remove RPC framing
-    16  get_watches — watch_list RPC passthrough
-    17  script_load — exec + eval round-trips and verified flag
-    18  script_run — exec + eval round-trips and verified flag
-    19  script_cmd — exec + eval round-trips and line passthrough
-    20  script_abort — exec + eval round-trips and verified flag
-    21  close_handle — exact handleclose command string
-    22  break_on_tls_callbacks — breakpoints_set key and count
+Covers frame field mapping for ``get_stack_trace``, RPC framing and address-range filtering for ``get_labels`` and ``get_comments``, the ``SetExceptionBPX`` command string, ``find_references`` and ``find_string_references`` ref_search framing, ``get_function_cfg``, ``clear_database``, ``remove_watch``, ``get_watches``, the ``script_load``, ``script_run``, ``script_cmd`` and ``script_abort`` exec and eval round-trips, ``close_handle``, and the ``break_on_tls_callbacks`` count.
 """
 
 from __future__ import annotations
@@ -288,19 +269,9 @@ class TestSetExceptionConfig:
     async def test_ignore_raises_tool_error_and_sends_nothing(self) -> None:
         """``handling='ignore'`` raises instead of sending a fabricated numeric code.
 
-        ``SetExceptionBPX``'s second argument is a first/second/all
-        *chance* selector, not a break/ignore/log axis, so there is no
-        numeric value that means "ignore" - x64dbg only exposes exception
-        ignore ranges through its GUI-managed, ini-persisted filter list
-        (audit7.md T1-2). The old ``handling_map = {"break": 1,
-        "ignore": 0, "log": 2}`` mapping sent ``SetExceptionBPX
-        0xc0000005, 0``, which x64dbg would have silently reinterpreted
-        as a first-chance breakpoint instead of ever ignoring anything.
+        ``SetExceptionBPX``'s second argument is a first/second/all *chance* selector, not a break/ignore/log axis, so there is no numeric value that means "ignore". x64dbg exposes exception ignore ranges only through its GUI-managed, ini-persisted filter list. A numeric mapping such as ``{"break": 1, "ignore": 0, "log": 2}`` would send ``SetExceptionBPX 0xc0000005, 0``, which x64dbg reinterprets as a first-chance breakpoint rather than ignoring anything.
 
-        Mutation caught: reintroducing the numeric ``handling_map`` makes
-        this raise nothing and instead sends ``SetExceptionBPX
-        0xc0000005, 0``, failing both the ``pytest.raises`` and the
-        empty-``fake.sent`` assertion.
+        Mutation caught: reintroducing the numeric ``handling_map`` makes this raise nothing and instead sends ``SetExceptionBPX 0xc0000005, 0``, failing both the ``pytest.raises`` and the empty-``fake.sent`` assertion.
         """
         bridge = X64DbgBridge()
         fake = _install_fake_pipe(bridge, lambda _c, _p: _success())
@@ -313,14 +284,9 @@ class TestSetExceptionConfig:
     async def test_break_maps_to_first_chance_in_command(self) -> None:
         """``handling='break'`` sends the ``first``-chance selector, not a numeric code.
 
-        Oracle: ``SetExceptionBPX``'s chance argument is the string
-        ``first``/``second``/``all``, not an integer index - the old
-        ``handling_map`` mapped ``"break"`` to the integer ``1``, which
-        ``SetExceptionBPX`` does not accept as a chance selector.
+        Oracle: ``SetExceptionBPX``'s chance argument is the string ``first``/``second``/``all``, not an integer index. A numeric code such as ``1`` is not accepted as a chance selector.
 
-        Mutation caught: reverting to the numeric mapping sends
-        ``SetExceptionBPX 0x80000003, 1`` instead of ``..., first``,
-        failing the exact-string assertion.
+        Mutation caught: a numeric mapping sends ``SetExceptionBPX 0x80000003, 1`` instead of ``..., first``, failing the exact-string assertion.
         """
         bridge = X64DbgBridge()
         fake = _install_fake_pipe(bridge, lambda _c, _p: _success())
@@ -566,11 +532,8 @@ class TestScriptAbort:
     async def test_sends_scriptabort_command_and_queries_script_iserror(self) -> None:
         """``script_abort`` sends the plugin RPC then eval RPC and returns ``verified=True``.
 
-        Oracle: ``script_abort`` dispatches the plugin's ``script_abort`` RPC
-        (``await self._send_pipe_command("script_abort")``) -- x64dbg registers
-        no ``scriptabort`` console command, so the old ``exec`` path was dropped
-        in audit7 F-0001 -- then queries the ``script.iserror()`` register via
-        ``self._query_script_error()``.
+        Oracle: ``script_abort`` dispatches the plugin's ``script_abort`` RPC (``await self._send_pipe_command("script_abort")``). x64dbg registers no ``scriptabort`` console command, so the bridge sends none. It then queries the ``script.iserror()`` register via ``self._query_script_error()``.
+
         Mutation caught: omitting the eval query → assertion fails.
         """
 

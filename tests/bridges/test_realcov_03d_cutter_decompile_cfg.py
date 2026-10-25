@@ -3,22 +3,18 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-backend regression tests for CutterBridge decompilation and CFG rendering.
+"""Real-backend tests for CutterBridge decompilation and CFG rendering.
 
-Covers two defects found against a real rizin 0.9.1 backend:
+They pin the behaviour of a real rizin 0.9.1 backend:
 
-* S15-D01: ``CutterBridge.decompile`` ran the nonexistent ``pdc`` command
-  (rizin 0.9.1 ships no native decompiler) and then fell back to ``pdg``
-  without ever configuring ``ghidra.sleighhome``, so every call failed with
-  "No sleigh specification for <language id>" and the Decompiler tab stayed
-  blank. The fix drops ``pdc``, resolves and configures
-  ``ghidra.sleighhome`` from the resolved backend's install directory, and
-  uses an extended timeout for the SLEIGH-loading first ``pdg`` call.
-* S15-D02: ``CutterBridge.get_function_graph`` issued ``agj @ addr``, which
-  returns empty output against rizin 0.9.1, so the CFG tab always rendered
-  an empty graph. The fix builds the graph from ``afbj`` (basic-block JSON,
-  which real gates in this same suite already prove returns real data) plus
-  a ``pdj`` call per block for the block's real disassembled instructions.
+* ``CutterBridge.decompile`` does not run ``pdc`` (rizin 0.9.1 ships no native
+  decompiler). It resolves and configures ``ghidra.sleighhome`` from the resolved
+  backend's install directory and uses an extended timeout for the SLEIGH-loading
+  first ``pdg`` call, so decompilation does not fail with "No sleigh specification
+  for <language id>".
+* ``CutterBridge.get_function_graph`` builds the graph from ``afbj`` (basic-block
+  JSON) plus a ``pdj`` call per block for the block's disassembled instructions,
+  because ``agj @ addr`` returns empty output against rizin 0.9.1.
 
 Every assertion here is anchored to output computed by a genuine rizin
 process against a real, on-disk PE (``kernel32.dll``), never a canned or
@@ -27,13 +23,12 @@ marker (each fixture spawns an external rizin subprocess) and skip outright
 when no rizin/radare2 binary is discoverable on ``PATH``, matching the
 real-backend gating already established in ``test_realcov_03c_cutter.py``.
 
-Both defects are specific to the rizin 0.9.1 backend the application ships
-(``agj`` returns empty and ``pdg`` requires the bundled rz-ghidra plugin),
-neither of which reproduces against the radare2 5.9.8 build inside the CI
-container. The five behavioral tests -- the two decompiler tests and the
+These tests depend on the rizin 0.9.1 backend the application ships (``agj`` returns
+empty and ``pdg`` requires the bundled rz-ghidra plugin), which does not reproduce
+against the radare2 5.9.8 build inside the CI container. The five behavioral tests
+-- the two decompiler tests and the
 three positive CFG tests -- are therefore registered as ``host_native`` (in
-``tests/_helpers/host_native.py``) so they run against the real host rizin
-where reverting either fix genuinely turns them red; the two backend-agnostic
+``tests/_helpers/host_native.py``) so they run against the real host rizin; the two backend-agnostic
 ``ToolError`` guard tests keep running inside the container.
 """
 
@@ -113,15 +108,15 @@ async def _first_sized_function(bridge: CutterBridge, *, min_blocks: int = 1) ->
 
 
 class TestRealDecompileGhidra:
-    """S15-D01: rz-ghidra ``pdg``-based decompilation produces real C-like output."""
+    """rz-ghidra ``pdg``-based decompilation produces real C-like output."""
 
     async def test_decompile_produces_c_like_tokens(self, pe_bridge: CutterBridge) -> None:
         """Decompiling a real, non-thunk function yields genuine C-like pseudocode.
 
-        Falsifiable: before the fix this call either raised ``ToolError``
+        Falsifiable: a failure here either raises ``ToolError``
         (the "No sleigh specification" ``pdg`` failure, or the dead ``pdc``
         path) or, if the not-available check missed a failure-text variant,
-        returned non-C content. A correct fix returns pseudocode containing
+        returned non-C content. A correct implementation returns pseudocode containing
         real braces, a return statement, and a C-like type keyword -- none
         of which appear in an empty string or an error message.
 
@@ -162,17 +157,16 @@ class TestRealDecompileGhidra:
 
 
 class TestRealCfgBasicBlocks:
-    """S15-D02: CFG graph data is built from real ``afbj`` basic blocks, not the broken ``agj``."""
+    """CFG graph data is built from real ``afbj`` basic blocks, not ``agj``."""
 
     async def test_get_function_graph_returns_multiple_real_blocks_with_edges(self, pe_bridge: CutterBridge) -> None:
         """A multi-block function's CFG has at least two blocks joined by a real jump/fail edge.
 
-        Falsifiable: before the fix ``get_function_graph`` issued
-        ``agj @ addr``, which returns empty output against this rizin 0.9.1
-        backend, so ``blocks`` would be ``[]`` and every assertion below
-        would fail. The corrected implementation returns real per-block
-        addresses and at least one edge whose target lands on another real
-        block in the same function.
+        Falsifiable: ``get_function_graph`` must not issue ``agj @ addr``, which returns empty output against this
+        rizin 0.9.1 backend; ``blocks`` would then be ``[]`` and every assertion below would fail.
+        The implementation returns real per-block
+                        addresses and at least one edge whose target lands on another real block in
+                        the same function.
 
         Args:
             pe_bridge: Analyzed kernel32.dll bridge.

@@ -1203,14 +1203,14 @@ class TestParseKernelObjectLogEdgeCases:
 class TestParseDllLogEdgeCases:
     """Adversarial and boundary inputs for :func:`parse_dll_log`.
 
-    Covers the extended 8-column format that F-0019 introduces, non-ASCII
+    Covers the extended 8-column format that the monitor writes, non-ASCII
     DLL paths, zero-valued extension columns from legacy 6-column records,
     and short rows below the six-field minimum being dropped.
     """
 
     @pytest.mark.asyncio
     async def test_extended_eight_column_format_parsed(self, tmp_path: Path) -> None:
-        """Confirm the extended F-0019 eight-column record populates event_id and payload_schema.
+        """The extended eight-column record populates event_id and payload_schema.
 
         Args:
             tmp_path: pytest-provided temporary directory fixture.

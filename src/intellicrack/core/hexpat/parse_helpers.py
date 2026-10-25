@@ -4,12 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Shared parsing helpers for the hexpat runtime.
 
-The hexpat standard-library and runtime layers historically contained
-``except ValueError: return PatternValue(value=0)`` style blocks that
-silently absorbed parse and conversion failures from
+Parse and conversion failures from
 :func:`time.localtime`, :func:`time.gmtime`, :func:`time.strftime`,
 ``int(...)`` calls, ``format()`` calls, and the format-string regex
-fallback. Per the audit, every except handler must log at least at
+fallback. Every except handler must log at least at
 debug level so pattern-execution failures remain observable from the
 structured log stream.
 

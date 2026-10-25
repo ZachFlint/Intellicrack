@@ -2,20 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-gate tests for SandboxBridge state management (Group 06 Wave 5).
+"""Tests for SandboxBridge state management.
 
-Covers:
-  S12-03 — ``_StateTracker`` clears ``BridgeState.last_error`` on success
+Covers ``_StateTracker`` clearing ``BridgeState.last_error`` on success
             after a prior failure; the fail-then-succeed lifecycle is verified
             without mocking any production code.
-  S12-04 — Replacement gates for behaviors tested with fake gates in
-            ``tests/test_bridges/test_sandbox_bridge.py`` (that file uses
-            ``AsyncMock``/``MagicMock``/``patch.object`` on the operations
-            under test).  These gates use real ``SandboxBridge`` methods
+  Operation error paths. These gates use real ``SandboxBridge`` methods
             against deterministic code paths that require no external sandbox.
-
-Note: ``tests/test_bridges/test_sandbox_bridge.py`` cannot be deleted per
-wave-5 constraints, but its behaviors are now properly gated here.
 """
 
 from __future__ import annotations
@@ -89,13 +82,13 @@ class _TestableSandboxBridge(SandboxBridge):
         return cast(AbstractAsyncContextManager[None], self._track_state(operation))
 
     def simulate_shutdown(self) -> None:
-        """Set the bridge into the post-shutdown state used by S12-04 tests."""
+        """Set the bridge into the post-shutdown state used by the shutdown tests."""
         self._manager_destroyed = True
         self._manager = None
 
 
 class TestStateTrackerClearsLastErrorOnSuccess:
-    """Gate for S12-03: _StateTracker clears last_error when the block succeeds."""
+    """Gate: _StateTracker clears last_error when the block succeeds."""
 
     def test_last_error_cleared_to_none_after_successful_op(self) -> None:
         """last_error is None after track_state succeeds following a prior failure.
@@ -148,7 +141,7 @@ class TestStateTrackerClearsLastErrorOnSuccess:
     def test_fail_then_succeed_clears_last_error(self) -> None:
         """Fail-then-succeed lifecycle: last_error is set then cleared to None.
 
-        This is the exact scenario described in S12-03: the first call raises
+        This is the fail-then-succeed scenario: the first call raises
         (setting last_error), the second call succeeds (clearing last_error).
         Oracle: ``_StateTracker`` is symmetric; success always clears regardless
         of prior state.  Mutation: adding a guard ``if self.state.last_error
@@ -193,11 +186,8 @@ class TestStateTrackerClearsLastErrorOnSuccess:
 
 
 class TestSandboxBridgeManagerGates:
-    """Gate for S12-04: SandboxBridge operation error paths without mocking.
+    """Gate for SandboxBridge operation error paths without mocking.
 
-    These tests replace the behaviors covered by fake gates in
-    ``tests/test_bridges/test_sandbox_bridge.py``, which uses
-    ``AsyncMock``/``MagicMock``/``patch.object`` on the operations under test.
     All tests here drive the real ``SandboxBridge`` code without patching.
     """
 
@@ -206,7 +196,7 @@ class TestSandboxBridgeManagerGates:
 
         Oracle: ``sandbox_bridge.py`` — ``if instance is None: raise ToolError(...)``.
         ``SandboxManager.get()`` returns ``self._instances.get(instance_id)`` which is
-        None for any ID not previously created.  This path requires zero mocking —
+        None for any ID that was never created.  This path requires zero mocking —
         the manager has no instances after ``SandboxBridge()`` construction.
 
         Mutation: returning an empty result dict instead of raising ToolError
@@ -221,7 +211,7 @@ class TestSandboxBridgeManagerGates:
             asyncio.run(_run())
 
     def test_ensure_manager_raises_tool_error_after_destruction(self) -> None:
-        """ensure_manager() raises ToolError when the manager was previously destroyed.
+        """ensure_manager() raises ToolError when the manager was destroyed.
 
         Oracle: ``sandbox_bridge.py`` — ``if self._manager_destroyed: raise ToolError(...)``
         where the error text is ``"manager was shut down; call create() to recreate"``.

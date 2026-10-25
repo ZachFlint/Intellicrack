@@ -2,16 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for GUI audit finding M19: HiDPI splash oversizing.
+"""Tests for HiDPI splash sizing.
 
 The splash builds its backing pixmap at physical resolution
-(``SPLASH_WIDTH * dpi_scale``) but never set the pixmap's
-``devicePixelRatio``. ``QSplashScreen`` therefore treated the physical-pixel
-dimensions as logical points and, combined with paint code that also scaled by
-``dpi_scale``, rendered roughly twice the intended size on a 2x display. The
-fix sets ``devicePixelRatio`` on the pixmap so its logical (device-independent)
-size stays at ``SPLASH_WIDTH`` x ``SPLASH_HEIGHT`` while the backing store
-remains high resolution.
+``(``SPLASH_WIDTH * dpi_scale``) but does not set the pixmap's
+``devicePixelRatio``. Without it, ``QSplashScreen`` would treat the physical-pixel dimensions as logical points and, combined with paint code that also scales by
+``dpi_scale``, render roughly twice the intended size on a 2x display. Setting ``devicePixelRatio`` on the pixmap keeps its logical
+(device-independent) size at ``SPLASH_WIDTH`` x ``SPLASH_HEIGHT`` while the backing store remains high resolution.
 """
 
 from __future__ import annotations
@@ -51,7 +48,7 @@ def hidpi_splash(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> Iterato
 
 
 class TestM19SplashHiDpiSizing:
-    """M19: the splash must render at correct logical size on HiDPI displays."""
+    """The splash must render at correct logical size on HiDPI displays."""
 
     def test_pixmap_device_pixel_ratio_is_set(self, hidpi_splash: SplashScreen) -> None:
         """The backing pixmap carries the display's device pixel ratio.

@@ -5,8 +5,7 @@
 
 """Real Win32 named-pipe coverage for :class:`NamedPipeClient`.
 
-The audit (``audit/test-audit-02-bridges-debugger-process.md``) flags that
-``tests/test_audit3/bridges/test_named_pipe_client.py`` intentionally stubs the
+The unit tests for ``NamedPipeClient`` intentionally stub the
 four synchronous Win32 transport methods (``_open_handle``,
 ``_read_exact_sync``, ``_write_sync``, ``_close_handle``) with an in-memory
 ``_FakePipe``. That design exercises the async orchestration cross-platform but
@@ -71,7 +70,7 @@ _PIPE_READY_TIMEOUT_S = 20.0
 # (ERROR_FILE_NOT_FOUND). This constant is derived from the Win32 error
 # specification and the Intellicrack bridge contract — NOT copied from
 # _PIPE_ERROR_HINTS at import time. If the bridge changes the text without
-# updating this constant, the test goes red, proving it is a real gate.
+# updating this constant, the test fails.
 _EXPECTED_HINT_FOR_ERROR_2: str = "The x64dbg bridge plugin is not running. Ensure x64dbg is open and the Intellicrack plugin is loaded"
 
 # Exact message prefix the production _open_handle emits when WaitNamedPipeW
@@ -82,7 +81,7 @@ _EXPECTED_MESSAGE_PREFIX_ERROR_2: str = f"Named pipe not available (error {_ERRO
 # Assembled from the independently-known prefix and hint constants (not from
 # the implementation's runtime output) using the bridge's documented separator.
 # Any change to the format, separator, or hint body makes this constant
-# diverge from the implementation, turning the equality assertion red.
+# diverge from the implementation, failing the equality assertion.
 _EXPECTED_FULL_MESSAGE_ERROR_2: str = f"{_EXPECTED_MESSAGE_PREFIX_ERROR_2}. {_EXPECTED_HINT_FOR_ERROR_2}"
 
 

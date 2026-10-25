@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, items 1, 2, 16 and 17: nothing a server writes reaches a model unsanitized, and every image is one the endpoint can take.
+"""Nothing a server writes reaches a model unsanitized, and every image is one the endpoint can take.
 
 Every end-to-end gate launches the real hostile server in ``tests/_helpers/mcp_hostile_server.py`` over stdio, runs one real agent turn
 through the real orchestrator and the real configurable provider, and inspects the request bodies the loopback endpoint recorded -- for
@@ -158,7 +158,7 @@ class TestSanitizer:
 
 
 class TestSchemaTextIsSanitized:
-    """Item 1(b) and 1(c): the argument schema a model sees carries nothing the server smuggled into it."""
+    """The argument schema a model sees carries nothing the server smuggled into it."""
 
     def test_sanitized_schema_is_clean_and_keeps_its_structure(self) -> None:
         """Descriptions and titles are cleaned, identifiers aliased, the pattern escaped and the reference kept resolvable."""
@@ -219,7 +219,7 @@ def sanitized_alias(aliases: Mapping[str, str], original: str) -> str:
 
 @pytest.mark.parametrize("dialect", _ALL_DIALECTS)
 class TestEverythingTheModelReadsIsClean:
-    """Item 1(a), (b) and (d) end to end, on every dialect."""
+    """Cases (a), (b) and (d) end to end, on every dialect."""
 
     def test_structured_output_is_sanitized_on_every_dialect(self, tmp_path: Path, dialect: ApiDialect) -> None:
         """Structured output carrying forged markers and invisible characters reaches the endpoint clean and isolated.
@@ -297,7 +297,7 @@ class TestEverythingTheModelReadsIsClean:
 
 
 class TestOneRepresentationIsSent:
-    """Item 17: a text block that restates structured output is not sent alongside it."""
+    """A text block that restates structured output is not sent alongside it."""
 
     @pytest.mark.parametrize("dialect", _TEXT_DIALECTS)
     def test_text_dialects_send_the_structured_data_once(self, tmp_path: Path, dialect: ApiDialect) -> None:
@@ -328,7 +328,7 @@ class TestOneRepresentationIsSent:
 
 
 class TestGeminiFieldsAreNotOverwritten:
-    """Item 16: structured fields named ``content`` and ``error`` survive on Gemini."""
+    """Structured fields named ``content`` and ``error`` survive on Gemini."""
 
     def test_reserved_field_names_reach_gemini_intact(self, tmp_path: Path) -> None:
         """The tool's own ``content`` and ``error`` fields arrive under ``output``, and no error is reported.
@@ -418,7 +418,7 @@ def _sent_images(dialect: ApiDialect, payload: list[Any]) -> list[tuple[str, str
 
 
 class TestImagesAreChecked:
-    """Item 2: an image is validated, capped and sent only where the endpoint can take it."""
+    """An image is validated, capped and sent only where the endpoint can take it."""
 
     def test_images_are_checked_where_the_server_hands_them_over(self, tmp_path: Path) -> None:
         """A mislabelled image is retyped by its bytes; one that is not base64 or not an image becomes a note.

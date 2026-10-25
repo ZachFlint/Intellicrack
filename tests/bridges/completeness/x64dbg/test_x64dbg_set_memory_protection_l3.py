@@ -216,7 +216,7 @@ class TestSetMemoryProtectionRealVerification:
         ``setpagerights`` command would never be sent (so the real page
         stays RW and this assertion fails), or the verification step
         could claim ``verified=True`` without the real protection having
-        changed at all (the exact failure mode the revert-to-RED probe
+        changed at all (the exact failure mode the revert probe
         for this item exercises) - in both cases the real,
         non-test-double ``get_memory_regions`` call below would not
         report ``"r--"`` for this region.

@@ -3,13 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for GUI audit finding M4 (VNC connect blocks the GUI thread).
+"""Tests that VNC connect does not block the GUI thread.
 
-Finding M4: ``VNCWidget.connect_to_server`` ran ``run_bridge_coroutine`` (the
+``VNCWidget.connect_to_server`` ran ``run_bridge_coroutine`` (the
 blocking bridge runner) on the Qt main thread, freezing the UI for up to the
 connect timeout when the VNC port is unreachable.
 
-These tests assert the fix: the connect handshake is dispatched onto the async
+These tests assert that the connect handshake is dispatched onto the async
 worker path via ``run_bridge_coroutine_logged`` (never the blocking runner) and
 the outcome is delivered back on the GUI thread, starting the pump/timer on
 success and surfacing failure via ``connection_status_changed``.
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 class TestConnectDispatch:
-    """M4: connect must dispatch via the async worker, not block the GUI thread."""
+    """connect must dispatch via the async worker, not block the GUI thread."""
 
     @staticmethod
     def test_connect_uses_async_logged_runner_not_blocking(
@@ -194,7 +194,7 @@ class TestConnectDispatch:
 
 
 class TestConnectDoesNotBlock:
-    """M4: connect_to_server must return without awaiting the coroutine."""
+    """connect_to_server must return without awaiting the coroutine."""
 
     @staticmethod
     def test_connect_returns_before_coroutine_completes(

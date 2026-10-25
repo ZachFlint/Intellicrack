@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D60 on the Windows backend: nothing scanned is not "clean".
+"""Gates for the Windows backend: nothing scanned is not "clean".
 
 ``WindowsSandbox.yara_scan`` carried the same three-way ambiguity the QEMU
 backend did - see ``tests/sandbox/qemu/test_yara_scan_outcome_s17d60.py`` for

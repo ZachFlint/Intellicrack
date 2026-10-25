@@ -2,16 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave-5 integration and command-construction gates for installer.py.
+"""Integration and command-construction gates for installer.py.
 
 Covers: _probe_version_command (real frida binary invocation), _detect_vs_generator
 (cmake --help output parsing), _find_cmake (shutil.which PATH-based discovery),
 build_x64dbg_plugin (full configure + build command construction and flag
 correctness).
 
-_install_frida is UNTESTABLE in the sandbox because the sandbox runs with no
-network access; pip cannot reach PyPI, and no pre-built frida wheel is staged
-locally.  See the UNTESTABLE annotation at the bottom of this module.
+_install_frida is not covered because the sandbox runs with no network access; pip cannot reach PyPI, and no pre-built frida wheel is staged locally.
 """
 
 from __future__ import annotations
@@ -39,7 +37,6 @@ from intellicrack.core.types import ToolName
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
 
 # Private symbols accessed via getattr + cast to avoid reportPrivateUsage.
-# The existing test_installer.py audit3 file uses the same pattern; see line 77.
 _detect_vs_generator_fn: Callable[[Path], str | None] = cast(
     Callable[[Path], str | None],
     getattr(installer_mod, "_detect_vs_generator"),
@@ -381,19 +378,6 @@ class TestBuildX64dbgPluginCommandConstruction:
         assert build_cmd[config_idx + 1] == "Release", f"Expected --config Release, got {build_cmd[config_idx + 1]!r}"
 
 
-# UNTESTABLE finding annotation
-#
-# Finding: _install_frida real pip invocation (installer.py line ~700)
-# Status: UNTESTABLE in the sandbox environment.
-#
-# Structural reason: _install_frida_impl invokes pip as a subprocess to download
-# and install frida from PyPI.  The sandbox runs with no network access, so pip
-# cannot reach PyPI.  No pre-staged local frida wheel is available either.  Even
-# with frida already installed, upgrading without network fails with a non-zero
-# exit code when the live PyPI check cannot be performed.
-#
-# What would make this testable: stage a local frida wheel in the CI image and
-# run pip with --find-links pointing to a local directory and --no-index, or
-# use a pip-cache volume seeded with the frida distribution.  Until then, the
-# real pip-install success path cannot be exercised deterministically in a
-# network-isolated environment.
+# _install_frida is not exercised here: its pip install needs PyPI access, which the sandbox lacks,
+# and no frida wheel is staged locally. A deterministic test would need a local wheel installed with
+# --find-links and --no-index, or a seeded pip cache.

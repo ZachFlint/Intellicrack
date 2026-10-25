@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for importable (``--pyargs``) collection targets.
+"""Gates for importable (``--pyargs``) collection targets.
 
 Addressing tests by filesystem path makes pytest build the target's package
 chain twice inside the Windows container, so every test is collected under a

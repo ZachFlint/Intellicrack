@@ -122,7 +122,7 @@ def _tool_turn(result: ToolResult) -> list[Message]:
 
 
 class TestImageDimensions:
-    """Item 35: an image's size is read from the encoded file header."""
+    """An image's size is read from the encoded file header."""
 
     @pytest.mark.parametrize("fmt", ["PNG", "JPEG", "WEBP"])
     def test_reads_dimensions_of_real_encoder_output(self, fmt: str) -> None:
@@ -146,7 +146,7 @@ class TestImageDimensions:
 
 
 class TestImageTokens:
-    """Item 35: an image is priced by its pixels, not its base64 length."""
+    """An image is priced by its pixels, not its base64 length."""
 
     @pytest.mark.parametrize(
         ("width", "height", "expected"),
@@ -222,7 +222,7 @@ def _header_only_png(width: int, height: int) -> str:
 
 
 class TestBoundingContent:
-    """Item 35: multi-part content shares the same bound as plain results."""
+    """Multi-part content shares the same bound as plain results."""
 
     def test_textual_parts_share_one_budget(self) -> None:
         """Text, resource text and JSON are cut at one shared budget; media is kept."""
@@ -256,7 +256,7 @@ class TestBoundingContent:
 
 
 class TestTrimmingKeepsCallsAndResultsTogether:
-    """Item 34: trimming never leaves a tool result without its call."""
+    """Trimming never leaves a tool result without its call."""
 
     def test_results_go_with_the_call_they_answer(self) -> None:
         """Removing the assistant tool-call message removes its results too."""
@@ -316,7 +316,7 @@ class _BrokenTimestamp(datetime):
 
 
 class TestSessionPersistence:
-    """Blocker 2: multi-part history saves, loads and never wedges a save."""
+    """Multi-part history saves, loads and never wedges a save."""
 
     def test_multipart_error_result_round_trips(self, tmp_path: Path) -> None:
         """Every part kind and the error flag survive a save and a load.
@@ -419,7 +419,7 @@ class TestSessionPersistence:
 
 
 class TestSchemaArgumentSummary:
-    """Item 33: a raw input schema renders as a readable argument list."""
+    """A raw input schema renders as a readable argument list."""
 
     def test_renders_types_optionality_and_combinators(self) -> None:
         """Required, optional, arrays, unions, enums and refs all render."""

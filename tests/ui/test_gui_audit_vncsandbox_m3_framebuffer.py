@@ -3,15 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for GUI audit finding M3 (VNC framebuffer thread safety).
+"""Tests for VNC framebuffer thread safety.
 
-Finding M3: ``apply_raw_rect`` writes to the framebuffer on the shared bridge
+``apply_raw_rect`` writes to the framebuffer on the shared bridge
 event loop while ``paintEvent`` read ``client.framebuffer.scaled(...)`` on the
 Qt GUI thread. The ``asyncio.Lock`` only serialised bridge-loop coroutines and
 never guarded ``paintEvent``, so the GUI thread could read a partially written
 QImage (torn frame or freed-buffer crash).
 
-These tests assert the fix: the bridge loop builds into a back buffer and
+These tests assert that the bridge loop builds into a back buffer and
 atomically publishes a completed copy under a ``threading.Lock`` that
 ``paintEvent`` also holds when reading, so a consumer never observes an
 intermediate buffer.
@@ -118,14 +118,14 @@ class _RecordingLock:
 
 
 class TestFramebufferDoubleBuffering:
-    """M3: publish/consume must double-buffer under a threading lock."""
+    """Publish/consume must double-buffer under a threading lock."""
 
     @staticmethod
     def test_publish_frame_creates_independent_copy() -> None:
         """publish_frame must snapshot a copy distinct from the live back buffer.
 
         A shared reference would let the GUI thread read a buffer the bridge
-        loop is still mutating; the fix publishes an independent copy.
+        loop is still mutating, so publish_frame must publish an independent copy.
         """
         client = RFBClient()
         client.framebuffer = _make_framebuffer(FB_SIZE, FB_SIZE, COLOR_A)
@@ -234,7 +234,7 @@ class TestFramebufferDoubleBuffering:
 
 
 class TestPaintEventUsesSnapshot:
-    """M3: paintEvent must read the published snapshot, not the live buffer."""
+    """paintEvent must read the published snapshot, not the live buffer."""
 
     @staticmethod
     def test_paint_event_reads_snapshot(qapp: object, monkeypatch: pytest.MonkeyPatch) -> None:

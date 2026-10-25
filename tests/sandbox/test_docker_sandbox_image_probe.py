@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for image-cache probing in the Docker sandbox driver.
+"""Gates for image-cache probing in the Docker sandbox driver.
 
 ``docker image inspect`` exits non-zero both when an image is genuinely absent
 and when the probe simply could not tell -- a timeout while the engine is

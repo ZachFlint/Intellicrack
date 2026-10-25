@@ -5,8 +5,7 @@
 """Gate for the pixi.lock multi-platform requirements generator.
 
 ``pixi.lock`` can resolve a package to different versions per locked
-platform, since not every release ships wheels for every platform (this
-project hit it for real: ``ast-serialize`` resolved to ``0.11.2`` on
+platform, since not every release ships wheels for every platform (``ast-serialize`` resolves to ``0.11.2`` on
 ``linux-64`` but only ``0.6.0`` on ``win-64``). ``generate_requirements.py``
 must deterministically select the ``win-64`` resolution, since this project
 targets Windows as a priority and its CI runs on ``windows-latest`` -- not
@@ -209,10 +208,10 @@ def test_package_name_and_version_rejects_incomplete_entries(gr: ModuleType) -> 
 
 
 def test_load_lock_pypi_packages_selects_windows_version_not_linux(gr: ModuleType, tmp_path: Path) -> None:
-    """The exact regression this fix targets: ast-serialize must resolve to the win-64 version.
+    """ast-serialize must resolve to the win-64 version.
 
-    Falsifiable: reverting ``_load_lock_pypi_packages`` to the pre-fix
-    behavior (iterate the flat ``packages`` list, last entry wins) would
+    Falsifiable: iterating the flat ``packages`` list in ``_load_lock_pypi_packages``
+    (last entry wins) would
     make this assert ``0.11.2`` (the Linux entry, which appears last in the
     fixture's ``packages`` list) instead of ``0.6.0`` (the Windows entry).
     """

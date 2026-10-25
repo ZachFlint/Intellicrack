@@ -2,31 +2,31 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-02 GUI audit findings in ``provider_config``.
+"""Gates for ``provider_config`` async bridge dispatch and splitter sizing.
 
-Each test targets one audit finding for
-:mod:`intellicrack.ui.provider_config` and fails against the pre-fix
+Each test targets one defect in
+:mod:`intellicrack.ui.provider_config` and fails against the defective
 behaviour:
 
-* ``test_c3_*``: the OAuth login flow must dispatch onto the async bridge
+* The OAuth login flow must dispatch onto the async bridge
   (``run_bridge_coroutine_async``) instead of blocking the GUI thread on
   ``run_bridge_coroutine`` for the human-timescale browser wait, and the
   obtained credentials must reach the provider widget through the async
   ``on_success`` callback.
-* ``test_h14_*``: credential-store enumeration, at both dialog construction
+* Credential-store enumeration, at both dialog construction
   and on "Reload Keys", must dispatch via the async bridge, never the
   blocking runner.
-* ``test_h15_*``: "Migrate" must dispatch the env-to-store migration via the
+* "Migrate" must dispatch the env-to-store migration via the async bridge
   async bridge and reload the credential overview from the success callback.
-* ``test_h16_*``: "Discover" must dispatch model discovery via the async
+* "Discover" must dispatch model discovery via the async
   bridge and must refresh provider status only once discovery actually
   completes, not immediately after dispatch.
-* ``test_h17_*``: "Revoke Token" must dispatch the OAuth revoke call via the
+* "Revoke Token" must dispatch the OAuth revoke call via the
   async bridge and reload the credential overview from the success callback.
-* ``test_m14_*``: the OpenRouter generation cost lookup must dispatch via the
+* The OpenRouter generation cost lookup must dispatch via the
   async bridge and deliver its outcome through the
   ``generation_lookup_finished`` signal.
-* ``test_l18_*``: the provider-list splitter panel must not be collapsible to
+* The provider-list splitter panel must not be collapsible to
   zero width and its left panel must carry a nonzero minimum width.
 
 All tests drive real :class:`~intellicrack.ui.provider_config.ProviderConfigDialog`
@@ -391,13 +391,13 @@ class _FakeFailingOpenRouterProvider(_FakeOpenRouterProvider):
 
 @pytest.mark.usefixtures("qapp")
 class TestC3OAuthLoginAsyncDispatch:
-    """C3: OAuth login must dispatch via the async bridge, never the blocking one."""
+    """OAuth login must dispatch via the async bridge, never the blocking one."""
 
     @staticmethod
     def test_oauth_login_dispatches_via_async_bridge_not_blocking(monkeypatch: pytest.MonkeyPatch) -> None:
         """``start_oauth_flow`` must call ``run_bridge_coroutine_async``, never ``run_bridge_coroutine``.
 
-        Pre-fix, ``_run_oauth_flow`` called
+        ``_run_oauth_flow`` must not call
         ``creds = run_bridge_coroutine(_run_oauth())`` directly with no
         timeout, blocking the GUI thread for the human-timescale browser
         wait. Against that code, triggering the OAuth flow would record a
@@ -462,13 +462,13 @@ class TestC3OAuthLoginAsyncDispatch:
 
 @pytest.mark.usefixtures("qapp")
 class TestH14CredentialStoreEnumerationAsync:
-    """H14: credential-store enumeration at construction and on Reload Keys must be async."""
+    """Credential-store enumeration at construction and on Reload Keys must be async."""
 
     @staticmethod
     def test_dialog_construction_loads_credential_store_via_async_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
         """Constructing the dialog must dispatch the store load via ``run_bridge_coroutine_async``.
 
-        Pre-fix, ``ProviderConfigDialog.__init__`` called
+        ``ProviderConfigDialog.__init__`` must not call
         ``run_bridge_coroutine(_load_store_credentials())`` before the dialog
         was even shown, blocking construction on the OS keyring. Against
         that code this test fails: the blocking sink receives a call and the
@@ -510,13 +510,13 @@ class TestH14CredentialStoreEnumerationAsync:
 
 @pytest.mark.usefixtures("qapp")
 class TestH15MigrateCredentialsAsync:
-    """H15: "Migrate" must dispatch the env-to-store migration via the async bridge."""
+    """The "Migrate" action must dispatch the env-to-store migration via the async bridge."""
 
     @staticmethod
     def test_migrate_dispatches_via_async_bridge_not_blocking(monkeypatch: pytest.MonkeyPatch) -> None:
         """``migrate_credentials`` must call ``run_bridge_coroutine_async``, never the blocking runner.
 
-        Pre-fix, ``migrate_credentials`` called
+        ``migrate_credentials`` must not call
         ``run_bridge_coroutine(store.migrate_from_env())`` synchronously.
         Against that code the blocking sink receives a call and the async
         sink stays empty.
@@ -568,13 +568,13 @@ class TestH15MigrateCredentialsAsync:
 
 @pytest.mark.usefixtures("qapp")
 class TestH16ModelDiscoveryAsync:
-    """H16: model discovery for the selected provider must dispatch via the async bridge."""
+    """Model discovery for the selected provider must dispatch via the async bridge."""
 
     @staticmethod
     def test_discover_dispatches_via_async_bridge_not_blocking(monkeypatch: pytest.MonkeyPatch) -> None:
         """``_on_discover_selected_provider`` must dispatch via ``run_bridge_coroutine_async``.
 
-        Pre-fix, ``discover_single_provider`` called
+        ``discover_single_provider`` must not call
         ``run_bridge_coroutine(_discover())`` synchronously, blocking the GUI
         thread on the network round-trip. Against that code the blocking
         sink receives a call and the async sink stays empty.
@@ -607,7 +607,7 @@ class TestH16ModelDiscoveryAsync:
     def test_discover_does_not_refresh_status_until_discovery_completes(monkeypatch: pytest.MonkeyPatch) -> None:
         """Provider status must refresh only once the dispatched discovery coroutine completes.
 
-        Regression: pre-fix, ``_on_discover_selected_provider`` called
+        ``_on_discover_selected_provider`` must not call
         ``self._refresh_provider_status()`` immediately after
         ``discover_single_provider(...)`` returned, before the (now async)
         discovery had actually run. Against that code this test fails at the
@@ -650,13 +650,13 @@ class TestH16ModelDiscoveryAsync:
 
 @pytest.mark.usefixtures("qapp")
 class TestH17RevokeTokenAsync:
-    """H17: "Revoke Token" must dispatch the OAuth revoke call via the async bridge."""
+    """The "Revoke Token" action must dispatch the OAuth revoke call via the async bridge."""
 
     @staticmethod
     def test_revoke_dispatches_via_async_bridge_not_blocking(monkeypatch: pytest.MonkeyPatch) -> None:
         """``revoke_oauth_token`` must call ``run_bridge_coroutine_async``, never the blocking runner.
 
-        Pre-fix, ``_do_revoke_oauth_token`` called
+        ``_do_revoke_oauth_token`` must not call
         ``run_bridge_coroutine(manager.revoke_token(oauth_provider))``
         synchronously. Against that code the blocking sink receives a call
         and the async sink stays empty.
@@ -710,13 +710,13 @@ class TestH17RevokeTokenAsync:
 
 @pytest.mark.usefixtures("qapp")
 class TestM14OpenRouterGenerationLookupAsync:
-    """M14: OpenRouter generation cost lookup must dispatch via the async bridge."""
+    """OpenRouter generation cost lookup must dispatch via the async bridge."""
 
     @staticmethod
     def test_lookup_dispatches_via_async_bridge_not_blocking(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """``get_openrouter_generation`` must call ``run_bridge_coroutine_async``, never the blocking runner.
 
-        Pre-fix, ``_fetch_openrouter_generation`` returned
+        ``_fetch_openrouter_generation`` must not return
         ``run_bridge_coroutine(_fetch())`` directly, blocking the GUI thread
         on the OpenRouter network round-trip. Against that code the blocking
         sink receives a call and the async sink stays empty.
@@ -818,15 +818,15 @@ class TestM14OpenRouterGenerationLookupAsync:
 
 @pytest.mark.usefixtures("qapp")
 class TestL18ProviderListSplitterNotCollapsible:
-    """L18: the provider-list splitter panel must not collapse to zero width."""
+    """The provider-list splitter panel must not collapse to zero width."""
 
     @staticmethod
     def test_splitter_children_are_not_collapsible(monkeypatch: pytest.MonkeyPatch) -> None:
         """The dialog's splitter must forbid collapsing a pane to zero.
 
-        Pre-fix, ``setChildrenCollapsible(False)`` was never called, so the
+        ``setChildrenCollapsible(False)`` must be called, since without it the
         default ``QSplitter`` behaviour (``childrenCollapsible() is True``)
-        applied and this assertion fails against that code.
+        applies and this assertion fails against that code.
 
         Args:
             monkeypatch: Fixture used to patch the bridge runners for a
@@ -846,9 +846,9 @@ class TestL18ProviderListSplitterNotCollapsible:
     def test_left_panel_has_the_configured_minimum_width(monkeypatch: pytest.MonkeyPatch) -> None:
         """The splitter's left (provider-list) panel must carry a nonzero minimum width.
 
-        Pre-fix, only the inner ``QListWidget`` had a minimum width; the
-        containing ``left_panel`` itself had none, so
-        ``left_panel.minimumWidth()`` was ``0`` and this assertion fails
+        Only the inner ``QListWidget`` may carry a minimum width, while the
+        containing ``left_panel`` itself must carry one, since otherwise
+        ``left_panel.minimumWidth()`` would be ``0`` and this assertion fails
         against that code.
 
         Args:

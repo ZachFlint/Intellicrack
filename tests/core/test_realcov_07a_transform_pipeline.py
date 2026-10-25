@@ -4,11 +4,11 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage tests for ``intellicrack.core.transform_pipeline``.
 
-The audit (shard 07) flagged that the Python-only transform nodes
+The Python-only transform nodes
 (``RegexReplaceNode``, ``CustomExpressionNode``, ``RepeatNode``,
 ``TruncateNode``, ``PadNode``), the ``TransformPipeline.execute`` /
 ``preview`` orchestration, the restricted-AST ``_eval_ast_node`` evaluator,
-and ``RustTransformNode`` parameter coercion were untested in unit tests.
+and ``RustTransformNode`` parameter coercion are covered here by real data.
 
 These tests drive every node against REAL binary bytes taken from real
 System32 PE binaries and the committed ELF fixture, and validate the

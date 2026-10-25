@@ -69,8 +69,7 @@ function headers(hasBody) {
  * `registry.BusyError` and mapped through `_EXCEPTION_RULES` - under a single
  * `{"error": {"kind": ..., "status": ..., "message": ..., "detail": ...}}`
  * envelope, where `detail` is the optional actionable second line the server
- * sets only on a failure that has a next step to offer. There is no second,
- * bare `{"busy": true}` shape for the server to ever send.
+ * sets only on a failure that has a next step to offer.
  *
  * @param {object|null} payload The parsed JSON body, or null when it wasn't JSON.
  * @param {number} status HTTP status code of the response.

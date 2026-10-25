@@ -2,29 +2,25 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-02 GUI audit findings in ``cutter_panel``.
+"""Gates for the ``cutter_panel`` shutdown timeout and function-tree header layout.
 
-Each test targets one audit finding and fails against the pre-fix behaviour:
+Each test targets one defect and fails against the defective behaviour:
 
-* ``M3``: ``_cleanup`` called the blocking ``run_bridge_coroutine`` with no
-  ``timeout_s`` for the bridge ``shutdown()`` RPC, so a wedged r2pipe backend
-  froze the calling (GUI) thread inside ``future.result(timeout=None)``
-  forever. Post-fix the call passes ``timeout_s=_SHUTDOWN_TIMEOUT_S``, so
-  ``_cleanup`` returns within that bound even when ``shutdown()`` never
-  resolves, and the resulting ``TimeoutError`` is caught and logged rather
-  than propagating.
-* ``M42``: the function tree (``_func_tree``) had no header resize mode, so
-  Qt's default ``stretchLastSection`` made the near-empty "Size" column
-  consume all leftover width while the variable-length "Name" column stayed
-  pinned at its narrow default and got elided, with no tooltip fallback.
-  Post-fix the header disables stretch-last-section, stretches the Name
-  column, sizes Address/Size to their contents, and every row gets a full-name
+* ``_cleanup`` must not call the blocking ``run_bridge_coroutine`` with no
+  ``timeout_s`` for the bridge ``shutdown()`` RPC. Otherwise a wedged r2pipe backend
+  freezes the calling (GUI) thread inside ``future.result(timeout=None)`` forever. The call passes
+  ``timeout_s=_SHUTDOWN_TIMEOUT_S``, so ``_cleanup`` returns within that bound even when ``shutdown()``
+  never resolves, and the resulting ``TimeoutError`` is caught and logged rather than propagating.
+* The function tree (``_func_tree``) must set a header resize mode. Otherwise Qt's default
+  ``stretchLastSection`` lets the near-empty "Size" column consume all leftover width while the variable-length
+  "Name" column stays pinned at its narrow default and gets elided, with no tooltip fallback. The header disables
+  stretch-last-section, stretches the Name column, sizes Address/Size to their contents, and every row gets a full-name
   tooltip.
 
 All tests drive a real :class:`CutterPanel` under an offscreen
-``QApplication``; no widget behaviour is mocked. The M3 reproduction runs
+``QApplication``; no widget behaviour is mocked. The shutdown reproduction runs
 ``_cleanup`` on a background thread and bounds the ``Thread.join`` wait so a
-pre-fix regression (an unbounded blocking wait) fails deterministically
+regression (an unbounded blocking wait) fails deterministically
 instead of hanging the test process forever.
 """
 
@@ -94,19 +90,14 @@ def test_m3_cleanup_bounds_wait_on_wedged_bridge_shutdown(
 ) -> None:
     """``_cleanup`` must not block its caller forever on a wedged ``shutdown``.
 
-    Pre-fix, ``run_bridge_coroutine(self._bridge.shutdown())`` was called
-    with no ``timeout_s``, which resolves to an unbounded
-    ``future.result(timeout=None)`` wait in ``async_bridge.py``; a bridge
-    whose ``shutdown()`` coroutine never completes would freeze whichever
-    thread called ``_cleanup`` (the GUI thread for a normal panel-close
-    action) indefinitely. This test drives ``_cleanup`` on a background
-    thread and bounds the ``join`` wait to a small multiple of the
-    (monkeypatched, short) shutdown timeout: pre-fix the thread is still
-    alive after the join deadline because the wait never times out;
-    post-fix ``run_bridge_coroutine`` raises ``TimeoutError`` (a subclass of
-    the ``OSError`` caught by ``_cleanup``) once the configured timeout
-    elapses, so the thread finishes promptly and without propagating an
-    exception.
+    ``run_bridge_coroutine(self._bridge.shutdown())`` must not be called with no ``timeout_s``, which would resolve to an
+    unbounded ``future.result(timeout=None)`` wait in ``async_bridge.py``; a bridge whose ``shutdown()`` coroutine never
+    completes would freeze whichever thread called ``_cleanup`` (the GUI thread for a normal panel-close action) indefinitely.
+    This test drives ``_cleanup`` on a background thread and bounds the ``join`` wait to a small multiple of the
+    (monkeypatched, short) shutdown timeout. Without the bound the thread is still alive after the join deadline
+    because the wait never times out. With it, ``run_bridge_coroutine`` raises ``TimeoutError`` (a subclass of
+    the ``OSError`` caught by ``_cleanup``) once the configured timeout elapses, so the thread finishes promptly
+    and without propagating an exception.
 
     Args:
         monkeypatch: Fixture used to shrink the module's shutdown-timeout
@@ -126,8 +117,7 @@ def test_m3_cleanup_bounds_wait_on_wedged_bridge_shutdown(
         ``_cleanup`` itself only ever catches ``(RuntimeError,
         ConnectionError, OSError)`` -- the same tuple that
         ``asyncio.TimeoutError``/``TimeoutError`` belongs to -- so that is
-        the exact set this harness must observe leaking if the fix's
-        ``timeout_s`` wiring were removed.
+        the exact set this harness must observe leaking when ``timeout_s`` is absent.
         """
         try:
             panel._cleanup()
@@ -158,17 +148,13 @@ def test_m3_cleanup_bounds_wait_on_wedged_bridge_shutdown(
 def test_m42_func_tree_header_stretches_name_not_size_column() -> None:
     """The function tree header must stretch Name, not the trailing Size column.
 
-    Pre-fix, ``_func_tree`` never called ``setSectionResizeMode`` or
-    ``setStretchLastSection(False)``, so Qt's default
-    ``stretchLastSection=True`` made the near-empty "Size" column (index 2)
-    consume all leftover width while "Name" (index 0) -- which holds real,
-    often long, function/symbol names -- stayed pinned at its narrow
-    ``Interactive`` default. Post-fix the header disables stretch-last-
-    section and explicitly stretches column 0 while sizing columns 1/2 to
-    their contents.
+    ``_func_tree`` must call ``setSectionResizeMode`` and ``setStretchLastSection(False)``, or Qt's default
+    ``stretchLastSection=True`` lets the near-empty "Size" column (index 2) consume all leftover width while "Name" (index 0),
+    which holds real, often long, function/symbol names, stays pinned at its narrow ``Interactive`` default. The header
+    disables stretch-last-section, explicitly stretches column 0, and sizes columns 1/2 to their contents.
 
     Asserts:
-        The concrete Qt resize-mode configuration is exactly the fixed one,
+        The concrete Qt resize-mode configuration is exactly the one the header sets,
         not merely "some" configuration.
     """
     panel = CutterPanel()
@@ -190,11 +176,11 @@ def test_m42_long_function_name_gets_full_tooltip_and_wide_name_column(
 ) -> None:
     """A long demangled function name must get a tooltip and the widest column.
 
-    Pre-fix there was no per-item tooltip, so a name elided by the narrow
+    Without a per-item tooltip, a name elided by the narrow
     Interactive-width Name column had no way to be read short of manually
-    dragging the header. Post-fix every row's ``Name`` cell carries a
+    dragging the header. Every row's ``Name`` cell must carry a
     ``toolTip`` equal to the full, unelided name, and -- because the header
-    now stretches column 0 instead of column 2 -- the rendered Name column is
+    stretches column 0 instead of column 2, so the rendered Name column is
     measurably wider than the Size column once real data is loaded into a
     reasonably wide panel.
 

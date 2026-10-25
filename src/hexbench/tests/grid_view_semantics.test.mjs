@@ -3,8 +3,8 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates A-2 (the hex view really is a grid) and UX-4 (the row width is a
- * setting, not a constant).
+ * Gates the hex view as a real grid, and the row width as a setting rather
+ * than a constant.
  *
  * Both done-when checks are about what the running view does - an
  * `aria-activedescendant` that names a live element, a ruler and a row pool
@@ -422,7 +422,7 @@ function press(key, modifiers = {}) {
   return prevented;
 }
 
-/* ------------------------------------------------------------------- A-2 */
+/* ------------------------------------------------------------ grid roles */
 
 check('the grid rendered rows at all', visibleRows().length > 1, `${visibleRows().length} rows are visible`);
 check(
@@ -551,7 +551,7 @@ check(
 grid.togglePane();
 flushFrames();
 
-/* ------------------------------------------------------------------ UX-4 */
+/* ------------------------------------------------------------ row width */
 
 check(
   'the view starts at the compiled default',
@@ -655,6 +655,24 @@ check(
   grid.bytesPerRow === 32 && rulerColumnsOf().length === 32 && cellsOf(visibleRows()[0], 'hex').length === 32,
   `bytesPerRow ${grid.bytesPerRow} with ${rulerColumnsOf().length} ruler columns`,
 );
+
+/* ----------------------------------------------- stale document snapshots */
+
+grid.setDocument({ handle: HANDLE, generation: 5, length: DOCUMENT_LENGTH });
+grid.setDocument({ handle: HANDLE, generation: 3, length: DOCUMENT_LENGTH });
+check(
+  'an out-of-order reply carrying an older generation does not rewind the document',
+  grid.document.generation === 5,
+  `generation ${grid.document.generation} after a stale snapshot arrived, expected 5`,
+);
+grid.setDocument({ handle: HANDLE, generation: 6, length: DOCUMENT_LENGTH });
+check(
+  'a newer generation is still applied',
+  grid.document.generation === 6,
+  `generation ${grid.document.generation}, expected 6`,
+);
+flushFrames();
+await settle();
 
 /* ---------------------------------------------------------- fit to width */
 

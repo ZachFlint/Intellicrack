@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-gate tests for local-model classification helpers (wave 2d).
+"""Real-gate tests for local-model classification helpers.
 
-Fixes FG-12 (list_models any-substring weakness) by pinning every
-RECOMMENDED_MODELS_B580 entry and verifies three previously un-tested
-pure helpers against independent oracles:
+Pins every RECOMMENDED_MODELS_B580 entry and verifies three pure helpers
+against independent oracles:
 
 * ``_classify_model_capabilities`` -- context-window key priority order
   (max_position_embeddings > max_sequence_length > n_positions), vision
@@ -39,9 +38,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-# ---------------------------------------------------------------------------
 # Module-level typed wrappers for private helpers (avoids reportPrivateUsage)
-# ---------------------------------------------------------------------------
 
 
 def _classify_model_capabilities(config: dict[str, Any]) -> tuple[int, bool]:
@@ -93,9 +90,7 @@ def _estimate_memory_from_name(device_name: str) -> int:
     return fn(device_name)
 
 
-# ---------------------------------------------------------------------------
 # Constants
-# ---------------------------------------------------------------------------
 
 _1_GiB: int = 1024 * 1024 * 1024
 _DEFAULT_CTX: int = 4096
@@ -113,17 +108,15 @@ _EXPECTED_MODEL_IDS: tuple[str, ...] = (
 )
 
 
-# ---------------------------------------------------------------------------
-# FG-12 -- RECOMMENDED_MODELS_B580 exact entry pinning
-# ---------------------------------------------------------------------------
+# RECOMMENDED_MODELS_B580 exact entry pinning
 
 
 class TestRecommendedModelsB580:
     """Pin all seven RECOMMENDED_MODELS_B580 entries by exact model_id.
 
-    The pre-existing test only checked any("phi" or "tiny") in model IDs;
-    a single model named "phi-placeholder" would have passed.  These gates
-    require every specific entry to be present with its full field set.
+    A check of any("phi" or "tiny") in model IDs would pass for a single
+    model named "phi-placeholder".  These gates require every specific entry
+    to be present with its full field set.
     """
 
     @staticmethod
@@ -183,9 +176,7 @@ class TestRecommendedModelsB580:
         assert memory_gb < 12.0, f"Phi-3-mini estimated memory {memory_gb} GB exceeds B580 VRAM"
 
 
-# ---------------------------------------------------------------------------
 # _classify_model_capabilities -- context-window extraction
-# ---------------------------------------------------------------------------
 
 
 class TestClassifyContextWindow:
@@ -295,9 +286,7 @@ class TestClassifyContextWindow:
         assert ctx == _DEFAULT_CTX
 
 
-# ---------------------------------------------------------------------------
 # _classify_model_capabilities -- vision detection
-# ---------------------------------------------------------------------------
 
 
 class TestClassifyVisionSupport:
@@ -422,9 +411,7 @@ class TestClassifyVisionSupport:
         assert vision is True
 
 
-# ---------------------------------------------------------------------------
 # _strip_pwsh_payload -- BOM removal and whitespace normalization
-# ---------------------------------------------------------------------------
 
 
 class TestStripPwshPayload:
@@ -514,9 +501,7 @@ class TestStripPwshPayload:
         assert parsed["vram_gb"] == 12
 
 
-# ---------------------------------------------------------------------------
 # _estimate_memory_from_name -- VRAM constant table
-# ---------------------------------------------------------------------------
 
 _VRAM_TABLE: tuple[tuple[str, int], ...] = (
     ("Intel Arc B580", 12 * _1_GiB),

@@ -2,16 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""S18-D11: dll_monitor.ps1 must actually load TraceEvent before probing for it.
+"""``dll_monitor.ps1`` must actually load TraceEvent before probing for it.
 
-``Test-TraceEventAvailable`` asked ``[System.Type]::GetType`` whether the
-TraceEvent session type resolved. ``GetType`` only ever finds a type in an
-assembly that is *already* loaded, and the script - unlike its two siblings -
-never loaded one: no search roots, no ``AssemblyResolve`` handler, no
-``Add-Type``. In a fresh PowerShell the probe therefore answered "no" every
-single time, so the whole realtime-ETW branch was unreachable and every DLL
-Loads row came from the ``Win32_ModuleLoadTrace`` WMI fallback instead - which
-is why each one carried image base ``0x0``. Measured live in the guest:
+``Test-TraceEventAvailable`` asks ``[System.Type]::GetType`` whether the
+TraceEvent session type resolves. ``GetType`` only finds types in assemblies
+that are already loaded, so the script must load TraceEvent itself (search
+roots, an ``AssemblyResolve`` handler and ``Add-Type``) before it probes. Without
+that load the probe answers no in a fresh PowerShell, the realtime ETW branch is
+unreachable, and every row comes from the ``Win32_ModuleLoadTrace`` WMI fallback
+with image base ``0x0``. Observed in the guest:
 
     ...|etw_unavailable_falling_back_to_wmi|TraceEvent.dll not loaded
 

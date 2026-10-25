@@ -5,7 +5,7 @@
 
 """Tests for :class:`ToolStatusDialog` prefetched-status reuse.
 
-Covers F-0007 (ui-app-core tool_status pre-fetch reuse): when a caller
+Covers pre-fetched tool status reuse: when a caller supplies a pre-fetched ``tool_statuses``
 supplies a pre-fetched ``tool_statuses`` snapshot, the dialog must render
 it immediately without spawning a fresh batch of background status-check
 workers. Explicit user-initiated refresh must still spawn workers.

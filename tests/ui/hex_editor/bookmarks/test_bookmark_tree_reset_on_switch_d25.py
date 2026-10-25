@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for S19-D25: opening a new file clears stale bookmark rows.
+"""Opening a new file clears stale bookmark rows.
 
 ``HexEditorPanel._load_file_impl`` (``ui/panels/hex_editor/panel.py:826-827``)
 calls ``_load_bookmarks_sidecar`` followed by ``_refresh_bookmarks_tree`` on
@@ -19,11 +19,6 @@ distinct real PE binaries (``kernel32.dll`` then a real system executable),
 adding a bookmark to the first file only, and asserts the tree reflects
 the second (bookmark-free) file's document rather than carrying over the
 first file's row.
-
-Reverting the ``_refresh_bookmarks_tree`` (or the underlying
-``_bookmarks_tree.clear()``) call on the second ``load_file`` turns this
-RED: the tree keeps showing file A's bookmark row after file B has been
-opened.
 """
 
 from __future__ import annotations

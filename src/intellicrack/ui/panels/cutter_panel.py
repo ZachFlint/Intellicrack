@@ -93,8 +93,8 @@ _SHUTDOWN_TIMEOUT_S: Final[float] = 10.0
 
 # The sub-tab strip (Debugger/Project/Advanced Search/Static Analysis Extras/...)
 # must never be squeezed below the height its own controls need: Qt's QSplitter
-# honours a child's real minimumHeight as a hard resize floor even though it
-# ignores setSizes()/setCollapsible() bookkeeping (S20-D21), so this constant --
+# honors a child's real minimumHeight as a hard resize floor even though it
+# ignores setSizes()/setCollapsible() bookkeeping, so this constant --
 # not a splitter size hint -- is what stops a MoveWindow/resize from collapsing
 # the sub-tab pane to a sliver on every subsequent layout pass.
 _DATA_TABS_MIN_HEIGHT: Final[int] = 240
@@ -231,7 +231,7 @@ class CutterPanel(AnalysisPanelBase):
         console = self._create_console()
         # Real minimumHeight, not a splitter size hint: a QSplitter enforces a
         # child's minimumHeight as a hard floor across every subsequent resize,
-        # which setSizes()/setCollapsible() alone do not (S20-D21).
+        # which setSizes()/setCollapsible() alone do not.
         data_tabs.setMinimumHeight(_DATA_TABS_MIN_HEIGHT)
         console.setMinimumHeight(_CONSOLE_MIN_HEIGHT)
 
@@ -256,7 +256,7 @@ class CutterPanel(AnalysisPanelBase):
         caching state (font metrics, icon caches) that has nothing to do
         with this panel's own layout -- so the same persisted pane sizes
         could resolve to visibly different geometry across panel
-        instances (S20-D21 repair). Explicitly resizing the splitter to
+        instances. Explicitly resizing the splitter to
         the exact total extent the requested sizes need, before applying
         them, removes that dependency: the splitter always has just
         enough room for the request, so ``setSizes()`` reproduces it
@@ -1111,9 +1111,8 @@ class CutterPanel(AnalysisPanelBase):
     def _on_decompile_error(self, error: object) -> None:
         """Surface a decompilation failure directly in the Decompiler tab.
 
-        Replaces a silently-swallowed warning log with an in-view message
-        so a failed decompile never leaves the tab showing stale or blank
-        content.
+        Shows the failure in the view so a failed decompile never leaves the
+        tab showing stale or blank content.
 
         Args:
             error: Exception raised by the bridge's ``decompile`` call.
@@ -1154,9 +1153,8 @@ class CutterPanel(AnalysisPanelBase):
     def _on_graph_error(self, error: object) -> None:
         """Surface a CFG retrieval failure and clear the graph view.
 
-        Replaces a silently-swallowed warning log with a status-bar message
-        and an emptied graph scene so a failed CFG fetch never leaves the
-        CFG tab showing a stale graph.
+        Shows the failure in the status bar and empties the graph scene so a
+        failed CFG fetch never leaves the CFG tab showing a stale graph.
 
         Args:
             error: Exception raised by the bridge's ``get_function_graph`` call.

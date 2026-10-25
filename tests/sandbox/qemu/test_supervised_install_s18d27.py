@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S18-D27: the printed install command could not finish an install.
+r"""The printed install command could not finish an install.
 
 ``print_plan`` told the operator to *"Run this command to perform the
 unattended install"*, and that single command provably cannot. Windows Setup

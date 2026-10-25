@@ -4,7 +4,6 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge-completeness remediation gates for PROCESS panel controls (L3).
 
-Covers agent-10 (``audit/bridge-completeness/agent-10-sandbox-process.md``)
 L3 wiring for:
 
 * P13 -- ``MemoryTab``'s new "Decommit" button invokes

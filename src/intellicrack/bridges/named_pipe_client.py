@@ -222,7 +222,7 @@ class NamedPipeClient:
         single-instance server pipe: the loser would otherwise collide with
         ``ERROR_PIPE_BUSY`` (231) while the winner's live connection gets
         discarded by the caller, permanently starving the server's one pipe
-        instance until it is recycled (F16).
+        instance until it is recycled.
 
         Raises:
             ToolError: If called on a non-Windows platform, if the connect
@@ -489,7 +489,7 @@ class NamedPipeClient:
         silent for an unbounded time between messages (for example while a
         debuggee runs between breakpoints), and treating that idle gap as a
         fatal read timeout would permanently kill an otherwise healthy
-        connection (F16). A genuinely dead peer is still detected promptly
+        connection. A genuinely dead peer is still detected promptly
         because the underlying blocking read fails with a broken-pipe error
         as soon as the OS tears down the handle.
 
@@ -581,7 +581,7 @@ class NamedPipeClient:
         garbage collected. A done-callback that drains the exception is
         attached to every future this method resolves so that outcome is
         consumed exactly once regardless of whether the original awaiter
-        is still listening (F16 unretrieved-future leak).
+        is still listening.
 
         Args:
             exc: Exception to propagate to awaiting ``send_command`` callers.
@@ -806,7 +806,7 @@ class NamedPipeClient:
         # both be genuinely in flight on this one duplex handle at the same
         # time. A synchronous (non-overlapped) handle does not support that:
         # a second thread's I/O call on the same handle can block for the
-        # full duration of an unrelated already-pending operation (F16).
+        # full duration of an unrelated already-pending operation.
         handle: int | None = kernel32.CreateFileW(
             pipe_name,
             GENERIC_READ | GENERIC_WRITE,
@@ -946,7 +946,7 @@ class NamedPipeClient:
         two threads issuing I/O on it concurrently: the background reader
         thread's indefinite wait for the next frame and a concurrent
         ``send_command`` write can otherwise block each other for the
-        duration of whichever operation is pending first (F16). Opening the
+        duration of whichever operation is pending first. Opening the
         handle with ``FILE_FLAG_OVERLAPPED`` (see :meth:`_open_handle`) and
         driving every read/write through a dedicated per-call
         :class:`~intellicrack.bridges.win32_types.OVERLAPPED` structure
@@ -1078,7 +1078,7 @@ class NamedPipeClient:
         Scopes ``CancelIoEx`` to the specific pending read's
         :class:`~intellicrack.bridges.win32_types.OVERLAPPED` structure so a
         read timeout can never collaterally abort a concurrently in-flight
-        write on the same duplex handle (F16). A no-op when no read is
+        write on the same duplex handle. A no-op when no read is
         currently pending.
         """
         self._cancel_scoped_io(self._read_overlapped, operation="read")
@@ -1089,7 +1089,7 @@ class NamedPipeClient:
         Scopes ``CancelIoEx`` to the specific pending write's
         :class:`~intellicrack.bridges.win32_types.OVERLAPPED` structure so a
         write timeout can never collaterally abort a concurrently
-        in-flight read on the same duplex handle (F16). A no-op when no
+        in-flight read on the same duplex handle. A no-op when no
         write is currently pending.
         """
         self._cancel_scoped_io(self._write_overlapped, operation="write")

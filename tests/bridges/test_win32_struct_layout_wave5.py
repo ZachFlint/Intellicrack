@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave-5 struct-layout gates for win32_types.py.
+"""Struct-layout gates for win32_types.py.
 
 Each test asserts ctypes.sizeof and key field offsets for a Win32 ctypes
 structure against the Windows SDK documented values.  The oracle is the

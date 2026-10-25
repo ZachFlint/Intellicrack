@@ -3,15 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for audit6 CORE-A findings on src/intellicrack/core/session.py and types.py.
+"""Regression tests for src/intellicrack/core/session.py and types.py.
 
 Covers:
-    F-0006 - auto-save loop must survive failures and re-arm.
-    F-0007 - Session.tool_states writer methods exist and persist round-trip.
-    F-0008 - Session.tags writer methods exist and persist round-trip.
-    F-0009 - duplicate Session dataclass in types.py is removed.
-    F-0022 - HexDocumentLike/HexDocumentFull Protocol bodies collapse to ``...``.
-    F-0024 - SessionManager.update offloads SQLite I/O via asyncio.to_thread + lock.
+    Auto-save loop must survive failures and re-arm.
+    Session.tool_states writer methods exist and persist round-trip.
+    Session.tags writer methods exist and persist round-trip.
+    No duplicate Session dataclass in types.py.
+    HexDocumentLike/HexDocumentFull Protocol bodies collapse to ``...``.
+    SessionManager.update offloads SQLite I/O via asyncio.to_thread + lock.
 """
 
 from __future__ import annotations
@@ -71,18 +71,16 @@ def _restore_session_store_save(original: Callable[[SessionStore, Session], None
     """Restore SessionStore.save to ``original``.
 
     Args:
-        original: Function previously returned by ``_swap_session_store_save``.
+        original: Original save callable returned by ``_swap_session_store_save``.
     """
     setattr(SessionStore, "save", original)
 
 
-# =====================================================================
-# F-0006 - Auto-save loop must survive a failure and re-arm.
-# =====================================================================
+# Auto-save loop must survive a failure and re-arm.
 
 
 class TestAutoSaveLoopSurvivesFailures:
-    """F-0006: an exception in save() must not kill the auto-save task.
+    """An exception in save() must not kill the auto-save task.
 
     The loop must re-arm across multiple consecutive failures and eventually
     complete a successful save.  ``save_attempts >= 2`` is not sufficient because
@@ -284,13 +282,11 @@ class TestAutoSaveLoopSurvivesFailures:
             await manager.close()
 
 
-# =====================================================================
-# F-0007 - Session.tool_states writer: behavioral correctness
-# =====================================================================
+# Session.tool_states writer: behavioral correctness
 
 
 class TestSessionToolStatesWriters:
-    """F-0007: Session.tool_states must have a concrete writer that persists.
+    """Session.tool_states must have a concrete writer that persists.
 
     The canonical writer is ``Session.set_tool_state``.  Verifying its
     existence via ``hasattr`` is insufficient because a stub that merely
@@ -438,13 +434,11 @@ class TestSessionToolStatesWriters:
         assert len(session.tool_states) == 0
 
 
-# =====================================================================
-# F-0008 - Session.tags writers: behavioral correctness
-# =====================================================================
+# Session.tags writers: behavioral correctness
 
 
 class TestSessionTagsWriters:
-    """F-0008: Session.tags must have concrete writer methods that persist.
+    """Session.tags must have concrete writer methods that persist.
 
     ``hasattr`` checks cannot gate correctness: a stub that always returns
     ``None`` would pass.  These tests assert exact return values (``True``/
@@ -563,13 +557,11 @@ class TestSessionTagsWriters:
         assert loaded.tags == ["b"]
 
 
-# =====================================================================
-# F-0009 - duplicate Session dataclass in types.py is gone
-# =====================================================================
+# No duplicate Session dataclass in types.py
 
 
 class TestDuplicateSessionRemoved:
-    """F-0009: types.py must not export a stale Session dataclass."""
+    """types.py must not export a stale Session dataclass."""
 
     @staticmethod
     def test_types_module_does_not_export_session() -> None:
@@ -579,13 +571,11 @@ class TestDuplicateSessionRemoved:
         assert "Session" not in exported, "Session must not be in types.__all__"
 
 
-# =====================================================================
-# F-0022 - Protocol bodies must collapse to `...`
-# =====================================================================
+# Protocol bodies must collapse to `...`
 
 
 class TestProtocolBodiesHaveNoConcreteImplementation:
-    """F-0022: Protocol method bodies must not provide concrete logic.
+    """Protocol method bodies must not provide concrete logic.
 
     A Protocol method body is allowed to be:
         * a single docstring (string Constant Expression), or
@@ -846,13 +836,11 @@ class TestProtocolBodiesHaveNoConcreteImplementation:
         )
 
 
-# =====================================================================
-# F-0024 - SessionManager.update must offload SQLite I/O and serialize concurrent writers
-# =====================================================================
+# SessionManager.update must offload SQLite I/O and serialize concurrent writers
 
 
 class TestSessionManagerUpdateOffloadsAndSerialises:
-    """F-0024: update() must run SQLite I/O off the event loop and never race."""
+    """update() must run SQLite I/O off the event loop and never race."""
 
     @staticmethod
     @pytest.mark.asyncio

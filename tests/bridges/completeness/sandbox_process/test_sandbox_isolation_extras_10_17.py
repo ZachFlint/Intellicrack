@@ -4,13 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge-completeness remediation gates for the SANDBOX isolation-extras slice (L1 + L2 + L3).
 
-Covers agent-10 (``audit/bridge-completeness/agent-10-sandbox-process.md``) row 17 and
-Prioritized-gap-list item 2: ``sandbox.create``/``sandbox.restart`` (the AI tool-calling
-path) and the per-instance panel toolbar (the GUI path) could set none of
+Covers these gaps: ``sandbox.create``/``sandbox.restart`` (the AI tool-calling
+path) and the per-instance panel toolbar (the GUI path) cannot set any of
 ``SandboxConfig``'s 7 isolation-extras fields -- ``clipboard_enabled``, ``audio_enabled``,
 ``video_enabled``, ``printer_enabled``, ``shared_folders``, ``startup_commands``,
-``environment_variables`` -- nor did the panel expose a per-instance ``block_telemetry``
-override, despite every field already being fully consumed by ``WindowsSandbox``.
+``environment_variables`` -- and the panel exposes no per-instance ``block_telemetry``
+override, although ``WindowsSandbox`` already consumes every field.
 
 * L1 -- ``SandboxBridge.create``/``restart`` thread all 7 fields into a real
   ``SandboxConfig`` passed to the manager, with ``SandboxConfig``'s own documented
@@ -139,7 +138,7 @@ class _ConfigRecordingManager(StubManager):
     Overrides both ``create()`` and ``restart()`` directly -- unlike
     ``test_sandbox_l1_l2.py``'s ``_ConfigRecordingManager``, which only overrides
     ``create()`` and relies on ``StubManager.restart()``'s internal delegation through
-    ``self.create()`` -- so this item's ``restart()`` isolation-extras coverage has its
+    ``self.create()`` -- so ``restart()`` isolation-extras coverage has its
     own direct recording point rather than depending on that delegation. Real VM
     provisioning (``WindowsSandbox``/``QEMUSandbox`` availability probing and startup) is
     the genuine external boundary this test cannot cross inside the sandbox environment,

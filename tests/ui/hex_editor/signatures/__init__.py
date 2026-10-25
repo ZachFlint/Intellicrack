@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit4 C8 hex signatures offload test package."""
+"""Hex signatures offload test package."""

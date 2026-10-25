@@ -2,20 +2,20 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the ProcessPanel status bar height and attach-hint overlay theming.
+"""Gates for the ProcessPanel status bar height and attach-hint overlay theming.
 
-Covers two Phase-code-half findings against real, on-screen (offscreen-platform) widgets:
+Covers two layout and theming behaviors against real, on-screen (offscreen-platform) widgets:
 
-* D42: the persistent status bar at the bottom of :class:`ProcessPanel` used a hardcoded
-  ``_STATUS_HEIGHT = 24`` fixed height, which clips the status labels once the application
-  font grows large enough that a single line of text no longer fits in 24px. The fix derives
-  the height from :class:`~PyQt6.QtGui.QFontMetrics` instead, so it must grow along with the
-  font.
-* D37 (code half): :class:`~intellicrack.ui.panels.process_panel.hint_overlay.AttachHintOverlay`
-  hardcoded a dark-theme-only stylesheet (``#1e1e1e``-family hex colors baked into the widget),
-  which left the overlay unreadable in a light theme. The fix removes the inline stylesheet and
-  relies on the ``attach_hint_overlay``/``attach_hint_label`` object names for a sibling agent's
-  application-stylesheet rules to theme it instead.
+* Status bar height: the persistent status bar at the bottom of :class:`ProcessPanel`
+  must not use a hardcoded ``_STATUS_HEIGHT = 24`` fixed height, which clips the status
+  labels once the application font grows large enough that a single line of text no
+  longer fits in 24px. The height is derived from :class:`~PyQt6.QtGui.QFontMetrics`,
+  so it grows along with the font.
+* Attach-hint overlay theming: :class:`~intellicrack.ui.panels.process_panel.hint_overlay.AttachHintOverlay`
+  must not hardcode a dark-theme-only stylesheet (``#1e1e1e``-family hex colors baked
+  into the widget), which leaves the overlay unreadable in a light theme. The widget
+  relies on the ``attach_hint_overlay``/``attach_hint_label`` object names so the
+  application stylesheet can theme it.
 """
 
 from __future__ import annotations
@@ -40,11 +40,11 @@ if TYPE_CHECKING:
 
     from PyQt6.QtWidgets import QApplication
 
-# Comfortably larger than the retired 24px fixed height. A pixel size (not a
+# Comfortably larger than the 24px fixed height. A pixel size (not a
 # point size) is used so the enlarged font's line height is deterministic and
 # independent of the headless platform's logical DPI -- an offscreen QPA at a
 # low DPI renders a 28pt font at only ~16px, which is too small to exceed the
-# retired 24px floor and would make this gate vacuous.
+# 24px floor and would make this gate vacuous.
 _ENLARGED_PIXEL_SIZE = 40
 _OLD_FIXED_STATUS_HEIGHT = 24
 
@@ -68,7 +68,7 @@ def panel(qapp: QApplication) -> Generator[ProcessPanel]:
 
 
 class TestStatusBarHeightDerivedFromFontMetrics:
-    """D42: the status bar height must track font metrics, not a hardcoded constant."""
+    """The status bar height must track font metrics, not a hardcoded constant."""
 
     @staticmethod
     def test_status_bar_height_scales_with_enlarged_application_font(qapp: QApplication) -> None:
@@ -135,7 +135,7 @@ class TestStatusBarHeightDerivedFromFontMetrics:
 
 
 class TestAttachHintOverlayIsThemedNotHardcoded:
-    """D37 (code half): the overlay must defer coloring to the app stylesheet."""
+    """The overlay must defer coloring to the app stylesheet."""
 
     @staticmethod
     def test_source_has_no_hardcoded_color_literals() -> None:

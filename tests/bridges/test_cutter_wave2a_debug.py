@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real falsifiable test gates for the CutterBridge debug subsystem (wave-2a).
+"""Real falsifiable test gates for the CutterBridge debug subsystem.
 
-Covers all 15 debug operations that were previously at 0 % test coverage:
+Covers the 15 debug operations:
 attach, detach, set_breakpoint (software / hardware / memory / conditional /
 injection guard), remove_breakpoint, get_breakpoints (merge + type coercion),
 step_into, step_over, run, get_registers (64-bit and 32-bit alt-name fallback),
@@ -529,7 +529,7 @@ class TestGetBreakpoints:
     def test_hw_type_string_coerced_to_hardware_literal(self) -> None:
         """A rizin-reported 'hw' type string is coerced to the 'hardware' literal.
 
-        This is the specific coercion identified as untested in the audit.
+        This is the coercion that needs a dedicated test.
         The independent oracle is the rizin dbj spec: rizin writes 'hw' in
         the 'type' field for hardware breakpoints, but the bridge must normalise
         it to the BreakpointInfo.bp_type literal 'hardware'.

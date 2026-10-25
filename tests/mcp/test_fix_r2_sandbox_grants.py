@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 6: a sandboxed server's write access lasts only as long as the server, covers only what it must, and never stalls the loop.
+"""A sandboxed server's write access lasts only as long as the server, covers only what it must, and never stalls the loop.
 
 Windows gives a directory Low integrity write access through its mandatory label, so every gate here reads and writes real labels on real
 directories, and the end-to-end gates run a real ``MCPServer`` confined at Low integrity. They can only run on Windows and are skipped

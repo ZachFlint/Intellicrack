@@ -2,18 +2,17 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit4 C13 (F-0007): hex patches bridge routing.
+"""Hex patches bridge routing.
 
-The defect: ``PatchesMixin._on_export_patches`` and
-``_on_import_patches`` previously called ``document.export_patches_*``
-and ``document.import_patches_*`` directly. The bridge's
-``export_patches`` / ``import_patches`` methods exist precisely so the
-GUI, AI tools and CLI agree on patch wire-format bytes including the
+The bridge's ``export_patches`` / ``import_patches`` methods exist so the
+GUI, AI tools and CLI agree on patch wire-format bytes, including the
 bridge's Python-only fallback for hexcore builds without a native IPS
-exporter. The panel-side path skipped that fallback and produced
-different bytes when the native build was missing.
+exporter. The panel must go through the bridge rather than call
+``document.export_patches_*`` or ``document.import_patches_*`` directly,
+because that path skips the fallback and produces different bytes when the
+native build is missing.
 
-The fix routes both ends of the panel patch flow through the bridge:
+The panel patch flow routes both ends through the bridge:
 
 - ``_on_export_patches`` calls ``bridge.export_patches(format, original_path)``
   via ``run_bridge_coroutine`` and base64-decodes the result before

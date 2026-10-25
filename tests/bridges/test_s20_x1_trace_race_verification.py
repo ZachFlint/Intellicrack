@@ -3,18 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for S20-D03: trace/animate verification must not miss fast settles.
+"""Falsifiable gates: trace/animate verification must not miss fast settles.
 
-Reproduced live: with cmd.exe paused at a valid state, ``Trace Into``/``Trace
-Over`` failed with "debugger never entered running state ... within 5.0s"
-even though the trace genuinely ran (RIP advanced), and ``Animate Stop``
-failed with "debugger still running ... within 5.0s" even though animation
-demonstrably stopped. The shared root cause: the old verification polled
-``status`` on a fixed interval and only accepted the transient running (or
-paused) state it happened to catch inside that window - a conditional trace
-or an animate-stop that settles between two polls reports only the paused
-state on both sides of the transition, so the poll can report "never
-happened" for a command that genuinely ran to completion.
+A poll of ``status`` on a fixed interval only accepts the transient running (or paused)
+state it happens to catch inside its window; a conditional trace or an animate-stop that settles between two polls
+reports only the paused state on both sides, so the poll can report "never happened" for a command that ran to completion.
 
 ``X64DbgBridge._await_run_completion`` fixes this by racing the plugin's
 asynchronous ``paused`` event (delivered via ``_handle_event`` and
@@ -58,9 +51,8 @@ _PAUSED_EVENT_ADDRESS: str = "0x00007ff600001000"
 class _FakePipeClient:
     """In-process replacement for ``NamedPipeClient`` used by this module.
 
-    Mirrors the fake used by ``tests/bridges/test_x64dbg_audit7_f0001.py``
-    (reproduced here rather than imported, since that file belongs to a
-    different domain and must not be modified or depended on). Exposes only
+    Mirrors the fake used by the x64dbg bridge tests (reproduced here rather than imported, so this module has no dependency on
+        another test module). Exposes only
     what ``X64DbgBridge._send_pipe_command`` calls: the ``is_connected``
     property and ``send_command``.
     """
@@ -104,7 +96,7 @@ class _PlaceholderProcess:
     """Sentinel stand-in used to satisfy ``self._process is not None`` checks.
 
     ``_raise_if_process_exited`` calls ``self._process.poll()`` on every
-    bridge command (D19's mid-session liveness probe), so this stand-in must
+    bridge command, so this stand-in must
     implement ``poll()`` with the same contract as
     ``subprocess.Popen.poll()``: ``None`` means the process is still
     running. Returning anything else here would make every bridge call in
@@ -223,8 +215,7 @@ async def test_animate_stop_verifies_via_paused_event_when_status_never_shows_pa
 ) -> None:
     """Animate stop that settles between micro-steps must still verify.
 
-    ``status`` always reports ``running`` (never ``paused``) - reproducing
-    the live symptom "debugger still running ... within 5.0s" - while the
+    ``status`` always reports ``running`` (never ``paused``), while the
     plugin's ``paused`` event fires the instant ``pause`` is sent.
     ``animate_stop`` must resolve through the event rather than the poll.
 

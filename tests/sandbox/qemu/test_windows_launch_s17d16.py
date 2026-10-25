@@ -2,18 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D16/D17/D18/D19: the QEMU backend must launch on Windows.
+"""Gates for the QEMU backend must launch on Windows.
 
 The QEMU backend had never run on Windows. Its command line and process model
 carried Unix assumptions that make QEMU exit before the VM starts:
 
-* ``-daemonize`` and ``-pidfile`` (S17-D16) - Windows QEMU implements neither;
+* ``-daemonize`` and ``-pidfile`` - Windows QEMU implements neither;
   ``-daemonize`` is rejected as an invalid option, so every launch failed.
-* virtio-9p for the Linux shared folder (S17-D17) - 9p is compiled out of every
+* virtio-9p for the Linux shared folder - 9p is compiled out of every
   Windows QEMU build, so ``-fsdev`` aborts the launch.
-* ``-cpu host`` and a q35 in-kernel IRQ chip under WHPX (companions of S17-D18) -
+* ``-cpu host`` and a q35 in-kernel IRQ chip under WHPX -
   both make WHPX raise "Unexpected VP exit code 4" during early boot.
-* ``-smbios type=3,...,chassis-type=N`` (S17-D19) - ``chassis-type`` is not a
+* ``-smbios type=3,...,chassis-type=N`` - ``chassis-type`` is not a
   valid SMBIOS type-3 parameter, so QEMU rejects the argument.
 
 These tests build the real command line with ``_build_qemu_command`` and assert
@@ -113,7 +113,7 @@ def test_whpx_pins_a_supported_irqchip_mode_and_a_compatible_cpu(tmp_path: Path)
     rejected outright ("WHPX: split irqchip currently not supported"), and
     leaving the mode unpinned lets the q35 default decide it. Which of the two
     supported modes actually carries a guest is settled against a live guest by
-    the S17-D37 gate, not by restating the chosen spelling here.
+    the WHPX interrupt-chip gate, not by restating the chosen spelling here.
 
     Args:
         tmp_path: Per-test temporary directory.
@@ -134,7 +134,7 @@ def test_linux_shared_folder_uses_fat_not_9p_on_windows(tmp_path: Path) -> None:
 
     The FAT volume that replaces it is exposed read-only: vvfat's write-back
     path calls ``abort()`` rather than failing a write, which took the whole
-    machine down mid-run (S17-D69).
+    machine down mid-run.
 
     Args:
         tmp_path: Per-test temporary directory.

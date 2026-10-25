@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Second-pass critical-coverage tests for the process bridge's remaining reachable failure paths.
+"""coverage tests for the process bridge's remaining reachable failure paths.
 
 Every test that modifies or probes a live process drives the real Win32 APIs against a child process that the
 test itself starts (a Python interpreter blocked on stdin). The only queries made against the pytest process

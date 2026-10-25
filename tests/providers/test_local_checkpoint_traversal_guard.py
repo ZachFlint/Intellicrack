@@ -11,7 +11,7 @@ so a hostile checkpoint can map a weight to ``../`` paths, an absolute/UNC path,
 or a Windows reserved device and make the loader read arbitrary files or block
 on a device handle (the reachable form of CVE-2026-69112). Intellicrack loads
 local models through :func:`load_model_for_cpu` / :func:`load_model_for_xpu` and
-``LocalTransformersProvider._load_model_for_cuda`, each of which now calls
+``LocalTransformersProvider._load_model_for_cuda`, each of which calls
 :func:`validate_local_checkpoint` before handing the path to ``from_pretrained``.
 
 These gates build **real** sharded safetensors checkpoints with ``torch`` /
@@ -113,7 +113,7 @@ class TestTraversalCheckpointIsRejectedButReallyExploitable:
         legit = tmp_path / "legit"
         victim = tmp_path / "victim"
         _build_sharded_checkpoint(legit)
-        reference = LlamaForCausalLM.__module__  # touch to keep import meaningful
+        reference = LlamaForCausalLM.__module__
         assert reference
 
         original = AutoModelForCausalLM.from_pretrained(str(legit), dtype=torch.float32)

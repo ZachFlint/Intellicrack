@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Bridge-layer contract tests for the new PE introspection methods.
+"""Bridge-layer contract tests for the PE introspection methods.
 
 These tests do not require ``intellicrack_hexcore`` to be built; they
 verify the ``HexEditorBridge.get_pe_sections`` /

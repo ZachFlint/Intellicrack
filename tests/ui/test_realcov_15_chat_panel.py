@@ -7,7 +7,7 @@
 :class:`ChatPanel` is a pure view/controller widget: it collects user input
 and re-emits it as ``message_submitted``, renders real :class:`Message`
 objects into message bubbles, supports incremental streaming updates, and
-manages conversation history. None of this was previously tested.
+manages conversation history.
 
 These tests drive the genuine widget through ``qtbot`` -- typing real text and
 pressing the real Send button, feeding real :class:`Message`/:class:`ToolCall`

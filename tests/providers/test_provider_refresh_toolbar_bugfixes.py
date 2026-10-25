@@ -416,7 +416,7 @@ class TestOpenAIChatModelFilterExcludesMediaModels:
         ``_fetch_and_sort_models`` builds its catalog by keeping only
         ``_is_chat_model`` ids and sorting them ``reverse=True``; the
         toolbar then defaults to index 0 when no configured default model
-        matches. Before the fix, ``sora-2-pro`` sorted ahead of every real
+        matches. Without the sort key, ``sora-2-pro`` would sort ahead of every real
         chat model and became that default.
         """
         raw_catalog = ["gpt-4o", "gpt-4.1", "o3", "o4-mini", "sora-2-pro", "gpt-image-1"]
@@ -460,7 +460,7 @@ class TestGrokChatModelFilterExcludesMediaModels:
         """Reproduces the exact toolbar default-selection bug end to end.
 
         Grok's ``_fetch_and_sort_models`` keeps only ``_is_chat_model`` ids
-        and sorts ``reverse=True``; before the fix, ``grok-imagine-video-1``
+        and sorts ``reverse=True``; ``grok-imagine-video-1``
         sorted ahead of every ``grok-4``/``grok-3`` chat model (``'i'`` >
         ``'4'``) and became the toolbar's default.
         """

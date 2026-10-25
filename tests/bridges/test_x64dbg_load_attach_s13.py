@@ -3,25 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for S13-D02 and S13-D06 in the x64dbg bridge.
+"""Regression gates for ``load()`` attach-state registration and ``scan_memory`` pattern-length validation in the x64dbg bridge.
 
-S13-D02: ``load()`` previously never registered ``self._attached_pid`` in
-practice - it queried ``$pid`` exactly once, immediately after issuing
-``InitDebug``, which races the debug loop's process-creation event and
-commonly observes ``0``. Every process-inspection command
-(``read_memory``, ``get_memory_regions``, ``get_modules``, ``get_threads``,
-``get_process_info``) gates purely on ``self._attached_pid is None`` and
-therefore raised "not attached" even though the debuggee was loaded and
-running. :class:`TestLoadRegistersAttachedProcess` drives the real
-``X64DbgBridge`` against a real host x64dbg installation and a real
-System32 debuggee to prove the Load path now registers attach state the
-same way the Attach path always did.
+``load()`` must register ``self._attached_pid`` the same way ``attach()`` does. A single ``$pid`` query issued right after ``InitDebug`` races the debug loop's process-creation event and commonly observes ``0``. Every process-inspection command (``read_memory``, ``get_memory_regions``, ``get_modules``, ``get_threads``, ``get_process_info``) gates on ``self._attached_pid is None`` and so raises "not attached" even though the debuggee is loaded and running. :class:`TestLoadRegistersAttachedProcess` drives the real ``X64DbgBridge`` against a real host x64dbg installation and a real System32 debuggee to prove that the Load path registers attach state.
 
-S13-D06: ``scan_memory`` must raise a clear ``ToolError`` for patterns
-shorter than ``MIN_PATTERN_LENGTH`` bytes instead of silently returning an
-empty result list. :class:`TestScanMemoryRejectsShortPatterns` exercises
-that guard directly; it requires no host x64dbg installation because the
-length check runs before any process or memory access.
+``scan_memory`` must raise a clear ``ToolError`` for patterns shorter than ``MIN_PATTERN_LENGTH`` bytes instead of silently returning an empty result list. :class:`TestScanMemoryRejectsShortPatterns` exercises that guard directly; it requires no host x64dbg installation because the length check runs before any process or memory access.
 """
 
 from __future__ import annotations
@@ -58,17 +44,12 @@ def _x64dbg_release_exists() -> bool:
 @pytest.mark.skipif(not _x64dbg_release_exists(), reason="vendored x64dbg install not present on this host")
 @pytest.mark.asyncio
 class TestLoadRegistersAttachedProcess:
-    """S13-D02: ``load()`` must register attach state like ``attach()`` does."""
+    """``load()`` must register attach state like ``attach()`` does."""
 
     async def test_load_then_run_makes_inspection_commands_see_the_attached_process(self) -> None:
         """Load a real debuggee and confirm process-inspection RPCs succeed.
 
-        Falsifiable: before the fix, ``self._attached_pid`` stayed ``None``
-        after ``load()`` in real usage because the single, unretried
-        ``reg_get $pid`` immediately after ``InitDebug`` raced the debug
-        loop's process-creation event. ``get_modules``, ``read_memory``, and
-        ``get_threads`` would then each raise ``ToolError`` ("not attached")
-        instead of returning the real, non-empty results asserted below.
+        Falsifiable: if ``self._attached_pid`` stays ``None`` after ``load()``, for example because the single, unretried ``reg_get $pid`` issued immediately after ``InitDebug`` races the debug loop's process-creation event, then ``get_modules``, ``read_memory``, and ``get_threads`` each raise ``ToolError`` ("not attached") instead of returning the real, non-empty results asserted below.
         """
         if not _TARGET_EXE.exists():
             pytest.skip(f"debuggee target not present on this host: {_TARGET_EXE}")
@@ -106,15 +87,13 @@ class TestLoadRegistersAttachedProcess:
 
 
 class TestScanMemoryRejectsShortPatterns:
-    """S13-D06: ``scan_memory`` must reject sub-minimum-length patterns loudly."""
+    """``scan_memory`` must reject sub-minimum-length patterns loudly."""
 
     @pytest.mark.asyncio
     async def test_hex_string_pattern_shorter_than_minimum_raises_tool_error(self) -> None:
         """A hex-string pattern under ``MIN_PATTERN_LENGTH`` bytes raises ``ToolError``.
 
-        Falsifiable: before the fix (or under a regression that removes the
-        length guard), a short pattern would silently produce an empty
-        match list instead of surfacing the requirement to the caller/UI.
+        Falsifiable: without the length guard, a short pattern would silently produce an empty match list instead of surfacing the requirement to the caller/UI.
         """
         bridge = X64DbgBridge()
         short_pattern = "48 8B 05 90"

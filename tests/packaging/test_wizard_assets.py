@@ -20,7 +20,7 @@ dependency, matching :mod:`tests.ui.test_app_icon_frames`) and assert:
   light side of mid-grey while the dark banner lands on the dark side;
 * the small wizard image is exactly 165x174.
 
-Reverting to a single-dark render (the original bug) collapses the luma gap and
+Reverting to a single-dark render collapses the luma gap and
 makes the banners byte-identical, turning these red. The banner and small PNGs
 live under ``packaging/wizard`` (mounted in the sandbox); the icon frame set is
 gated separately by :mod:`tests.ui.test_app_icon_frames`.
@@ -203,7 +203,7 @@ def test_light_and_dark_banners_are_distinct_and_correctly_toned() -> None:
     The theme-aware wizard needs two real banners. This asserts they are not the
     same bytes, share one canvas size, and that the light banner's mean luma sits
     on the light side of mid-grey well above the dark banner's, which sits on the
-    dark side -- exactly what a single-dark render (the original bug) violates.
+    dark side -- exactly what a single-dark render violates.
     """
     assert _BANNER_LIGHT.is_file(), f"light banner missing: {_BANNER_LIGHT}"
     assert _BANNER_DARK.is_file(), f"dark banner missing: {_BANNER_DARK}"
@@ -225,7 +225,7 @@ def test_light_and_dark_banners_are_distinct_and_correctly_toned() -> None:
 def test_small_wizard_image_uses_the_small_aspect() -> None:
     """Real gate: the small wizard image is 165x174 (Inno 55x58 base at 3x).
 
-    A full-bleed square (the earlier bug) would not carry this logo aspect;
+    A full-bleed square would not carry this logo aspect;
     pinning the exact dimensions catches a regression to the wrong ratio.
     """
     assert _SMALL.is_file(), f"small wizard image missing: {_SMALL}"

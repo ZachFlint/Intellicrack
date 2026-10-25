@@ -3,18 +3,17 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 U3 tests for ``clipboard_monitor.ps1`` remediation.
+"""Tests for ``clipboard_monitor.ps1`` behavior.
 
-Validates the four fixes applied to
+Validates the following behavior of
 ``src/intellicrack/sandbox/scripts/clipboard_monitor.ps1``:
 
-* F-0001 - the polling fallback is reachable when ``Add-Type`` fails.
-* F-0002 - the file no longer relies on ``$ErrorActionPreference =
-  'SilentlyContinue'``; failures are caught explicitly and emitted as
-  structured JSON log records.
-* F-0003 - the caller-supplied ``-LogDir`` is honored for all log writes.
-* F-0004 - the handler does not assign to the read-only automatic
-  variable ``$pid`` (renamed to ``$ownerPid``).
+* The polling fallback is reachable when ``Add-Type`` fails.
+* The file does not rely on ``$ErrorActionPreference = 'SilentlyContinue'``;
+  failures are caught explicitly and emitted as structured JSON log records.
+* The caller-supplied ``-LogDir`` is honored for all log writes.
+* The handler does not assign to the read-only automatic variable ``$pid``;
+  it uses ``$ownerPid`` instead.
 
 The tests run the real script under ``pwsh`` against the live filesystem
 and clipboard. They are skipped on non-Windows platforms because the
@@ -263,12 +262,12 @@ def _parse_json_log_records(contents: str) -> list[dict[str, object]]:
 
 
 def test_script_file_exists() -> None:
-    """The remediated script must exist on disk."""
+    """The script must exist on disk."""
     assert _SCRIPT_PATH.is_file(), f"missing script: {_SCRIPT_PATH}"
 
 
 def test_script_does_not_use_blanket_silentlycontinue() -> None:
-    """F-0002: file-level ``SilentlyContinue`` must be gone.
+    """File-level ``SilentlyContinue`` must not be set.
 
     The script must opt into ``$ErrorActionPreference = 'Stop'`` rather
     than swallowing every error globally.
@@ -279,7 +278,7 @@ def test_script_does_not_use_blanket_silentlycontinue() -> None:
 
 
 def test_script_does_not_clobber_pid_automatic_variable() -> None:
-    """F-0004: assignment to the automatic variable ``$pid`` is forbidden.
+    """Assignment to the automatic variable ``$pid`` is forbidden.
 
     The user-supplied pid must use a different name (``$ownerPid``).
     """
@@ -290,7 +289,7 @@ def test_script_does_not_clobber_pid_automatic_variable() -> None:
 
 
 def test_script_accepts_logdir_parameter() -> None:
-    """F-0003: the script must declare a ``-LogDir`` parameter."""
+    """The script must declare a ``-LogDir`` parameter."""
     text = _SCRIPT_PATH.read_text(encoding="utf-8")
     assert "[Parameter()][string]$LogDir" in text
 
@@ -298,7 +297,7 @@ def test_script_accepts_logdir_parameter() -> None:
 def test_script_runs_without_pid_readonly_error(tmp_path: Path) -> None:
     """Verify the script does not crash with the read-only ``$pid`` error.
 
-    F-0004 runtime check: starting the script must not raise the "PID is
+    Starting the script must not raise the "PID is
     read-only" error from clobbering ``$pid``.
 
     Args:
@@ -320,7 +319,7 @@ def test_script_runs_without_pid_readonly_error(tmp_path: Path) -> None:
 
 
 def test_script_writes_logs_to_supplied_logdir(tmp_path: Path) -> None:
-    """F-0003 runtime check: log lines must land in the supplied ``-LogDir``.
+    """Log lines must land in the supplied ``-LogDir``.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
@@ -366,7 +365,7 @@ def _find_unused_drive_letter() -> str | None:
 def test_script_emits_structured_error_when_logdir_is_unwritable() -> None:
     """Verify the script surfaces errors instead of swallowing them silently.
 
-    F-0002 runtime check: pointing ``-LogDir`` at a path on a drive that
+    Pointing ``-LogDir`` at a path on a drive that
     does not exist should cause the script to fail fast under
     ``$ErrorActionPreference = 'Stop'`` rather than exit 0 with no
     output.
@@ -435,7 +434,7 @@ def _assert_add_type_failed_record(rec: dict[str, object], log_path: Path) -> No
 def test_script_logs_structured_json_when_add_type_fails(tmp_path: Path) -> None:
     """Verify the exact JSON structure emitted when ``Add-Type`` compilation fails.
 
-    F-0001 runtime check: injecting invalid C# into ``Add-Type`` must cause the
+    Injecting invalid C# into ``Add-Type`` must cause the
     script to emit a JSON record whose fields exactly match the schema defined by
     ``Write-StructuredError``:
 
@@ -602,7 +601,7 @@ def test_smoke_script_logs_clipboard_change(tmp_path: Path) -> None:
 
     The expected byte count in field[4] is independently derived from
     ``len(sentinel.encode("utf-8"))`` -- a separate computation that does not
-    invoke any production code -- making this a genuine falsifiable oracle.
+    invoke any production code.
 
     This exercises the event-driven clipboard path. The listener records a
     readiness marker once it is registered, which the test waits for before it

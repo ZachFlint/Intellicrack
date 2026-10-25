@@ -3,22 +3,21 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the S20-D10 Ghidra CFG rendering fix.
+"""Falsifiable gates for Ghidra CFG rendering.
 
-Before this fix, ``ui/panels/graph_view.py`` only understood the Cutter/Rizin
+``ui/panels/graph_view.py`` understands the Cutter/Rizin
 ``agj``/``afbj`` block shape (blocks keyed by ``offset``, edges from ``jump``/
 ``fail``). Ghidra's ``get_basic_blocks`` bridge method returns a different
 shape (blocks keyed by ``start``, edges via ``destinations``/
-``destination_edges``), so every Ghidra block fell back to the default
+``destination_edges``), so Ghidra blocks fall back to the default
 ``block.get("offset", 0)`` of ``0``, collapsing every distinct basic block
-onto scene key ``0`` and producing exactly the observed bug: a CFG showing a
+onto scene key ``0``, so a CFG shows a
 single block labeled ``"0x0"`` with no edges, regardless of how many real
 basic blocks and branches the function actually had.
 
 These tests build ``CFGGraphScene`` with the exact Ghidra ``get_basic_blocks``
 block shape -- three real basic blocks with real 64-bit addresses and real
-``destination_edges`` flow-type data, mirroring the audit's own
-``S20_CFG_CHECK`` ground truth of 3 basic blocks for ``FUN_140027780`` -- and
+``destination_edges`` flow-type data, mirroring the 3 basic blocks of ``FUN_140027780`` -- and
 assert on the real, populated ``CFGGraphScene.block_items`` mapping and real
 ``EdgeItem`` instances added to the scene. No part of the scene or its block
 map is mocked or stubbed.
@@ -69,7 +68,7 @@ def qapp() -> Generator[QApplication]:
 def _ghidra_shaped_blocks() -> list[dict[str, Any]]:
     """Build a 3-block Ghidra ``get_basic_blocks`` payload for a synthetic if/merge function.
 
-    Mirrors the shape ``GhidraBridge.get_basic_blocks`` now returns: each
+    Mirrors the shape ``GhidraBridge.get_basic_blocks`` returns: each
     block carries ``start``/``end`` (no ``offset``), and edges are carried
     through ``destination_edges`` (no top-level ``jump``/``fail``). The
     entry block conditionally branches to the true-branch block and falls
@@ -126,15 +125,14 @@ def _ghidra_shaped_blocks() -> list[dict[str, Any]]:
 
 
 class TestGhidraBlockAddressing:
-    """S20-D10: Ghidra-shaped blocks are keyed by their real start address."""
+    """Ghidra-shaped blocks are keyed by their real start address."""
 
     def test_three_ghidra_blocks_keep_distinct_real_addresses(self, qapp: QApplication) -> None:
         """Three Ghidra basic blocks produce three distinct, non-zero scene keys.
 
-        Before the fix, every block here would collapse onto scene key ``0``
-        (the ``block.get("offset", 0)`` fallback) because none of them carry
-        an ``offset`` key, reproducing the audit's observed single
-        ``"0x0"`` block for a function verified to have 3 real basic blocks.
+        Blocks without an ``offset`` key would collapse onto scene key ``0``
+        (the ``block.get("offset", 0)`` fallback) so the three blocks must stay distinct instead of rendering as one
+        ``"0x0"`` block.
 
         Args:
             qapp: Session/module QApplication fixture.
@@ -152,7 +150,7 @@ class TestGhidraBlockAddressing:
 
 
 class TestGhidraDestinationEdges:
-    """S20-D10: Ghidra ``destination_edges`` render as real scene edges."""
+    """Ghidra ``destination_edges`` render as real scene edges."""
 
     def test_destination_edges_render_with_correct_branch_types(self, qapp: QApplication) -> None:
         """All 3 destination edges are added to the scene with the right branch coloring.
@@ -161,9 +159,8 @@ class TestGhidraDestinationEdges:
         edge and its fallthrough destination as ``"false"`` (since the same
         block also has a conditional edge); the true-branch block's sole
         fallthrough destination renders as ``"unconditional"`` (it has no
-        sibling conditional edge to pair against). Before the fix, Ghidra
-        blocks carried no ``jump``/``fail`` keys, so ``_create_edges`` built
-        zero edges for them regardless of how many real successors existed.
+        sibling conditional edge to pair against). Ghidra blocks carry no ``jump``/``fail`` keys, so ``_create_edges`` must read
+                ``destination_edges`` to build their edges.
 
         Args:
             qapp: Session/module QApplication fixture.
@@ -185,9 +182,8 @@ class TestGhidraDestinationEdges:
         for blocks with no ``jump``/``fail`` keys): only a block that is never
         referenced as someone else's destination becomes a layer-0 root, and
         :meth:`CFGGraphScene._position_layers` always gives layer 0 the
-        smallest y-offset. Before the fix, every block here collapsed onto a
-        single scene item at key 0, so this real, on-screen y-ordering could
-        not exist at all.
+        smallest y-offset. Without per-block keys, every block would collapse onto a single scene item at
+                key 0, so this on-screen y-ordering could not exist.
 
         Args:
             qapp: Session/module QApplication fixture.

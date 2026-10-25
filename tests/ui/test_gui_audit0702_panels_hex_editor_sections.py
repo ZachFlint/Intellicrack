@@ -2,32 +2,25 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the GUI audit findings C4 and M9 in ``hex_editor.sections``.
+"""Gates for ``hex_editor.sections`` template selection MRO and strings-worker staleness.
 
-C4: ``SectionsMixin`` declared an empty ``_select_template`` stub. Because
-``HexEditorPanel``'s base-class list places ``SectionsMixin`` before
-``TemplatesMixin`` and neither mixin shares a non-``object`` ancestor,
-Python's MRO resolved ``self._select_template(...)`` to the stub instead of
-``TemplatesMixin``'s real implementation, so ``_auto_detect_file_type``
-silently never selected a structure template on file open. The fix removes
-the stub (keeping only a ``Callable`` type annotation for static analysis),
-letting MRO fall through to ``TemplatesMixin._select_template``.
+``SectionsMixin`` must not declare an empty ``_select_template`` stub. Because ``HexEditorPanel``'s base-class list places
+``SectionsMixin`` before ``TemplatesMixin`` and neither mixin shares a non-``object`` ancestor, Python's MRO would resolve
+``self._select_template(...)`` to the stub instead of ``TemplatesMixin``'s real implementation, and ``_auto_detect_file_type``
+would silently never select a structure template on file open. The stub is removed (keeping only a ``Callable`` type
+annotation for static analysis), letting MRO fall through to ``TemplatesMixin._select_template``.
 
-M9: ``_populate_strings`` called ``previous.requestInterruption()`` on a
-superseded strings-extraction worker, but ``GenericCallableWorker.run()``
-never checks the interruption flag, so the stale worker keeps running to
-completion and can emit ``call_finished`` after a newer worker already
-rendered fresh results -- silently clobbering the strings tree with stale
-data. The fix routes both ``call_finished`` and ``call_error`` through
-``_on_strings_worker_finished`` / ``_on_strings_worker_error``, which compare
-the emitting worker's identity against the live ``self._strings_worker``
-reference and discard any delivery from a worker that has already been
-superseded.
+``_populate_strings`` calls ``previous.requestInterruption()`` on a superseded strings-extraction worker, but
+``GenericCallableWorker.run()`` never checks the interruption flag, so the stale worker keeps running to completion and can
+emit ``call_finished`` after a newer worker already rendered fresh results, clobbering the strings tree with stale data.
+Both ``call_finished`` and ``call_error`` route through ``_on_strings_worker_finished`` / ``_on_strings_worker_error``, which
+compare the emitting worker's identity against the live ``self._strings_worker`` reference and discard any delivery from a
+worker that has already been superseded.
 
 Every test below drives the real ``SectionsMixin`` / ``TemplatesMixin``
 implementations (no mocks standing in for the mixin logic) under an
 offscreen ``QApplication``, using real ``GenericCallableWorker`` QThreads for
-the M9 race reproduction.
+the race reproduction.
 """
 
 from __future__ import annotations
@@ -99,11 +92,11 @@ class _MagicBytesDocument:
 def test_c4_mro_resolves_select_template_to_templates_mixin() -> None:
     """``_select_template`` must resolve via MRO to ``TemplatesMixin``'s implementation.
 
-    Pre-fix, ``SectionsMixin`` defined its own empty ``_select_template``
+    ``SectionsMixin`` must not define its own empty ``_select_template``
     stub, which precedes ``TemplatesMixin`` in ``HexEditorPanel``'s base
     list and therefore wins Python's MRO lookup, making
     ``TemplatesMixin._select_template`` unreachable through
-    ``self._select_template(...)``. Post-fix the stub is removed, so the
+    ``self._select_template(...)``. Without the stub, the
     class attribute lookup falls through to the real implementation.
     """
     resolved = _SectionsThenTemplatesHost._select_template
@@ -117,7 +110,7 @@ def test_c4_select_template_updates_combo_box(qapp: QApplication) -> None:
     """Calling ``self._select_template`` on the combined host must move the combo selection.
 
     Exercises the resolved method directly (as ``_auto_detect_file_type``
-    does) and asserts the real ``QComboBox`` selection changes. Pre-fix this
+    does) and asserts the real ``QComboBox`` selection changes. Were the stub present, this
     would be a no-op because the call resolved to ``SectionsMixin``'s empty
     stub, leaving the combo box on its initial index.
 
@@ -142,9 +135,9 @@ def test_c4_auto_detect_file_type_selects_pe_template_end_to_end(qapp: QApplicat
 
     Drives the exact call site the finding describes
     (``_auto_detect_file_type`` -> ``self._select_template(...)``) with a
-    document whose leading bytes are the ``MZ`` DOS signature. Pre-fix, the
+    document whose leading bytes are the ``MZ`` DOS signature. With the stub present, the
     combo box would remain on its initial ``ELF_HEADER_64`` selection because
-    ``self._select_template`` resolved to the no-op stub; post-fix it must
+    ``self._select_template`` resolved to the no-op stub; it must
     move to ``IMAGE_DOS_HEADER``.
 
     Args:
@@ -172,7 +165,7 @@ class _RaceDocument:
     calls. The first invocation blocks on :attr:`release_first_call` so a
     test can hold a superseded worker's native extraction in flight while a
     second, faster worker finishes and renders its results first --
-    reproducing the exact race M9 describes.
+    reproducing the race in which a superseded worker finishes late.
 
     Attributes:
         first_call_started: Event set once the first call is in flight, so a
@@ -252,14 +245,14 @@ def test_m9_superseded_slower_worker_does_not_overwrite_fresher_result(
 ) -> None:
     """A stale worker's late ``call_finished`` must not clobber a fresher rendered result.
 
-    Reproduces the exact race M9 describes: an old (slow) extraction is
+    Reproduces the race in which an old (slow) extraction is
     still in flight when a new scan is triggered; ``requestInterruption()``
     does not actually stop the old worker's native call, so it can still
     complete and emit ``call_finished`` after the new worker's results are
-    already on screen. Pre-fix, ``call_finished`` connected directly to
+    already on screen. Were ``call_finished`` connected directly to
     ``_on_strings_ready`` with no staleness check, so the stale worker's
     late delivery would clear the tree and repopulate it with
-    ``STALE-RESULT``. Post-fix, ``_on_strings_worker_finished`` compares the
+    ``STALE-RESULT``. ``_on_strings_worker_finished`` compares the
     emitting worker's identity against the live ``_strings_worker`` and
     discards the stale delivery.
 
@@ -317,10 +310,10 @@ def test_m9_stale_worker_error_is_discarded_by_identity_check(qapp: QApplication
     Directly exercises ``_on_strings_worker_error`` (the real production
     handler ``call_error`` is connected to) the same way Qt would invoke it
     from a stale worker's queued signal: with a worker object that is no
-    longer ``self._strings_worker``. Pre-fix, ``call_error`` connected
+    longer ``self._strings_worker``. Were ``call_error`` connected
     directly to ``_on_strings_failed_obj`` with no staleness check, so any
     late error -- even from a worker that has since been superseded -- would
-    clear the tree and show an error row. Post-fix the handler must discard
+    clear the tree and show an error row. The handler must discard
     it because the emitting worker no longer matches ``self._strings_worker``.
 
     Args:

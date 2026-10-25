@@ -7,13 +7,12 @@
 
 The module promises that "any drift between the compiled module and its stub
 is reported as an error instead of silently narrowing what the harness can
-reach." Before this fix, ``build_catalog`` only ever walked the *live*
-names (``runtime_surface()``) and asked whether each had a stub entry; a name
-removed from the compiled extension while ``__init__.pyi`` still declared it
-was never visited at all, so it vanished from the catalogue with zero
-``CatalogError``. This case reproduces exactly that shape with a fully
-synthetic runtime surface and stub, so it does not depend on -- or risk
-disturbing -- the real compiled extension's actual API.
+reach." ``build_catalog`` walks the *live* names (``runtime_surface()``) and asks whether
+each has a stub entry. A name removed from the compiled extension while
+``__init__.pyi`` still declared it is then never visited at all, and vanishes
+from the catalogue with zero ``CatalogError``. This case reproduces exactly that
+shape with a fully synthetic runtime surface and stub, so it does not depend on
+-- or risk disturbing -- the real compiled extension's actual API.
 """
 
 from __future__ import annotations
@@ -57,10 +56,11 @@ class SymmetricDriftDetectionTests(Assertions, unittest.TestCase):
         """A method present in the stub but removed from the compiled module must be reported, not dropped silently.
 
         ``length`` is a real, argument-free method on the compiled
-        ``HexDocument`` class, so if the new symmetric check is missing this
+        ``HexDocument`` class, so if the symmetric check is missing this
         does not blow up on an unrelated ``AttributeError`` while building the
         one genuine operation -- it falls straight through to a clean, normal
-        return, which is exactly what the old code did with a stale stub entry.
+        return, which is what a stale stub entry gets when nothing checks the
+        reverse direction.
         """
         synthetic_signatures: dict[str, tuple[list[tuple[str, str]], str]] = {
             "length": ([], "int"),
@@ -98,7 +98,7 @@ class SymmetricDriftDetectionTests(Assertions, unittest.TestCase):
             catalog.build_catalog.cache_clear()
 
     def test_the_real_catalogue_still_builds_with_no_stub_only_drift(self) -> None:
-        """The real compiled module and its real stub must build cleanly, with no false positive from the new check."""
+        """The real compiled module and its real stub must build cleanly, with no false positive from the reverse check."""
         catalog.build_catalog.cache_clear()
         try:
             operations = catalog.build_catalog()

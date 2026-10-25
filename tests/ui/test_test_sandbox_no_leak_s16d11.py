@@ -3,42 +3,33 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for S16-D11: "Test Sandbox" must not leak a running instance.
+"""Gate for "Test Sandbox" not leaking a running instance.
 
-The Sandbox-Settings dialog's "Test Sandbox" button
-(``SandboxConfigDialog._test_sandbox``, in
-``src/intellicrack/ui/sandbox_config.py``) launches ``WindowsSandbox.exe``
-via ``SandboxTestWorker`` to verify the sandbox actually works, then always
-terminates the launched instance once the check completes -- either because
-the wait timed out (sandbox still open, needs cleanup) or an error occurred.
+The Sandbox-Settings dialog's "Test Sandbox" button (``SandboxConfigDialog._test_sandbox``, in
+``src/intellicrack/ui/sandbox_config.py``) launches ``WindowsSandbox.exe`` via
+``SandboxTestWorker`` to verify the sandbox works, then always terminates the launched instance
+once the check completes, either because the wait timed out (sandbox still open, needs cleanup)
+or an error occurred.
 
-Before the fix, that cleanup went straight to a forced
-``ProcessManager.terminate_tree`` (``TerminateProcess``) kill of the sandbox
-client. Windows Sandbox's underlying Host Compute Service VM session is
-documented to require the client's own graceful shutdown path (the same
-one triggered by clicking the sandbox window's close button) to be released
-cleanly; a bare forced kill of the client process can leave that session
-orphaned, which then blocks a subsequent "Create" with only one Windows
-Sandbox instance allowed to run at a time.
+Cleanup must try the client's own graceful shutdown path first, the same one triggered by
+clicking the sandbox window's close button. A forced ``ProcessManager.terminate_tree``
+(``TerminateProcess``) kill of the sandbox client can leave the Host Compute Service VM session
+orphaned, which then blocks a subsequent "Create" because only one Windows Sandbox instance may
+run at a time.
 
-The fix (``SandboxTestWorker._terminate_sandbox_process``) posts
-``WM_CLOSE`` to the sandbox client's top-level window first (mirroring the
-window-close button) and only falls back to the forced process-tree kill
-when no window is found or the graceful close does not complete in time.
-Both ``run()``'s ``finally`` cleanup and ``stop()`` (the path
-``_cancel_test`` uses when the dialog is closed/rejected mid-test) now go
-through this shared helper.
+``SandboxTestWorker._terminate_sandbox_process`` posts ``WM_CLOSE`` to the sandbox client's
+top-level window first (mirroring the window-close button) and only falls back to the forced
+process-tree kill when no window is found or the graceful close does not complete in time. Both
+``run()``'s ``finally`` cleanup and ``stop()`` (the path ``_cancel_test`` uses when the dialog is
+closed or rejected mid-test) go through this shared helper.
 
-This test cannot launch a real Windows Sandbox (forbidden by the task, and
-unavailable in CI), so it drives the real ``SandboxTestWorker`` termination
-logic against a real, controllable stand-in subprocess -- the same pattern
-already used by the project's own ``TestM15SandboxTestWorkerLifecycle``
-gates in ``tests/ui/test_gui_audit0702_sandbox_config.py``. The genuine,
-falsifiable assertion is that the graceful-close boundary
-(``sandbox_config.find_window_by_pid``) is actually consulted before any
-hard kill happens: reverting the fix (going back to a bare
-``ProcessManager.terminate_tree`` call) means that boundary is never
-touched, which this test would catch.
+This test cannot launch a real Windows Sandbox (it is unavailable in CI), so it drives the real
+``SandboxTestWorker`` termination logic against a real, controllable stand-in subprocess, the same
+pattern as the ``TestM15SandboxTestWorkerLifecycle`` gates in
+``tests/ui/test_gui_audit0702_sandbox_config.py``. The falsifiable assertion is that the
+graceful-close boundary (``sandbox_config.find_window_by_pid``) is consulted before any hard kill
+happens. Going back to a bare ``ProcessManager.terminate_tree`` call means that boundary is never
+touched, which this test catches.
 """
 
 from __future__ import annotations
@@ -97,7 +88,7 @@ def sleeping_process(qapp: object) -> Generator[Popen[bytes]]:
 
 @pytest.mark.spawns_process
 class TestSandboxTestWorkerDoesNotLeakARunningInstance:
-    """S16-D11: sandbox test termination must attempt a graceful close and never leak."""
+    """Sandbox test termination must attempt a graceful close and never leak."""
 
     @staticmethod
     def test_stop_consults_graceful_close_before_hard_kill_and_leaves_nothing_running(
@@ -110,7 +101,7 @@ class TestSandboxTestWorkerDoesNotLeakARunningInstance:
         that still returns ``None`` (the real, deterministic outcome for this
         windowless console stand-in process) so the test asserts the
         production code actually calls into the graceful-close boundary --
-        the real behavioural change this fix introduces -- while letting the
+        the real behavioural change under test -- while letting the
         real fallback termination path run unmodified afterwards.
 
         Args:

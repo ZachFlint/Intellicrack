@@ -513,8 +513,7 @@ class ProcessManager:
         """Cleanup handler for normal program exit.
 
         Delegates to :meth:`_sync_cleanup`, which terminates every tracked subprocess and external PID along with their descendants in a
-        single pass. The historical implementation invoked :meth:`_terminate_process_sync` for each tracked entry before calling
-        :meth:`_sync_cleanup`, causing every process tree to be walked twice and adding tens of seconds of latency to interpreter shutdown.
+        single pass.
         """
         if self._cleanup_in_progress:
             return
@@ -536,7 +535,6 @@ class ProcessManager:
             processes = list(self._processes.values())
             external_pids = list(self._external_pids.keys())
 
-        # Collect all processes including children
         all_procs_psutil: list[psutil.Process] = []
         root_pids = [p.pid for p in processes if p.pid is not None] + external_pids
         spared = _own_lineage()
@@ -551,7 +549,6 @@ class ProcessManager:
                 all_procs_psutil.extend(proc.children(recursive=True))
             except psutil.NoSuchProcess:
                 _logger.exception("process_lookup_failed", pid=pid)
-        # Deduplicate based on PID
         seen_pids: set[int] = set()
         unique_procs: list[psutil.Process] = []
         for p in all_procs_psutil:

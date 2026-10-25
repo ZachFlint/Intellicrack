@@ -6,12 +6,12 @@
 
 The workers that do not go through the async-bridge dispatch helpers each belong to one widget: the tool installer and status check, the
 sandbox test, the XPU requirements probe, the tracked-process refresh, the log-tail load, and the provider model refresh and connection
-test. Every one of them used to take that widget as its Qt parent. Qt destroys a parent's children along with it, and destroying a
+test. None of them may take that widget as its Qt parent. Qt destroys a parent's children along with it, and destroying a
 ``QThread`` whose OS thread is still running aborts the process with a native access violation and no Python traceback: exit 255 with
 nothing reported. A tool download, a Windows Sandbox launch and a model list from an unreachable endpoint all run long enough for a user
 to close the window first.
 
-All of them now derive from :class:`RetainedWorker`, which pins the thread in the shared worker registry until its OS thread finishes, and
+All of them derive from :class:`RetainedWorker`, which pins the thread in the shared worker registry until its OS thread finishes, and
 none of them accepts a Qt parent any more: they take ``owner``, which :func:`drain_bridge_workers_for` matches on and
 :func:`guarded_delivery` checks before delivering. Their call sites wrap the closure slots, which is where the guard is load-bearing: Qt
 breaks a connection itself when the slot is a bound method of a destroyed ``QObject``, but a closure has no receiver object to detect, so
@@ -689,10 +689,11 @@ def _overlong_worker_constructions(root: Path, limits: Mapping[str, int | None])
 def test_no_test_hands_a_converted_worker_a_positional_parent() -> None:
     """No test may construct a converted worker with more positional arguments than it declares.
 
-    Removing ``parent`` from these constructors left every caller that passed a widget as the trailing positional argument raising
-    ``TypeError`` on construction. Two such call sites reached CI and failed there; two more sat in files the suite aborts before
-    reaching, so nothing reported them. The production side is already gated, and this is the mirror of it for the tests: restore a
-    trailing positional widget at any of those call sites and this turns red, naming the file, the line and the arity.
+    A caller that passes a widget as the trailing positional argument raises ``TypeError`` on construction,
+    because these constructors take no parent. Such a call site can hide in a file the suite aborts before
+    reaching. The production side is already gated, and this is the mirror of it for the tests: restore a
+    trailing positional widget at any of those call sites and this turns red, naming the file, the line and
+    the arity.
     """
     offenders = _overlong_worker_constructions(_TESTS_ROOT, _worker_positional_limits())
 

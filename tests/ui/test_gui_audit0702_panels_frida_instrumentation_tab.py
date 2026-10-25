@@ -3,27 +3,23 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GUI audit regression gates for ``intellicrack.ui.panels.frida_instrumentation_tab``.
+"""Gates for ``intellicrack.ui.panels.frida_instrumentation_tab`` symbol lookup and RPC result widgets.
 
-Covers the 2026-07-02 audit findings for ``frida_instrumentation_tab.py``'s
-``SymbolLookupControls`` and ``ScriptMessagingControls`` widgets:
+Covers the ``SymbolLookupControls`` and ``ScriptMessagingControls`` widgets:
 
-* M20 -- ``_populate_symbols_from_module`` (the ``Enumerate Symbols`` handler)
+* ``_populate_symbols_from_module`` (the ``Enumerate Symbols`` handler)
   must populate the symbols table's third and fourth columns from real symbol
   data (module name and source file:line) instead of unconditionally
   inserting empty-string cells.
-* M21 -- the third column must carry the same semantic value (the symbol's
-  module name) regardless of whether the row came from ``Enumerate Symbols``
-  or ``Find Functions Matching``, instead of one path leaving it blank and
-  the other stuffing the module name into a column labelled ``Is Global``.
-* M22 -- the shared ``_on_symbol_lookup_error`` handler must re-enable only
-  the button belonging to the operation that actually failed, not all three
-  symbol-lookup buttons unconditionally.
-* L7 -- the symbols table header must stretch only the ``Name`` column and
-  size the remaining columns to their contents, instead of applying
-  ``Stretch`` to every column uniformly.
-* L8 -- the RPC result label must word-wrap and expose the full result text
-  via tooltip instead of clipping a long, unwrapped single line.
+* The third column must carry the same semantic value (the symbol's module name) regardless of whether the row
+  came from ``Enumerate Symbols`` or ``Find Functions Matching``, rather than one path leaving it blank and the
+  other writing the module name into a column labelled ``Is Global``.
+* The shared ``_on_symbol_lookup_error`` handler must re-enable only the button belonging to the operation that
+  actually failed, not all three symbol-lookup buttons unconditionally.
+* The symbols table header must stretch only the ``Name`` column and size the remaining columns to their contents,
+  instead of applying ``Stretch`` to every column uniformly.
+* The RPC result label must word-wrap and expose the full result text via tooltip instead of clipping a long,
+  unwrapped single line.
 
 All tests drive real, constructed ``SymbolLookupControls`` /
 ``ScriptMessagingControls`` widgets under an offscreen ``QApplication``; no
@@ -82,7 +78,7 @@ def _make_symbol(
 def test_m20_enumerate_symbols_populates_module_and_source_columns() -> None:
     """``_populate_symbols_from_module`` must fill columns 2/3 with real data, not blanks.
 
-    Regression: pre-fix, every row from the ``Enumerate Symbols`` path got
+    Every row from the ``Enumerate Symbols`` path must not get
     ``QTableWidgetItem("")`` unconditionally in columns 2 and 3 regardless of
     the symbol's actual module/source data, so this assertion would see empty
     strings in both cells for every row.
@@ -117,7 +113,7 @@ def test_m20_enumerate_symbols_populates_module_and_source_columns() -> None:
 def test_m20_enumerate_symbols_name_and_address_still_populated() -> None:
     """The pre-existing Name/Address columns must remain correct alongside the new columns.
 
-    Ensures the M20 fix did not regress the columns that already worked.
+    Ensures the module-name population did not regress the columns that already worked.
     """
     controls = SymbolLookupControls()
     try:
@@ -135,12 +131,9 @@ def test_m20_enumerate_symbols_name_and_address_still_populated() -> None:
 def test_m21_module_column_semantics_match_between_enumerate_and_matching_paths() -> None:
     """Column 2 must carry the identical module-name semantic from both populate paths.
 
-    Regression: pre-fix, ``_populate_symbols_from_matching`` wrote the
-    symbol's module name into column 2 (labelled ``Is Global``) while
-    ``_populate_symbols_from_module`` left the same column blank -- two
-    populate paths feeding the same table gave column 2 two different,
-    both-wrong meanings. Post-fix both paths must write the same module-name
-    value for symbols sharing a module.
+    ``_populate_symbols_from_matching`` must not write the symbol's module name into column 2 (labelled ``Is Global``) while
+    ``_populate_symbols_from_module`` leaves the same column blank: two populate paths feeding one table would give column 2
+    two different, both-wrong meanings. Both paths must write the same module-name value for symbols sharing a module.
     """
     controls = SymbolLookupControls()
     try:
@@ -168,11 +161,9 @@ def test_m21_module_column_semantics_match_between_enumerate_and_matching_paths(
 def test_m21_symbol_columns_header_no_longer_mislabels_module_as_is_global() -> None:
     """The declared header for column 2 must not be the misleading ``Is Global`` label.
 
-    Regression: with the header literally reading ``Is Global`` while the
-    matching-path handler wrote a module name (e.g. ``kernel32.dll``) into
-    it, the column header and its actual content were semantically
-    incompatible. The fixed header must describe the module-name content
-    that both populate paths now write.
+    The header must not read ``Is Global`` while the matching-path handler writes a module name (e.g. ``kernel32.dll``) into
+    it, since the column header and its actual content would be semantically incompatible. The header must describe the
+    module-name content that both populate paths write.
     """
     controls = SymbolLookupControls()
     try:
@@ -187,9 +178,9 @@ def test_m21_symbol_columns_header_no_longer_mislabels_module_as_is_global() -> 
 def test_m22_error_handler_reenables_only_the_failed_operations_button() -> None:
     """``_on_symbol_lookup_error`` must re-enable only the button for the failed operation.
 
-    Regression: pre-fix, the shared handler unconditionally re-enabled all
+    The shared handler must not unconditionally re-enable all
     three symbol-lookup buttons on any single failure. Simulates the race
-    from the finding: two operations in flight (both buttons disabled), one
+    from a real race: two operations in flight (both buttons disabled), one
     fails; only that operation's button may come back enabled while the
     still-in-flight operation's button must remain disabled.
     """
@@ -213,12 +204,10 @@ def test_m22_error_handler_reenables_only_the_failed_operations_button() -> None
 
 
 def test_m22_error_handler_requires_explicit_button_argument() -> None:
-    """The handler's signature must take an explicit ``button`` parameter, matching the fixed pattern.
+    """The handler's signature must take an explicit ``button`` parameter, matching the intended pattern.
 
-    Regression: pre-fix ``_on_symbol_lookup_error(self, operation, exc)`` took
-    no button argument at all and reached into all three button attributes
-    directly. Calling it with only ``(operation, exc)`` must now be a
-    ``TypeError`` since the third positional argument is mandatory.
+    ``_on_symbol_lookup_error`` must not reach into all three button attributes directly. Calling it with only
+    ``(operation, exc)`` must be a ``TypeError`` since the third positional argument is mandatory.
     """
     controls = SymbolLookupControls()
     try:
@@ -236,10 +225,8 @@ def test_m22_error_handler_requires_explicit_button_argument() -> None:
 def test_l7_only_name_column_stretches_others_resize_to_contents() -> None:
     """Header resize modes: column 0 stretches, columns 1-3 size to their contents.
 
-    Regression: pre-fix ``setSectionResizeMode(QHeaderView.ResizeMode.Stretch)``
-    was called with no column index, which applies Stretch to every section
-    in the header -- all four columns would report ``Stretch`` here instead
-    of only column 0.
+    ``setSectionResizeMode(QHeaderView.ResizeMode.Stretch)`` must not be called without a column index, since that applies
+    Stretch to every section in the header. All four columns would then report ``Stretch`` here instead of only column 0.
     """
     controls = SymbolLookupControls()
     try:
@@ -258,9 +245,9 @@ def test_l7_only_name_column_stretches_others_resize_to_contents() -> None:
 def test_l7_long_symbol_name_gets_a_tooltip_with_the_full_text() -> None:
     """A long mangled symbol name must be recoverable via tooltip even when the cell elides it.
 
-    Regression: pre-fix ``QTableWidgetItem(name)`` was created with no
+    ``QTableWidgetItem(name)`` must not be created with no
     ``setToolTip`` call anywhere in either populate path, so hovering a
-    truncated long name showed nothing.
+    truncated long name would show nothing.
     """
     controls = SymbolLookupControls()
     try:
@@ -276,8 +263,8 @@ def test_l7_long_symbol_name_gets_a_tooltip_with_the_full_text() -> None:
 def test_l8_rpc_result_label_has_word_wrap_enabled_at_construction() -> None:
     """``_rpc_result_label`` must have word wrap enabled at construction.
 
-    Regression: pre-fix, the bare ``QLabel("")`` never called
-    ``setWordWrap(True)``, so a long RPC return value forced the panel to
+    The bare ``QLabel("")`` must call
+    ``setWordWrap(True)``, since otherwise a long RPC return value forces the panel to
     grow past its available width instead of wrapping onto multiple lines.
     """
     controls = ScriptMessagingControls()
@@ -295,10 +282,9 @@ def test_l8_rpc_call_done_sets_full_text_and_tooltip_for_long_result() -> None:
     asserts the complete stringified value is present in both the label text
     and the tooltip.
 
-    Regression: pre-fix ``_on_rpc_call_done`` only called
-    ``self._rpc_result_label.setText(...)`` with no tooltip assignment, so
-    ``toolTip()`` stayed the empty string regardless of result length, and
-    with no word wrap the tail of a long unwrapped line was unreadable.
+    ``_on_rpc_call_done`` must set the tooltip too, not only
+    ``self._rpc_result_label.setText(...)``. Otherwise ``toolTip()`` stays the empty string regardless of result length, and
+    without word wrap the tail of a long unwrapped line is unreadable.
     """
     controls = ScriptMessagingControls()
     try:

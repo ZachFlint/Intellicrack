@@ -2,26 +2,24 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for audit F13/F10 -- the async-worker lifetime fix.
+"""Gates for the async-worker lifetime defects in ``MainWindow._run_async``.
 
-Before the fix, ``MainWindow._run_async`` built a throwaway ``AsyncWorker``
-``QThread`` with a brand-new ``asyncio`` event loop per call and retained only a
-single overwritable ``self._current_worker`` reference. Two effects followed:
+``_run_async`` must not build a throwaway ``AsyncWorker`` ``QThread`` with a new
+``asyncio`` event loop per call, nor retain only a single overwritable
+``self._current_worker`` reference. Two effects follow from that design:
 
-* **F13** -- an overlapping operation dropped the previous worker's only Python
-  reference, so the still-running ``QThread`` could be garbage-collected
-  mid-flight and crash the GUI thread.
-* **F10** -- because each call closed its private loop in ``finally``, an
-  asyncio primitive created on one call's loop and awaited on a later call
-  raised "Event loop is closed".
+* An overlapping operation drops the previous worker's only Python reference, so the
+  still-running ``QThread`` can be garbage-collected mid-flight and crash the GUI thread.
+* Because each call closes its private loop in ``finally``, an asyncio primitive
+  created on one call's loop and awaited on a later call raises "Event loop is closed".
 
-The fix routes ``_run_async`` through ``run_bridge_coroutine_async`` on the
+``_run_async`` routes through ``run_bridge_coroutine_async`` on the
 single persistent bridge event loop, whose worker registry pins each worker for
 the lifetime of its OS thread and whose loop is never closed between calls.
 
 Every test drives the real ``MainWindow._run_async`` seam against a real
 ``Config``/``Orchestrator`` and the real persistent bridge loop -- no mocked
-dispatch. Each is falsified by reverting to the throwaway ``AsyncWorker``.
+dispatch. Each would fail if the throwaway ``AsyncWorker`` were reintroduced.
 """
 
 from __future__ import annotations
@@ -98,9 +96,9 @@ class TestAsyncWorkerRetired:
     def test_asyncworker_class_removed() -> None:
         """``ui.app`` must no longer expose the throwaway ``AsyncWorker``.
 
-        The structural fix retires the per-call ``QThread``/new-loop worker
+        The design retires the per-call ``QThread``/new-loop worker
         entirely in favour of the persistent bridge loop. If a future change
-        reintroduces ``AsyncWorker`` (the F13 root cause), this gate fails.
+        reintroduces ``AsyncWorker``, this gate fails.
         """
         assert not hasattr(app_module, "AsyncWorker"), (
             "AsyncWorker (throwaway per-call event loop; F13 root cause) was reintroduced into ui.app"
@@ -140,9 +138,9 @@ class TestRunAsyncPersistentLoop:
         """Two overlapping ``_run_async`` calls must both deliver.
 
         The first coroutine is slower than the second, so the second is
-        dispatched while the first is still in flight. Under the old
-        single-``_current_worker`` design the second dispatch overwrote the
-        first worker's only reference; here both must run to completion.
+        dispatched while the first is still in flight. Under a single-``_current_worker``
+        design the second dispatch would overwrite the first worker's only reference; here
+        both must run to completion.
 
         Args:
             qapp: QApplication fixture used to pump queued signals.
@@ -169,13 +167,13 @@ class TestRunAsyncPersistentLoop:
 
     @staticmethod
     def test_loop_bound_primitive_reused_across_calls(qapp: QApplication, main_window: MainWindow) -> None:
-        """F10 gate: an asyncio primitive survives a second ``_run_async`` call.
+        """An asyncio primitive survives a second ``_run_async`` call.
 
         Creates an ``asyncio.Event`` on the persistent loop during the first
         dispatch, then awaits it during a second dispatch. Because both run on
         the same never-closed loop, no "Event loop is closed" is raised and the
-        waiter completes. With the old throwaway loop (closed in ``finally``),
-        the primitive would belong to a dead loop and the waiter would fail.
+        With a throwaway loop closed in ``finally``, the primitive would belong to a dead
+        loop and the waiter would fail.
 
         Args:
             qapp: QApplication fixture used to pump queued signals.

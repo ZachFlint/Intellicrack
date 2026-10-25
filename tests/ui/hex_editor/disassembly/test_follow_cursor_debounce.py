@@ -2,14 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit4 C9 (F-0013): hex disassembly follow-cursor debounce.
+"""Regression tests: hex disassembly follow-cursor debounce.
 
-The defect: ``DisassemblyMixin._on_cursor_moved_disasm`` previously called
-``_on_disassemble`` synchronously on every cursor move.  Holding an arrow key
-streams hundreds of cursor events per second, each of which became a bridge
-``disassemble`` call - the bridge worker thread saturates and the GUI freezes.
-
-The fix introduces three production-grade safeguards:
+Calling ``_on_disassemble`` synchronously on every cursor move would turn
+each of the hundreds of cursor events per second from a held arrow key into a
+bridge ``disassemble`` call - the bridge worker thread saturates and the GUI
+freezes.  ``DisassemblyMixin._on_cursor_moved_disasm`` therefore applies three
+safeguards:
 
 1. **Debounce timer** -- each cursor move re-arms a single-shot ``QTimer``;
    only the most recent offset survives the wait window.
@@ -724,7 +723,7 @@ class TestBridgeCallParameters:
     def test_debounce_burst_yields_one_bridge_call_with_correct_offset(qapp: QApplication) -> None:
         """A debounce burst through the full path delivers the last offset to bridge.disassemble.
 
-        This is the critical end-to-end gate for finding 04-F3: it exercises
+        This is the critical end-to-end gate: it exercises
         ``_on_cursor_moved_disasm`` -> debounce timer -> ``_on_follow_cursor_debounced``
         -> ``_on_disassemble`` -> ``bridge.disassemble`` without any override,
         and asserts the exact offset value at the bridge level.

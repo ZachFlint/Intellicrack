@@ -93,8 +93,6 @@ class X64DbgAdvancedTab(QWidget):
         sub_tabs.addTab(self._build_plugin_tab(), self.tr("Plugins"))
         layout.addWidget(sub_tabs)
 
-    # -- Module Info: imports, entry point, PE directories -----------------
-
     def _build_module_info_tab(self) -> QWidget:
         """Build the module-info sub-tab (imports, entry point, PE directories).
 
@@ -436,8 +434,6 @@ class X64DbgAdvancedTab(QWidget):
         _logger.warning("x64dbg_modinfo_operation_failed", operation=operation, error=str(exc))
         QMessageBox.warning(self, self.tr("Module Info Error"), str(exc))
 
-    # -- Process Structures: PEB / TEB / SEH --------------------------------
-
     def _build_process_structures_tab(self) -> QWidget:
         """Build the process-structures sub-tab (PEB/TEB/SEH readers).
 
@@ -600,8 +596,6 @@ class X64DbgAdvancedTab(QWidget):
         _logger.warning("x64dbg_procstruct_operation_failed", operation=operation, error=str(exc))
         QMessageBox.warning(self, self.tr("Process Structure Error"), str(exc))
 
-    # -- Watch expressions ---------------------------------------------------
-
     def _build_watches_tab(self) -> QWidget:
         """Build the watch-expression sub-tab.
 
@@ -744,8 +738,6 @@ class X64DbgAdvancedTab(QWidget):
         btn.setEnabled(True)
         _logger.warning("x64dbg_watch_operation_failed", operation=operation, error=str(exc))
         QMessageBox.warning(self, self.tr("Watch Error"), str(exc))
-
-    # -- Breakpoint property configuration -----------------------------------
 
     def _bpcfg_row(self, *widgets: QWidget, label: str | None = None, stretch: bool = False) -> QHBoxLayout:
         """Build one horizontal row for the breakpoint-configuration sub-tab.
@@ -1231,8 +1223,6 @@ class X64DbgAdvancedTab(QWidget):
         _logger.warning("x64dbg_bp_config_operation_failed", operation=operation, error=str(exc))
         self._bpcfg_status_label.setText(f"[-] {operation} failed: {exc}")
 
-    # -- Cross-references: xref, CFG, string refs, intermodular calls -------
-
     def _build_xref_tab(self) -> QWidget:
         """Build the cross-reference discovery sub-tab.
 
@@ -1441,8 +1431,6 @@ class X64DbgAdvancedTab(QWidget):
         _logger.warning("x64dbg_xref_operation_failed", operation=operation, error=str(exc))
         QMessageBox.warning(self, self.tr("Cross-Reference Error"), str(exc))
 
-    # -- Handles --------------------------------------------------------------
-
     def _build_handles_tab(self) -> QWidget:
         """Build the process-handle enumeration sub-tab.
 
@@ -1602,8 +1590,6 @@ class X64DbgAdvancedTab(QWidget):
         btn.setEnabled(True)
         _logger.warning("x64dbg_handles_operation_failed", operation=operation, error=str(exc))
         QMessageBox.warning(self, self.tr("Handle Error"), str(exc))
-
-    # -- Script engine ---------------------------------------------------------
 
     def _build_script_tab(self) -> QWidget:
         """Build the script-engine sub-tab (load/run/cmd/abort).
@@ -1782,8 +1768,6 @@ class X64DbgAdvancedTab(QWidget):
         btn.setEnabled(True)
         _logger.warning("x64dbg_script_operation_failed", operation=operation, error=str(exc))
         self._script_status_label.setText(f"[-] script_{operation} failed: {exc}")
-
-    # -- Plugin manager ----------------------------------------------------
 
     def _build_plugin_tab(self) -> QWidget:
         """Build the plugin-manager sub-tab (load/unload/list).

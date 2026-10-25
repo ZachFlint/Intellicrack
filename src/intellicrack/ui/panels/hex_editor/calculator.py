@@ -137,9 +137,7 @@ class CalculatorMixin:
     def _convert_local(self, text: str, *, big_endian: bool, signed_only: bool) -> None:
         """Parse ``text`` and populate representations without the bridge.
 
-        Local fallback used only when no bridge is attached to this
-        mixin, preserving the exact parsing and rendering behaviour the
-        panel has always produced.
+        Local fallback used only when no bridge is attached to this mixin.
 
         Args:
             text: Raw input string, optionally prefixed with 0x, 0b, or 0o.

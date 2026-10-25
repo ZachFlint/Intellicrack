@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge-completeness remediation gates for SANDBOX panel controls (L3).
 
-Covers the six newly-wired ``SandboxPanel`` controls in
+Covers the six ``SandboxPanel`` controls in
 ``src/intellicrack/ui/panels/sandbox_panel.py``:
 
 * ``_on_refresh_instances`` -> ``SandboxBridge.list`` (no args) and the

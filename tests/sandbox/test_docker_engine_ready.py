@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Docker container-engine readiness check.
+"""Gates for the Docker container-engine readiness check.
 
 ``docker version`` answers as soon as the API server is up, but on Windows a
 ``docker run`` issued before the container engine has warmed up fails with

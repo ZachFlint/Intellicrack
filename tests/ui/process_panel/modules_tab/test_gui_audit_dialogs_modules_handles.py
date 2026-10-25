@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for GUI audit finding: ModulesTab handle table clipping.
+"""Regression tests for ModulesTab handle table clipping.
 
 The handle enumeration table (Handle Value / Type / Granted Access / Object
-Address) previously used the default equal-width columns with no stretch and
-no tooltips, so the wide hexadecimal granted-access mask and object address
-were silently clipped. These tests pin the fix:
+Address) must size its columns to content and expose full values as tooltips, so the
+wide hexadecimal granted-access mask and object address are not silently clipped.
+These tests pin that behaviour:
 
 * The handle table sizes every column to its content with no stretched last
   section, so a value wider than the viewport widens the table and its

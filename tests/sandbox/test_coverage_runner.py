@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the isolated coverage runner (docker/coverage_runner.py).
+"""Gates for the isolated coverage runner (docker/coverage_runner.py).
 
 The runner replaced a PowerShell scheduler whose ``Start-Sleep`` poll-loop
 watchdog was starved by a runaway group and whose ``taskkill /T`` could not
@@ -150,11 +150,6 @@ def test_hanging_group_is_bounded_and_its_children_are_reaped(tmp_path: Path) ->
     JUnit. Critically, the grandchild spawned by the hung group must be dead
     afterwards -- the Job Object reaps it even though ``taskkill``/parent-walking
     would miss it.
-
-    Falsifiability: if the kernel-wait timeout regresses to a starvable loop the
-    run exceeds ``_RUN_HARNESS_TIMEOUT_SEC`` and ``subprocess.run`` raises; if
-    the Job-Object kill regresses the recorded child PID stays alive and the
-    final assertion fails.
 
     Args:
         tmp_path: Pytest-provided temporary directory.

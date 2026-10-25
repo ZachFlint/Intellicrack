@@ -184,10 +184,8 @@ class TestSwapBlocks:
     def test_swap_blocks_different_lengths(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that swapping blocks of unequal lengths raises ValueError.
 
-        Audit-1 F-0002: the previous Rust implementation silently
-        zero-padded the shorter block, corrupting both buffers. The bridge
-        now rejects the call up front so callers must explicitly handle
-        size differences.
+        Unequal block lengths are rejected up front, since zero-padding the shorter
+        block would corrupt both buffers. Callers must handle size differences explicitly.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.

@@ -2,12 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave-5 gate tests for Group-09 open OAuth findings.
-
-Closes findings #1, #2, #12, #13, #15, #17, #18, #20, #24, #31, #32,
-#34, #35, #36, #38, #39, #42, #43, #44, #45, #46, #49, #53, #54, #55,
-#57, #58, #60, #61, #62, #63 from the section-11-credentials-oauth audit.
-"""
+"""Gate tests for the OAuth manager, its callback server, token refresh and revoke paths, and keyring checks."""
 
 from __future__ import annotations
 
@@ -54,9 +49,7 @@ _OAUTH_TO_PROVIDER_NAME: dict[OAuthProvider, str] = cast(Any, _oauth_mod)._OAUTH
 _oauth_provider_to_name: Any = cast(Any, _oauth_mod)._oauth_provider_to_name
 
 
-# ---------------------------------------------------------------------------
 # Module-level capability check
-# ---------------------------------------------------------------------------
 
 
 def _loopback_tcp_available() -> bool:
@@ -81,9 +74,7 @@ _requires_loopback = pytest.mark.skipif(
 )
 
 
-# ---------------------------------------------------------------------------
 # In-process HTTP server handlers
-# ---------------------------------------------------------------------------
 
 _TOKEN_200_BODY: Final[bytes] = json.dumps({
     "access_token": "tok_access_200",
@@ -164,9 +155,7 @@ class _Always403Handler(_CannedPostHandler):
     response_body: ClassVar[bytes] = b'{"error": "forbidden"}'
 
 
-# ---------------------------------------------------------------------------
 # Fake keyring module (in-memory backend for store tests)
-# ---------------------------------------------------------------------------
 
 
 class _FakeKeyringGoodBackend:
@@ -349,9 +338,7 @@ class _ZeroPriorityModule:
         """
 
 
-# ---------------------------------------------------------------------------
 # Helper functions
-# ---------------------------------------------------------------------------
 
 
 def _find_free_port() -> int:
@@ -468,9 +455,7 @@ def _make_outer_cred_json(inner_api_key: str) -> str:
     })
 
 
-# ---------------------------------------------------------------------------
 # Fixtures
-# ---------------------------------------------------------------------------
 
 
 def _start_server(handler_cls: type[http.server.BaseHTTPRequestHandler]) -> tuple[http.server.ThreadingHTTPServer, str, threading.Thread]:
@@ -572,49 +557,32 @@ def with_fake_keyring(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     _FakeKeyringModule.passwords.clear()
 
 
-# ---------------------------------------------------------------------------
-# Finding #1 — _oauth_provider_to_name happy path (oauth.py:109)
-# ---------------------------------------------------------------------------
+# _oauth_provider_to_name happy path
 
 
 def test_oauth_provider_to_name_google_returns_provider_google() -> None:
-    """_oauth_provider_to_name(GOOGLE) must return provider_ids.GOOGLE exactly.
-
-    Mutation: changing the mapping entry to provider_ids.ANTHROPIC would fail.
-    """
+    """_oauth_provider_to_name(GOOGLE) must return provider_ids.GOOGLE exactly."""
     result = _oauth_provider_to_name(OAuthProvider.GOOGLE)
     assert result == provider_ids.GOOGLE
 
 
 def test_oauth_provider_to_name_anthropic_returns_provider_anthropic() -> None:
-    """_oauth_provider_to_name(ANTHROPIC) must return provider_ids.ANTHROPIC exactly.
-
-    Mutation: removing the ANTHROPIC entry would raise KeyError.
-    """
+    """_oauth_provider_to_name(ANTHROPIC) must return provider_ids.ANTHROPIC exactly."""
     result = _oauth_provider_to_name(OAuthProvider.ANTHROPIC)
     assert result == provider_ids.ANTHROPIC
 
 
 def test_oauth_provider_to_name_huggingface_returns_provider_huggingface() -> None:
-    """_oauth_provider_to_name(HUGGINGFACE) must return provider_ids.HUGGINGFACE exactly.
-
-    Mutation: mapping HUGGINGFACE to the wrong provider id would fail.
-    """
+    """_oauth_provider_to_name(HUGGINGFACE) must return provider_ids.HUGGINGFACE exactly."""
     result = _oauth_provider_to_name(OAuthProvider.HUGGINGFACE)
     assert result == provider_ids.HUGGINGFACE
 
 
-# ---------------------------------------------------------------------------
-# Finding #2 — _oauth_provider_to_name KeyError path (oauth.py:121)
-# ---------------------------------------------------------------------------
+# _oauth_provider_to_name KeyError path
 
 
 def test_oauth_provider_to_name_all_enum_members_have_mapping() -> None:
-    """Every OAuthProvider member must appear in _OAUTH_TO_PROVIDER_NAME.
-
-    Mutation: adding a new OAuthProvider member without a mapping entry would
-    cause this coverage-invariant test to fail and expose the dead KeyError branch.
-    """
+    """Every OAuthProvider member must appear in _OAUTH_TO_PROVIDER_NAME."""
     for provider in OAuthProvider:
         assert provider in _OAUTH_TO_PROVIDER_NAME, f"OAuthProvider.{provider.name} has no entry in _OAUTH_TO_PROVIDER_NAME"
 
@@ -626,9 +594,6 @@ def test_oauth_provider_to_name_raises_key_error_for_unmapped_provider(
 
     Temporarily removes one entry from the mapping to exercise the KeyError branch.
 
-    Mutation: removing the ``if provider not in _OAUTH_TO_PROVIDER_NAME`` guard
-    would cause a KeyError from the dict lookup itself rather than the documented
-    guarded raise — the message text would differ.
 
     Args:
         monkeypatch: Pytest fixture used to replace the mapping dict temporarily.
@@ -640,18 +605,12 @@ def test_oauth_provider_to_name_raises_key_error_for_unmapped_provider(
         _oauth_provider_to_name(OAuthProvider.HUGGINGFACE)
 
 
-# ---------------------------------------------------------------------------
-# Finding #12 — OAuthCallbackHandler.do_GET error in params (oauth.py:402)
-# ---------------------------------------------------------------------------
+# OAuthCallbackHandler.do_GET error in params
 
 
 @_requires_loopback
 def test_callback_handler_error_param_returns_400_and_sets_callback_error() -> None:
-    """do_GET with ?error=access_denied must send HTTP 400 and set callback_error.
-
-    Mutation: removing the ``if "error" in params:`` branch would fall through to
-    the missing-code-or-state else clause and set no callback_error attribute.
-    """
+    """do_GET with ?error=access_denied must send HTTP 400 and set callback_error."""
     port = _find_free_port()
     server = OAuthCallbackServer(port=port, timeout=5.0)
     server.start()
@@ -676,9 +635,7 @@ def test_callback_handler_error_param_returns_400_and_sets_callback_error() -> N
     server.stop()
 
 
-# ---------------------------------------------------------------------------
-# Finding #13 — OAuthCallbackHandler.do_GET missing code/state (oauth.py:419)
-# ---------------------------------------------------------------------------
+# OAuthCallbackHandler.do_GET missing code/state
 
 
 @_requires_loopback
@@ -710,9 +667,7 @@ def test_callback_handler_missing_params_returns_400() -> None:
         server.stop()
 
 
-# ---------------------------------------------------------------------------
-# Finding #15 — OAuthCallbackServer.start OSError on bind (oauth.py:510)
-# ---------------------------------------------------------------------------
+# OAuthCallbackServer.start OSError on bind
 
 
 @_requires_loopback
@@ -721,9 +676,6 @@ def test_callback_server_start_raises_callback_error_when_port_occupied() -> Non
 
     The holder listens on the port first, with ``SO_EXCLUSIVEADDRUSE`` where
     the platform has it, so the server's own bind must fail.
-
-    Mutation: removing the OSError catch in start() would let the OSError
-    propagate as-is rather than as OAuthCallbackError.
     """
     port = _find_free_port()
     holder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -740,19 +692,12 @@ def test_callback_server_start_raises_callback_error_when_port_occupied() -> Non
         holder.close()
 
 
-# ---------------------------------------------------------------------------
-# Finding #17 — OAuthCallbackServer.wait_for_callback timeout (oauth.py:543)
-# ---------------------------------------------------------------------------
+# OAuthCallbackServer.wait_for_callback timeout
 
 
 @_requires_loopback
 def test_wait_for_callback_timeout_raises_callback_error() -> None:
-    """wait_for_callback must raise OAuthCallbackError after the timeout elapses.
-
-    Mutation: removing the ``if not self._event.wait(timeout=...)`` guard and
-    raising OAuthCallbackError unconditionally would still pass; removing it and
-    proceeding without a guard would return None instead of raising.
-    """
+    """wait_for_callback must raise OAuthCallbackError after the timeout elapses."""
     port = _find_free_port()
     server = OAuthCallbackServer(port=port, timeout=0.05)
     server.start()
@@ -763,9 +708,7 @@ def test_wait_for_callback_timeout_raises_callback_error() -> None:
         server.stop()
 
 
-# ---------------------------------------------------------------------------
-# Finding #18 — OAuthCallbackServer.wait_for_callback denied (oauth.py:556)
-# ---------------------------------------------------------------------------
+# OAuthCallbackServer.wait_for_callback denied
 
 
 @_requires_loopback
@@ -774,9 +717,6 @@ def test_wait_for_callback_access_denied_raises_authorization_error() -> None:
 
     A background thread sends ``?error=access_denied`` to the callback server;
     wait_for_callback detects "denied" in the error code and raises.
-
-    Mutation: removing the ``"denied" in error_msg.lower()`` guard would raise a
-    generic OAuthCallbackError instead of OAuthAuthorizationError.
     """
     port = _find_free_port()
     server = OAuthCallbackServer(port=port, timeout=5.0)
@@ -803,9 +743,7 @@ def test_wait_for_callback_access_denied_raises_authorization_error() -> None:
         sender.join(timeout=3.0)
 
 
-# ---------------------------------------------------------------------------
-# Finding #20 — OAuthCallbackServer.wait_for_callback missing code/state (oauth.py:566)
-# ---------------------------------------------------------------------------
+# OAuthCallbackServer.wait_for_callback missing code/state
 
 
 @_requires_loopback
@@ -841,17 +779,13 @@ def test_wait_for_callback_missing_code_and_state_raises_callback_error() -> Non
         sender.join(timeout=3.0)
 
 
-# ---------------------------------------------------------------------------
-# Finding #24 — OAuthManager.build_authorization_url PKCE disabled (oauth.py:701)
-# ---------------------------------------------------------------------------
+# OAuthManager.build_authorization_url PKCE disabled
 
 
 def test_build_authorization_url_pkce_disabled_omits_code_challenge() -> None:
     """build_authorization_url with use_pkce=False must not include code_challenge.
 
     Oracle: urllib.parse.parse_qs on the returned URL — code_challenge absent.
-    Mutation: unconditionally adding code_challenge regardless of use_pkce would
-    add the param and fail the ``not in`` assertion.
     """
     config = OAuthConfig(
         provider=OAuthProvider.GOOGLE,
@@ -876,11 +810,7 @@ def test_build_authorization_url_pkce_disabled_omits_code_challenge() -> None:
 
 
 def test_build_authorization_url_pkce_enabled_includes_s256_challenge() -> None:
-    """build_authorization_url with use_pkce=True must include S256 code_challenge.
-
-    Mutation: omitting code_challenge when use_pkce=True would fail the
-    ``in params`` assertion; setting method to plain instead of S256 would also fail.
-    """
+    """build_authorization_url with use_pkce=True must include S256 code_challenge."""
     config = OAuthConfig(
         provider=OAuthProvider.GOOGLE,
         client_id="pkce-on-client",
@@ -902,18 +832,13 @@ def test_build_authorization_url_pkce_enabled_includes_s256_challenge() -> None:
     assert verify_pkce_pair(state.code_verifier, params["code_challenge"][0])
 
 
-# ---------------------------------------------------------------------------
-# Finding #31 — _exchange_code_for_token HTTP error (oauth.py:901)
-# ---------------------------------------------------------------------------
+# _exchange_code_for_token HTTP error
 
 
 def test_exchange_code_for_token_http_error_raises_oauth_token_error(
     mock_400_server: str,
 ) -> None:
     """_exchange_code_for_token must raise OAuthTokenError on a non-2xx HTTP response.
-
-    Mutation: removing the ``except httpx.HTTPStatusError`` block would let the
-    raw httpx exception propagate rather than the documented OAuthTokenError.
 
     Args:
         mock_400_server: Base URL of the mock server returning HTTP 400.
@@ -931,9 +856,7 @@ def test_exchange_code_for_token_http_error_raises_oauth_token_error(
     asyncio.run(go())
 
 
-# ---------------------------------------------------------------------------
-# Finding #32 — _exchange_code_for_token network error (oauth.py:906)
-# ---------------------------------------------------------------------------
+# _exchange_code_for_token network error
 
 
 def test_exchange_code_for_token_network_error_raises_oauth_token_error() -> None:
@@ -941,9 +864,6 @@ def test_exchange_code_for_token_network_error_raises_oauth_token_error() -> Non
 
     Uses a port with no listener so httpx raises a ConnectError (subclass of
     RequestError / OSError), which the SUT wraps in OAuthTokenError.
-
-    Mutation: removing the ``except (OSError, ..., httpx.RequestError)`` block
-    would let the raw connection error propagate without the documented wrapping.
     """
     dead_port = _find_free_port()
     config = OAuthConfig(
@@ -967,9 +887,7 @@ def test_exchange_code_for_token_network_error_raises_oauth_token_error() -> Non
     asyncio.run(go())
 
 
-# ---------------------------------------------------------------------------
-# Finding #34 — _store_token keyring unavailable (oauth.py:924)
-# ---------------------------------------------------------------------------
+# _store_token keyring unavailable
 
 
 def test_store_token_keyring_unavailable_returns_without_raising() -> None:
@@ -978,9 +896,6 @@ def test_store_token_keyring_unavailable_returns_without_raising() -> None:
     Oracle: the in-memory cache is NOT modified by _store_token; confirming
     the token is absent from cache after the call proves the unavailable-keyring
     early-return path was taken without an exception.
-
-    Mutation: raising KeyringUnavailableError instead of returning would cause
-    the test to fail with an unexpected exception.
     """
     store = _make_keyring_free_store()
     manager = OAuthManager(credential_store=store)
@@ -1001,9 +916,7 @@ def test_store_token_keyring_unavailable_returns_without_raising() -> None:
     assert OAuthProvider.ANTHROPIC not in cache
 
 
-# ---------------------------------------------------------------------------
-# Finding #35 — _store_token keyring success (oauth.py:935)
-# ---------------------------------------------------------------------------
+# _store_token keyring success
 
 
 @pytest.mark.usefixtures("with_fake_keyring")
@@ -1012,9 +925,6 @@ def test_store_token_keyring_available_serializes_exact_json() -> None:
 
     Oracle: the exact ``access_token`` field from the stored JSON read back
     from _FakeKeyringModule.passwords matches the original token's access_token.
-
-    Mutation: serialising the wrong field (e.g. refresh_token) would make the
-    read-back access_token value differ.
     """
     store = _make_store_with_fake_keyring()
     manager = OAuthManager(credential_store=store)
@@ -1042,9 +952,7 @@ def test_store_token_keyring_available_serializes_exact_json() -> None:
     assert token_data["token_type"] == "Bearer"
 
 
-# ---------------------------------------------------------------------------
-# Finding #36 — _load_token_from_store (oauth.py:953)
-# ---------------------------------------------------------------------------
+# _load_token_from_store
 
 
 @pytest.mark.usefixtures("with_fake_keyring")
@@ -1053,9 +961,6 @@ def test_load_token_from_store_returns_correct_token_when_present() -> None:
 
     Oracle: access_token read back from the returned OAuthToken matches the
     value pre-seeded in the fake keyring.
-
-    Mutation: returning None for all keys would fail the ``assert token is not None``
-    check and the access_token assertion.
     """
     token = OAuthToken(
         access_token="from_store_acc",
@@ -1087,9 +992,6 @@ def test_load_token_from_store_returns_none_when_absent(
 
     Oracle: fake keyring is empty for GOOGLE; None is the documented return.
 
-    Mutation: returning a placeholder token for every provider would fail the
-    ``result is None`` assertion.
-
     Args:
         monkeypatch: pytest fixture used to clear ambient GOOGLE env vars so
             the store's env fallback does not surface a container-provided key.
@@ -1107,9 +1009,7 @@ def test_load_token_from_store_returns_none_when_absent(
     assert result is None
 
 
-# ---------------------------------------------------------------------------
-# Finding #38 — _load_token cache miss, keyring load (oauth.py:1006)
-# ---------------------------------------------------------------------------
+# _load_token cache miss, keyring load
 
 
 @pytest.mark.usefixtures("with_fake_keyring")
@@ -1118,9 +1018,6 @@ def test_load_token_cache_miss_falls_through_to_keyring() -> None:
 
     Oracle: no pre-seeded cache entry; fake keyring has a stored token; the
     returned token's access_token matches the keyring value.
-
-    Mutation: short-circuiting the store lookup after a cache miss (returning
-    None unconditionally) would fail the access_token assertion.
     """
     token = OAuthToken(
         access_token="cache_miss_loaded",
@@ -1143,9 +1040,7 @@ def test_load_token_cache_miss_falls_through_to_keyring() -> None:
     assert result.access_token == "cache_miss_loaded"
 
 
-# ---------------------------------------------------------------------------
-# Finding #39 — _load_token JSON decode error (oauth.py:1020)
-# ---------------------------------------------------------------------------
+# _load_token JSON decode error
 
 
 @pytest.mark.usefixtures("with_fake_keyring")
@@ -1155,9 +1050,6 @@ def test_load_token_json_decode_error_returns_none() -> None:
     The fake keyring stores a valid outer ProviderCredentials JSON whose
     ``api_key`` contains malformed token JSON, triggering json.JSONDecodeError
     inside _load_token_from_store, which _load_token catches and maps to None.
-
-    Mutation: not catching json.JSONDecodeError in _load_token would propagate
-    the exception to the caller instead of returning None.
     """
     malformed_token_json = "NOT_VALID_JSON{{{"
     _FakeKeyringModule.passwords["intellicrack", "intellicrack_google"] = _make_outer_cred_json(malformed_token_json)
@@ -1173,9 +1065,7 @@ def test_load_token_json_decode_error_returns_none() -> None:
     assert result is None
 
 
-# ---------------------------------------------------------------------------
-# Finding #42 — get_token needs_refresh + auto_refresh=True (oauth.py:1052)
-# ---------------------------------------------------------------------------
+# get_token needs_refresh + auto_refresh=True
 
 
 def test_get_token_needs_refresh_auto_refresh_returns_refreshed_token(
@@ -1186,9 +1076,6 @@ def test_get_token_needs_refresh_auto_refresh_returns_refreshed_token(
     A token expiring in 7 minutes is within the 10-minute needs_refresh buffer
     but outside the 5-minute is_expired buffer.  With auto_refresh=True the
     manager calls refresh_token() which hits the mock 200 server.
-
-    Mutation: skipping the refresh branch regardless of needs_refresh would
-    return the stale token whose access_token != "tok_access_200".
 
     Args:
         mock_200_server: Base URL of the 200 token server.
@@ -1216,9 +1103,7 @@ def test_get_token_needs_refresh_auto_refresh_returns_refreshed_token(
     assert result.access_token != "stale_7min"
 
 
-# ---------------------------------------------------------------------------
-# Finding #43 — get_token OAuthTokenRefreshError path (oauth.py:1056)
-# ---------------------------------------------------------------------------
+# get_token OAuthTokenRefreshError path
 
 
 def test_get_token_returns_none_when_refresh_raises_token_refresh_error(
@@ -1228,9 +1113,6 @@ def test_get_token_returns_none_when_refresh_raises_token_refresh_error(
 
     A 403 from the token endpoint causes refresh_token() to raise
     OAuthTokenRefreshError, which get_token catches and maps to None.
-
-    Mutation: propagating OAuthTokenRefreshError instead of catching it would
-    raise rather than returning None.
 
     Args:
         mock_403_server: Base URL of the 403 token server.
@@ -1256,9 +1138,7 @@ def test_get_token_returns_none_when_refresh_raises_token_refresh_error(
     assert result is None
 
 
-# ---------------------------------------------------------------------------
-# Finding #44 — get_token OAuthTokenError, not expired (oauth.py:1059)
-# ---------------------------------------------------------------------------
+# get_token OAuthTokenError, not expired
 
 
 def test_get_token_returns_stale_token_when_refresh_raises_token_error_not_expired(
@@ -1268,8 +1148,6 @@ def test_get_token_returns_stale_token_when_refresh_raises_token_error_not_expir
 
     A 500 from the token endpoint causes OAuthTokenError (not RefreshError).
     The token expiring in 7 minutes has is_expired=False, so get_token returns it.
-
-    Mutation: returning None on any OAuthTokenError would fail the not-None assertion.
 
     Args:
         mock_500_server: Base URL of the 500 token server.
@@ -1296,9 +1174,7 @@ def test_get_token_returns_stale_token_when_refresh_raises_token_error_not_expir
     assert result.access_token == "stale_not_expired"
 
 
-# ---------------------------------------------------------------------------
-# Finding #45 — get_token expired after failed refresh (oauth.py:1090)
-# ---------------------------------------------------------------------------
+# get_token expired after failed refresh
 
 
 def test_get_token_returns_none_when_refresh_raises_token_error_and_token_expired(
@@ -1309,9 +1185,6 @@ def test_get_token_returns_none_when_refresh_raises_token_error_and_token_expire
     A token expiring in 3 minutes is within both the needs_refresh (10-min) and
     is_expired (5-min) buffers.  After a 500 OAuthTokenError, token.is_expired is
     True so get_token returns None.
-
-    Mutation: returning the expired token (not None) when refresh fails would
-    fail the ``result is None`` assertion.
 
     Args:
         mock_500_server: Base URL of the 500 token server.
@@ -1337,9 +1210,7 @@ def test_get_token_returns_none_when_refresh_raises_token_error_and_token_expire
     assert result is None
 
 
-# ---------------------------------------------------------------------------
-# Finding #46 — _post_token_refresh happy path (oauth.py:816)
-# ---------------------------------------------------------------------------
+# _post_token_refresh happy path
 
 
 def test_post_token_refresh_happy_path_parses_exact_fields(
@@ -1349,9 +1220,6 @@ def test_post_token_refresh_happy_path_parses_exact_fields(
 
     Exercises _post_token_refresh via refresh_token().  The 200 server returns
     the canned _TOKEN_200_BODY; the test asserts exact field values.
-
-    Mutation: parsing access_token from the wrong JSON key would fail the
-    exact-value assertion.
 
     Args:
         mock_200_server: Base URL of the 200 token server.
@@ -1384,9 +1252,7 @@ def test_post_token_refresh_happy_path_parses_exact_fields(
     assert 3590.0 <= expires_in_seconds <= 3620.0
 
 
-# ---------------------------------------------------------------------------
-# Finding #49 — refresh_token other HTTP error 500 (oauth.py:1181)
-# ---------------------------------------------------------------------------
+# refresh_token other HTTP error 500
 
 
 def test_refresh_token_500_raises_oauth_token_error(
@@ -1396,10 +1262,6 @@ def test_refresh_token_500_raises_oauth_token_error(
 
     500 is not in {401, 403}; it must raise the generic OAuthTokenError, NOT
     OAuthTokenRefreshError.
-
-    Mutation: treating all non-2xx as OAuthTokenRefreshError would raise the
-    wrong type and the specific ``not pytest.raises(OAuthTokenRefreshError)``
-    semantics would be violated.
 
     Args:
         mock_500_server: Base URL of the 500 token server.
@@ -1424,9 +1286,7 @@ def test_refresh_token_500_raises_oauth_token_error(
     asyncio.run(go())
 
 
-# ---------------------------------------------------------------------------
-# Finding #53 — revoke_token no revoke_url with credential_store (oauth.py:1213)
-# ---------------------------------------------------------------------------
+# revoke_token no revoke_url with credential_store
 
 
 @pytest.mark.usefixtures("with_fake_keyring")
@@ -1436,9 +1296,6 @@ def test_revoke_token_no_revoke_url_calls_credential_store_delete() -> None:
     ANTHROPIC has revoke_url=None in OAUTH_CONFIGS; only the keyring-delete
     path runs.  The pre-seeded fake keyring entry is verified to be absent
     after revocation.
-
-    Mutation: removing ``await self._credential_store.delete(provider_name)``
-    would leave the sentinel data in the fake keyring.
     """
     credential_key = ("intellicrack", "intellicrack_anthropic")
     _FakeKeyringModule.passwords[credential_key] = "sentinel_to_be_deleted"
@@ -1466,9 +1323,7 @@ def test_revoke_token_no_revoke_url_calls_credential_store_delete() -> None:
     assert credential_key not in _FakeKeyringModule.passwords
 
 
-# ---------------------------------------------------------------------------
-# Finding #54 — revoke_token with revoke_url, success (oauth.py:1218)
-# ---------------------------------------------------------------------------
+# revoke_token with revoke_url, success
 
 
 def test_revoke_token_with_revoke_url_success_returns_true(
@@ -1478,9 +1333,6 @@ def test_revoke_token_with_revoke_url_success_returns_true(
     """revoke_token must return True and clear cache when the revoke endpoint returns 200.
 
     Monkeypatches OAUTH_CONFIGS[GOOGLE].revoke_url to point to the 200 server.
-
-    Mutation: not calling ``raise_for_status()`` would leave revoke_succeeded=False
-    regardless of the response, returning False instead of True.
 
     Args:
         mock_200_server: Base URL of the 200 server to act as the revoke endpoint.
@@ -1516,9 +1368,7 @@ def test_revoke_token_with_revoke_url_success_returns_true(
     assert OAuthProvider.GOOGLE not in cache
 
 
-# ---------------------------------------------------------------------------
-# Finding #55 — revoke_token revoke HTTP error (oauth.py:1230)
-# ---------------------------------------------------------------------------
+# revoke_token revoke HTTP error
 
 
 def test_revoke_token_revoke_http_error_returns_false(
@@ -1526,9 +1376,6 @@ def test_revoke_token_revoke_http_error_returns_false(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """revoke_token must return False when the revoke endpoint returns a non-2xx status.
-
-    Mutation: not checking raise_for_status() would leave revoke_succeeded=True
-    despite the 500, returning True instead of False.
 
     Args:
         mock_500_server: Base URL of the 500 server to act as the revoke endpoint.
@@ -1560,17 +1407,11 @@ def test_revoke_token_revoke_http_error_returns_false(
     assert result is False
 
 
-# ---------------------------------------------------------------------------
-# Finding #57 — OAuthManager.to_provider_credentials (oauth.py:1268)
-# ---------------------------------------------------------------------------
+# OAuthManager.to_provider_credentials
 
 
 def test_to_provider_credentials_api_key_equals_access_token() -> None:
-    """to_provider_credentials must return ProviderCredentials whose api_key is the access_token.
-
-    Mutation: setting api_key to token.refresh_token or None would fail the
-    exact-value assertion.
-    """
+    """to_provider_credentials must return ProviderCredentials whose api_key is the access_token."""
     now = datetime.now(UTC)
     token = OAuthToken(
         access_token="creds_acc_57",
@@ -1592,9 +1433,7 @@ def test_to_provider_credentials_api_key_equals_access_token() -> None:
     assert creds.api_key == "creds_acc_57"
 
 
-# ---------------------------------------------------------------------------
-# Finding #58 — OAuthManager.run_authorization_flow (oauth.py:1290)
-# ---------------------------------------------------------------------------
+# OAuthManager.run_authorization_flow
 
 
 @_requires_loopback
@@ -1607,9 +1446,6 @@ def test_run_authorization_flow_returns_token_from_fake_server(
     The fake browser function reads the state from the authorization URL and
     sends a real GET to the local callback server, triggering handle_callback
     which exchanges the code against the mock 200 token server.
-
-    Mutation: not calling handle_callback after wait_for_callback would skip
-    the token exchange and raise rather than returning a token.
 
     Args:
         mock_200_server: Base URL of the 200 token server.
@@ -1653,9 +1489,7 @@ def test_run_authorization_flow_returns_token_from_fake_server(
     assert token.token_type == "Bearer"
 
 
-# ---------------------------------------------------------------------------
-# Finding #60 — authorize_google (oauth.py:1368)
-# ---------------------------------------------------------------------------
+# authorize_google
 
 
 @_requires_loopback
@@ -1668,9 +1502,6 @@ def test_authorize_google_returns_provider_credentials_with_access_token(
     Monkeypatches OAUTH_CONFIGS[GOOGLE] to point the token_url at the 200 server,
     and the global OAuthManager singleton to a controlled instance.  The fake
     browser sends the callback with the state extracted from the auth URL.
-
-    Mutation: returning ProviderCredentials(api_key=None) would fail the exact
-    api_key assertion.
 
     Args:
         mock_200_server: Base URL of the 200 token server.
@@ -1723,9 +1554,7 @@ def test_authorize_google_returns_provider_credentials_with_access_token(
     assert creds.api_key == "tok_access_200"
 
 
-# ---------------------------------------------------------------------------
-# Finding #61 — CredentialStore._check_keyring library not installed (store.py:147)
-# ---------------------------------------------------------------------------
+# CredentialStore._check_keyring library not installed
 
 
 def test_check_keyring_library_not_installed_returns_false(
@@ -1736,9 +1565,6 @@ def test_check_keyring_library_not_installed_returns_false(
     Monkeypatches the module-level _keyring_module to None, then creates a
     fresh CredentialStore whose _check_keyring has never been called.
 
-    Mutation: removing the ``if _keyring_module is None: return False`` guard
-    would cause an AttributeError from calling get_keyring() on None.
-
     Args:
         monkeypatch: Pytest fixture used to set _keyring_module to None.
     """
@@ -1748,9 +1574,7 @@ def test_check_keyring_library_not_installed_returns_false(
     assert result is False
 
 
-# ---------------------------------------------------------------------------
-# Finding #62 — CredentialStore._check_keyring fail/null backend (store.py:161)
-# ---------------------------------------------------------------------------
+# CredentialStore._check_keyring fail/null backend
 
 
 def test_check_keyring_fail_keyring_backend_returns_false(
@@ -1760,9 +1584,6 @@ def test_check_keyring_fail_keyring_backend_returns_false(
 
     Oracle: CredentialStore._UNUSABLE_BACKEND_NAMES and the backend_name
     sentinel check ``backend_name in {"Keyring", "FailKeyring", "NullKeyring"}``.
-
-    Mutation: removing ``"FailKeyring"`` from the sentinel set would let the
-    backend pass and _check_keyring would return True instead of False.
 
     Args:
         monkeypatch: Pytest fixture used to inject the FailKeyring module.
@@ -1780,9 +1601,6 @@ def test_check_keyring_null_keyring_name_returns_false(
 
     Uses a dynamically created class named NullKeyring to exercise the
     ``backend_name in {"Keyring", "FailKeyring", "NullKeyring"}`` branch.
-
-    Mutation: removing ``"NullKeyring"`` from the sentinel set would let the
-    backend pass and return True.
 
     Args:
         monkeypatch: Pytest fixture used to inject a NullKeyring-named module.
@@ -1816,9 +1634,7 @@ def test_check_keyring_null_keyring_name_returns_false(
     assert result is False
 
 
-# ---------------------------------------------------------------------------
-# Finding #63 — CredentialStore._check_keyring priority <= 0 (store.py:169)
-# ---------------------------------------------------------------------------
+# CredentialStore._check_keyring priority <= 0
 
 
 def test_check_keyring_zero_priority_backend_returns_false(
@@ -1828,9 +1644,6 @@ def test_check_keyring_zero_priority_backend_returns_false(
 
     _ZeroPriorityBackend passes the name checks but has priority=0.0, which
     fails the ``priority <= 0`` guard.
-
-    Mutation: changing the guard to ``priority < 0`` would let priority=0.0
-    through and return True instead of False.
 
     Args:
         monkeypatch: Pytest fixture used to inject the zero-priority module.

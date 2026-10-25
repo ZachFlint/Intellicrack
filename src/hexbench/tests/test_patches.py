@@ -49,9 +49,7 @@ from ._support import (
     SupportError,
     decode_tagged_bytes,
     json_object,
-    require_absent,
     require_equal,
-    require_false,
     require_greater,
     require_member,
     require_prefix,
@@ -547,7 +545,7 @@ class UpsRoundTrip(_PatchCase):
 
 
 class ImportResetsHistory(_PatchCase):
-    """Importing BPS or UPS replaces the document, so everything about it changes."""
+    """Importing BPS or UPS replaces the document's bytes as one undoable edit."""
 
     def backed_document(self) -> str:
         """Open a document over a real file and make one edit to it.
@@ -573,22 +571,40 @@ class ImportResetsHistory(_PatchCase):
         donor = self.edited_document()
         return _raw_of(self.session.call(exporter, {"source_data": _BASE_DATA.hex()}, handle=donor))
 
-    def test_bps_import_clears_undo_forgets_the_path_and_moves_the_generation(self) -> None:
-        """Every cached window a client holds is invalidated, and undo cannot cross the import."""
+    def require_undoable_replacement(self, importer: str, exporter: str) -> None:
+        """Import a whole-document patch and check it is one undoable edit.
+
+        The import replaces the document's bytes, so every cached window a
+        client holds is invalidated, but it keeps the backing path and a single
+        undo restores exactly the edited bytes it replaced.
+
+        Args:
+            importer: Name of the import operation under test.
+            exporter: Name of the export operation that builds its patch.
+        """
         handle = self.backed_document()
-        patch = self.donor_patch("export_patches_bps")
+        patch = self.donor_patch(exporter)
+        backing = str(self.session.path(_BACKING_NAME))
+        replaced = bytearray(_BASE_DATA)
+        replaced[_FIRST_OFFSET : _FIRST_OFFSET + len(_FIRST_WRITE)] = _FIRST_WRITE
+        require_equal(self.read_all(handle), bytes(replaced), f"document before the {importer}")
+        earlier = _int_member(self.document_json(handle), _GENERATION_KEY)
 
-        before = self.document_json(handle)
-        require_true(before[_CAN_UNDO_KEY], "can_undo before the import")
-        require_equal(before[_PATH_KEY], str(self.session.path(_BACKING_NAME)), "path before the import")
-        earlier = _int_member(before, _GENERATION_KEY)
-
-        self.session.call("import_patches_bps", {"patch_data": patch.hex(), "source_data": _BASE_DATA.hex()}, handle=handle)
+        self.session.call(importer, {"patch_data": patch.hex(), "source_data": _BASE_DATA.hex()}, handle=handle)
 
         after = self.document_json(handle)
-        require_false(after[_CAN_UNDO_KEY], "can_undo after the import")
-        require_absent(after[_PATH_KEY], "path after the import")
-        require_greater(_int_member(after, _GENERATION_KEY), earlier, "generation after the import")
+        require_equal(self.read_all(handle), _settled_bytes(), f"document after the {importer}")
+        require_true(after[_CAN_UNDO_KEY], f"can_undo after the {importer}")
+        require_equal(after[_PATH_KEY], backing, f"path after the {importer}")
+        require_greater(_int_member(after, _GENERATION_KEY), earlier, f"generation after the {importer}")
+
+        require_true(self.session.call("undo", handle=handle).value is True, f"undo of the {importer}")
+        require_equal(self.read_all(handle), bytes(replaced), f"document after undoing the {importer}")
+        require_equal(self.document_json(handle)[_PATH_KEY], backing, f"path after undoing the {importer}")
+
+    def test_bps_import_is_one_undoable_edit_that_keeps_the_path(self) -> None:
+        """A BPS import moves the generation, keeps the path, and undoes in one step."""
+        self.require_undoable_replacement("import_patches_bps", "export_patches_bps")
 
     def test_bps_import_discards_the_edit_it_replaced(self) -> None:
         """The document afterwards is the patch's target, not the target plus prior edits."""
@@ -597,21 +613,9 @@ class ImportResetsHistory(_PatchCase):
         self.session.call("import_patches_bps", {"patch_data": patch.hex(), "source_data": _BASE_DATA.hex()}, handle=handle)
         require_equal(self.read_all(handle), _settled_bytes(), "document after a replacing import")
 
-    def test_ups_import_clears_undo_and_forgets_the_path_too(self) -> None:
+    def test_ups_import_is_one_undoable_edit_that_keeps_the_path(self) -> None:
         """The UPS importer replaces the document on the same terms as the BPS one."""
-        handle = self.backed_document()
-        patch = self.donor_patch("export_patches_ups")
-
-        before = self.document_json(handle)
-        require_true(before[_CAN_UNDO_KEY], "can_undo before the import")
-        earlier = _int_member(before, _GENERATION_KEY)
-
-        self.session.call("import_patches_ups", {"patch_data": patch.hex(), "source_data": _BASE_DATA.hex()}, handle=handle)
-
-        after = self.document_json(handle)
-        require_false(after[_CAN_UNDO_KEY], "can_undo after the import")
-        require_absent(after[_PATH_KEY], "path after the import")
-        require_greater(_int_member(after, _GENERATION_KEY), earlier, "generation after the import")
+        self.require_undoable_replacement("import_patches_ups", "export_patches_ups")
 
     def test_ips_import_does_not_reset_history(self) -> None:
         """The IPS importer edits in place, so undo still reaches back past it."""

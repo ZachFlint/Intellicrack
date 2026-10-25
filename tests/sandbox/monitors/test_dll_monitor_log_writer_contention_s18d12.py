@@ -2,14 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""S18-D12: the DLL monitor must not drop records while the host reads its log.
+r"""The DLL monitor must not drop records while the host reads its log.
 
 ``Write-DllRecord`` appended with ``Add-Content``, which opens the file afresh
 for every single record. The host collects the monitor logs off the guest while
 the run is still going, and ``qemu-guest-agent`` opens them for reading *without*
 sharing writes, so for as long as it holds a handle no writer can open the file
-at all and the record is lost. Measured live in the guest once S18-D10 made the
-diagnostic reachable:
+at all and the record is lost. Measured live in the guest:
 
     ...|dll_event_handler_error|The process cannot access the file
     'C:\intellicrack\logs\dll_monitor.log' because it is being used by another process.

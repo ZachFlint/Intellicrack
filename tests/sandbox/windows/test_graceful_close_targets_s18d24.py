@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack.
 
-"""Gates for the Windows Sandbox graceful-close target selection (S18-D24).
+"""Gates for the Windows Sandbox graceful-close target selection.
 
 The window inventory these tests are built from was captured from a live
 Windows Sandbox session on 26100: one visible ``Windows Sandbox`` shell window

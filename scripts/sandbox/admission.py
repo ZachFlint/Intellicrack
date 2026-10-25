@@ -9,10 +9,10 @@ Several independent :mod:`scripts.sandbox.docker_sandbox` processes -- one per
 agent or session -- may drive the Windows test container at the same time on a
 single host. Windows containers, WHPX virtual machines, and Windows Sandbox all
 share the Host Compute Service, so oversubscribing the host does not merely slow
-a run down: interleaving too many at once has bugchecked this machine. The
-per-run identity work already keeps concurrent runs from clobbering each other's
-artifacts; this module adds the missing governor that bounds *how many* run at
-once and sizes each run's memory and CPU share so the concurrent set fits.
+a run down: interleaving too many at once has bugchecked this machine. Per-run
+identity keeps concurrent runs from clobbering each other's artifacts; this
+module adds a governor that bounds *how many* run at once and
+sizes each run's memory and CPU share so the concurrent set fits.
 
 Two concerns live here, each expressed as pure, testable logic:
 

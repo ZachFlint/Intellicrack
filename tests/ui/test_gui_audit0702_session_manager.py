@@ -2,30 +2,30 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-02 GUI audit findings in ``session_manager``.
+"""Gates for ``session_manager`` non-blocking dispatch, parent state adoption and tag persistence.
 
-Each test targets one audit finding and fails against the pre-fix behaviour:
+Each test targets one defect and fails against the defective behaviour:
 
-* ``test_h19_*`` (H19): session deletion must dispatch through the
+* Session deletion must dispatch through the
   non-blocking bridge worker instead of blocking the GUI thread inside
   ``run_bridge_coroutine``'s ``future.result(timeout=None)``.
-* ``test_h20_*`` (H20): session import must dispatch through the same
+* Session import must dispatch through the same
   non-blocking worker rather than blocking the GUI thread for the duration
   of the SQLite write.
-* ``test_h29_*`` (H29): the dialog's only production call site
+* The dialog's only production call site
   (``SessionManagerDialog(parent=self)``) must adopt the parent's live
   ``Orchestrator`` session manager and active session instead of silently
   falling back to the empty on-disk sidecar store, and the
   ``SessionManagerDialog.from_orchestrator`` factory must wire the same
   state directly.
-* ``test_m17_*`` (M17): tag add/remove persistence must dispatch through
+* Tag add/remove persistence must dispatch through
   the non-blocking bridge worker instead of blocking the GUI thread.
 
-The threading gates (H19, H20, M17) prove non-blocking dispatch by wiring a
+The threading gates prove non-blocking dispatch by wiring a
 ``SessionManager`` subclass whose persistence method sleeps for a
 measurable delay before delegating to the real implementation, then
 asserting the GUI-thread call that triggers persistence returns long
-before that delay elapses. Blocking pre-fix code (``run_bridge_coroutine``)
+before that delay elapses. Blocking code (``run_bridge_coroutine``)
 would make the same call site wait for the full delay before returning.
 
 All tests drive real ``SessionManagerDialog``, ``SessionManager``, and
@@ -234,12 +234,12 @@ def test_h19_delete_returns_before_blocking_and_completes_via_worker(
 ) -> None:
     """Deleting a session must not block the GUI thread on the SQLite write.
 
-    Pre-fix, ``_delete_session`` routed through
+    ``_delete_session`` must not route through
     ``run_bridge_coroutine(self._manager.delete(session_id))`` -- the
     documented blocking variant that calls ``future.result(timeout=None)``
     on the calling (GUI) thread -- so the call would not return until the
     injected ``_DELAY_S`` inside ``_DelayedDeleteManager.delete`` elapsed.
-    Post-fix, ``_delete_session_via_manager`` dispatches through
+    ``_delete_session_via_manager`` dispatches through
     ``run_bridge_coroutine_logged`` -> ``run_bridge_coroutine_async``, which
     starts a ``BridgeCallWorker`` QThread and returns immediately; the
     deletion completes later and is observed through the ``session_deleted``
@@ -292,11 +292,11 @@ def test_h20_import_returns_before_blocking_and_completes_via_worker(
 ) -> None:
     """Importing a session must not block the GUI thread on the SQLite write.
 
-    Pre-fix, ``_import_via_manager`` routed through
+    ``_import_via_manager`` must not route through
     ``run_bridge_coroutine(manager.import_json(path, replace=replace))`` --
     the blocking variant -- so the call would not return until the injected
     ``_DELAY_S`` inside ``_DelayedImportManager.import_json`` elapsed.
-    Post-fix, it dispatches through ``run_bridge_coroutine_logged`` and
+    It dispatches through ``run_bridge_coroutine_logged`` and
     returns immediately; completion is observed through the "Import
     Complete" ``QMessageBox.information`` call made by
     ``_on_import_via_manager_succeeded``.
@@ -354,11 +354,11 @@ def test_m17_tag_add_returns_before_blocking_and_persists_via_worker(
 ) -> None:
     """Adding a tag must not block the GUI thread on the SQLite write.
 
-    Pre-fix, ``_on_tags_changed`` routed through
+    ``_on_tags_changed`` must not route through
     ``run_bridge_coroutine(manager.update(session))`` -- the blocking
     variant -- so the tag-chip click handler would not return until the
     injected ``_DELAY_S`` inside ``_DelayedUpdateManager.update`` elapsed.
-    Post-fix, it dispatches through ``run_bridge_coroutine_logged`` and
+    It dispatches through ``run_bridge_coroutine_logged`` and
     returns immediately; the persisted tag is only observable in the
     backing SQLite store once the delayed write actually completes.
 
@@ -410,14 +410,14 @@ def test_h29_parent_orchestrator_wires_live_manager_and_active_session(
 ) -> None:
     """``SessionManagerDialog(parent=self)`` must adopt the parent's live orchestrator state.
 
-    Pre-fix, the dialog's only production call site
+    The dialog's only production call site
     (``app.py``'s ``_on_load_session``: ``SessionManagerDialog(parent=self)``)
-    left ``self._manager``/``self._current_session``/``self._current_session_id``
-    at their ``None`` defaults, so the dialog fell back to the empty on-disk
+    must not leave ``self._manager``/``self._current_session``/``self._current_session_id``
+    at their ``None`` defaults: the dialog would fall back to the empty on-disk
     sidecar store instead of the orchestrator's live, SQLite-backed
-    ``SessionManager``, the active-session delete-protection guard never
-    fired (it compared against ``None``), and the tags editor stayed
-    permanently disabled. Post-fix, ``_adopt_parent_orchestrator`` reads
+    ``SessionManager``, the active-session delete-protection guard would never
+    fire (it compares against ``None``), and the tags editor would stay
+    permanently disabled. ``_adopt_parent_orchestrator`` reads
     ``parent._orchestrator`` and wires all three.
 
     Args:
@@ -464,9 +464,8 @@ def test_h29_from_orchestrator_factory_wires_manager_and_active_session(
 ) -> None:
     """``SessionManagerDialog.from_orchestrator`` wires the live manager and active session.
 
-    This factory method did not exist pre-fix; callers had no way to build
-    a dialog explicitly bound to an orchestrator's live session state other
-    than manually threading through ``session_manager``/``current_session``.
+    Callers build a dialog bound to an orchestrator's live session state through this factory
+    rather than manually threading through ``session_manager``/``current_session``.
 
     Args:
         qtbot: pytest-qt bot fixture.

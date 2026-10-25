@@ -5,8 +5,7 @@
 
 """Real-data coverage for HexPat type_system, completer, and core reflection.
 
-The tests in this module exercise three production surfaces highlighted as
-under-covered in audit shard 09b:
+The tests in this module exercise three production surfaces:
 
 * :mod:`type_system` -- struct inheritance layout, composite ``using`` alias
   targets, namespace-qualified registration, and the resolver/``user_type_names``

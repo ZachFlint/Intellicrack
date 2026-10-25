@@ -5,10 +5,13 @@
 
 use thiserror::Error;
 
+/// Errors raised while resolving, encoding or decoding text.
 #[derive(Error, Debug)]
 pub enum EncodingError {
+    /// The encoding name is not recognized.
     #[error("unsupported encoding: {0}")]
     UnsupportedEncoding(String),
+    /// The text contains a character the encoding cannot represent.
     #[error("encode failed: {0}")]
     EncodeFailed(String),
 }
@@ -100,7 +103,7 @@ fn decode_ebcdic(data: &[u8]) -> (String, bool) {
     let mut result = String::with_capacity(data.len());
     let mut had_replacement = false;
     for &byte in data {
-        let ch = EBCDIC_TO_UNICODE[byte as usize];
+        let ch = EBCDIC_TO_UNICODE[usize::from(byte)];
         if ch == '\u{FFFD}' {
             had_replacement = true;
         }
@@ -109,53 +112,204 @@ fn decode_ebcdic(data: &[u8]) -> (String, bool) {
     (result, had_replacement)
 }
 
-fn build_ebcdic_reverse_table() -> std::collections::HashMap<char, u8> {
-    let mut map = std::collections::HashMap::with_capacity(256);
-    for (byte_val, &ch) in EBCDIC_TO_UNICODE.iter().enumerate() {
-        if let Ok(b) = u8::try_from(byte_val) {
-            map.entry(ch).or_insert(b);
-        }
-    }
-    map
-}
-
 fn encode_ebcdic(text: &str) -> Result<Vec<u8>, EncodingError> {
-    let reverse = build_ebcdic_reverse_table();
     let mut result = Vec::with_capacity(text.len());
     for ch in text.chars() {
-        match reverse.get(&ch) {
-            Some(&b) => result.push(b),
-            None => {
-                return Err(EncodingError::EncodeFailed(format!(
-                    "character '{}' (U+{:04X}) cannot be encoded in EBCDIC CP037",
-                    ch, ch as u32
-                )));
-            }
-        }
+        let Some(byte) = EBCDIC_TO_UNICODE
+            .iter()
+            .position(|&mapped| mapped == ch)
+            .and_then(|index| u8::try_from(index).ok())
+        else {
+            return Err(EncodingError::EncodeFailed(format!(
+                "character '{}' (U+{:04X}) cannot be encoded in EBCDIC CP037",
+                ch, ch as u32
+            )));
+        };
+        result.push(byte);
     }
     Ok(result)
 }
 
+/// A resolved text encoding, looked up once and reused for every window.
+#[derive(Clone, Copy)]
+pub enum Codec {
+    /// 7-bit ASCII; bytes with the high bit set are invalid.
+    Ascii,
+    /// IBM EBCDIC code page 037.
+    Ebcdic,
+    /// UTF-8.
+    Utf8,
+    /// UTF-16, little-endian code units.
+    Utf16Le,
+    /// UTF-16, big-endian code units.
+    Utf16Be,
+    /// Any other encoding supported by `encoding_rs`.
+    Other(&'static encoding_rs::Encoding),
+}
+
+impl Codec {
+    /// Resolves an encoding name or WHATWG label, case-insensitively.
+    ///
+    /// The crate's own names are tried first, then any `encoding_rs` label.
+    /// UTF-16 labels such as `"utf-16"` or `"unicode"` resolve to the matching
+    /// UTF-16 codec rather than to `encoding_rs`'s UTF-16 encodings, whose
+    /// encoder emits UTF-8.
+    ///
+    /// # Errors
+    ///
+    /// Returns `EncodingError::UnsupportedEncoding` for an unknown name, or
+    /// for the WHATWG `replacement` pseudo-encoding.
+    pub fn resolve(name: &str) -> Result<Self, EncodingError> {
+        let trimmed = name.trim();
+        match trimmed.to_lowercase().as_str() {
+            "ascii" | "us-ascii" => return Ok(Self::Ascii),
+            "ebcdic" | "ebcdic-cp037" | "cp037" => return Ok(Self::Ebcdic),
+            _ => {}
+        }
+        let enc = resolve_encoding(trimmed).or_else(|unsupported| {
+            encoding_rs::Encoding::for_label(trimmed.as_bytes()).ok_or(unsupported)
+        })?;
+        if enc == encoding_rs::UTF_8 {
+            Ok(Self::Utf8)
+        } else if enc == encoding_rs::UTF_16LE {
+            Ok(Self::Utf16Le)
+        } else if enc == encoding_rs::UTF_16BE {
+            Ok(Self::Utf16Be)
+        } else if enc == encoding_rs::REPLACEMENT {
+            Err(EncodingError::UnsupportedEncoding(name.to_string()))
+        } else {
+            Ok(Self::Other(enc))
+        }
+    }
+
+    /// Encodes `text`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `EncodingError::EncodeFailed` if a character has no mapping.
+    pub fn encode(self, text: &str) -> Result<Vec<u8>, EncodingError> {
+        match self {
+            Self::Ascii => text
+                .chars()
+                .map(|ch| {
+                    u8::try_from(ch).ok().filter(u8::is_ascii).ok_or_else(|| {
+                        EncodingError::EncodeFailed(format!(
+                            "U+{:04X} cannot be encoded in ASCII",
+                            ch as u32
+                        ))
+                    })
+                })
+                .collect(),
+            Self::Ebcdic => encode_ebcdic(text),
+            Self::Utf8 => Ok(text.as_bytes().to_vec()),
+            Self::Utf16Le => Ok(text.encode_utf16().flat_map(u16::to_le_bytes).collect()),
+            Self::Utf16Be => Ok(text.encode_utf16().flat_map(u16::to_be_bytes).collect()),
+            Self::Other(enc) => {
+                let (cow, _, had_unmappable) = enc.encode(text);
+                if had_unmappable {
+                    return Err(EncodingError::EncodeFailed(format!(
+                        "text contains characters that cannot be encoded in '{}'",
+                        enc.name()
+                    )));
+                }
+                Ok(cow.into_owned())
+            }
+        }
+    }
+
+    /// Decodes `data` exactly as the requested encoding, never sniffing a
+    /// byte-order mark. Returns the text and whether any byte was invalid.
+    #[must_use]
+    pub fn decode(self, data: &[u8]) -> (String, bool) {
+        match self {
+            Self::Ascii => (
+                data.iter().map(|&b| char::from(b & 0x7F)).collect(),
+                data.iter().any(|&b| b & 0x80 != 0),
+            ),
+            Self::Ebcdic => decode_ebcdic(data),
+            Self::Utf8 => {
+                let (cow, had_errors) = encoding_rs::UTF_8.decode_without_bom_handling(data);
+                (cow.into_owned(), had_errors)
+            }
+            Self::Utf16Le => {
+                let (cow, had_errors) = encoding_rs::UTF_16LE.decode_without_bom_handling(data);
+                (cow.into_owned(), had_errors)
+            }
+            Self::Utf16Be => {
+                let (cow, had_errors) = encoding_rs::UTF_16BE.decode_without_bom_handling(data);
+                (cow.into_owned(), had_errors)
+            }
+            Self::Other(enc) => {
+                let (cow, had_errors) = enc.decode_without_bom_handling(data);
+                (cow.into_owned(), had_errors)
+            }
+        }
+    }
+
+    /// Returns `true` when `window` decodes cleanly to text equal to
+    /// `needle_lower` after lowercasing.
+    ///
+    /// Against an ASCII needle the common encodings compare code units with
+    /// ASCII case folding and allocate nothing, stopping at the first unit that
+    /// differs, which is what keeps a per-offset scan linear. Any code unit
+    /// that is not itself printable-range ASCII (for example the multi-byte
+    /// U+212A, which lowercases to `'k'`) falls through to the decode path, so
+    /// it is still matched.
+    #[must_use]
+    pub fn window_matches_ignore_case(self, window: &[u8], needle_lower: &str) -> bool {
+        if needle_lower.is_ascii() {
+            match self {
+                Self::Ascii | Self::Utf8 if window.len() == needle_lower.len() => {
+                    return window.eq_ignore_ascii_case(needle_lower.as_bytes());
+                }
+                Self::Utf16Le | Self::Utf16Be if window.len() == needle_lower.len() * 2 => {
+                    if let Some(matched) = self.utf16_ascii_window_matches(window, needle_lower) {
+                        return matched;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let (decoded, had_errors) = self.decode(window);
+        !had_errors && decoded.to_lowercase() == needle_lower
+    }
+
+    /// Compares a UTF-16 `window` to an ASCII `needle_lower`, one code unit at
+    /// a time, ASCII-folded, stopping at the first that differs.
+    ///
+    /// Returns `Some(matched)` when every code unit is printable-range ASCII (a
+    /// zero high byte and a low byte below `0x80`), and `None` when any unit is
+    /// not — such a unit can still case-fold to an ASCII letter, so only a full
+    /// decode can decide and the caller falls back to it.
+    fn utf16_ascii_window_matches(self, window: &[u8], needle_lower: &str) -> Option<bool> {
+        let (low, high) = match self {
+            Self::Utf16Le => (0usize, 1usize),
+            Self::Utf16Be => (1, 0),
+            _ => return None,
+        };
+        for (unit, needle_byte) in window.as_chunks::<2>().0.iter().zip(needle_lower.bytes()) {
+            if unit[high] != 0 || unit[low] >= 0x80 {
+                return None;
+            }
+            if !unit[low].eq_ignore_ascii_case(&needle_byte) {
+                return Some(false);
+            }
+        }
+        Some(true)
+    }
+}
+
 /// Decodes raw bytes into a string using the specified encoding.
+///
+/// The bytes are decoded as the requested encoding even when they start with
+/// a byte-order mark for another one, so `encode_text(decode_text(x))`
+/// round-trips for lossless encodings.
 ///
 /// # Errors
 ///
 /// Returns `EncodingError::UnsupportedEncoding` if the encoding name is not recognized.
 pub fn decode_text(data: &[u8], encoding_name: &str) -> Result<(String, bool), EncodingError> {
-    let lower = encoding_name.to_lowercase();
-    match lower.as_str() {
-        "ascii" => {
-            let s: String = data.iter().map(|&b| (b & 0x7F) as char).collect();
-            let had_replacement = data.iter().any(|&b| b & 0x80 != 0);
-            Ok((s, had_replacement))
-        }
-        "ebcdic" | "ebcdic-cp037" | "cp037" => Ok(decode_ebcdic(data)),
-        _ => {
-            let enc = resolve_encoding(encoding_name)?;
-            let (cow, _enc_used, had_errors) = enc.decode(data);
-            Ok((cow.into_owned(), had_errors))
-        }
-    }
+    Ok(Codec::resolve(encoding_name)?.decode(data))
 }
 
 /// Encodes a string into raw bytes using the specified encoding.
@@ -165,164 +319,72 @@ pub fn decode_text(data: &[u8], encoding_name: &str) -> Result<(String, bool), E
 /// Returns `EncodingError::UnsupportedEncoding` if the encoding name is not recognized,
 /// or `EncodingError::EncodeFailed` if the text contains unmappable characters.
 pub fn encode_text(text: &str, encoding_name: &str) -> Result<Vec<u8>, EncodingError> {
-    let lower = encoding_name.to_lowercase();
-    match lower.as_str() {
-        "ascii" => {
-            let mut bytes = Vec::with_capacity(text.len());
-            for ch in text.chars() {
-                let cp = ch as u32;
-                if cp > 0x7F {
-                    return Err(EncodingError::EncodeFailed(format!(
-                        "U+{cp:04X} cannot be encoded in ASCII"
-                    )));
-                }
-                bytes.push(ch as u8);
-            }
-            Ok(bytes)
-        }
-        "utf-8" | "utf8" => Ok(text.as_bytes().to_vec()),
-        "utf-16le" | "utf16le" => {
-            let encoded: Vec<u8> = text.encode_utf16().flat_map(u16::to_le_bytes).collect();
-            Ok(encoded)
-        }
-        "utf-16be" | "utf16be" => {
-            let encoded: Vec<u8> = text.encode_utf16().flat_map(u16::to_be_bytes).collect();
-            Ok(encoded)
-        }
-        "ebcdic" | "ebcdic-cp037" | "cp037" => encode_ebcdic(text),
-        _ => {
-            let enc = resolve_encoding(encoding_name)?;
-            let (cow, _enc_used, had_unmappable) = enc.encode(text);
-            if had_unmappable {
-                return Err(EncodingError::EncodeFailed(format!(
-                    "text contains characters that cannot be encoded in '{encoding_name}'"
-                )));
-            }
-            Ok(cow.into_owned())
-        }
-    }
+    Codec::resolve(encoding_name)?.encode(text)
 }
 
-#[must_use]
+/// Finds every occurrence of `text` encoded in `encoding_name`, overlapping
+/// ones included.
+///
+/// Matches may start at any byte offset, including odd offsets for UTF-16,
+/// and may overlap, as byte and hex searches do: `aa` occurs at 0, 1 and 2
+/// in `aaaa`. Returns at most `max_results` `(offset, length)` pairs in
+/// ascending order. Text that cannot be represented in the encoding matches
+/// nothing. This is the one text-search engine; `search::search_text` reports
+/// the same matches. A case-sensitive search costs time linear in `data`
+/// plus the bytes of the matches it reports, whatever the pattern, so a long
+/// pattern over repetitive data costs no more than a short one.
+///
+/// # Errors
+///
+/// Returns `EncodingError::UnsupportedEncoding` if the encoding name is not
+/// recognized, so a typo is never mistaken for "no matches".
 pub fn search_text_encoded(
     data: &[u8],
     text: &str,
     encoding_name: &str,
     case_sensitive: bool,
     max_results: usize,
-) -> Vec<(usize, usize)> {
+) -> Result<Vec<(usize, usize)>, EncodingError> {
+    let codec = Codec::resolve(encoding_name)?;
     if text.is_empty() || max_results == 0 {
-        return Vec::new();
+        return Ok(Vec::new());
     }
-
-    let Ok(search_bytes) = encode_text(text, encoding_name) else {
-        return Vec::new();
+    let Ok(search_bytes) = codec.encode(text) else {
+        return Ok(Vec::new());
     };
-
-    if search_bytes.is_empty() {
-        return Vec::new();
+    if search_bytes.is_empty() || search_bytes.len() > data.len() {
+        return Ok(Vec::new());
     }
 
-    if case_sensitive {
-        let mut results: Vec<(usize, usize)> = Vec::new();
-        find_pattern(data, &search_bytes, max_results, &mut results);
-        return results;
-    }
-
-    search_text_case_insensitive(data, text, encoding_name, search_bytes.len(), max_results)
-}
-
-fn unit_width(encoding_name: &str) -> usize {
-    match encoding_name.to_lowercase().as_str() {
-        "utf-16le" | "utf16le" | "utf-16be" | "utf16be" => 2,
-        _ => 1,
-    }
-}
-
-fn search_text_case_insensitive(
-    data: &[u8],
-    needle: &str,
-    encoding_name: &str,
-    window_len: usize,
-    max_results: usize,
-) -> Vec<(usize, usize)> {
-    if window_len == 0 || data.len() < window_len {
-        return Vec::new();
-    }
-
-    let needle_lower = needle.to_lowercase();
-    let step = unit_width(encoding_name);
+    let window_len = search_bytes.len();
     let mut results: Vec<(usize, usize)> = Vec::new();
-    let last_start = data.len() - window_len;
-    let mut offset: usize = 0;
-
-    while offset <= last_start && results.len() < max_results {
-        let window = &data[offset..offset + window_len];
-        if window_matches_case_insensitive(window, &needle_lower, encoding_name) {
-            results.push((offset, window_len));
-            offset += window_len.max(step);
-        } else {
-            offset += step;
-        }
-    }
-
-    results
-}
-
-fn window_matches_case_insensitive(window: &[u8], needle_lower: &str, encoding_name: &str) -> bool {
-    let lower = encoding_name.to_lowercase();
-    let decoded: String = match lower.as_str() {
-        "ascii" => {
-            if window.iter().any(|&b| b & 0x80 != 0) {
-                return false;
-            }
-            window.iter().map(|&b| b as char).collect()
-        }
-        "ebcdic" | "ebcdic-cp037" | "cp037" => {
-            let (s, had_replacement) = decode_ebcdic(window);
-            if had_replacement {
-                return false;
-            }
-            s
-        }
-        _ => {
-            let Ok(enc) = resolve_encoding(encoding_name) else {
-                return false;
+    if case_sensitive {
+        // `find_iter` resumes after each match and so skips overlapping ones;
+        // resuming one byte past each match start keeps them, and the finder's
+        // two-way search stays linear on the bytes it scans.
+        let finder = memchr::memmem::Finder::new(&search_bytes);
+        let mut start = 0;
+        while results.len() < max_results {
+            let Some(found) = finder.find(&data[start..]) else {
+                break;
             };
-            let (cow, had_errors) = enc.decode_without_bom_handling(window);
-            if had_errors {
-                return false;
-            }
-            cow.into_owned()
+            let offset = start + found;
+            results.push((offset, window_len));
+            start = offset + 1;
         }
-    };
+        return Ok(results);
+    }
 
-    decoded.to_lowercase() == needle_lower
-}
-
-fn find_pattern(
-    data: &[u8],
-    pattern: &[u8],
-    max_results: usize,
-    results: &mut Vec<(usize, usize)>,
-) {
-    if pattern.is_empty() || results.len() >= max_results {
-        return;
-    }
-    let pat_len = pattern.len();
-    let data_len = data.len();
-    if pat_len > data_len {
-        return;
-    }
-    let mut pos = 0;
-    while pos <= data_len - pat_len && results.len() < max_results {
-        if data[pos..pos + pat_len] == *pattern {
-            results.push((pos, pat_len));
-            pos += pat_len;
-        } else {
-            pos += 1;
-        }
-    }
+    let needle_lower = text.to_lowercase();
+    results.extend(
+        (0..=data.len() - window_len)
+            .filter(|&offset| {
+                codec.window_matches_ignore_case(&data[offset..offset + window_len], &needle_lower)
+            })
+            .take(max_results)
+            .map(|offset| (offset, window_len)),
+    );
+    Ok(results)
 }
 
 const ENCODING_LIST: &[(&str, &str)] = &[
@@ -367,6 +429,7 @@ const ENCODING_LIST: &[(&str, &str)] = &[
     ("koi8-u", "KOI8-U (Ukrainian)"),
 ];
 
+/// Returns `(name, description)` for every encoding offered to users.
 #[must_use]
 pub fn list_encodings() -> Vec<(String, String)> {
     ENCODING_LIST
@@ -515,7 +578,13 @@ mod tests {
     #[test]
     fn test_list_encodings_count() {
         let encodings = list_encodings();
-        assert!(encodings.len() > 30);
+        assert_eq!(encodings.len(), 36);
+        for (name, _) in &encodings {
+            assert!(
+                Codec::resolve(name).is_ok(),
+                "listed encoding {name} must resolve"
+            );
+        }
     }
 
     #[test]
@@ -537,7 +606,7 @@ mod tests {
     #[test]
     fn test_search_text_utf8() {
         let data = b"Hello, world! Hello again!";
-        let results = search_text_encoded(data, "Hello", "utf-8", true, 10);
+        let results = search_text_encoded(data, "Hello", "utf-8", true, 10).unwrap();
         assert_eq!(results.len(), 2);
         assert_eq!(results[0], (0, 5));
         assert_eq!(results[1], (14, 5));
@@ -546,8 +615,8 @@ mod tests {
     #[test]
     fn test_search_text_utf8_not_found() {
         let data = b"Hello, world!";
-        let results = search_text_encoded(data, "xyz", "utf-8", true, 10);
-        assert!(results.is_empty());
+        let results = search_text_encoded(data, "xyz", "utf-8", true, 10).unwrap();
+        assert_eq!(results.len(), 0);
     }
 
     #[test]
@@ -557,28 +626,28 @@ mod tests {
             .encode_utf16()
             .flat_map(u16::to_le_bytes)
             .collect();
-        let results = search_text_encoded(&haystack, "Hello", "utf-16le", true, 10);
-        assert_eq!(results.len(), 2);
+        let results = search_text_encoded(&haystack, "Hello", "utf-16le", true, 10).unwrap();
+        assert_eq!(results, vec![(0, 10), (24, 10)]);
     }
 
     #[test]
     fn test_search_text_max_results() {
         let data = b"aaa aaa aaa aaa aaa";
-        let results = search_text_encoded(data, "aaa", "utf-8", true, 2);
+        let results = search_text_encoded(data, "aaa", "utf-8", true, 2).unwrap();
         assert_eq!(results.len(), 2);
     }
 
     #[test]
     fn test_search_text_case_insensitive() {
         let data = b"Hello hello HELLO";
-        let results = search_text_encoded(data, "hello", "utf-8", false, 10);
-        assert!(results.len() >= 2);
+        let results = search_text_encoded(data, "hello", "utf-8", false, 10).unwrap();
+        assert_eq!(results, vec![(0, 5), (6, 5), (12, 5)]);
     }
 
     #[test]
     fn test_search_text_mixed_case_ascii() {
         let data = b"say hello to the world";
-        let results = search_text_encoded(data, "HeLLo", "utf-8", false, 10);
+        let results = search_text_encoded(data, "HeLLo", "utf-8", false, 10).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0], (4, 5));
     }
@@ -586,7 +655,7 @@ mod tests {
     #[test]
     fn test_search_text_mixed_case_matches_upper() {
         let data = b"the WORLD is here";
-        let results = search_text_encoded(data, "WoRlD", "utf-8", false, 10);
+        let results = search_text_encoded(data, "WoRlD", "utf-8", false, 10).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0], (4, 5));
     }
@@ -595,7 +664,7 @@ mod tests {
     fn test_search_text_mixed_case_cyrillic_utf16le() {
         let target = "привет";
         let haystack: Vec<u8> = target.encode_utf16().flat_map(u16::to_le_bytes).collect();
-        let results = search_text_encoded(&haystack, "ПрИвЕт", "utf-16le", false, 10);
+        let results = search_text_encoded(&haystack, "ПрИвЕт", "utf-16le", false, 10).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, 0);
         assert_eq!(results[0].1, haystack.len());
@@ -615,10 +684,10 @@ mod tests {
     #[test]
     fn test_unsupported_encoding() {
         let result = decode_text(b"test", "unknown-encoding-xyz");
-        assert!(result.is_err());
-        if let Err(EncodingError::UnsupportedEncoding(name)) = result {
-            assert_eq!(name, "unknown-encoding-xyz");
-        }
+        assert!(matches!(
+            result,
+            Err(EncodingError::UnsupportedEncoding(ref n)) if n == "unknown-encoding-xyz"
+        ));
     }
 
     #[test]
@@ -632,8 +701,8 @@ mod tests {
     #[test]
     fn test_search_empty_text() {
         let data = b"Hello";
-        let results = search_text_encoded(data, "", "utf-8", true, 10);
-        assert!(results.is_empty());
+        let results = search_text_encoded(data, "", "utf-8", true, 10).unwrap();
+        assert_eq!(results.len(), 0);
     }
 
     #[test]
@@ -671,38 +740,166 @@ mod tests {
     #[test]
     fn test_search_text_encoded_guards() {
         // max_results == 0
-        assert!(search_text_encoded(b"hello", "he", "utf-8", true, 0).is_empty());
-        // unsupported encoding -> encode_text fails -> empty
-        assert!(search_text_encoded(b"hello", "he", "no-such-enc", true, 10).is_empty());
+        assert_eq!(
+            search_text_encoded(b"hello", "he", "utf-8", true, 0)
+                .unwrap()
+                .len(),
+            0
+        );
+        // text unrepresentable in the encoding -> no match, not an error
+        assert_eq!(
+            search_text_encoded(b"hello", "\u{0416}", "ascii", true, 10)
+                .unwrap()
+                .len(),
+            0
+        );
     }
 
     #[test]
     fn test_search_case_insensitive_data_shorter_than_window() {
         // window_len (6) > data.len() (2) -> empty
-        assert!(search_text_encoded(b"ab", "abcdef", "utf-8", false, 10).is_empty());
+        assert_eq!(
+            search_text_encoded(b"ab", "abcdef", "utf-8", false, 10)
+                .unwrap()
+                .len(),
+            0
+        );
     }
 
     #[test]
     fn test_find_pattern_oversize_pattern_via_search() {
         // case-sensitive path: pattern longer than data -> no results
-        assert!(search_text_encoded(b"ab", "abcdef", "utf-8", true, 10).is_empty());
+        assert_eq!(
+            search_text_encoded(b"ab", "abcdef", "utf-8", true, 10)
+                .unwrap()
+                .len(),
+            0
+        );
     }
 
     #[test]
-    fn test_window_matches_case_insensitive_reject_arms() {
+    fn test_window_matches_ignore_case_reject_arms() {
         // ASCII high bit -> reject
-        assert!(!window_matches_case_insensitive(&[0x80], "x", "ascii"));
+        assert!(!Codec::Ascii.window_matches_ignore_case(&[0x80], "x"));
         // EBCDIC decode-and-compare: 0xC1 -> 'A' lowercased 'a' matches
-        assert!(window_matches_case_insensitive(&[0xC1], "a", "ebcdic"));
-        assert!(!window_matches_case_insensitive(&[0xC2], "a", "ebcdic"));
-        // resolve_encoding error -> reject
-        assert!(!window_matches_case_insensitive(
-            &[0x41],
-            "a",
-            "no-such-enc"
+        assert!(Codec::Ebcdic.window_matches_ignore_case(&[0xC1], "a"));
+        assert!(!Codec::Ebcdic.window_matches_ignore_case(&[0xC2], "a"));
+        assert!(matches!(
+            Codec::resolve("no-such-enc"),
+            Err(EncodingError::UnsupportedEncoding(ref n)) if n == "no-such-enc"
         ));
         // decode had_errors (lone Shift_JIS lead byte) -> reject
-        assert!(!window_matches_case_insensitive(&[0x81], "x", "shift_jis"));
+        let sjis = Codec::resolve("shift_jis").unwrap();
+        assert!(!sjis.window_matches_ignore_case(&[0x81], "x"));
+    }
+
+    /// A window that is a multi-byte character lowercasing to an ASCII needle
+    /// (U+212A KELVIN SIGN, bytes E2 84 AA, lowercases to 'k') must still match
+    /// case-insensitively; a length-blind ASCII fast path rejects it because
+    /// the three-byte window differs in length from the one-byte needle.
+    #[test]
+    fn test_window_matches_ignore_case_folds_multibyte_to_ascii_needle() {
+        assert!(Codec::Utf8.window_matches_ignore_case("\u{212A}".as_bytes(), "k"));
+    }
+
+    /// The UTF-16 case-insensitive fast path folds printable-ASCII code units
+    /// directly in both byte orders, but a non-ASCII unit (the one-unit Kelvin
+    /// sign U+212A, which lowercases to `'k'`) must defer to the decode so it
+    /// still matches. Folding the raw bytes would miss it.
+    #[test]
+    fn test_utf16_case_insensitive_folds_ascii_and_defers_non_ascii() {
+        let as_le = |s: &str| -> Vec<u8> { s.encode_utf16().flat_map(u16::to_le_bytes).collect() };
+        let as_be = |s: &str| -> Vec<u8> { s.encode_utf16().flat_map(u16::to_be_bytes).collect() };
+        assert!(Codec::Utf16Le.window_matches_ignore_case(&as_le("HeLLo"), "hello"));
+        assert!(Codec::Utf16Be.window_matches_ignore_case(&as_be("HeLLo"), "hello"));
+        assert!(!Codec::Utf16Le.window_matches_ignore_case(&as_le("World"), "hello"));
+        assert!(Codec::Utf16Le.window_matches_ignore_case(&as_le("\u{212A}"), "k"));
+        assert!(Codec::Utf16Be.window_matches_ignore_case(&as_be("\u{212A}"), "k"));
+    }
+
+    /// "us-ascii" and a space-padded "ascii" must resolve to the strict ASCII
+    /// codec, not fall through to windows-1252, which would decode 0xC8 as 'È'
+    /// with no error instead of masking it to 'H' and flagging the loss.
+    #[test]
+    fn test_resolve_ascii_aliases_use_the_strict_codec() {
+        assert_eq!(
+            decode_text(&[0xC8], "us-ascii").unwrap(),
+            ("H".to_string(), true)
+        );
+        assert_eq!(
+            decode_text(&[0xC8], " ascii ").unwrap(),
+            ("H".to_string(), true)
+        );
+    }
+
+    /// An unknown encoding name must make the search return an error rather
+    /// than no matches, so a typo is not reported to the user as "0 matches",
+    /// per the bridge's raise-on-unsupported contract.
+    #[test]
+    fn test_search_text_encoded_rejects_unknown_encoding() {
+        assert!(matches!(
+            search_text_encoded(b"hello", "he", "no-such-enc", true, 10),
+            Err(EncodingError::UnsupportedEncoding(ref n)) if n == "no-such-enc"
+        ));
+        assert!(matches!(
+            search_text_encoded(b"hello", "", "no-such-enc", true, 10),
+            Err(EncodingError::UnsupportedEncoding(_))
+        ));
+    }
+
+    /// Case-insensitive UTF-16 search must not step two bytes at a time, or
+    /// UTF-16 text at an odd offset is found case-sensitively but missed
+    /// case-insensitively.
+    #[test]
+    fn test_search_text_encoded_utf16_case_insensitive_odd_offset() {
+        let data = [0x41, 0x48, 0x00, 0x49, 0x00];
+        assert_eq!(
+            search_text_encoded(&data, "hi", "utf-16le", false, 10).unwrap(),
+            vec![(1, 4)]
+        );
+        assert_eq!(
+            search_text_encoded(&data, "HI", "utf-16le", true, 10).unwrap(),
+            vec![(1, 4)]
+        );
+    }
+
+    /// `decode_text` must not use `encoding_rs`'s BOM-sniffing decode, which
+    /// decodes bytes starting with a byte-order mark as the sniffed encoding
+    /// with the BOM stripped instead of as the one requested.
+    #[test]
+    fn test_decode_text_does_not_sniff_bom() {
+        assert_eq!(
+            decode_text(&[0xFE, 0xFF, 0x41, 0x00], "utf-16le").unwrap(),
+            ("\u{FFFE}A".to_string(), false)
+        );
+        assert_eq!(
+            decode_text(&[0xEF, 0xBB, 0xBF, 0x41], "utf-8").unwrap(),
+            ("\u{FEFF}A".to_string(), false)
+        );
+        assert_eq!(
+            decode_text(&[0xEF, 0xBB, 0xBF, 0x41], "windows-1252").unwrap(),
+            ("\u{EF}\u{BB}\u{BF}A".to_string(), false)
+        );
+    }
+
+    /// WHATWG UTF-16 labels such as `"utf-16"` must resolve to the crate's
+    /// UTF-16 codec, not be rejected or resolved to `encoding_rs`'s UTF-16
+    /// encoding, whose encoder emits UTF-8 (a search for `"AB"` would look for
+    /// `41 42`).
+    #[test]
+    fn test_utf16_labels_resolve_to_utf16_codecs() {
+        assert_eq!(
+            encode_text("AB", "utf-16").unwrap(),
+            vec![0x41, 0x00, 0x42, 0x00]
+        );
+        assert_eq!(
+            encode_text("AB", "unicodefffe").unwrap(),
+            vec![0x00, 0x41, 0x00, 0x42]
+        );
+        assert!(matches!(
+            Codec::resolve("replacement"),
+            Err(EncodingError::UnsupportedEncoding(_))
+        ));
     }
 
     #[test]
@@ -748,5 +945,92 @@ mod tests {
                 "encoding {n} should resolve"
             );
         }
+    }
+
+    /// A case-sensitive search reports every occurrence, overlapping ones
+    /// included, and keeps its result cap and its odd-offset UTF-16 matches.
+    #[test]
+    fn test_case_sensitive_search_semantics() {
+        assert_eq!(
+            search_text_encoded(b"aaaaa", "aa", "ascii", true, 10).unwrap(),
+            vec![(0, 2), (1, 2), (2, 2), (3, 2)]
+        );
+        assert_eq!(
+            search_text_encoded(b"aaaaa", "aa", "ascii", true, 1).unwrap(),
+            vec![(0, 2)]
+        );
+        assert_eq!(
+            search_text_encoded(b"\x00h\x00i\x00", "hi", "utf-16le", true, 10).unwrap(),
+            vec![(1, 4)]
+        );
+        assert_eq!(
+            search_text_encoded(b"xyz", "xyz", "ascii", true, 10).unwrap(),
+            vec![(0, 3)]
+        );
+    }
+
+    /// `search_text_encoded` and `search::search_text` are one engine: the
+    /// hex editor falls back from one to the other, so on self-overlapping
+    /// patterns, in both case modes and at odd UTF-16 offsets, they report
+    /// identical matches.
+    #[test]
+    fn test_text_search_entry_points_report_identical_matches() {
+        let wide_aba: Vec<u8> = "xABABAy"
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        let mut odd_wide = vec![0xFF];
+        odd_wide.extend_from_slice(&wide_aba);
+        let cases: [(&[u8], &str, &str); 4] = [
+            (b"aaaaaa", "aa", "ascii"),
+            (b"xAbAbAbAy", "aba", "ascii"),
+            (&wide_aba, "ABA", "utf-16le"),
+            (&odd_wide, "aba", "utf-16le"),
+        ];
+        for (data, text, encoding) in cases {
+            for case_sensitive in [true, false] {
+                let encoded =
+                    search_text_encoded(data, text, encoding, case_sensitive, 100).unwrap();
+                let searched: Vec<(usize, usize)> =
+                    crate::search::search_text(data, text, encoding, case_sensitive, 100)
+                        .unwrap()
+                        .into_iter()
+                        .map(|r| (r.offset, r.length))
+                        .collect();
+                assert_eq!(
+                    encoded, searched,
+                    "{text:?} in {data:?}, case_sensitive={case_sensitive}"
+                );
+            }
+        }
+        assert_eq!(
+            search_text_encoded(b"xAbAbAbAy", "aba", "ascii", false, 100).unwrap(),
+            vec![(1, 3), (3, 3), (5, 3)]
+        );
+        assert_eq!(
+            search_text_encoded(&wide_aba, "ABA", "utf-16le", true, 100).unwrap(),
+            vec![(2, 6), (6, 6)]
+        );
+    }
+
+    /// A case-sensitive search over repetitive data takes linear time.
+    ///
+    /// Every offset of 64 MiB of zeros is a near miss for 4 KiB of zeros ending
+    /// in 0x01, so a window compare checks each offset to its last byte.
+    #[test]
+    fn test_case_sensitive_search_is_linear_on_near_misses() {
+        let mut pattern = "\0".repeat(4095);
+        pattern.push('\u{1}');
+        let data = vec![0u8; 64 << 20];
+
+        let started = std::time::Instant::now();
+        let found = search_text_encoded(&data, &pattern, "ascii", true, 10).unwrap();
+        let elapsed = started.elapsed();
+
+        assert_eq!(found, Vec::<(usize, usize)>::new());
+        assert!(
+            elapsed < std::time::Duration::from_secs(5),
+            "64 MiB near-miss search took {elapsed:?}"
+        );
     }
 }

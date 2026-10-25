@@ -5,7 +5,7 @@
 
 """Real-binary validation for ``intellicrack.bridges.pe_format`` helpers.
 
-The pre-existing ``test_pe_format.py`` suite exercises every public
+The ``test_pe_format.py`` suite exercises every public
 helper against hand-assembled ``struct.pack`` buffers. Those buffers
 prove the helpers' arithmetic but cannot prove fidelity against the
 compiler-inserted padding, alignment slack, populated data directories,

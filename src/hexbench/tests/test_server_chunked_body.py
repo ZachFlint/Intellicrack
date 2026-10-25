@@ -5,14 +5,13 @@
 
 """A ``Transfer-Encoding: chunked`` request body must be read, not silently dropped.
 
-``BenchRequestHandler._read_body`` used to consult only ``Content-Length``. A
-standard HTTP/1.1 client that streams a request body sends
-``Transfer-Encoding: chunked`` instead and omits ``Content-Length`` entirely,
-so the handler returned an empty body without reading a single byte off the
-socket -- while the real chunk-framed bytes stayed sitting unread in the
-connection's receive buffer. Because the connection was then kept alive for
-another request, that leftover framing corrupted the *next* request parsed off
-the same socket.
+``BenchRequestHandler._read_body`` must consume a ``Transfer-Encoding: chunked``
+request body. A standard HTTP/1.1 client that streams a request body sends
+``Transfer-Encoding: chunked`` and omits ``Content-Length`` entirely. A handler that
+reads only ``Content-Length`` returns an empty body without reading a single byte
+off the socket, leaving the chunk-framed bytes unread in the connection's receive
+buffer. Because the connection is kept alive for another request, that leftover
+framing would corrupt the *next* request parsed off the same socket.
 
 This is exercised over a genuine loopback socket, not the in-process
 :class:`~hexbench.api.Application` shortcut every other suite uses, because

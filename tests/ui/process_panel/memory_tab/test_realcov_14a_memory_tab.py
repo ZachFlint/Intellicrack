@@ -2,14 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""FIX UNIT 14a real-data coverage for ``process_panel.memory_tab``.
+"""Real-data coverage for ``process_panel.memory_tab``.
 
-Audit shard 14 flagged the existing memory-tab tests for invoking
-``MemoryTab._format_memory`` with hand-crafted byte blobs and never reading
-real process memory. These tests attach a real :class:`ProcessBridge` to the
-running interpreter, read the genuine bytes at a real loaded-module image base
-(which always begins with the ``MZ`` PE signature), and verify
-``_format_memory`` renders those real bytes. They also drive
+These tests attach a real :class:`ProcessBridge` to the running interpreter, read the
+genuine bytes at a real loaded-module image base (which always begins with the ``MZ``
+PE signature), and verify ``_format_memory`` renders those real bytes. They also drive
 ``MemoryTab._refresh_regions`` so the region table is populated from the real
 ``get_memory_map`` enumeration of this process's address space.
 """

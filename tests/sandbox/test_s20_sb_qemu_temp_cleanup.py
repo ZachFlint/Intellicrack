@@ -2,18 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S20-D12 (QEMU half): destroy must not silently leak a temp tree.
+r"""Gates for QEMU sandbox destroy: it must not silently leak a temp tree.
 
-Measured live: destroying a QEMU sandbox after a ~4.1GB memory dump failed to
+Destroying a QEMU sandbox after a multi-gigabyte memory dump can fail to
 remove ``%LOCALAPPDATA%\\Temp\\intellicrack_qemu_<id>`` with
-``[WinError 5] Access is denied`` after 5 retries spanning about 7.5 seconds
-total (0.5s, 1.0s, 1.5s, 2.0s backoff steps) - nowhere near long enough for the
-OS to release a multi-gigabyte file's handle - and the directory was then
-abandoned forever with only a log line about it.
+``[WinError 5] Access is denied`` because the OS takes a long time to release
+a large file's handle.
 
-:meth:`QEMUSandbox._remove_temp_tree` now retries with a longer, capped
-backoff, and when every retry still fails it schedules every remaining entry
-for deletion on the next reboot via ``MoveFileExW`` /
+:meth:`QEMUSandbox._remove_temp_tree` retries with a longer, capped backoff,
+and when every retry still fails it schedules every remaining entry for
+deletion on the next reboot via ``MoveFileExW`` /
 ``MOVEFILE_DELAY_UNTIL_REBOOT`` (:meth:`QEMUSandbox._schedule_delete_on_reboot`
 and :meth:`QEMUSandbox._schedule_temp_tree_delete_on_reboot`) instead of
 leaving the space leaked with no path to reclaiming it.

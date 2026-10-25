@@ -3,18 +3,17 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L1/L2/L3 gate tests for the hex-editor VA-mapping tab (rows #72-73, #77-78).
+"""L1/L2/L3 gate tests for the hex-editor VA-mapping tab.
 
-Covers ``audit/bridge-completeness/agent-09-hex-editor.md``:
+Covers the VA-mapping and memory-tuning methods and their GUI controls:
 
-* Row #72 -- ``set_va_base``/``list_va_mappings``/``auto_detect_va_mappings``/
-  ``remove_va_mapping`` (``hex_editor.py:8187-8274``) had zero GUI surface.
-* Row #73 -- ``file_offset_to_va``/``va_to_file_offset`` (``hex_editor.py:8302,8320``)
-  had zero GUI surface.
-* Row #77 -- ``set_chunk_size`` had zero GUI surface.
-* Row #78 -- ``get_memory_usage``/``set_memory_budget`` had zero GUI surface.
+* ``set_va_base``/``list_va_mappings``/``auto_detect_va_mappings``/
+  ``remove_va_mapping`` need GUI controls.
+* ``file_offset_to_va``/``va_to_file_offset`` need GUI controls.
+* ``set_chunk_size`` needs GUI controls.
+* ``get_memory_usage``/``set_memory_budget`` need GUI controls.
 
-The remediation adds a new "VA Mapping" side tab
+The panel adds a new "VA Mapping" side tab
 (``ui/panels/hex_editor/va_mapping.py``, wired into the panel at
 ``panel.py:465``) with add/remove/auto-detect/refresh controls, a
 goto-by-VA / cursor-offset-to-VA navigation pair, and a "Performance

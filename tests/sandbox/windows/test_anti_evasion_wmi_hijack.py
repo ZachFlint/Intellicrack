@@ -2,17 +2,17 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Regression tests for audit7 F-0013: WMI provider hijack via MOF compilation.
+r"""Tests for the WMI provider hijack via MOF compilation in anti-evasion.
 
-The pre-fix ``WindowsSandbox.apply_anti_evasion`` wrote spoofed manufacturer /
-product / BIOS values to ``HKLM:\HARDWARE\DESCRIPTION\System\BIOS`` and
-sibling keys. That registry hive is **volatile**: it is rebuilt by the Windows
-kernel at every boot from PnP enumeration, so any writes vanish before
-sandboxed samples actually read them. Evasive malware in any case queries the
-WMI providers (``Win32_ComputerSystem``, ``Win32_ComputerSystemProduct``,
-``Win32_BIOS``), not the raw hive.
+Writing spoofed manufacturer / product / BIOS values to
+``HKLM:\HARDWARE\DESCRIPTION\System\BIOS`` and sibling keys does not work. That
+registry hive is **volatile**: it is rebuilt by the Windows kernel at every
+boot from PnP enumeration, so any writes vanish before sandboxed samples
+actually read them. Evasive malware in any case queries the WMI providers
+(``Win32_ComputerSystem``, ``Win32_ComputerSystemProduct``, ``Win32_BIOS``),
+not the raw hive.
 
-The fix:
+``WindowsSandbox.apply_anti_evasion`` therefore:
 
 1. Drops every ``HKLM:\HARDWARE\DESCRIPTION`` write.
 2. Generates a MOF file from the active anti-evasion profile that redefines
@@ -171,7 +171,7 @@ def _make_recording_sandbox(tmp_path: Path) -> _RecordingSandbox:
 
 
 class TestF0013AntiEvasionMOFGeneration:
-    """F-0013: anti-evasion must generate a profile-driven MOF file."""
+    """Anti-evasion must generate a profile-driven MOF file."""
 
     def test_default_profile_mof_contains_hp_manufacturer(self) -> None:
         """The default profile MOF declares HP as manufacturer."""
@@ -208,7 +208,7 @@ class TestF0013AntiEvasionMOFGeneration:
 
 
 class TestF0013AntiEvasionNoVolatileRegistryWrites:
-    """F-0013: apply_anti_evasion must not write to the volatile HARDWARE hive."""
+    """apply_anti_evasion must not write to the volatile HARDWARE hive."""
 
     def test_no_hklm_hardware_writes(self, tmp_path: Path) -> None:
         r"""apply_anti_evasion never dispatches ``HKLM:\HARDWARE`` registry writes.
@@ -250,7 +250,7 @@ class TestF0013AntiEvasionNoVolatileRegistryWrites:
 
 
 class TestF0013AntiEvasionMOFCompilationAndVerification:
-    """F-0013: ``apply_anti_evasion`` must compile a MOF and verify spoofed values."""
+    """``apply_anti_evasion`` must compile a MOF and verify spoofed values."""
 
     def test_mofcomp_invoked_with_staged_mof_file(self, tmp_path: Path) -> None:
         """The MOF file is staged on disk and ``mofcomp.exe`` is dispatched against it.
@@ -362,7 +362,7 @@ class TestF0013AntiEvasionMOFCompilationAndVerification:
 
 
 class TestF0013AntiEvasionSuccessfulFlow:
-    """F-0013: end-to-end success path returns the WMI hijack technique markers."""
+    """The end-to-end success path returns the WMI hijack technique markers."""
 
     def test_successful_flow_reports_wmi_hijack_techniques(self, tmp_path: Path) -> None:
         """A spoofed-payload run reports the three WMI hijack techniques and observed values.
@@ -408,7 +408,7 @@ class TestF0013AntiEvasionSuccessfulFlow:
 
 
 class TestF0013AntiEvasionRejectsNonRunning:
-    """F-0013: ``apply_anti_evasion`` must reject calls when the sandbox is not running."""
+    """``apply_anti_evasion`` must reject calls when the sandbox is not running."""
 
     def test_raises_when_state_not_running(self, tmp_path: Path) -> None:
         """A stopped sandbox refuses to apply anti-evasion and never dispatches.

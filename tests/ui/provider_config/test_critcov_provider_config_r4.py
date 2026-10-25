@@ -241,8 +241,8 @@ def test_reload_logs_a_provider_configured_through_an_alias_variable_as_refreshe
     OpenAI is configured through its own key variable. Google is configured only through its ``GEMINI_API_KEY`` alias, so the loader reports
     it as configured while the variable named by its mapping (``GOOGLE_API_KEY``) holds no value.
 
-    This test is red until the suspected defect is fixed: the reload asks only for the mapping's primary key variable, so a provider
-    configured through an alias is never logged as refreshed. It still runs the ``env_var is None`` branch of the reload loop.
+    The reload asks only for the mapping's primary key variable, so a provider
+    configured through an alias is never logged as refreshed. The test still runs the ``env_var is None`` branch of the reload loop.
 
     Args:
         build_dialog: Factory for provider dialogs.

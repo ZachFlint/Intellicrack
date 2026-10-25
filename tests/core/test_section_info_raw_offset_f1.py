@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for audit F1 -- SectionInfo carries a raw file offset.
+"""Regression gate: SectionInfo carries a raw file offset.
 
 Cross-tool navigation maps a section's virtual address to a raw file offset so
 the hex editor can scroll there. That requires ``SectionInfo`` to record the raw
@@ -42,7 +42,7 @@ def test_section_raw_offset_matches_pe_file_offset() -> None:
     asserts that every extracted
     ``SectionInfo.raw_offset`` equals the corresponding LIEF section file
     offset, and that the executable ``.text`` section has a non-zero offset
-    (which the pre-fix default of 0 could never satisfy).
+    (which a default of 0 could never satisfy).
     """
     pe_path = Path(sys.executable)
     parse_fn = cast("_LiefParseFn", vars(lief)["parse"])

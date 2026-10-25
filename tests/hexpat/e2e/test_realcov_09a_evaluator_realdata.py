@@ -3,8 +3,7 @@
 
 """Real-data E2E coverage for the HexPat evaluator, interpreter, and data reader.
 
-These tests address coverage gaps documented in the Shard 09 hexpat back-end
-audit. They drive the full preprocessor -> lexer -> parser -> evaluator pipeline
+These tests cover real-data paths of the hexpat back-end. They drive the full preprocessor -> lexer -> parser -> evaluator pipeline
 via :meth:`HexPatInterpreter.execute_bytes` and assert on concrete decoded
 values rather than mere field presence.
 

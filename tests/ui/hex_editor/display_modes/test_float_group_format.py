@@ -3,15 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Gate for the float display modes of ``HexEditorWidget._format_group``.
+"""Float display modes of ``HexEditorWidget._format_group``.
 
 ``float32`` and ``float64`` render an IEEE-754 value from raw bytes, and each has
-three outcomes: a finite number, ``NaN``, and a signed infinity. The gates feed
+three outcomes: a finite number, ``NaN``, and a signed infinity. The tests feed
 real ``struct.pack`` byte patterns through the real widget in each mode and read
 the rendered text back, so a branch that stops returning its own text - or falls
 through into the next display mode's handling and prints a hex byte instead -
 fails an assertion. Padding is stripped before comparing: the width of the cell
-is layout, the value it carries is what is gated here.
+is layout, the value it carries is what is checked here.
 """
 
 from __future__ import annotations

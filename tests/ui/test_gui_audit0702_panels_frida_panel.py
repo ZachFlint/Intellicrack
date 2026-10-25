@@ -3,19 +3,19 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GUI audit regression gates for ``intellicrack.ui.panels.frida_panel``.
+"""Gates for ``intellicrack.ui.panels.frida_panel`` hook table, splitters and label widgets.
 
-Covers the 2026-07-02 audit findings for ``frida_panel.py``:
+Covers the ``frida_panel.py`` widgets:
 
-* H23 -- ``_on_remove_hook`` must keep ``_hook_ids`` in sync with the hooks
+* ``_on_remove_hook`` must keep ``_hook_ids`` in sync with the hooks
   table row-for-row even on the no-bridge fallback path, so later lookups by
   ``_find_hook_row`` do not resolve to the wrong row.
-* M44 -- ``main_splitter`` and ``top_splitter`` must be non-collapsible so no
+* ``main_splitter`` and ``top_splitter`` must be non-collapsible so no
   pane (process browser, script editor, tool tabs, console) can be dragged to
   zero size and vanish.
-* M45 -- the load-module result label must word-wrap and expose the full
+* The load-module result label must word-wrap and expose the full
   message as a tooltip instead of clipping long bridge exception text.
-* L9 -- the module combo box must grow to fit its contents
+* The module combo box must grow to fit its contents
   (``AdjustToContents``) and expose the full selected module name as a
   tooltip instead of eliding it at a fixed 120px floor.
 
@@ -51,7 +51,7 @@ class _RecordingBridge:
 
     Used only by the bridge-backed sanity test to force ``_on_remove_hook``
     down its bridge branch and observe exactly which hook id it forwards;
-    the H23 gate itself exercises the no-bridge fallback path with no
+    the no-bridge gate itself exercises the fallback path with no
     bridge object at all.
     """
 
@@ -104,14 +104,10 @@ def _drive(
 def test_h23_remove_hook_without_bridge_pops_matching_hook_id() -> None:
     """Removing row 0 with no bridge must drop ``_hook_ids[0]``, not leave it stale.
 
-    Regression: pre-fix, the pop-and-return branch only ran when
-    ``self._bridge is not None``. With ``self._bridge is None`` -- a state
-    the code itself explicitly checks for -- execution fell straight through
-    to ``removeRow`` with no matching ``_hook_ids.pop``. After removing row 0
-    with two hooks present, the table would show 1 row while ``_hook_ids``
-    still held both original entries, so ``_hook_ids[0]`` would remain the
-    *removed* hook's id (``"hook-a"``) instead of shifting up to
-    ``"hook-b"``.
+    The pop-and-return branch must also run when ``self._bridge is None``. Otherwise a state the code itself checks for
+    lets execution fall straight through to ``removeRow`` with no matching ``_hook_ids.pop``. After removing row 0
+    with two hooks present, the table would show 1 row while ``_hook_ids`` still held both original entries, so
+    ``_hook_ids[0]`` would remain the *removed* hook's id (``"hook-a"``) instead of shifting up to ``"hook-b"``.
     """
     panel = FridaPanel()
     assert panel._bridge is None
@@ -129,7 +125,7 @@ def test_h23_remove_hook_without_bridge_pops_matching_hook_id() -> None:
 def test_h23_remove_hook_without_bridge_keeps_find_hook_row_correct() -> None:
     """After a no-bridge removal, ``_find_hook_row`` must resolve the surviving id to row 0.
 
-    This is the concrete downstream failure mode described by the finding: a
+    This is the concrete downstream failure mode: a
     stale ``_hook_ids`` list means the next lookup by hook id (used by
     ``_on_hook_installed``/``_on_hook_removed`` to locate a row) resolves to
     the wrong table row for every row that shifted up.
@@ -150,9 +146,8 @@ def test_h23_remove_hook_with_bridge_forwards_correct_id_and_pops_once(
 ) -> None:
     """The bridge-backed branch must forward the right id and pop ``_hook_ids`` exactly once.
 
-    Sanity companion to the no-bridge gates above: confirms the H23 fix
-    (popping on the no-bridge fallback branch) did not introduce a
-    double-pop on the pre-existing bridge-backed branch. With a bridge
+    Sanity companion to the no-bridge gates above: popping on the no-bridge fallback branch does not
+    introduce a double-pop on the pre-existing bridge-backed branch. With a bridge
     attached, ``_on_remove_hook`` must forward the selected row's hook id to
     ``bridge.remove_hook`` and, once the success callback fires,
     ``_hook_ids`` must drop from two entries to one -- not zero, and not two.
@@ -180,7 +175,7 @@ def test_h23_remove_hook_with_bridge_forwards_correct_id_and_pops_once(
 def test_m44_main_and_top_splitters_are_non_collapsible() -> None:
     """Both the vertical main splitter and horizontal top splitter must be non-collapsible.
 
-    Regression: neither splitter called ``setChildrenCollapsible(False)``, so
+    Neither splitter may skip ``setChildrenCollapsible(False)``, or
     dragging a handle to the edge could collapse the process browser, script
     editor, or tool tabs (or the console, on the vertical splitter) to 0px
     with no visible handle remnant to grab and recover it.
@@ -215,11 +210,11 @@ def test_m44_dragging_top_splitter_handle_to_edge_does_not_collapse_process_brow
 ) -> None:
     """Dragging the top splitter's first handle to the far edge must not zero the process browser pane.
 
-    This exercises the concrete, user-visible consequence of the M44 fix
+    This exercises the concrete, user-visible consequence of the flag
     rather than only the ``childrenCollapsible`` flag: with the flag left at
-    Qt's default ``True`` (pre-fix) and no minimum size floor set on any
+    Qt's default ``True`` and no minimum size floor set on any
     pane, moving the handle to position 0 shrinks the process-browser pane
-    to zero width. Post-fix, ``setChildrenCollapsible(False)`` clamps the
+    to zero width. With ``setChildrenCollapsible(False)``, the splitter clamps the
     pane to its (non-zero, real-widget) minimum size hint instead.
 
     Args:
@@ -248,8 +243,8 @@ def test_m44_dragging_top_splitter_handle_to_edge_does_not_collapse_process_brow
 def test_m45_load_module_result_has_word_wrap_enabled() -> None:
     """``_load_module_result`` must have word wrap enabled at construction.
 
-    Regression: pre-fix, the bare ``QLabel("")`` never called
-    ``setWordWrap(True)``, so a long bridge exception string would force the
+    The bare ``QLabel("")`` must call
+    ``setWordWrap(True)``, since otherwise a long bridge exception string would force the
     modules pane to grow past its splitter share instead of wrapping onto
     multiple lines.
     """
@@ -266,10 +261,9 @@ def test_m45_load_module_error_sets_wrapping_text_and_full_tooltip() -> None:
     exposes the identical full string as a fallback for any residual
     clipping.
 
-    Regression: pre-fix ``_on_load_module_error`` called
-    ``self._load_module_result.setText(...)`` directly with no tooltip
-    assignment anywhere in the file, so ``toolTip()`` stayed the empty
-    string regardless of how long the error text was.
+    ``_on_load_module_error`` must set the tooltip too, not only call
+    ``self._load_module_result.setText(...)``. Otherwise ``toolTip()`` stays the empty string regardless of how long the
+    error text is.
     """
     panel = FridaPanel()
     long_message = (
@@ -290,7 +284,7 @@ def test_m45_load_module_error_sets_wrapping_text_and_full_tooltip() -> None:
 def test_m45_load_module_success_also_sets_tooltip() -> None:
     """A successful load must also mirror its text into the tooltip via the shared setter.
 
-    Confirms the fix applies uniformly through ``_set_load_module_result``
+    Confirms the tooltip applies uniformly through ``_set_load_module_result``
     rather than being a special case bolted only onto the error path.
     """
     panel = FridaPanel()
@@ -310,7 +304,7 @@ def test_m45_load_module_success_also_sets_tooltip() -> None:
 def test_l9_module_combo_has_adjust_to_contents_policy() -> None:
     """``_module_combo`` must use ``AdjustToContents`` so long names are not elided.
 
-    Regression: pre-fix the combo only had a 120px ``setMinimumWidth`` with
+    The combo must not rely on only a 120px ``setMinimumWidth`` with
     the Qt default ``AdjustToContentsOnFirstShow`` policy, which freezes the
     widget's width at first paint (while the combo is still empty) and never
     grows for items added later by ``_populate_modules_table``.
@@ -324,12 +318,12 @@ def test_l9_combo_width_grows_after_first_show_when_long_names_are_added(
 ) -> None:
     """The combo must widen for long module names even after already being shown once empty.
 
-    Reproduces the exact failure sequence from the finding: the panel is
+    Reproduces the exact failure sequence: the panel is
     shown (and thus painted) while ``_module_combo`` is still empty, then
     ``_populate_modules_table`` adds a long real module name afterward.
-    Pre-fix, ``AdjustToContentsOnFirstShow`` would cache the (near-zero
+    ``AdjustToContentsOnFirstShow`` would cache the (near-zero
     content) width from that first, empty paint and never revisit it; the
-    post-fix ``AdjustToContents`` policy recomputes the size hint from the
+    ``AdjustToContents`` policy recomputes the size hint from the
     combo's current contents on every query.
 
     Args:
@@ -371,8 +365,8 @@ def test_l9_selecting_long_module_name_sets_full_tooltip() -> None:
     empty combo becomes current, and asserts the tooltip mirrors the long
     name in full rather than being left unset.
 
-    Regression: pre-fix there was no ``currentTextChanged`` connection at
-    all, so the combo's tooltip stayed empty regardless of which module was
+    The ``currentTextChanged`` connection must exist, since without it
+    the combo's tooltip would stay empty regardless of which module was
     selected.
     """
     panel = FridaPanel()
@@ -403,7 +397,7 @@ def test_l9_combo_changed_handler_updates_tooltip_directly() -> None:
     """The dedicated combo-changed handler must set the tooltip to the given text.
 
     Exercises ``_on_module_combo_changed`` directly (independent of signal
-    wiring) so this gate stays true to the concrete fix even if the
+    wiring) so this gate stays true to the concrete behaviour even if the
     connection is later rewired.
     """
     panel = FridaPanel()

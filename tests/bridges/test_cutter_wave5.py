@@ -2,10 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real falsifiable test gates for the CutterBridge operations still open after wave-2a.
+"""Falsifiable test gates for the CutterBridge operations.
 
-Covers the 9 CutterBridge operations identified as NOT_RESOLVED in
-audit/verification/group-02-report.md (STILL OPEN § CutterBridge):
+Covers the nine CutterBridge operations:
 
 - decompile(address)           — pdg / pdd command dispatch + C-code content
 - search_crypto_constants()    — /cj command + parsed result structure

@@ -627,8 +627,8 @@ class SignaturesMixin:
         """Start scanning the document against the selected signature database.
 
         DIE, ClamAV, and custom-JSON databases are dispatched through the matching ``HexEditorBridge.scan_*_signatures`` method so the AI-
-        callable tool and this toolbar action share a single scanner implementation (the audit's highest drift-risk item: nontrivial parsing
-        logic most likely to drift between two independent copies). YARA has no bridge equivalent and continues to run via the local
+        callable tool and this toolbar action share a single scanner implementation (nontrivial parsing
+        logic that would otherwise drift between two independent copies). YARA has no bridge equivalent and continues to run via the local
         :class:`YaraScanner`-backed worker.
         """
         if self.document is None or not self._sig_db_path:

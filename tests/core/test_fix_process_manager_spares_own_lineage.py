@@ -7,14 +7,11 @@
 A tracked PID is terminated together with all of its descendants. The registry
 accepts any live PID, Intellicrack's own included -- the Process panel's "Track
 This Process" action registers whichever row was clicked -- and closing the main
-window sweeps everything tracked. With its own PID in the registry the
-application therefore killed itself in the middle of closing, and in the test
-suite one test that left the worker's PID registered made the next test to
-close a main window kill the whole worker, which the session could only report
-as "node down: Not properly terminated" under an unrelated test's name.
+window sweeps everything tracked, so a sweep must never end its own process
+or an ancestor of it.
 
 Every gate here runs in a child interpreter, because the behaviour under test
-is whether the process survives: without the fix the child is gone before it
+is whether the process survives: without the guard the child is gone before it
 can report anything.
 """
 

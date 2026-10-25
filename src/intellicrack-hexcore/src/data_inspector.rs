@@ -5,11 +5,15 @@
 
 use std::collections::HashMap;
 
+/// Every interpretation of the bytes at one offset that fits the window.
 pub struct DataInspection {
+    /// Interpretation name (e.g. `"uint32_le"`) to its rendered value. A key is
+    /// absent when the window is too short or the bytes are not a valid value.
     pub values: HashMap<String, String>,
 }
 
 impl DataInspection {
+    /// Returns the interpretation map.
     #[must_use]
     pub fn to_map(&self) -> &HashMap<String, String> {
         &self.values
@@ -69,6 +73,9 @@ fn decode_uleb128(data: &[u8], offset: usize) -> Option<(u64, usize)> {
     for i in 0..max_bytes {
         let byte = data[offset + i];
         bytes_read += 1;
+        if shift == 63 && byte & 0x7E != 0 {
+            return None;
+        }
         result |= u64::from(byte & 0x7F) << shift;
         if byte & 0x80 == 0 {
             return Some((result, bytes_read));
@@ -90,6 +97,9 @@ fn decode_sleb128(data: &[u8], offset: usize) -> Option<(i64, usize)> {
     for i in 0..max_bytes {
         let byte = data[offset + i];
         bytes_read += 1;
+        if shift == 63 && !matches!(byte & 0x7F, 0x00 | 0x7F) {
+            return None;
+        }
         result |= i64::from(byte & 0x7F) << shift;
         shift += 7;
         if byte & 0x80 == 0 {
@@ -149,13 +159,14 @@ fn inspect_8bit(
         }
     }
 
-    if remaining >= 1 {
-        if let Some((val, count)) = decode_uleb128(data, offset) {
-            values.insert("uleb128".to_string(), format!("{val} ({count} bytes)"));
-        }
-        if let Some((val, count)) = decode_sleb128(data, offset) {
-            values.insert("sleb128".to_string(), format!("{val} ({count} bytes)"));
-        }
+    // `remaining >= 1` holds here (the caller runs this only for a non-empty
+    // window), so the LEB128 decoders, which read from `offset`, always have
+    // their lead byte.
+    if let Some((val, count)) = decode_uleb128(data, offset) {
+        values.insert("uleb128".to_string(), format!("{val} ({count} bytes)"));
+    }
+    if let Some((val, count)) = decode_sleb128(data, offset) {
+        values.insert("sleb128".to_string(), format!("{val} ({count} bytes)"));
     }
 }
 
@@ -197,10 +208,18 @@ fn inspect_16bit(values: &mut HashMap<String, String>, data: &[u8], offset: usiz
     }
 
     let date_bits = le_val;
+    // The 7-bit year field plus 1980 spans 1980..=2107, so no explicit upper
+    // bound on the year is needed.
     let year = u32::from((date_bits >> 9) & 0x7F) + 1980;
     let month = (date_bits >> 5) & 0x0F;
     let day = date_bits & 0x1F;
-    if (1..=12).contains(&month) && (1..=31).contains(&day) && year <= 2107 {
+    let month_days = match month {
+        2 if is_leap_year(i64::from(year)) => 29,
+        2 => 28,
+        4 | 6 | 9 | 11 => 30,
+        _ => 31,
+    };
+    if (1..=12).contains(&month) && (1..=month_days).contains(&day) {
         values.insert(
             "dos_date".to_string(),
             format!("{year:04}-{month:02}-{day:02}"),
@@ -463,17 +482,26 @@ fn inspect_wide_string(
     remaining: usize,
 ) {
     let mut wide_chars: Vec<u16> = Vec::new();
+    let mut terminated = false;
     let max_wide = remaining.min(64) / 2;
     for i in 0..max_wide {
         let idx = offset + i * 2;
         let code_unit = u16::from_le_bytes([data[idx], data[idx + 1]]);
         if code_unit == 0 {
+            terminated = true;
             break;
         }
         wide_chars.push(code_unit);
         if wide_chars.len() >= 32 {
             break;
         }
+    }
+    if !terminated
+        && wide_chars
+            .last()
+            .is_some_and(|unit| (0xD800..=0xDBFF).contains(unit))
+    {
+        wide_chars.pop();
     }
     if !wide_chars.is_empty() {
         if let Ok(s) = String::from_utf16(&wide_chars) {
@@ -484,6 +512,12 @@ fn inspect_wide_string(
     }
 }
 
+/// Decodes the bytes at `offset` as every supported primitive type.
+///
+/// Each width is decoded only when enough bytes remain, so a window near the
+/// end of `data` yields the narrower interpretations and omits the rest; an
+/// `offset` at or past the end yields an empty map. The wide-string key reads
+/// up to 64 bytes (32 UTF-16 code units).
 #[must_use]
 pub fn inspect_at(data: &[u8], offset: usize) -> DataInspection {
     let mut values = HashMap::new();
@@ -588,11 +622,21 @@ mod tests {
 
     #[test]
     fn test_inspect_unix_timestamp() {
-        let ts: u32 = 1_704_067_200;
-        let data = ts.to_le_bytes();
-        let result = inspect_at(&data, 0);
-        let ts_str = result.values.get("unix_timestamp").unwrap();
-        assert!(ts_str.starts_with("2024-01-01"));
+        // 1_704_067_200 is 2024-01-01 00:00:00; +3661 s exercises h/m/s.
+        let ts: u32 = 1_704_070_861;
+        let result = inspect_at(&ts.to_le_bytes(), 0);
+        assert_eq!(
+            result.values.get("unix_timestamp").map(String::as_str),
+            Some("2024-01-01 01:01:01 UTC")
+        );
+        let leap: u32 = 1_709_208_000;
+        assert_eq!(
+            inspect_at(&leap.to_le_bytes(), 0)
+                .values
+                .get("unix_timestamp")
+                .map(String::as_str),
+            Some("2024-02-29 12:00:00 UTC")
+        );
     }
 
     #[test]
@@ -652,16 +696,20 @@ mod tests {
     fn test_inspect_uleb128() {
         let data = [0x80, 0x01];
         let result = inspect_at(&data, 0);
-        let uleb = result.values.get("uleb128").unwrap();
-        assert!(uleb.starts_with("128"));
+        assert_eq!(
+            result.values.get("uleb128").map(String::as_str),
+            Some("128 (2 bytes)")
+        );
     }
 
     #[test]
     fn test_inspect_sleb128() {
         let data = [0x7F];
         let result = inspect_at(&data, 0);
-        let sleb = result.values.get("sleb128").unwrap();
-        assert!(sleb.starts_with("-1"));
+        assert_eq!(
+            result.values.get("sleb128").map(String::as_str),
+            Some("-1 (1 bytes)")
+        );
     }
 
     #[test]
@@ -792,15 +840,74 @@ mod tests {
 
     #[test]
     fn test_inspect_filetime_valid() {
-        // FILETIME for 2024-01-01 00:00:00 UTC.
-        let filetime: u64 = 133_485_408_000_000_000;
-        let data = filetime.to_le_bytes();
-        let result = inspect_at(&data, 0);
-        assert!(result
+        // FILETIME for 2024-01-01 01:01:01 UTC.
+        let filetime: u64 = 133_485_444_610_000_000;
+        let result = inspect_at(&filetime.to_le_bytes(), 0);
+        assert_eq!(
+            result.values.get("filetime").map(String::as_str),
+            Some("2024-01-01 01:01:01 UTC")
+        );
+    }
+
+    /// The 10th ULEB128 byte carries only bit 63; higher payload bits must
+    /// not be shifted out silently, so the 2^64 encoding `80 x9, 02` must
+    /// overflow rather than decode to `Some((0, 10))`.
+    #[test]
+    fn test_decode_uleb128_tenth_byte_payload_overflow_returns_none() {
+        let mut overflow = vec![0x80u8; 9];
+        overflow.push(0x02);
+        assert_eq!(decode_uleb128(&overflow, 0), None);
+        let mut max = vec![0xFFu8; 9];
+        max.push(0x01);
+        assert_eq!(decode_uleb128(&max, 0), Some((u64::MAX, 10)));
+    }
+
+    /// A 10th SLEB128 byte must be a pure sign extension of bit 63 (payload
+    /// `00` or `7F`); `80 x9, 01` encodes +2^63, which does not fit `i64`, and
+    /// must not decode to `i64::MIN` with the wrong sign.
+    #[test]
+    fn test_decode_sleb128_tenth_byte_overflow_returns_none() {
+        let mut overflow = vec![0x80u8; 9];
+        overflow.push(0x01);
+        assert_eq!(decode_sleb128(&overflow, 0), None);
+        let mut min = vec![0x80u8; 9];
+        min.push(0x7F);
+        assert_eq!(decode_sleb128(&min, 0), Some((i64::MIN, 10)));
+    }
+
+    /// `dos_date` must not accept day 31 in every month: `0x505F` must not
+    /// render the impossible date "2020-02-31".
+    #[test]
+    fn test_inspect_dos_date_rejects_day_past_month_end() {
+        assert!(!inspect_at(&0x505Fu16.to_le_bytes(), 0)
             .values
-            .get("filetime")
-            .unwrap()
-            .starts_with("2024-01-01"));
+            .contains_key("dos_date"));
+        assert_eq!(
+            inspect_at(&0x505Du16.to_le_bytes(), 0)
+                .values
+                .get("dos_date")
+                .map(String::as_str),
+            Some("2020-02-29")
+        );
+        assert!(!inspect_at(&0x509Fu16.to_le_bytes(), 0)
+            .values
+            .contains_key("dos_date"));
+    }
+
+    /// When the 32-unit cap or the window end falls between the two halves of
+    /// a surrogate pair, `from_utf16` rejects the lone trailing high surrogate,
+    /// so it must be dropped without discarding the whole valid prefix.
+    #[test]
+    fn test_inspect_wide_string_cap_does_not_split_surrogate_pair() {
+        let mut data: Vec<u8> = std::iter::repeat_n([0x41u8, 0x00], 31).flatten().collect();
+        data.extend_from_slice(&[0x3D, 0xD8, 0x00, 0xDE]);
+        assert_eq!(
+            inspect_at(&data, 0)
+                .values
+                .get("wide_string")
+                .map(String::as_str),
+            Some("A".repeat(31).as_str())
+        );
     }
 
     #[test]

@@ -2,50 +2,38 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""S20-D07 regression: Hex Templates tree must populate real field values.
+"""Hex Templates tree must populate real field values on the real HexEditorPanel.
 
-Reproduces the live-audit repro exactly at the GUI boundary: load a real PE
-binary into the real, fully-assembled ``HexEditorPanel`` (``ui/panels/hex_editor/panel.py``),
-pick the real ``IMAGE_DOS_HEADER`` struct template, and drive the panel's
-actual ``_on_apply_template`` - the same handler the toolbar's Apply button
-connects to - with no stubbed document, no patched ``apply_template``, and no
-synthetic field dicts.
+Loads a real PE binary into the real, fully-assembled ``HexEditorPanel``
+(``ui/panels/hex_editor/panel.py``), picks the real ``IMAGE_DOS_HEADER`` struct
+template, and drives the panel's actual ``_on_apply_template``, the same handler the
+toolbar's Apply button connects to. No document is stubbed, ``apply_template`` is not
+patched, and no synthetic field dicts are used.
 
-The audit found the Templates tree's Field/Offset/Size columns populated
-correctly for every ``IMAGE_DOS_HEADER`` field while the Value column stayed
-empty for all of them (e_magic should read "23117 (0x5A4D)"). Tracing the
-full chain end to end - the Rust template evaluator
-(``src/intellicrack-hexcore/src/templates/eval.rs``), the PyO3
-``field_to_dict`` conversion (``src/intellicrack-hexcore/src/lib.rs``), and
-the installed ``intellicrack_hexcore`` extension itself - shows every stage
-already emits a fully populated ``display_value`` for every field: calling
-``HexDocument.apply_template`` directly (bypassing the GUI entirely) already
-returns ``{'name': 'e_magic', ..., 'display_value': '23117 (0x5A4D)', ...}``
-against the real installed backend. So neither the Rust engine nor the PyO3
-boundary was ever the break.
+The Templates tree's Field/Offset/Size columns populate for every ``IMAGE_DOS_HEADER``
+field, and the Value column must show the real value (e_magic reads "23117 (0x5A4D)").
+The Rust template evaluator (``src/intellicrack-hexcore/src/templates/eval.rs``), the
+PyO3 ``field_to_dict`` conversion (``src/intellicrack-hexcore/src/lib.rs``) and the
+installed ``intellicrack_hexcore`` extension each emit a fully populated
+``display_value`` for every field, so the engine and the PyO3 boundary are not the cause.
 
-The real break is a method-name collision between two ``HexEditorPanel``
-mixins that both use the generic name ``_populate_template_tree`` /
-``_highlight_template_fields`` for two different features:
-``TemplatesMixin`` (struct templates, this file's fields keyed by
-``display_value``) and ``PatternEditorMixin`` (the HexPat DSL pattern
-preview, fields keyed by ``type``). ``HexEditorPanel`` lists
-``PatternEditorMixin`` before ``TemplatesMixin`` in its base classes, so
-Python's MRO resolves every ``self._populate_template_tree(...)`` call -
-including ``TemplatesMixin._on_apply_template``'s own call - to
-``PatternEditorMixin``'s implementation, which reads a ``type`` key struct
-fields never carry. The Value column comes out empty not because the data is
-missing, but because the wrong mixin's tree-builder silently wins the name
-collision. The fix renames ``TemplatesMixin``'s own methods to
-``_populate_struct_template_tree`` / ``_highlight_struct_template_fields`` so
-its call site can never again be shadowed by a same-named method on a
-different mixin, however the base-class list is ordered.
+The cause is a method-name collision between two ``HexEditorPanel`` mixins that both use
+the generic names ``_populate_template_tree`` / ``_highlight_template_fields``:
+``TemplatesMixin`` (struct templates, fields keyed by ``display_value``) and
+``PatternEditorMixin`` (the HexPat DSL pattern preview, fields keyed by ``type``).
+``HexEditorPanel`` lists ``PatternEditorMixin`` before ``TemplatesMixin``, so Python's
+MRO resolves every ``self._populate_template_tree(...)`` call, including
+``TemplatesMixin._on_apply_template``'s own call, to ``PatternEditorMixin``'s
+implementation. That implementation reads a ``type`` key which struct fields never carry,
+so the Value column comes out empty. ``TemplatesMixin`` names its methods
+``_populate_struct_template_tree`` / ``_highlight_struct_template_fields`` so its call
+site cannot be shadowed by a same-named method on another mixin, whatever the base-class
+order.
 
-This test builds the real, fully-assembled ``HexEditorPanel`` (every mixin,
-real MRO) rather than a single-mixin harness, because a harness built from
-``TemplatesMixin`` alone cannot reproduce the collision at all - it would
-pass whether or not the rename fix is present, since ``PatternEditorMixin``
-would simply be absent from its MRO.
+This test builds the real, fully-assembled ``HexEditorPanel`` (every mixin, real MRO)
+rather than a single-mixin harness, because a harness built from ``TemplatesMixin``
+alone cannot reproduce the collision. It would pass whether or not the names collide,
+since ``PatternEditorMixin`` would be absent from its MRO.
 """
 
 from __future__ import annotations
@@ -74,7 +62,7 @@ _VALUE_COLUMN_INDEX: Final[int] = 3
 
 
 class TestHexTemplateValueColumn:
-    """S20-D07 -- the real HexEditorPanel's Templates tree must show real field values."""
+    """The real HexEditorPanel's Templates tree must show real field values."""
 
     @staticmethod
     def test_apply_image_dos_header_populates_real_values_on_full_panel(qapp: QApplication, real_pe_dll: Path) -> None:
@@ -131,9 +119,9 @@ class TestHexTemplateValueColumn:
 
     @staticmethod
     def test_apply_template_tree_builder_resolves_to_templates_mixin(qapp: QApplication, real_pe_dll: Path) -> None:
-        """The renamed struct-template tree builder must resolve on the real MRO.
+        """The struct-template tree builder must resolve on the real MRO.
 
-        Isolates the MRO-collision fix itself: ``HexEditorPanel`` must
+        Isolates the MRO collision: ``HexEditorPanel`` must
         expose ``_populate_struct_template_tree`` bound to
         ``TemplatesMixin``'s implementation (not shadowed by any other
         mixin), independent of whether ``_on_apply_template`` is invoked.

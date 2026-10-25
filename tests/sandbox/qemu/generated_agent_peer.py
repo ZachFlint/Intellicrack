@@ -178,9 +178,9 @@ def verify_lift_is_complete(agent_script: str, peer_script: str) -> None:
     and PowerShell binds both function calls and variables late, so a fragment
     lifted without something it depends on does not fail: the call is skipped or
     the variable reads as ``$null``, and the peer answers with a result that
-    looks exactly like the behaviour under test. That has already happened once
-    - ``ConvertTo-CommandLineArgument`` was lifted while a global it used was
-    not, and its output was byte-identical to the defect it was meant to gate.
+    looks exactly like the behaviour under test. Such a lift can pass for correct:
+    ``ConvertTo-CommandLineArgument`` lifted without a global it uses produces
+    output identical to the defect it is meant to gate.
     So the dependency set is checked here rather than trusted.
 
     Only names the generated agent itself declares are considered, so this
@@ -220,12 +220,10 @@ def build_peer_script(agent_script: str, *, listener_statement: str) -> str:
     That loop serves one connection after another, as the agent's own does. The
     production client gives each connection attempt its own short budget and
     closes the socket of an attempt whose handshake overran it, and the agent
-    answers the next attempt on a new connection. A peer that served only the
-    first connection stopped listening the moment a slow first handshake was
-    abandoned, so every retry was refused and the gate failed with nothing
-    wrong in the agent. A client that leaves mid-exchange is not a fault of
-    the peer either, so the write that fails against its closed socket ends
-    that connection and nothing more.
+    answers the next attempt on a new connection. A peer that serves only one
+    connection refuses every retry after an abandoned handshake. A client that
+    leaves mid-exchange is not a fault of the peer either, so the write that fails
+    against its closed socket ends that connection and nothing more.
 
     Lifting the readiness branch rather than answering the probe here is what
     makes this peer a gate on it: the production client handshakes before it

@@ -175,9 +175,8 @@ def _keyring_backend_usable(module: ModuleType) -> bool:
 def test_list_providers_no_deadlock(store_module_fresh: ModuleType) -> None:
     """``list_providers`` must not deadlock when acquiring the internal lock.
 
-    Previously ``list_providers`` held ``self._lock`` and then called
-    ``self.get`` which attempted to re-enter the same ``asyncio.Lock``,
-    causing a deadlock.
+    ``list_providers`` must not call ``self.get`` while holding ``self._lock``,
+    because ``self.get`` re-enters the same ``asyncio.Lock`` and would deadlock.
 
     Args:
         store_module_fresh: The freshly reloaded credential store module.

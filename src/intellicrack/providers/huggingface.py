@@ -183,8 +183,8 @@ class HuggingFaceProvider(LLMProviderBase):
     ``provider="auto"`` so requests are routed through HuggingFace's
     first-party router at ``https://router.huggingface.co``, which selects
     whichever backing inference provider currently serves the requested
-    model's conversational task, replacing the deprecated
-    ``api-inference.huggingface.co`` host. The dedicated ``hf-inference``
+    model's conversational task, and the deprecated
+    ``api-inference.huggingface.co`` host is not used. The dedicated ``hf-inference``
     provider does not support chat completion and is never selected.
 
     ``list_models`` additionally intersects the Hub catalog against the

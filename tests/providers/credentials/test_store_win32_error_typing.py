@@ -8,10 +8,9 @@
 Manager through ``win32ctypes`` (or ``pywin32``) and surfaces every
 ``CredRead``/``CredWrite``/``CredDelete`` failure as ``pywintypes.error``,
 which derives directly from :class:`Exception` -- it is neither an
-:class:`OSError` nor a :class:`keyring.errors.KeyringError`. Before those
-types were added to the store's ``except`` tuples, a Win32 credential failure
-escaped :class:`~intellicrack.credentials.store.CredentialStore` untyped and
-bypassed the ``.env`` fallback entirely.
+:class:`OSError` nor a :class:`keyring.errors.KeyringError`. The store's ``except`` tuples must cover it, or a Win32
+credential failure escapes :class:`~intellicrack.credentials.store.CredentialStore` untyped and
+bypasses the ``.env`` fallback entirely.
 
 No test here touches the operating system's own keyring. The store runs over
 a real file-backed keyring in the test's own directory, sized like Credential
@@ -20,8 +19,7 @@ whose writes additionally refuse an over-long entry name the way ``CredWrite``
 does: by raising the genuine ``win32ctypes`` ``pywintypes.error`` that
 ``WinVaultKeyring`` lets escape. The gate then asserts the store translates
 exactly that error, so it fails if the store's exception tuple stops covering
-the type the Windows backend raises -- the regression that reintroduces the
-defect.
+the type the Windows backend raises.
 """
 
 from __future__ import annotations

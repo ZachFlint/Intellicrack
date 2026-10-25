@@ -2,10 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""FIX UNIT 14a real-data coverage for ``process_panel.system_tab``.
+"""Real-data coverage for ``process_panel.system_tab``.
 
-Audit shard 14 flagged the existing system-tab tests for populating tables
-from synthetic OS/registry dicts and never exercising real Win32 queries.
+The privilege table is checked against real Win32 token queries rather than synthetic
+OS/registry dicts.
 These tests attach a real :class:`ProcessBridge` to the running interpreter
 and drive ``SystemTab._refresh_privileges`` so the privilege table renders the
 process token's genuine privileges. Assertions check real, verifiable values:

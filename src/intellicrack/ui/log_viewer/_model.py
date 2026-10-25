@@ -126,9 +126,9 @@ class LogRecordTableModel(QAbstractTableModel):
     def _resolve_level_colors(self) -> None:
         """Resolve per-level foreground and background colors from the active theme.
 
-        DEBUG and INFO map to the theme's muted and primary foreground so both stay readable against the active background (fixing white-on-
-        white INFO text under the light theme). WARNING and ERROR keep their semantic hue with a faint tint, while CRITICAL renders as a
-        solid badge with a contrast-picked foreground so the three severities remain distinguishable in both light and dark themes.
+        DEBUG and INFO map to the theme's muted and primary foreground so both stay readable against the active background. WARNING and ERROR
+        keep their semantic hue with a faint tint, while CRITICAL renders as a solid badge with a contrast-picked foreground so the three
+        severities remain distinguishable in both light and dark themes.
         """
         colors = self._theme_manager.get_analysis_colors()
         foreground = colors["foreground"]

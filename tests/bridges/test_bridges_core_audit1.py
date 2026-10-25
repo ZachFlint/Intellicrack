@@ -2,15 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit1 bridges-core regression tests.
+"""Regression tests for the bridges core.
 
-Covers the seven findings tracked in audit1.md against
+Covers the defects found in
 ``src/intellicrack/bridges/{schemas,__init__,win32_types,base}.py`` and the
 ``src/intellicrack/core/orchestrator.py`` validation call site.
 
-Each finding has at least one red/green pair documenting the buggy old
-behaviour (assertion would have fired before the fix) and the corrected
-behaviour after the fix lands.
+Each defect has a red/green pair documenting the buggy behaviour and the corrected behaviour.
 """
 
 from __future__ import annotations
@@ -102,16 +100,14 @@ def _make_tool(*params: ToolParameter) -> ToolDefinition:
     )
 
 
-# ---------------------------------------------------------------------------
-# F-0001: normalize_type silently downgrades unknown types -> raise/warn.
-# ---------------------------------------------------------------------------
+# normalize_type silently downgrades unknown types -> raise/warn.
 
 
 def test_f0001_normalize_type_unknown_emits_warning() -> None:
     """Red/green: an unrecognised type now emits ``schema_type_fallback``.
 
-    The pre-fix behaviour silently coerced any unrecognised string to
-    ``"string"`` with no diagnostic. The fix preserves the coercion as
+    Unrecognised strings are silently coerced to
+    ``"string"`` with no diagnostic. The coercion is kept as
     a backwards-compatible fallback but logs a warning so the offending
     type can be surfaced through the validation pipeline.
     """
@@ -133,19 +129,17 @@ def test_f0001_normalize_type_known_emits_no_warning() -> None:
     assert not fallbacks, "schema_type_fallback must not fire for recognised types"
 
 
-# ---------------------------------------------------------------------------
-# F-0002: validate_tool_parameter type check dead -> validate before normalize.
-# ---------------------------------------------------------------------------
+# validate_tool_parameter type check dead -> validate before normalize.
 
 
 def test_f0002_validate_tool_parameter_flags_unknown_type() -> None:
     """Red/green: parameter validation now flags unrecognised types.
 
-    Before the fix, ``validate_tool_parameter`` normalised the type
+    ``validate_tool_parameter`` must not normalise the type
     first and then re-checked membership in
-    ``VALID_JSON_SCHEMA_TYPES`` -- the post-normalisation value was
-    always either a valid type or ``"string"``, so the branch was
-    unreachable. After the fix, ``is_recognized_type`` is consulted
+    ``VALID_JSON_SCHEMA_TYPES`` -- the post-normalisation value is
+    always either a valid type or ``"string"``, so the branch is
+    unreachable. ``is_recognized_type`` must be consulted
     against the *raw* input so genuinely malformed types produce a
     diagnostic.
     """
@@ -183,18 +177,15 @@ def test_f0002_is_recognized_type_rejects_unknown() -> None:
     assert is_recognized_type("  STRING  ")
 
 
-# ---------------------------------------------------------------------------
-# F-0003: validate_and_convert results unused -> wire pure validation pass.
-# ---------------------------------------------------------------------------
+# validate_and_convert results unused -> wire pure validation pass.
 
 
 def test_f0003_validate_tool_for_provider_returns_errors_only() -> None:
     """Red/green: orchestrator's pure validation pass returns no schemas.
 
-    Before the fix the orchestrator threw away the converted schemas
+    The orchestrator must not throw away the converted schemas
     from ``validate_and_convert`` (and re-allocated them again via
-    ``get_all_schemas_for_provider``). The new
-    ``validate_tool_for_provider`` is a pure validation pass that does
+    ``get_all_schemas_for_provider``). ``validate_tool_for_provider`` is a pure validation pass that does
     not allocate schemas at all, so the orchestrator can keep the
     diagnostics without paying the conversion cost.
     """
@@ -224,9 +215,7 @@ def test_f0003_validate_tool_for_provider_flags_missing_function() -> None:
     assert any("at least one function" in m for m in error_messages)
 
 
-# ---------------------------------------------------------------------------
-# F-0004: bridges/__init__.py eager imports -> lazy ``__getattr__``.
-# ---------------------------------------------------------------------------
+# bridges/__init__.py eager imports -> lazy ``__getattr__``.
 
 
 @contextmanager
@@ -286,9 +275,9 @@ def _preserved_sys_modules(names: Sequence[str]) -> Generator[None]:
 def test_f0004_bridges_package_does_not_eager_load_heavy_submodules() -> None:
     """Importing ``intellicrack.bridges`` must NOT load heavy submodules.
 
-    The pre-fix ``__init__.py`` eagerly imported every bridge
+    An eager ``__init__.py`` would import every bridge
     (Ghidra, Frida, x64dbg, Cutter, sandbox, hex_editor, process,
-    installer). After the fix, the package only loads those modules
+    installer). The package loads those modules only
     on first attribute access via PEP 562 ``__getattr__``.
     """
     heavy = [
@@ -360,17 +349,14 @@ def test_f0004_bridges_dunder_probe_is_silent() -> None:
         assert "lazy_resolve_unknown_attribute" not in events, f"probe {probe!r} logged unexpected warning noise: {events}"
 
 
-# ---------------------------------------------------------------------------
-# F-0005: protection_to_string contract drift -> TypedDict redesign.
-# ---------------------------------------------------------------------------
+# protection_to_string contract drift -> TypedDict redesign.
 
 
 def test_f0005_decode_protection_returns_typed_dict() -> None:
     """Red/green: ``decode_protection`` returns the new TypedDict shape.
 
-    Before the fix the only API was ``protection_to_string`` which lost
-    the structured access bits behind a string like ``"rwx+G"``. The
-    redesign introduces ``decode_protection`` returning a typed dict
+    The string-only API ``protection_to_string`` loses
+    the structured access bits behind a string like ``"rwx+G"``. The module provides ``decode_protection`` returning a typed dict
     with ``read``/``write``/``execute``/``copy_on_write``/``guard``
     booleans plus the original raw value, while keeping
     ``protection_to_string`` as a thin formatter built on top.
@@ -423,9 +409,7 @@ def test_f0005_memory_protection_flags_typeddict_keys() -> None:
     assert set(flags.keys()) == {"read", "write", "execute", "copy_on_write", "guard", "raw"}
 
 
-# ---------------------------------------------------------------------------
-# F-0006: state_to_string / mem_type_to_string silent ``unknown``.
-# ---------------------------------------------------------------------------
+# state_to_string / mem_type_to_string silent ``unknown``.
 
 
 def test_f0006_state_to_string_known_values() -> None:
@@ -464,16 +448,14 @@ def test_f0006_mem_type_to_string_unknown_includes_value() -> None:
     assert events[0].get("mem_type") == "0x12345"
 
 
-# ---------------------------------------------------------------------------
-# F-0007: ToolBridgeBase.shutdown non-abstract -> mark ``@abstractmethod``.
-# ---------------------------------------------------------------------------
+# ToolBridgeBase.shutdown non-abstract -> mark ``@abstractmethod``.
 
 
 def test_f0007_toolbridgebase_shutdown_is_abstract() -> None:
     """Red/green: ``ToolBridgeBase.shutdown`` is now an abstract method.
 
-    Before the fix the base class supplied a default body so subclasses
-    could silently skip overriding it. After the fix every concrete
+    The base class supplies no default body, so subclasses
+    cannot silently skip overriding it. Every concrete
     bridge must provide its own ``shutdown``.
     """
     abstract_methods = ToolBridgeBase.__abstractmethods__

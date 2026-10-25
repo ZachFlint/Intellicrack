@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D50(b): a recorder that dies must be reported as an outage.
+"""A recorder that dies must be reported as an outage.
 
 Measured live: because ``api_trace.ps1`` exits 0.6 seconds after starting,
 the report's API Calls tab held exactly one row and that row *was* the
@@ -18,7 +18,7 @@ directly against the exact ``timestamp|collector|state|detail`` lines
 (``injection_monitor.ps1``) emit. The end-to-end test reproduces the live
 failure for real: it stages the genuine bundled scripts into a guest monitor
 directory *without* the vendored ETW assemblies - the exact provisioning gap
-S17-D50(a) fixes - launches both under a real ``powershell.exe``, and reads
+closes - launches both under a real ``powershell.exe``, and reads
 the resulting shared folder back through the real
 :meth:`QEMUSandbox._collect_monitoring_logs`, the same path
 :meth:`QEMUSandbox.run_binary` builds an :class:`ExecutionReport` from. If a
@@ -256,7 +256,7 @@ async def _run_to_completion(powershell: str, script_path: Path, logs_dir: Path)
 class _WindowsAgentSandboxWithoutTraceEvent(QEMUSandbox):
     """Stages only the bundled ``api_trace.ps1`` and ``injection_monitor.ps1``.
 
-    Reproduces the S17-D50(a) provisioning gap deterministically - the
+    Reproduces the provisioning gap deterministically - the
     vendored ETW assemblies are deliberately not staged - so this outage
     detection gate does not depend on that fix having run.
     """
@@ -281,7 +281,7 @@ class _ReportReadingSandbox(QEMUSandbox):
     def use_workspace(self, temp_dir: Path, share: Path) -> None:
         """Point the sandbox at its working directory and its shared folder.
 
-        Since S17-D69 the guest's logs are pulled out of the guest and land
+        The guest's logs are pulled out of the guest and land
         under the working directory's ``collected`` tree rather than on the
         share, which the guest cannot write to.
 
@@ -321,9 +321,9 @@ class TestARealDeadRecorderIsReportedAsAnOutageNotARecord:
     async def test_unprovisioned_recorders_surface_as_outages_in_collect_monitoring_logs(self, tmp_path: Path) -> None:
         """Both real ETW-based scripts, run without their DLL, must surface as outages.
 
-        This drives the whole S17-D50(b) path for real: the genuine bundled
+        This drives the whole path for real: the genuine bundled
         scripts are staged without the vendored assemblies - the exact
-        provisioning gap S17-D50(a) fixes - launched under the real
+        provisioning gap - launched under the real
         ``powershell.exe``, and the resulting shared folder is read back
         through the real :meth:`QEMUSandbox._collect_monitoring_logs`. A
         pass here is exactly what "the report says these collectors are
@@ -374,7 +374,7 @@ class TestARealDeadRecorderIsReportedAsAnOutageNotARecord:
         assert "never reported starting" in by_collector["injection_monitor"]["reason"]
         assert by_collector["injection_monitor"]["exit_code"] is None
 
-        # S18-D09 moved this row rather than dropping it. api_trace.ps1 writes
+        # The row is moved rather than dropped. api_trace.ps1 writes
         # its own failure into its data log for lack of any other channel, and
         # reading that back as an API call reported a collector which captured
         # nothing at all as having observed API activity. The row must not reach
@@ -442,9 +442,9 @@ def _lifecycle_states(logs_dir: Path, collectors: tuple[str, ...]) -> dict[str, 
 
 @pytest.mark.asyncio
 class TestTheOutageReportMatchesTheRealStagedBundlesLifecycle:
-    """The S17-D50(b) outage guarantee must hold against today's real, fully-staged agent bundle.
+    """The outage guarantee must hold against today's real, fully-staged agent bundle.
 
-    S17-D50(a) fixes assembly *discovery* and *load*: with every vendored
+    Vendored-assembly staging fixes discovery and load: with every vendored
     assembly staged, both scripts' dependency resolver (see
     ``test_traceevent_provisioning_s17d50a.py::TestAddTypeLoadsTheVendoredAssemblyUnderTheDesktopCLR``)
     lets ``Add-Type`` succeed, so each real ETW-based collector reaches the
@@ -456,14 +456,14 @@ class TestTheOutageReportMatchesTheRealStagedBundlesLifecycle:
     reported as an outage, and every collector still watching is not. The
     old form of this test asserted that both collectors *died*, which was
     only ever true because ``api_trace.ps1`` crashed unconditionally on a
-    null receiver (S18-D08); with that crash fixed, demanding a dead
+    null receiver; with that crash fixed, demanding a dead
     recorder would be demanding the defect back.
 
-    This is the strongest gate for S17-D50(b): it proves the outage report
+    This is the strongest gate: it proves the outage report
     agrees with production's actual current behaviour - the real
     :meth:`QEMUSandbox._create_guest_agent_script` staging everything it
     stages today - not only with the deliberately DLL-less staging variant
-    above, which isolates outage detection from whatever S17-D50(a) does or
+    above, which isolates outage detection from whatever the staging fix does or
     does not fully resolve.
     """
 
@@ -514,7 +514,7 @@ class TestTheOutageReportMatchesTheRealStagedBundlesLifecycle:
                     f"{by_collector[collector]!r} does not carry {stop_detail!r}"
                 )
 
-        # S18-D08: every step of api_trace.ps1 that can fail because of the
+        # Every step of api_trace.ps1 that can fail because of the
         # machine is guarded and names its own stage, so the outer catch-all
         # only ever fires for a fault in the script itself - it is how the
         # null-receiver crash that emptied the API Calls tab on every run

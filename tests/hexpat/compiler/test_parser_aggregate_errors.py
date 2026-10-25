@@ -3,18 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit 5 u4 / F-0023 - parser surfaces every collected parse error.
+"""The parser surfaces every collected parse error.
 
-Before remediation, ``HexPatParser.parse()`` collected each recovered error
-into ``self._errors`` but only re-raised the first one wrapped in a fresh
-``HexPatParseError``. Callers that wanted to inspect all syntax errors in a
-single file had no way to retrieve them; the message of the raised exception
-mentioned just the first error and any secondary errors were silently lost.
+``HexPatParser.parse()`` collects each recovered error into ``self._errors``. Callers
+that want every syntax error in a file must be able to retrieve them all, and the
+raised message must not drop secondary errors.
 
-The remediation introduces ``HexPatAggregateParseError`` (a subclass of
-``HexPatParseError`` so existing handlers continue to catch it) which carries
-the full tuple of collected errors via the ``errors`` attribute and surfaces
-all of them in the aggregate message.
+``HexPatAggregateParseError`` (a subclass of ``HexPatParseError``, so existing handlers
+still catch it) carries the full tuple of collected errors via the ``errors`` attribute
+and surfaces all of them in the aggregate message.
 """
 
 from __future__ import annotations
@@ -42,7 +39,7 @@ def _parse_source(source: str) -> HexPatParser:
 
 
 class TestAggregateParseError:
-    """F-0023: ``parse()`` surfaces every collected parse error to the caller."""
+    """``parse()`` surfaces every collected parse error to the caller."""
 
     def test_single_error_still_raises_hexpatparseerror(self) -> None:
         """A single parse error continues to raise ``HexPatParseError``.
@@ -69,8 +66,7 @@ class TestAggregateParseError:
         parser = _parse_source(source)
         with pytest.raises(HexPatAggregateParseError) as excinfo:
             parser.parse()
-        # Pre-fix behaviour would have surfaced only the first error; the fix
-        # must surface them all.
+        # Every error must be surfaced, not only the first.
         assert len(excinfo.value.errors) >= 2
 
     def test_aggregate_is_subclass_of_hexpatparseerror(self) -> None:

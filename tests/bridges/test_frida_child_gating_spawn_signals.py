@@ -3,27 +3,19 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for FridaBridge device-wide spawn-gating signal wiring.
+"""Tests for FridaBridge device-wide spawn-gating signal wiring.
 
-Covers finding T1-1: ``FridaBridge.enable_child_gating`` /
-``disable_child_gating`` arm and disarm Frida's DEVICE-WIDE spawn gating
-(``Device.enable_spawn_gating`` / ``Device.disable_spawn_gating``), which
-suspends every new process the device observes -- a disruptive, device-wide
-side effect. The previous implementation subscribed to the SESSION-scoped
-``"child-added"`` signal instead of the device's own ``"spawn-added"`` /
-``"spawn-removed"`` signals, so the real Frida ``Device`` class never
-delivered any event to that handler: gating was genuinely switched on, but
-every gated process stayed invisible to ``get_pending_children`` and
-unresumable through ``resume_child``, with no recovery path.
+``FridaBridge.enable_child_gating`` / ``disable_child_gating`` arm and disarm Frida's DEVICE-WIDE spawn gating
+(``Device.enable_spawn_gating`` / ``Device.disable_spawn_gating``), which suspends every new process the device
+observes, a disruptive, device-wide side effect. The bridge listens for the device's own ``"spawn-added"`` and
+``"spawn-removed"`` signals. The real Frida ``Device`` class does not emit the session-scoped ``"child-added"`` signal
+to device handlers, so listening on it would leave gating switched on while every gated process stayed invisible to
+``get_pending_children`` and unresumable through ``resume_child``.
 
-The fix (a) subscribes to the device's ``"spawn-added"`` / ``"spawn-removed"``
-signals instead of ``"child-added"``, (b) makes ``get_pending_children`` query
-``Device.enumerate_pending_spawn`` directly instead of relying solely on the
-event-populated cache, and (c) keeps the resume path passing the real pid
-through to ``Device.resume``. It also fixes a handler-leak: repeated
-enable/disable cycles used to leave the previous ``"child-added"`` listener
-attached forever (the disable path never called ``Device.off``), which would
-have caused duplicate listener registration under a naive spawn-added fix.
+The bridge subscribes to ``"spawn-added"`` and ``"spawn-removed"``, makes ``get_pending_children`` query
+``Device.enumerate_pending_spawn`` directly instead of relying only on the event-populated cache, and passes the real
+pid through to ``Device.resume`` on the resume path. The disable path detaches its listeners with ``Device.off``, so
+repeated enable/disable cycles do not stack duplicate listeners.
 
 These tests drive the REAL ``FridaBridge`` child-gating methods
 (``enable_child_gating``, ``disable_child_gating``, ``get_pending_children``,
@@ -218,15 +210,11 @@ class _SpawnGatingDevice:
 def test_enable_child_gating_arms_device_and_registers_spawn_signals() -> None:
     """Verify ``enable_child_gating`` arms device-wide gating via the correct signals.
 
-    Regression test for T1-1(a): the bridge must keep calling
-    ``Device.enable_spawn_gating`` (the decided, lower-risk fix keeps the
-    device-wide behavior) while listening on the device's own
-    ``"spawn-added"``/``"spawn-removed"`` signals -- not the session-scoped
-    ``"child-added"`` signal a real ``frida.Device`` never emits. Falsifiable:
-    if the fix were reverted to ``device.on("child-added", ...)``, the
-    ``spawn-added``/``spawn-removed`` listener lists would be empty and this
-    assertion would fail; if ``enable_spawn_gating`` stopped being called,
-    ``gating_enabled`` would stay ``False``.
+    The bridge must keep calling ``Device.enable_spawn_gating`` (device-wide behavior) while listening on the device's
+    own ``"spawn-added"``/``"spawn-removed"`` signals -- not the session-scoped ``"child-added"`` signal a real
+    ``frida.Device`` never emits. Falsifiable: if the bridge registered ``device.on("child-added", ...)`` instead, the
+    ``spawn-added``/``spawn-removed`` listener lists would be empty and this assertion would fail; if
+    ``enable_spawn_gating`` stopped being called, ``gating_enabled`` would stay ``False``.
     """
     bridge = FridaBridge()
     device = _SpawnGatingDevice()
@@ -250,8 +238,7 @@ def test_get_pending_children_returns_simulated_spawn_and_dispatches_message() -
     device would, and ``get_pending_children`` must report the pid. Also
     confirms the ``spawn_added`` dispatch message reaches
     ``set_message_handler`` with the correct pid. Falsifiable: if the
-    registered callback were a no-op (or registered under the wrong
-    signal, as in T1-1's original defect), neither the returned list nor
+    registered callback were a no-op (or registered under the wrong signal), neither the returned list nor
     the captured message would contain the simulated pid.
     """
     bridge = FridaBridge()
@@ -275,16 +262,12 @@ def test_get_pending_children_returns_simulated_spawn_and_dispatches_message() -
 def test_get_pending_children_reflects_device_state_even_when_event_never_fired() -> None:
     """Verify ``get_pending_children`` is correct even if a device event was missed.
 
-    Regression test for T1-1(b): populates the device double's ground-truth
-    pending-spawn map directly, WITHOUT going through ``simulate_spawn``
-    (so no ``spawn-added`` callback ever fires -- exactly the "missed
-    event" scenario the fix targets, for example a spawn that arrived
-    before the signal handlers were registered). ``get_pending_children``
-    must still report it because it queries
-    ``Device.enumerate_pending_spawn`` directly. Falsifiable: the previous
-    implementation returned only the in-memory event-populated cache
-    (``list(self._gated_children)``); since no event ever fired here, that
-    cache would be empty and this assertion would fail.
+    Populates the device double's ground-truth pending-spawn map directly, WITHOUT going through ``simulate_spawn`` (so
+    no ``spawn-added`` callback ever fires -- exactly the "missed event" scenario, for example a spawn that arrived
+    before the signal handlers were registered). ``get_pending_children`` must still report it because it queries
+    ``Device.enumerate_pending_spawn`` directly. Falsifiable: an implementation that returns only the in-memory
+    event-populated cache (``list(self._gated_children)``); since no event ever fired here, that cache would be empty
+    and this assertion would fail.
     """
     bridge = FridaBridge()
     device = _SpawnGatingDevice()
@@ -304,13 +287,9 @@ def test_get_pending_children_reflects_device_state_even_when_event_never_fired(
 def test_get_pending_children_raises_toolerror_without_device() -> None:
     """Verify ``get_pending_children`` raises when no Frida device is available.
 
-    Regression coverage for the device guard added alongside T1-1(b): the
-    previous implementation unconditionally returned the (always-empty,
-    since child-added never fired) cache regardless of device state, so a
-    caller with no device attached silently got ``[]`` instead of a clear
-    error. Falsifiable: if the guard were removed, this call would return
-    an empty list instead of raising and ``pytest.raises`` would fail with
-    "DID NOT RAISE".
+    The device guard makes a caller with no device attached get a clear error instead of a silent empty list.
+    Falsifiable: if the guard were removed, this call would return an empty list instead of raising and
+    ``pytest.raises`` would fail with "DID NOT RAISE".
     """
     bridge = FridaBridge()
 
@@ -321,7 +300,7 @@ def test_get_pending_children_raises_toolerror_without_device() -> None:
 def test_resume_child_calls_device_resume_and_untracks_pid() -> None:
     """Verify ``resume_child`` resumes the exact pid via ``Device.resume``.
 
-    Regression test for T1-1(c): drives a real gated spawn end to end
+    Drives a real gated spawn end to end
     (enable gating, simulate a spawn, resume it) and asserts the device
     double's ``resume`` was invoked with the correct pid, and that the
     pid is no longer reported by a subsequent ``get_pending_children``

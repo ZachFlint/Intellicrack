@@ -2,21 +2,19 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D11: the panel's two silent failure paths must surface.
+"""Gates for the panel's two silent failure paths surfacing.
 
-Two failures used to vanish entirely:
+Two failures must not vanish silently:
 
-(a) ``_connect_vnc_display`` passed ``on_error=lambda _: _logger.debug(
-    "vnc_port_query_failed")``, dropping the error text on the floor at debug
-    level, so a VM Display that never connected left no usable evidence.
-(b) ``_on_poll_status_error`` discarded its exception argument completely and
-    only rewrote the status label.
+(a) ``_connect_vnc_display`` must not drop the VNC port query error at debug level, because a
+    VM Display that never connects would then leave no usable evidence.
+(b) ``_on_poll_status_error`` must not discard its exception argument and only rewrite the
+    status label.
 
-Both are now reported at warning level with the real error text and mirrored
-into the Console tab. Because the status poll fires every five seconds, its
-report is de-duplicated on the error text rather than repeated identically
-forever - which is also asserted here, so a "fix" that floods the console fails
-too.
+Both are reported at warning level with the real error text and mirrored into the Console
+tab. Because the status poll fires every five seconds, its report is de-duplicated on the
+error text rather than repeated identically forever. The tests assert this too, so a change
+that floods the console fails.
 """
 
 from __future__ import annotations

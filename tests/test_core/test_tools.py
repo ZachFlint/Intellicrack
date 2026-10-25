@@ -8,7 +8,7 @@
 Tests validate:
 - ToolRegistry initialization and bridge lifecycle
 - Bridge availability and status reporting
-- execute_tool_call dispatch (Phase 1 blocker fix verification)
+- execute_tool_call dispatch
 - Tool definition consistency after initialization
 """
 
@@ -314,7 +314,7 @@ async def test_get_tool_definitions_after_init(tmp_path: Path) -> None:
     seven), the set of ``tool_name`` values equals the registry's available
     tools exactly, and each definition carries a non-empty description and at
     least one real ``ToolFunction``. A mutation returning
-    ``list(self._bridges.values())`` (seven bridge objects) satisfies the old
+    ``list(self._bridges.values())`` (seven bridge objects) satisfies a bare
     ``len == 7`` check but fails the ``isinstance(ToolDefinition)`` gate here.
 
     Args:
@@ -350,9 +350,8 @@ async def test_get_all_status_after_init(tmp_path: Path) -> None:
 async def test_dispatch_no_capability_gate(tmp_path: Path) -> None:
     """Verify execute_tool_call dispatches without has_capability gate.
 
-    This test verifies the Phase 1 fix: the broken has_capability gate
-    that blocked ALL AI tool calls has been removed. The method existence
-    check (getattr) is now the only validation.
+    Dispatch must not gate calls on ``has_capability``. The method existence
+    check (getattr) is the only validation.
 
     Args:
         tmp_path: Pytest temporary directory.

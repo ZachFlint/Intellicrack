@@ -3,19 +3,19 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L3 regression gate for T2-7(b): the hex-editor Hashes tab must route through the bridge.
+"""L3 gate: the hex-editor Hashes tab must route through the bridge.
 
-Prior to this fix ``HashingMixin`` always dispatched background workers that
+``HashingMixin`` dispatches background workers that
 called the shared ``HexDocument`` directly (``compute_hash``,
-``compute_hash_range``, ``verify_pe_checksum``, ``repair_pe_checksum``), and
-``CustomCrcDialog`` always used the local streaming CRC fallback, bypassing
+``compute_hash_range``, ``verify_pe_checksum``, ``repair_pe_checksum``), and ``CustomCrcDialog``
+uses the local streaming CRC fallback, bypassing
 ``HexEditorBridge``'s ``calculate_hash`` / ``calculate_hash_range`` /
 ``calculate_hash_custom_crc`` / ``verify_pe_checksum`` / ``repair_pe_checksum``
-entirely, even when a bridge was attached.
+entirely, even when a bridge is attached.
 
-The fix routes every one of those operations through the corresponding bridge
+Every one of those operations is routed through the corresponding bridge
 coroutine via ``run_bridge_coroutine`` whenever a bridge is attached, falling
-back to the original document-direct implementation otherwise.
+back to the document-direct implementation otherwise.
 
 Every test drives the REAL, unmodified hashing mixin against a real
 ``HexEditorBridge`` and real ``intellicrack_hexcore.HexDocument`` instances;
@@ -169,8 +169,8 @@ class TestHashRoutesThroughBridge:
         """Clicking Calculate must dispatch to ``HexEditorBridge.calculate_hash``.
 
         Falsifiable: if ``_on_calculate_hash`` were reverted to pass only
-        ``(self.document, algo)`` to ``_format_hash_result`` (the pre-fix
-        signature), ``bridge.calculate_hash_calls`` would stay empty even
+        ``(self.document, algo)`` to ``_format_hash_result`` (the signature without the bridge),
+        ``bridge.calculate_hash_calls`` would stay empty even
         though a hash result is still displayed (from the document-direct
         fallback instead).
 
@@ -204,7 +204,7 @@ class TestHashRoutesThroughBridge:
         """Hashing a selection must dispatch to ``HexEditorBridge.calculate_hash_range``.
 
         Falsifiable: if ``_on_hash_selection`` were reverted to pass only
-        ``(self.document, sel_start, sel_end, algo)`` (the pre-fix signature),
+        ``(self.document, sel_start, sel_end, algo)`` (the signature without the bridge),
         ``bridge.calculate_hash_range_calls`` would stay empty.
 
         Args:

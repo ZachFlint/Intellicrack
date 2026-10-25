@@ -2,15 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-gate tests for sandbox analysis functions (Group 06 Wave 5).
+"""Real-gate tests for sandbox analysis functions.
 
 Covers:
-  S12-01 — ``extract_iocs`` correctly identifies SHA1 hashes (40-char hex
-            strings) embedded in file change paths; the SHA1 regex pattern
-            is exercised independently of SHA256/MD5 patterns.
-  S12-02 — ``generate_timeline`` resource category is missing (PD-011
-            RED-BY-DESIGN): a ``ResourceSample`` in the report does not
-            produce a ``"resource"``-category event in the timeline.
+  - ``extract_iocs`` correctly identifies SHA1 hashes (40-char hex strings)
+    embedded in file change paths; the SHA1 regex pattern is exercised
+    independently of SHA256/MD5 patterns.
+  - ``generate_timeline`` resource category: a ``ResourceSample`` in the
+    report must produce a ``"resource"``-category event in the timeline.
 """
 
 from __future__ import annotations
@@ -88,7 +87,7 @@ def _report_with_all(
 
 
 class TestExtractIocsSha1:
-    """Gate for S12-01: extract_iocs identifies SHA1 hashes in file paths."""
+    """extract_iocs identifies SHA1 hashes in file paths."""
 
     def test_sha1_in_file_path_yields_sha1_ioc_type(self) -> None:
         r"""A 40-char hex stem in a file path is extracted as 'sha1'.
@@ -98,9 +97,6 @@ class TestExtractIocsSha1:
         called when the pattern fires and the deduplication guard passes.
         Known oracle value: SHA1 of the empty string =
         ``da39a3ee5e6b4b0d3255bfef95601890afd80709``.
-
-        Mutation: removing the SHA1 branch from ``_scan_text`` means no
-        ``sha1`` IOC is produced, failing the assertion.
         """
         path_with_sha1 = rf"C:\Malware\{_SHA1_KNOWN}.bin"
         report = _report_with_file_changes([
@@ -144,13 +140,7 @@ class TestExtractIocsSha1:
         assert sha1_iocs[0]["source"] == "file_changes", f"Expected source='file_changes'; got {sha1_iocs[0]['source']!r}"
 
     def test_sha1_deduplicated_when_same_hash_in_two_paths(self) -> None:
-        """The same SHA1 hash from two different file paths appears only once.
-
-        Oracle: ``extract_iocs`` maintains a ``seen: set[tuple[str, str]]``
-        keyed on ``(ioc_type, value)``; the second occurrence is skipped.
-        Mutation: removing deduplication produces two sha1 entries with the
-        same value, failing the ``len == 1`` assertion.
-        """
+        """The same SHA1 hash from two different file paths appears only once."""
         report = _report_with_file_changes([
             FileChange(
                 path=rf"C:\first\{_SHA1_KNOWN}.dll",
@@ -179,9 +169,6 @@ class TestExtractIocsSha1:
         ``if ("sha256", val + val[:24]) not in seen`` prevents a SHA1 value
         from being re-emitted when the longer hash that starts with the same
         40 chars has already been classified as SHA256.
-
-        Mutation: removing the guard causes both SHA256 and SHA1 IOCs to
-        be emitted for the same prefix, failing the ``len == 0`` assertion.
         """
         sha1_prefix = _SHA1_KNOWN
         sha256_with_sha1_prefix = sha1_prefix + sha1_prefix[:24]
@@ -204,13 +191,12 @@ class TestExtractIocsSha1:
 
 
 class TestGenerateTimelineResourceCategory:
-    """Gate for S12-02: generate_timeline resource category is absent (PD-011 RED-BY-DESIGN).
+    """generate_timeline must emit a resource category for ResourceSample entries.
 
     The production code has no ``_timeline_add_resource_events`` handler.
-    This test asserts the CORRECT CONTRACT (resource events in the report
-    must produce events with category='resource') but currently FAILS because
-    the handler does not exist.  The gate is permanently RED until PD-011 is
-    fixed.
+    This test asserts the correct contract (resource events in the report
+    must produce events with category='resource') and fails while the handler
+    does not exist.
     """
 
     def test_resource_sample_produces_resource_category_event(self) -> None:
@@ -222,9 +208,9 @@ class TestGenerateTimelineResourceCategory:
         follow the same pattern.  ``ResourceSample`` contains a timestamp
         field which the timeline can use as the event timestamp.
 
-        PD-011 RED-BY-DESIGN: ``generate_timeline`` has no resource handler.
-        The function iterates only 10 named ``if _should_include("X"):``
-        blocks; "resource" is absent.  Mutation: adding a
+        ``generate_timeline`` has no resource handler. The function iterates
+        only 10 named ``if _should_include("X"):`` blocks; "resource" is
+        absent.  Mutation: adding a
         ``_timeline_add_resource_events`` handler that appends events with
         ``category='resource'`` turns this gate green.
         """
@@ -253,8 +239,7 @@ class TestGenerateTimelineResourceCategory:
         Oracle: all other timeline handlers copy the source event's timestamp
         directly into the TimelineEvent.  The resource handler must do the same.
 
-        PD-011 RED-BY-DESIGN: This test is also red until the resource handler
-        is implemented.
+        This test fails until the resource handler is implemented.
         """
         ts = "2026-01-01T12:34:56Z"
         report = _report_with_resource_samples([
@@ -284,7 +269,7 @@ class TestGenerateTimelineResourceCategory:
         categories; a filter of ``['resource']`` must return only resource events,
         not file events even if file_changes are present.
 
-        PD-011 RED-BY-DESIGN: Red because no resource events are produced at all.
+        Fails while no resource events are produced at all.
         """
         report = _report_with_all(
             file_changes=[

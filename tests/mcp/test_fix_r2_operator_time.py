@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 8: the operator's time is kept out of every request deadline, on every protocol version.
+"""The operator's time is kept out of every request deadline, on every protocol version.
 
 A real ``MCPServer`` asks the operator for a name in the middle of ``tools/call``. The operator answers well after the server's
 per-request timeout has passed, and the call must still succeed, both on a legacy 2025-11-25 server reached over HTTP+SSE, where the

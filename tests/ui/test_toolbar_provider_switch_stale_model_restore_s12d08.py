@@ -2,25 +2,21 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S12-D08 (toolbar provider switch, stale model restore).
+"""Gate for the stale model restore on a toolbar provider switch.
 
-Switching the toolbar's provider combo while the discovery cache is COLD for
-the newly selected provider fell through ``_on_provider_changed`` to
-``_on_refresh_models``. That method captured ``model_combo.currentText()`` as
-the restore target -- at that instant the combo still displayed the OUTGOING
-provider's model id. When the refresh completed, ``_on_models_refresh_finished``
-restored that stale id via ``setCurrentText`` (the combo is editable), which
-is indistinguishable from a user manually typing a custom model id. The
-line edit's committed-text handler then logged
-``model_combo_text_not_in_catalog`` and emitted a user-visible
-"not present in provider catalog" warning for a value the user never typed.
+Switching the toolbar's provider combo while the discovery cache is COLD for the newly selected
+provider falls through ``_on_provider_changed`` to ``_on_refresh_models``. That method must not
+capture ``model_combo.currentText()`` as the restore target, because at that instant the combo
+still displays the OUTGOING provider's model id. ``_on_models_refresh_finished`` would restore that
+stale id via ``setCurrentText`` (the combo is editable), which is indistinguishable from a user
+manually typing a custom model id. The line edit's committed-text handler would then log
+``model_combo_text_not_in_catalog`` and show a user-visible "not present in provider catalog"
+warning for a value the user never typed.
 
-The fix threads the target provider through the refresh (``provider_switch``)
-so the restore target is the NEW provider's own remembered model
-(:meth:`MainWindow._remembered_model_for`), reusing the same per-provider
-memory the already-correct warm-cache fast path relies on
-(:meth:`MainWindow._select_model_for_provider`), instead of the stale combo
-text.
+The target provider is threaded through the refresh (``provider_switch``), so the restore target is
+the NEW provider's own remembered model (:meth:`MainWindow._remembered_model_for`), reusing the
+same per-provider memory the warm-cache fast path relies on
+(:meth:`MainWindow._select_model_for_provider`), not the stale combo text.
 
 This test drives the real :class:`MainWindow` over a real
 :class:`Orchestrator` and real, self-contained :class:`LLMProviderBase`
@@ -392,12 +388,11 @@ def test_cold_cache_provider_switch_restores_new_provider_model(
     ``_on_provider_changed``) because ``ModelDiscovery``'s cache starts empty
     for every provider.
 
-    Before the fix, the slow path captured A's model text as the restore
-    target and reinjected it as free text once B's catalog loaded -- a value
-    absent from B's catalog -- which the line edit's commit handler then
-    flagged as a not-in-catalog warning. After the fix, the restore target is
-    B's own remembered model, so the resulting selection belongs to B's
-    catalog and committing it raises no warning.
+    The slow path must not capture A's model text as the restore target and reinject it as free
+    text once B's catalog loads, because a value absent from B's catalog would be flagged by the
+    line edit's commit handler as a not-in-catalog warning. The restore target is B's own
+    remembered model, so the resulting selection belongs to B's catalog and committing it raises
+    no warning.
 
     Args:
         window_factory: Factory yielding a real, auto-closed MainWindow with

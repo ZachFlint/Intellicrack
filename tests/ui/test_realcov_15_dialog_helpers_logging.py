@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Structured-logging side-effect coverage for the dialog helpers.
 
-The forwarding behavior of ``show_error`` / ``show_warning`` / ``show_info`` is
-already covered. These tests add the missing assertion that the helpers emit
-the real structured log entries documented in their contract: when an
+These tests check that the dialog helpers emit the structured log entries documented in
+their contract: when an
 exception is supplied, ``show_error`` and ``show_warning`` must record the
 exception type (and traceback) through the real ``structlog`` pipeline.
 

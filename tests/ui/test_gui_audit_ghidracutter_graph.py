@@ -3,17 +3,17 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GUI audit regression tests for the shared CFG graph view components.
+"""Tests for the shared CFG graph view components.
 
-Covers three findings against ``intellicrack.ui.panels.graph_view``:
+Covers three behaviours of ``intellicrack.ui.panels.graph_view``:
 
-* M14 -- ``CFGGraphScene.load_graph`` must pin the scene rectangle to the
+* ``CFGGraphScene.load_graph`` must pin the scene rectangle to the
   current graph's ``itemsBoundingRect`` so a small graph loaded after a large
   one fits to its own bounds rather than the stale (only-growing) implicit rect.
-* M16 -- ``NumericSortTreeItem`` must order the Address (hex) and Size (decimal)
+* ``NumericSortTreeItem`` must order the Address (hex) and Size (decimal)
   columns numerically, not lexicographically (``0x9`` before ``0x1000``,
   ``20`` before ``100``).
-* graph block width -- ``BasicBlockItem`` must size its width from
+* ``BasicBlockItem`` must size its width from
   ``QFontMetricsF.horizontalAdvance`` of the widest line using the real font,
   not a fixed ``len(text) * 7`` pixels-per-character estimate.
 """
@@ -66,17 +66,17 @@ def _linear_chain(count: int, base: int = 0x400000, stride: int = 0x100) -> list
 
 @pytest.mark.usefixtures("qapp")
 class TestSceneRectFollowsCurrentGraph:
-    """M14: load_graph must reset the scene rect to the current graph bounds."""
+    """``load_graph`` must reset the scene rect to the current graph bounds."""
 
     @staticmethod
     def test_small_graph_after_large_shrinks_scene_rect() -> None:
         """A 2-block graph loaded after a 24-block graph must not keep the large rect.
 
-        Regression: ``load_graph`` never called ``setSceneRect``, so the scene's
+        ``load_graph`` must call ``setSceneRect``, since otherwise the scene's
         implicit rectangle (which only grows) stayed at the large graph's union.
         ``fit_to_view`` then fitted the small graph against the stale union,
-        rendering it as a tiny cluster. The fix pins ``sceneRect`` to
-        ``itemsBoundingRect`` on every load. If the fix is reverted the small
+        rendering it as a tiny cluster. ``sceneRect`` must be pinned to
+        ``itemsBoundingRect`` on every load. Without that pin the small
         rect equals the large rect and both assertions below fail.
         """
         scene = CFGGraphScene()
@@ -111,7 +111,7 @@ class TestSceneRectFollowsCurrentGraph:
 
 @pytest.mark.usefixtures("qapp")
 class TestNumericSortTreeItem:
-    """M16: Address and Size columns must sort numerically, not lexicographically."""
+    """Address and Size columns must sort numerically, not lexicographically."""
 
     @staticmethod
     def _build_tree(rows: list[tuple[str, str, str]]) -> QTreeWidget:
@@ -189,11 +189,11 @@ class TestBlockWidthFromFontMetrics:
     def test_width_matches_font_metrics_advance() -> None:
         """A long disassembly line yields a width equal to its measured advance.
 
-        Regression: width used ``max(len(disasm)) * 7`` fixed pixels-per-char, so
-        wide fonts or HiDPI displays clipped long instructions. The fix measures
-        the widest line with ``QFontMetricsF.horizontalAdvance`` using the item's
+        A fixed ``max(len(disasm)) * 7`` pixels-per-char width clips long
+        instructions on wide fonts or HiDPI displays. The width is measured with
+        ``QFontMetricsF.horizontalAdvance`` over the widest line using the item's
         actual code font. This test recomputes the expected advance with the same
-        font and asserts an exact match, which the old ``len * 7`` formula fails.
+        font and asserts an exact match, which a ``len * 7`` formula fails.
         """
         long_disasm = "movaps xmmword ptr [rbp - 0x1a0], xmm0"
         block_address = 0x401000
@@ -213,9 +213,8 @@ class TestBlockWidthFromFontMetrics:
             f"block width {item.rect().width()} must equal font-metric width {expected_width}"
         )
 
-        # The pre-fix code sized the block as a raw ``len(disasm) * 7`` estimate
-        # with no padding; the metric-based width adds ``_BLOCK_PADDING * 2``, so
-        # the two differ font-independently even when the fallback advance is 7px.
+        # A raw ``len(disasm) * 7`` estimate has no padding, while the metric-based width adds
+        # ``_BLOCK_PADDING * 2``, so the two differ font-independently even when the fallback advance is 7px.
         legacy_width = len(long_disasm) * 7
         assert item.rect().width() != pytest.approx(float(legacy_width)), "block width must not use the raw len*7 estimate"
 

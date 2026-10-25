@@ -5,17 +5,17 @@
 
 """L3 regression gate: ordinary GUI cursor navigation must reach the bridge/state holder.
 
-Covers the hex-editor bridge-routing finding's cursor sub-item:
+Covers cursor synchronization between the GUI and the bridge:
 ``HexEditorPanel._on_cursor_moved`` (``ui/panels/hex_editor/panel.py``), the
-handler for ordinary click / arrow-key caret navigation, updated only the
-local data-inspector/disassembly side panels and never told the shared
+handler for ordinary click / arrow-key caret navigation, updates only the local
+data-inspector/disassembly side panels and does not tell the shared
 ``HexDocumentState`` or the attached ``HexEditorBridge`` about the new
-cursor offset -- unlike its sibling ``_on_selection_changed``, which already
-pushed selection changes to both. Consequence: an AI orchestrator calling
-``hex_editor.get_cursor_position`` after the user moved the caret read a
+cursor offset -- unlike its sibling ``_on_selection_changed``, which pushes selection changes to
+both. Consequence: an AI orchestrator calling
+``hex_editor.get_cursor_position`` after the user moves the caret reads a
 stale offset.
 
-The fix adds a synchronous ``HexEditorBridge.update_cursor_from_gui`` method
+A synchronous ``HexEditorBridge.update_cursor_from_gui`` method
 (mirroring the existing ``update_selection_from_gui``) and calls it -- plus
 ``HexDocumentState.set_cursor(..., source="panel")`` -- from
 ``_on_cursor_moved``, guarded by a new ``_suppress_cursor_echo`` reentrancy
@@ -72,8 +72,7 @@ class TestGuiCursorMovePushesToBridgeAndStateHolder:
     def test_real_widget_goto_offset_updates_bridge_and_state_holder(qapp: QApplication) -> None:
         """Moving the caret via the real widget must update both sync targets.
 
-        Falsifiable: if ``_on_cursor_moved`` were reverted to its pre-fix
-        form (side-panel updates only, no bridge/state-holder push),
+        Falsifiable: if ``_on_cursor_moved`` lost its bridge and state-holder push, leaving only the side-panel updates,
         ``bridge.get_cursor_position()`` would stay ``0`` and
         ``state_holder.cursor_offset`` would stay ``0`` even though the
         widget's own caret moved to byte 256. Broken production line:
@@ -117,7 +116,7 @@ class TestAiIssuedCursorMoveDoesNotBounceBack:
 
         Falsifiable: if the ``_suppress_cursor_echo`` guard (or the
         ``try``/``finally`` around it in ``_on_state_event``) were
-        removed while keeping the forward-sync fix, the widget's own
+        removed while keeping the forward sync, the widget's own
         ``cursor_moved`` signal -- re-emitted synchronously by
         ``goto_offset`` inside ``_on_state_event``'s ``CURSOR_MOVED``
         branch -- would call back into ``_on_cursor_moved``, which would

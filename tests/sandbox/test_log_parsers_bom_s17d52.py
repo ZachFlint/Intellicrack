@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for S17-D52: BOM-prefixed monitor logs corrupt the first record.
+"""BOM-prefixed monitor logs corrupt the first record.
 
 The in-guest monitor scripts write their log files with PowerShell's default
 ``Out-File``/``Add-Content`` encoding, which stamps a UTF-8 byte-order-mark
@@ -51,7 +51,7 @@ _UTF8_BOM: Final[bytes] = b"\xef\xbb\xbf"
 _BOM_CHAR: Final[str] = "\ufeff"
 
 # Timestamps mirroring the exact corrupted values observed on the live
-# Windows 11 QEMU guest run that surfaced S17-D52.
+# Windows 11 QEMU guest run that exposed the defect.
 _TS_SPACE: Final[str] = "2026-08-07 15:19:47"
 _TS_ISO: Final[str] = "2026-08-07T15:19:53.0641788+00:00"
 

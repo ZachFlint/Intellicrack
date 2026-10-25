@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D55/S17-D67: a hard mid-session QGA channel reset must recover.
+"""A hard mid-session QGA channel reset must recover.
 
 :class:`OneShotGuestAgentChannelServer` (``tests/sandbox/qemu/guest_agent_server.py``)
 already proves that QEMU's ``org.qemu.guest_agent.0`` chardev refuses a second
-connection when the *first* one never got past the handshake - S17-D57's
+connection when the *first* one never got past the handshake - the channel contract's
 contract, which :class:`~intellicrack.sandbox.qemu.QemuGuestAgentClient` must
 keep honouring. This file covers the other half: a channel that completed its
 handshake, ran commands successfully, and only *afterwards* had its socket
@@ -15,7 +15,7 @@ production trigger named in the defect. Before this fix,
 ``QemuGuestAgentClient`` reacted to that kind of failure by closing the socket
 and stopping there: nothing ever opened a replacement, so every command for
 the rest of the session failed on a channel that was never coming back, the
-same terminal outcome S17-D55 fixed for the forwarded-port agent channel.
+same terminal outcome that was fixed for the forwarded-port agent channel.
 
 The server below is a genuine local asyncio TCP listener, not a mock: it
 speaks the real ``guest-sync-delimited`` handshake, including the leading
@@ -290,7 +290,7 @@ class TestAPermanentlyRefusedResetFailsPromptlyWithoutHanging:
     async def test_a_reset_against_no_listener_reports_failure_and_stays_disconnected(self) -> None:
         """A reset whose reopen is refused outright must fail cleanly.
 
-        This is the peer behaviour S17-D57 measured for real against a live
+        This is the peer behaviour measured for real against a live
         QEMU build: once the one connection it hands out is gone, a fresh
         connect is refused for the rest of the VM's life. Recovery must try
         the reopen and accept that outcome rather than hang retrying it or

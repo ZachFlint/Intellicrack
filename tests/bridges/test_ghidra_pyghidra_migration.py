@@ -3,23 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Ghidra bridge PyGhidra migration (F15).
+"""Falsifiable gates for the Ghidra bridge PyGhidra launch path.
 
-Ghidra 11.3+/12.x dropped the bundled Jython interpreter, so the bridge was
-migrated to launch ``analyzeHeadless`` through PyGhidra (CPython/jpype). These
-gates pin the migration-specific invariants that cannot regress silently:
+Ghidra 11.3+/12.x dropped the bundled Jython interpreter, so the bridge launches ``analyzeHeadless`` through PyGhidra (CPython/jpype). These gates pin the migration-specific invariants that cannot regress silently:
 
-  1. :meth:`GhidraBridge._discover_jdk` must prefer a valid ``JAVA_HOME`` and
-     otherwise select the highest-versioned bundled ``jdk-*`` that actually
-     contains a ``bin`` directory, so the PyGhidra JVM launch resolves a real
-     runtime. Exercised against a real temporary Ghidra tree.
+1. :meth:`GhidraBridge._discover_jdk` must prefer a valid ``JAVA_HOME`` and otherwise select the highest-versioned bundled ``jdk-*`` that actually contains a ``bin`` directory, so the PyGhidra JVM launch resolves a real runtime. Exercised against a real temporary Ghidra tree.
 
-  2. :meth:`GhidraBridge.decompile` must build its remote script around an
-     explicitly constructed ``DecompileOptions()`` (never ``ifc.getOptions()``,
-     which returns ``null`` in headless and yields a decompiler
-     ``NullPointerException``), and must apply the simplification style on the
-     ``DecompInterface`` where that setter actually lives. The generated script
-     is captured and asserted directly.
+2. :meth:`GhidraBridge.decompile` must build its remote script around an explicitly constructed ``DecompileOptions()`` (never ``ifc.getOptions()``, which returns ``null`` in headless and yields a decompiler ``NullPointerException``), and must apply the simplification style on the ``DecompInterface`` where that setter actually lives. The generated script is captured and asserted directly.
 """
 
 from __future__ import annotations
@@ -245,8 +235,7 @@ async def test_decompile_script_applies_simplification_on_interface() -> None:
 async def test_decompile_raises_on_null_options_regression_marker() -> None:
     """A remote decompile failure must surface as a ToolError with detail.
 
-    Models the exact headless failure the F15 fix eliminates: the remote script
-    reporting a decompiler failure. ``decompile`` must raise ``ToolError``
+    Models a headless decompiler failure, where the remote script reports the error. ``decompile`` must raise ``ToolError``
     carrying the error detail rather than returning an opaque sentinel. Fails if
     the failure branch is swallowed.
     """

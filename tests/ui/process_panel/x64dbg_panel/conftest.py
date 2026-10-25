@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Shared fixtures for audit7 ProcessPanel tab tests."""
+"""Shared fixtures for x64dbg panel tests."""
 
 from __future__ import annotations
 

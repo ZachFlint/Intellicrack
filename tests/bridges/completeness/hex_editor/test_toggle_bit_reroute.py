@@ -8,7 +8,7 @@
 Covers the data-inspector tab's bit-editor buttons
 (``ui/panels/hex_editor/data_inspector.py``
 ``DataInspectorMixin._on_bit_toggled`` /
-``_toggle_bit_via_bridge``), which now dispatch a bit flip to the
+``_toggle_bit_via_bridge``), which dispatch a bit flip to the
 bridge's atomic ``HexEditorBridge.toggle_bit`` when a bridge is
 attached AND the document's current bit differs from the button's new
 state (the normal case, since the button starts synced to the
@@ -52,7 +52,7 @@ class TestToggleBitRoutesThroughBridge:
 
         Falsifiable: if ``_on_bit_toggled``/``_toggle_bit_via_bridge``
         were reverted to call ``document.set_bit`` directly (the
-        pre-remediation behaviour), ``toggle_bit_calls`` would stay
+        unrouted behaviour), ``toggle_bit_calls`` would stay
         empty even though a bridge was attached and the bit genuinely
         changed. Broken production line:
         ``run_bridge_coroutine(bridge.toggle_bit(offset, bit_index))``

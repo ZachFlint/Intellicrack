@@ -338,7 +338,7 @@ def build_bundled_tools(root: Path, *, spawn_helpers: bool = True) -> Path:
     Args:
         root: Directory to populate; created if absent.
         spawn_helpers: Whether the tree carries GLib's spawn helpers. QEMU's
-            own Windows build does not, which is S17-D47.
+            own Windows build does not, which is the spawn-helper gap.
 
     Returns:
         Path: ``root``, populated.

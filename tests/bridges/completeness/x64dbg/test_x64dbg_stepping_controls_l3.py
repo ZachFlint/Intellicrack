@@ -405,7 +405,7 @@ class TestGetTraceRecordButtonDrivesTraceRecordRpc:
 
 
 class TestEnableRecordingButtonArmsThePage:
-    """The panel must be able to arm the page it then queries (S18-D03).
+    """The panel must be able to arm the page it then queries.
 
     ``get_trace_record`` reads a counter x64dbg only keeps for pages a
     trace record type has been set on, so a Trace tab offering the query

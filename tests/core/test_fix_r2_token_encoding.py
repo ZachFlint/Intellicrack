@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 20: encoding downloads leave no staging files, bound the name lookup, and stay bounded with tiktoken's cache turned off.
+"""Encoding downloads leave no staging files, bound the name lookup, and stay bounded with tiktoken's cache turned off.
 
 The gates run the real downloader and loader against real loopback servers. A staging file that cannot be moved into place is removed;
 a name lookup that never answers is given up on within the connect timeout; a looked-up address is what gets connected to; and with

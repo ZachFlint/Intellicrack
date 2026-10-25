@@ -2,13 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for S20-D16 (Process share): process table column sizing.
+"""Tests for process table column sizing.
 
-Verifies that ``ProcessTab``'s system-process table no longer force-stretches a
-column to fill the available width (which squeezes wide content down to an
-illegible sliver, S20-D16's "Value column cut to 'Va...'" symptom) but instead
-keeps every column at its natural content width and lets the table's own
-horizontal scrollbar take over when the columns do not fit.
+Verifies that ``ProcessTab``'s system-process table does not force-stretch a column to fill
+the available width, which would squeeze wide content down to an illegible sliver. Every
+column keeps its natural content width, and the table's own horizontal scrollbar takes over
+when the columns do not fit.
 """
 
 from __future__ import annotations

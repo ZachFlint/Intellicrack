@@ -90,12 +90,12 @@ def test_pyqt6_qtwidgets_constructs_a_real_application_and_widget() -> None:
 def test_qt6core_dll_resolves_icuuc_next_to_itself() -> None:
     r"""``Qt6Core.dll``'s own directory must carry a working ``icuuc.dll``.
 
-    Structural companion to the two import gates above: pins the fix's actual
+    Structural companion to the two import gates above: pins the workaround's actual
     mechanism (an ``icuuc.dll`` placed next to ``Qt6Core.dll`` in
     ``PyQt6\Qt6\bin``) so a regression that silently drops just that one
-    file gets a message pointing straight at the fix, instead of only a bare
+    file gets a message pointing straight at the workaround, instead of only a bare
     ``ImportError`` that sends the next person back through the whole
-    diagnosis. A regenerated pixi environment that never re-ran the fix
+    diagnosis. A regenerated pixi environment that never re-ran the workaround
     reddens this the same way it reddens the two import gates above.
     """
     qtcore = importlib.import_module("PyQt6.QtCore")

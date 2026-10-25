@@ -141,10 +141,10 @@ def generated_nodes(tmp_path: Path) -> list[dict[str, object]]:
 def test_typed_nodes_survive_the_filter(generated_nodes: list[dict[str, object]]) -> None:
     """Module, class, and function nodes must appear typed in the HTML.
 
-    Under the pre-fix ``repo_root``-relative naming these are named
-    ``src.intellicrack.*`` and dropped by the ``startswith('intellicrack.')``
-    filter, leaving only typeless import targets. This asserts the real typed
-    nodes are present, so reverting the fix turns the test red.
+    Names derived from a ``repo_root``-relative path (``src.intellicrack.*``) are
+    dropped by the ``startswith('intellicrack.')`` filter, leaving only typeless
+    import targets. This asserts the real typed nodes are present, so a
+    repo-relative naming turns the test red.
 
     Args:
         generated_nodes: Node records embedded in the generated HTML.
@@ -162,7 +162,7 @@ def test_import_target_unifies_with_real_module(
 ) -> None:
     """An ``import intellicrack.helper`` resolves to the real module node.
 
-    Because file-derived module names now equal importable dotted paths, the
+    Because file-derived module names equal importable dotted paths, the
     import edge target and the scanned ``helper.py`` module collapse into one
     typed node rather than a separate typeless stub.
 
@@ -181,8 +181,7 @@ def test_no_intellicrack_node_is_typeless(
 ) -> None:
     """No internal ``intellicrack.*`` node is rendered as a typeless stub.
 
-    The pre-fix output consisted entirely of ``type == 'unknown'`` import
-    targets. Every internal node the generator emits now carries a real type;
+    Every internal node the generator emits carries a real type;
     boundary (external-dependency) nodes are the only permitted non-internal
     entries and are excluded from this check.
 

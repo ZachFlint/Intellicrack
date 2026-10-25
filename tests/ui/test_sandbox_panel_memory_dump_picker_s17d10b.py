@@ -2,27 +2,25 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D10b: Memory Dump on Windows Sandbox must use a live process picker.
+"""Gates for Memory Dump on Windows Sandbox using a live process picker.
 
-``SandboxPanel._on_memory_dump`` used to call
-``SandboxBridge.memory_dump(self.sandbox_id)`` unconditionally - with no
-``target_pid`` - for every backend. ``SandboxBridge.memory_dump`` requires a
-positive ``target_pid`` for any Windows Sandbox instance (audit7 F-0021), so
-the control could never succeed from the GUI on that backend: every click
-failed the bridge-side guard before a single guest command was dispatched.
+``SandboxPanel._on_memory_dump`` must not call ``SandboxBridge.memory_dump(self.sandbox_id)``
+without a ``target_pid`` on every backend. ``SandboxBridge.memory_dump`` requires a positive
+``target_pid`` for any Windows Sandbox instance, so the control can never succeed from the
+GUI on that backend: every click fails the bridge-side guard before a single guest command
+is dispatched.
 
-The fix threads a :class:`~intellicrack.ui.guest_process_picker.GuestProcessPickerDialog`
-into the Windows path: the handler first calls the new
-``SandboxBridge.list_guest_processes`` bridge method, then opens the picker
-with the enumerated processes, and only dispatches ``memory_dump`` with the
-PID the user chose. The QEMU path is untouched - it still dispatches
-``memory_dump`` directly with no PID, exactly as before this fix.
+On Windows, the handler threads a
+:class:`~intellicrack.ui.guest_process_picker.GuestProcessPickerDialog` into the path. It
+first calls the ``SandboxBridge.list_guest_processes`` bridge method, then opens the picker
+with the enumerated processes, and only dispatches ``memory_dump`` with the PID the user
+chose. The QEMU path dispatches ``memory_dump`` directly with no PID and does not open the
+picker.
 
-Each test patches ``run_bridge_coroutine_logged`` in the ``sandbox_panel``
-module (not the bridge) and asserts the coroutine handed to it is the exact
-coroutine object the mocked bridge method returned, called with the exact
-arguments the handler under test computed - a genuine gate on the handler's
-wiring logic, matching the convention in
+Each test patches ``run_bridge_coroutine_logged`` in the ``sandbox_panel`` module (not the
+bridge) and asserts the coroutine handed to it is the exact coroutine object the mocked
+bridge method returned, called with the exact arguments the handler under test computed.
+This is a genuine gate on the handler's wiring logic, matching the convention in
 ``tests/bridges/completeness/sandbox_process/test_sandbox_panel_l3.py``.
 """
 
@@ -236,9 +234,8 @@ class TestWindowsMemoryDumpUsesPicker:
     ) -> None:
         """Clicking Memory Dump on Windows Sandbox calls ``list_guest_processes`` first.
 
-        Falsified by: reverting to the pre-fix ``_on_memory_dump`` (a bare
-        ``self._bridge.memory_dump(self.sandbox_id)`` for every backend) would
-        leave ``bridge.list_guest_processes_calls`` empty and instead call
+        Falsified by: a bare ``self._bridge.memory_dump(self.sandbox_id)`` dispatched for every
+        backend would leave ``bridge.list_guest_processes_calls`` empty and instead call
         ``bridge.memory_dump`` with no ``target_pid``.
 
         Args:

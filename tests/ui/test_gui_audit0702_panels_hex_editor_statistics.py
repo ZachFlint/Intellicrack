@@ -3,17 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for GUI audit findings M10 and M11 in ``StatisticsMixin``.
+"""Gates for ``StatisticsMixin`` worker ownership and digram matrix offloading.
 
-M10 -- ``_update_statistics`` resolved the widget that owns its worker with
-``self if isinstance(self, QThread) else None``. ``self`` here is the
-``HexEditorPanel`` (a ``QWidget``-derived object), never a ``QThread``, so
-that check was always ``False`` and the statistics worker belonged to no
-widget at all -- unlike every other worker-launch site in the ``hex_editor``
-package, which correctly checks ``isinstance(self, QWidget)``. A worker that
-belongs to no widget is not joined by the panel's scoped drain and its result
-is not gated on the panel still existing. The fix replaces the ``QThread``
-check with a ``QWidget`` check, matching the sibling mixins.
+``_update_statistics`` must resolve the widget that owns its worker with ``self if isinstance(self, QWidget) else None``, as the sibling mixins do.
+``self`` is the ``HexEditorPanel`` (a ``QWidget``-derived object), never a ``QThread``, so a ``QThread`` check would always be
+``False`` and the statistics worker would belong to no widget at all. A worker that belongs to no widget is not joined by the
+panel's scoped drain and its result is not gated on the panel still existing.
 
 That widget is the worker's recorded owner, not its Qt parent. Qt destroys a
 parent's children with it, and destroying a ``QThread`` whose OS thread is
@@ -22,18 +17,14 @@ worker unparented and records the owner instead (see
 ``ui/panels/async_bridge.py``). Both halves are gated below: the harness must
 be the owner, and it must not be the Qt parent.
 
-M11 -- ``_on_show_digram_matrix`` called the native ``document.digram_matrix``
-FFI scan and the subsequent 65536-element Python list conversion directly
-inside the button-click slot, on the GUI thread, before opening the matrix
-dialog. This blocked the whole application's event loop for the duration of
-the scan, unlike the sibling ``_update_statistics`` method (which already
-offloads its comparable-cost computation to a ``GenericCallableWorker``). The
-fix moves the computation into a module-level ``compute_digram_matrix``
-function dispatched through a ``GenericCallableWorker``, opening the dialog
-only from the worker's ``call_finished`` callback on the GUI thread.
+``_on_show_digram_matrix`` must not call the native ``document.digram_matrix`` FFI scan and the subsequent 65536-element
+Python list conversion directly inside the button-click slot on the GUI thread, which would block the whole application's
+event loop for the duration of the scan. The sibling ``_update_statistics`` method already offloads its comparable-cost
+computation to a ``GenericCallableWorker``. The computation lives in a module-level ``compute_digram_matrix`` function
+dispatched through a ``GenericCallableWorker``, and the dialog opens only from the worker's ``call_finished`` callback on the GUI thread.
 
 Each test below drives the real ``StatisticsMixin`` slots through a small
-``QWidget`` harness backed by document doubles (for M11, one whose
+``QWidget`` harness backed by document doubles (one whose
 ``digram_matrix`` sleeps and records the identity of the OS thread that
 executed it), asserting real, falsifiable outcomes without mocking Qt or the
 mixin itself.
@@ -87,7 +78,7 @@ class _SlowDigramDocument:
     """Document double whose ``digram_matrix`` sleeps, then records its thread.
 
     ``digram_matrix`` sleeps ``_DOC_SLEEP_S`` before returning and records
-    the identity of the OS thread that executed it. A code path that still
+    the identity of the OS thread that executed it. A code path that calls
     calls it synchronously on the GUI thread will (a) block the caller for
     the sleep duration and (b) record the GUI thread's own identity; a
     worker-backed code path does neither.
@@ -184,16 +175,12 @@ class _StatisticsHarness(QWidget, StatisticsMixin):
 
 
 def test_m10_statistics_worker_owned_by_widget(qtbot: QtBot) -> None:
-    """M10: the statistics worker must be owned by the panel widget, and unparented.
+    """The statistics worker must be owned by the panel widget, and unparented.
 
-    Pre-fix, ``_update_statistics`` resolved its owner with
-    ``self if isinstance(self, QThread) else None``. ``self`` is a
-    ``QWidget``-derived harness, never a ``QThread``, so that check is
-    always ``False`` and the worker belonged to no widget. The fix checks
-    ``isinstance(self, QWidget)`` instead, so the harness must now be the
-    worker's recorded owner -- while remaining absent from its Qt parent
-    chain, since Qt would otherwise destroy the running thread along with
-    the harness.
+    ``_update_statistics`` must resolve its owner with ``isinstance(self, QWidget)``, not ``isinstance(self, QThread)``.
+    ``self`` is a ``QWidget``-derived harness, never a ``QThread``, so a ``QThread`` check would always be ``False`` and the
+    worker would belong to no widget. The harness must be the worker's recorded owner -- while remaining absent from its Qt
+    parent chain, since Qt would otherwise destroy the running thread along with the harness.
 
     The worker is joined directly rather than through its ``call_finished``
     signal: the computation over the small document double finishes before a
@@ -225,15 +212,15 @@ def test_m10_statistics_worker_owned_by_widget(qtbot: QtBot) -> None:
 
 
 def test_m11_digram_matrix_offloads_to_worker_thread(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
-    """M11: ``_on_show_digram_matrix`` must run ``document.digram_matrix`` off the GUI thread.
+    """``_on_show_digram_matrix`` must run ``document.digram_matrix`` off the GUI thread.
 
     Drives the real slot with a document whose ``digram_matrix`` sleeps for
-    ``_DOC_SLEEP_S``. Pre-fix, the slot called ``document.digram_matrix``
+    ``_DOC_SLEEP_S``. If the slot called ``document.digram_matrix``
     (and the subsequent 65536-element list comprehension) inline: the call
     would then block for the full sleep duration, the document would record
     the GUI thread's own identity as the caller, and there would be no
     ``_digram_worker`` attribute to type-check as a ``GenericCallableWorker``.
-    Each of those checks fails pre-fix and passes post-fix.
+    Each of those checks fails against that code and passes with the worker dispatch.
 
     Args:
         qtbot: pytest-qt bot fixture used to wait on the worker's completion

@@ -2,18 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for audit7 F-0006: guest agent bootstrap via qemu-guest-agent.
+"""Tests for guest agent bootstrap via qemu-guest-agent.
 
 These tests drive ``QEMUSandbox._bootstrap_guest_agent`` directly with a
 real fake qemu-guest-agent transport (no ``unittest.mock``). The fake records
 every ``guest-ping`` and ``guest-exec`` command, returns canned agent
 responses, and exposes the captured invocations to the test assertions.
 
-Channel contract (S17-D20): ``guest-ping`` and ``guest-exec`` are
+Channel contract: ``guest-ping`` and ``guest-exec`` are
 qemu-guest-agent commands and travel over the ``org.qemu.guest_agent.0``
 chardev channel, never over the QMP monitor socket. These tests therefore
 attach a :class:`QemuGuestAgentClient` rather than a :class:`QMPClient`;
-the earlier revision attached a QMP fake and pinned the defect.
+a QMP fake would pass while the channel is wrong.
 """
 
 from __future__ import annotations
@@ -209,8 +209,7 @@ def _launcher_exec_arguments(
 ) -> dict[str, object]:
     """Return the ``arguments`` payload of the recorded launcher guest-exec.
 
-    Readiness costs one ``guest-exec`` of its own before the launcher runs
-    (S17-D65), so the launcher is the first recorded invocation that is not
+    Readiness costs one ``guest-exec`` of its own before the launcher runs, so the launcher is the first recorded invocation that is not
     that probe. ``probe`` comes from the sandbox under test rather than from
     a constant restated here, so a change to the probe cannot silently make
     this helper start reporting the wrong invocation.

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Regression tests for S17-D42 and S17-D43: the guest-side virtio install.
+r"""The guest-side virtio install.
 
 The provisioner used to install the virtio drivers with a single first-logon
 command::
@@ -12,7 +12,7 @@ command::
 Measured against a real Windows 11 guest and a real virtio-win medium, that one
 line fails two different ways at once.
 
-**S17-D42 - the publisher is not trusted.** virtio-win catalogs are Authenticode
+**The publisher is not trusted.** virtio-win catalogs are Authenticode
 signed by Red Hat, and a stock Windows guest carries no Red Hat certificate in
 ``LocalMachine\TrustedPublisher``. ``pnputil`` therefore either refuses the
 package outright ("The publisher of an Authenticode(tm) signed catalog was not
@@ -22,7 +22,7 @@ answer it, and because ``FirstLogonCommands`` are strictly sequential the modal
 window blocks every later command - including the one that installs and starts
 the QEMU guest agent, which is the whole reason the guest exists.
 
-**S17-D43 - every package on the medium is fed to the guest.** ``/subdirs``
+**Every package on the medium is fed to the guest.** ``/subdirs``
 sweeps the entire medium, so a Windows 11 amd64 guest is handed the ARM64, x86,
 Server 2012 and Server 2019 packages as well. Each of those fails with "not
 present in the specified catalog file. The file is likely corrupt or the victim

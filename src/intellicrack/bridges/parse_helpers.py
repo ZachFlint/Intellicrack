@@ -9,8 +9,8 @@ This module centralises two recurring patterns from the bridge layer:
 1. ``safe_int_from_str`` parses an integer from a string and emits a
    structured debug log when parsing fails instead of silently swallowing
    the :class:`ValueError`. This is the canonical replacement for the
-   ``except ValueError: return None / 0 / continue / pass`` idiom that
-   bridge code historically used when reading plugin response payloads,
+   ``except ValueError: return None / 0 / continue / pass`` idiom for
+   reading plugin response payloads,
    x64dbg address strings, label/comment lists, and similar
    serialised-integer fields.
 
@@ -50,7 +50,7 @@ def safe_int_from_str(
     """Parse an integer from a value, logging at debug level on failure.
 
     The helper accepts ``int`` directly (returned unchanged unless it is
-    a ``bool``, which is rejected to match the historical
+    a ``bool``, which is rejected to match
     ``_coerce_address``/``_coerce_hex_int`` semantics) and any string or
     bytes-like object that ``int(value, base)`` can consume. Boolean
     values are treated as invalid because Python's ``bool`` subclasses
@@ -125,7 +125,7 @@ def safe_call[T, D](
     ``context`` so silent-swallow failures become observable without
     raising. Useful for replacing
     ``except (struct.error, OSError): return <sentinel>`` blocks that
-    previously discarded failures from struct unpacks, ctypes calls,
+    discard failures from struct unpacks, ctypes calls,
     Win32 policy probes, and similar small-scope operations.
 
     Args:

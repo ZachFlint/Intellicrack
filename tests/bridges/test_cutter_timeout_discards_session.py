@@ -23,14 +23,12 @@ These gates drive the real bridge through a genuine timeout:
 * ``test_timeout_poisons_session_and_rejects_next_command`` -- a real blocking
   pipe double forces a timeout, then asserts the session is discarded
   (``bridge.r2 is None``) and the *next* command is rejected up front with
-  "no binary loaded" instead of being run against the corrupted pipe. Against
-  the pre-fix code the pipe is left connected, so the session is not ``None``
+  "no binary loaded" instead of being run against the corrupted pipe. Without the discard the pipe is left connected, so the session is not ``None``
   and the next command hits the pipe again (a second timeout) -- both
-  assertions go RED.
+  assertions go.
 * ``test_timeout_terminates_corrupted_child`` -- registers a real child
   process as the session's rizin PID and asserts the timeout path actually
-  terminates it (the mechanism that unblocks the orphaned worker). The pre-fix
-  code never kills it, so the process stays alive and the wait times out RED.
+  terminates it (the mechanism that unblocks the orphaned worker). The unfixed code never kills it, so the process stays alive and the wait times out.
 """
 
 from __future__ import annotations
@@ -122,7 +120,7 @@ async def test_timeout_poisons_session_and_rejects_next_command(
     pipe blocking well past it, ``get_callgraph`` times out. The fix must then
     null the connection slot and reject the *next* command up front with
     "no binary loaded" -- proving no follow-up command is ever run against the
-    corrupted pipe. Against the pre-fix code the session stays connected, so
+    corrupted pipe. Without the discard the session stays connected, so
     both assertions fail.
 
     Args:
@@ -188,8 +186,8 @@ async def test_timeout_terminates_corrupted_child(
     Uses a real, long-lived child process as the bridge's rizin PID, then
     forces a command timeout. The containment must terminate that child (the
     real mechanism that closes the pipe handles and unblocks the orphaned
-    worker). The pre-fix code never touches the child, so it stays alive and
-    the wait times out -- RED.
+    worker). The unfixed code never touches the child, so it stays alive and
+    the wait times out.
 
     Args:
         monkeypatch: Fixture used to shrink the module command default.

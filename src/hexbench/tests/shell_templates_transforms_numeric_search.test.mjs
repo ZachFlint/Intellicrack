@@ -3,10 +3,10 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates BE-5: entry points for real engine features that had none before -
- * the template registry under the Analyze menu, transforms and encodings
- * under Tools, and numeric search as a mode of the Find dialog - plus the
- * Template panel's own spec: selecting a field actually marks its bytes.
+ * Gates the entry points for real engine features: the template registry
+ * under the Analyze menu, transforms and encodings under Tools, and numeric
+ * search as a mode of the Find dialog - plus the Template panel's own spec:
+ * selecting a field actually marks its bytes.
  *
  * `parseSearchInt` is exercised for real, against its actual exported
  * behaviour. The menu wiring, the dispatch argument shapes and the template
@@ -14,7 +14,7 @@
  * reconstructing api.js's HTTP layer, a live document and a real DOM, so
  * those are read as text and matched against the engine's own parameter
  * names (intellicrack-hexcore/src/lib.rs), the same technique
- * panels_diff_entropy_dock_wiring.test.mjs uses for BE-1's wiring. shell.js,
+ * panels_diff_entropy_dock_wiring.test.mjs uses for the diff and entropy docks. shell.js,
  * panels.js and renderers.js transitively import api.js, which reads
  * `document`/`window` at module scope, and panels.js starts a
  * self-installing poll loop the moment it is imported, so both globals are

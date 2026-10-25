@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """A real OAuth 2.1 authorization server and a separate real MCP resource server, run in-process.
 
-The two listen on different loopback ports, so the authorization server's issuer is a different origin from the MCP endpoint -- the layout
-where client registrations used to be discarded on every restart. The authorization server implements dynamic registration (switchable),
+The two listen on different loopback ports, so the authorization server's issuer is a different origin from the MCP endpoint. The authorization server implements dynamic registration (switchable),
 pre-registered clients, PKCE-verified authorization codes, access-token expiry and the refresh-token grant. The resource server serves the
 SDK's real Streamable HTTP ``MCPServer`` behind a bearer check that answers ``401`` for a missing, unknown or expired token and ``403
 insufficient_scope`` for a token lacking a required scope.

@@ -2,23 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D58: a sandbox must never write the configured disk image.
+"""A sandbox must never write the configured disk image.
 
-``_build_qemu_command`` attached the configured qcow2 read-write, with no
-per-instance overlay and no ``snapshot=on``, so every instance built from one
-``QEMUConfig`` received a byte-identical ``-drive`` line pointing at the same
-file. QEMU takes no image lock on Windows, so nothing refused the second open:
-two guests simply wrote over each other.
+``_build_qemu_command`` must attach the configured qcow2 through a per-instance
+overlay or ``snapshot=on``. Attaching it read-write lets every instance built from
+one ``QEMUConfig`` write over the same file, and QEMU takes no image lock on
+Windows, so nothing refuses the second open. The damage is silent: both guests
+appear to run normally.
 
-Measured on 2026-08-07: instances ``7306f4ec`` and ``0b0b8e09`` ran
-concurrently against ``windows11-intellicrack-v4.qcow2``; ``qemu-img check``
-afterwards reported *41 errors were found on the image. Data may be corrupted,
-or further writes to the image may corrupt it.* The untouched sibling copy
-reported *No errors were found on the image*, so the image was sound going in.
-The damage is silent - both guests appeared to run normally.
-
-This became reachable only once S17-D56 allowed two instances to exist, and the
-GUI's Compare control needs two runs, so the documented workflow led into it.
+Two instances can exist at once, and the GUI's Compare control runs two, so the
+documented workflow reaches this path.
 
 The gate drives the real launch composition - provision the launch disk, then
 assemble the argv around it - on two sandboxes sharing one image, and checks

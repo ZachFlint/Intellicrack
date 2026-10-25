@@ -2,18 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit4 C11 (F-0005): hex process memory bridge routing.
+"""Hex process memory bridge routing.
 
-The defect: ``ProcessMemoryMixin._on_open_process_memory`` previously called
-``HexDocument.from_process_memory`` directly and assigned the result to
-``self.document``. The bridge's ``document`` attribute, ``binary_loaded``
-state, ``_cursor_offset`` reset, and the shared state holder's
-``DOCUMENT_OPENED`` event were all skipped. AI tools, peer GUIs, and any
-other consumer that asks the bridge what it has open would see the prior
-file (or ``None``) until something else triggered a bridge-side mutation.
+``ProcessMemoryMixin._on_open_process_memory`` must open the process through
+``HexEditorBridge.open_process_memory``, not call ``HexDocument.from_process_memory``
+and assign the result to ``self.document`` directly. Going around the bridge skips its
+``document`` attribute, ``binary_loaded`` state, ``_cursor_offset`` reset, and the shared
+state holder's ``DOCUMENT_OPENED`` event. AI tools, peer GUIs, and any other consumer that
+asks the bridge what it has open would then see the prior file (or ``None``) until something
+else triggered a bridge-side mutation.
 
-The fix routes the panel through ``HexEditorBridge.open_process_memory``
-via ``run_bridge_coroutine_async``. The success handler then mirrors the
+The panel calls ``HexEditorBridge.open_process_memory`` via ``run_bridge_coroutine_async``.
+The success handler then mirrors the
 new ``bridge.document`` into the panel-local attributes the GUI reads
 from, so the hex view repaints correctly even when the panel's own
 state-holder subscription filters its own bridge source for loop-guard.

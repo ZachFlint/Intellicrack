@@ -3,8 +3,8 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates UX-2: a shortcut printed beside a menu entry is a promise, and the menu
- * printed three keys that no binding reached. Every command that advertises a
+ * Gates the shortcut advertising: a shortcut printed beside a menu entry is a
+ * promise, and no menu may print a key that no binding reaches. Every command that advertises a
  * key must therefore either be bound window-wide in SHORTCUTS or be declared as
  * one the hex view owns -- and be advertised as such.
  *

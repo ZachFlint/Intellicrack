@@ -3,19 +3,18 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for the Frida panel's instruction-disassembly control.
+"""Gates for the Frida panel's instruction-disassembly control.
 
 ``FridaBridge.disassemble_instruction`` (backed by Frida's ``Instruction.parse``)
-was a real, registered bridge method (``frida.disassemble_instruction`` in
-``tool_definition()``) with zero references anywhere under ``src/intellicrack/ui`` --
-an operator of the Frida panel had no way to disassemble a single instruction at
-an address even though the AI orchestrator could. The fix adds
-``InstructionDisassembleControls`` to the Memory section's "Disassemble" tab.
+is a real, registered bridge method (``frida.disassemble_instruction`` in
+``tool_definition()``), and the Frida panel must give an operator the same reach as the AI orchestrator:
+disassembling a single instruction at an address. ``InstructionDisassembleControls`` in the Memory section's
+"Disassemble" tab provides that control.
 
 The end-to-end test drives the real widget against a ``FridaBridge`` self-attached
 to the running test process (the same self-attach pattern already used by
 ``tests/bridges/completeness/frida/test_frida_panel_wiring.py`` for this same class
-of L3 gap), cross-checking every rendered field against an independently fetched
+of wiring gap), cross-checking every rendered field against an independently fetched
 ``InstructionInfo`` for the identical address. The invalid-address, no-bridge, and
 not-attached error paths are verified against a real, unattached ``FridaBridge``
 needing no process interaction at all.
@@ -166,8 +165,8 @@ class TestInstructionDisassembleControlsAgainstRealProcess:
         address, next address, size, mnemonic, operands, and full string --
         matches that ground truth exactly.
 
-        Falsifiable: before this control existed there was no GUI path to
-        ``disassemble_instruction`` at all; a regression that leaves the
+        Falsifiable: without a GUI control there is no path to
+        ``disassemble_instruction``; a regression that leaves the
         button unwired, drops the address parse, or renders only the
         mnemonic (leaving the other fields blank or stale) fails one of the
         field-equality assertions below.

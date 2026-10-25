@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D05: "Test Sandbox" must not pass on a host that cannot start one.
+"""Gate for "Test Sandbox" not passing on a host that cannot start a sandbox.
 
-``SandboxTestWorker`` used to treat process liveness as success::
+``SandboxTestWorker`` must not treat process liveness as success::
 
     try:
         self._process.wait(timeout=10)
@@ -13,19 +13,14 @@
         return False  # -> caller emits SUCCESS
     return self._handle_sandbox_exit_status()  # rc == 0 -> SUCCESS
 
-Both branches reported success. ``WindowsSandbox.exe`` is fire-and-forget and
-exits ``0`` within a second of handing off, so the ``rc == 0`` path is taken on
-every run -- including runs where the session then fails to come up. And a
-launch that fails with ``0x800706d9`` leaves a process alive on a modal dialog,
-so the ``TimeoutExpired`` path is exactly the broken-host state too.
+Both branches would report success. ``WindowsSandbox.exe`` is fire-and-forget and exits ``0``
+within a second of handing off, so the ``rc == 0`` path is taken on every run, including runs
+where the session then fails to come up. A launch that fails with ``0x800706d9`` leaves a process
+alive on a modal dialog, so the ``TimeoutExpired`` path is the broken-host state too. A probe that
+treats liveness as success cannot detect that failure.
 
-That is why wave 6H recorded H-09 "Sandbox test passed!" alongside H-01 Create
-failing ``0x800706d9`` on the same host: the probe was structurally incapable of
-detecting that failure, and the contradiction was read as host flakiness rather
-than as a bug for two audit waves.
-
-Success is now defined as a real session host process existing for this
-configuration, with no failure dialog on screen.
+Success is defined as a real session host process existing for this configuration, with no failure
+dialog on screen.
 """
 
 from __future__ import annotations
@@ -179,8 +174,7 @@ class TestTestSandboxVerifiesRealSession:
         """rc==0 with no session must fail, not pass.
 
         This is the exact shape of a broken host: the launcher hands off and
-        exits 0, but no session ever appears. The old implementation returned
-        success here.
+        exits 0, but no session ever appears, and that must not count as success.
 
         Args:
             tmp_path: Temporary directory fixture.

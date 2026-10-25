@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D25: a connected guest-agent channel must be a live one.
+"""A connected guest-agent channel must be a live one.
 
 The in-guest Intellicrack agent is reached through a QEMU SLIRP port forward
 (``-netdev user,...,hostfwd=tcp::4445-:4445``). SLIRP accepts the host-side TCP
@@ -42,7 +42,7 @@ whose peer runs the generated ``agent.ps1``'s own readiness branch under a real
 ``powershell.exe``: nothing there can connect if that branch stops answering.
 Without those two the servers in this module would happily answer a word no
 guest speaks, and every gate here would pass over a channel that is dead in
-production - the failure mode S17-D27 was caught making.
+production - the failure mode this guards against.
 """
 
 from __future__ import annotations
@@ -451,7 +451,7 @@ class TestPeerCloseEndsTheChannel:
         may paper over that close: ``is_connected`` has to go False on its own,
         because that is the only signal anything - a caller, or the client's
         own recovery - has that the socket in hand is finished. What happens to
-        the command issued afterwards is S17-D55's subject and is gated in
+        the command issued afterwards is covered in
         :mod:`tests.sandbox.qemu.test_agent_channel_reconnect_s17d55`.
         """
         server = IntellicrackAgentServer(close_after_replies=1)

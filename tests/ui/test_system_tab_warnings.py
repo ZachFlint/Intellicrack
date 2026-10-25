@@ -2,15 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for SystemTab audit7 findings F-0022 and F-0023.
+"""Tests for the SystemTab warnings on unattached actions and bridge errors.
 
-Validates the user-visible behaviour introduced when:
+Validates the user-visible behaviour when:
 
-* No process is attached and the operator clicks Query Mitigations, GUI
-  Resources, or Job Info — F-0022 ensures the action surfaces a
-  ``QMessageBox.warning`` rather than silently failing.
-* The bridge call raises an error — F-0023 ensures the error path shows a
-  ``QMessageBox.warning`` with action-specific text rather than only logging.
+* No process is attached and the operator clicks Query Mitigations, GUI Resources, or Job Info.
+  The action must surface a ``QMessageBox.warning`` rather than silently failing.
+* The bridge call raises an error. The error path must show a ``QMessageBox.warning`` with
+  action-specific text rather than only logging.
 """
 
 from __future__ import annotations
@@ -232,7 +231,7 @@ def _capture_callbacks(
 
 @pytest.mark.usefixtures("qapp")
 class TestUnattachedPidGuards:
-    """F-0022: pid-dependent actions must surface a warning when no PID is attached."""
+    """Actions that depend on a PID must surface a warning when no PID is attached."""
 
     def test_refresh_mitigations_unattached_shows_warning(
         self,
@@ -325,7 +324,7 @@ class TestUnattachedPidGuards:
 
 @pytest.mark.usefixtures("qapp")
 class TestErrorPathsSurfaceToUser:
-    """F-0023: error callbacks must show a QMessageBox.warning, not just log."""
+    """Error callbacks must show a QMessageBox.warning, not just log."""
 
     def test_refresh_mitigations_error_shows_warning(
         self,

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for audit4 B5 — ModulesTab F-0004 (filter wiring) and F-0024 (error callbacks).
+"""Tests for ModulesTab filter wiring and error callbacks.
 
 Validates that:
 
@@ -103,7 +103,7 @@ def _hidden_count(tab: ModulesTab) -> int:
 
 
 class TestFilterWiring:
-    """Verify F-0004 — _mod_filter is connected and filters the tree correctly."""
+    """Verify _mod_filter is connected and filters the tree correctly."""
 
     def test_filter_hides_non_matching_rows(self, tab: ModulesTab) -> None:
         """Typing 'kernel' hides rows whose name does not contain 'kernel'.
@@ -144,7 +144,7 @@ class TestFilterWiring:
 
 
 class TestErrorCallbacks:
-    """Verify F-0024 — refresh methods surface bridge errors via on_error callback."""
+    """Verify refresh methods surface bridge errors via on_error callback."""
 
     @staticmethod
     def _make_error_capturer(

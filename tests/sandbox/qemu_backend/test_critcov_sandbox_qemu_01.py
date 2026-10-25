@@ -2041,9 +2041,6 @@ def test_port_search_refuses_a_run_that_another_sandbox_has_reserved() -> None:
     claim collides with the first claim's reservation on every attempt and ends in the documented
     ``SandboxError``. The port itself stays bindable the whole time, which is what tells this failure
     apart from the unbindable-candidate one tested above.
-
-    Falsifiable: without the reservation check the second claim succeeds and hands the same port to two
-    sandboxes, so ``pytest.raises`` fails.
     """
     probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:

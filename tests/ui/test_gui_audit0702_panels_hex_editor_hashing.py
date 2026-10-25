@@ -3,18 +3,16 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for GUI audit finding H5 in the hex editor hashing mixin.
+"""Gate for the hex editor hashing mixin's background document calls.
 
-H5 -- ``_on_calculate_hash``, ``_on_hash_selection``, ``_on_verify_pe_checksum``
-and ``_on_repair_pe_checksum`` used to call the hexcore document's hash and
-PE-checksum methods directly on the Qt GUI thread. Hashing a large binary, or
-scanning/repairing its PE checksum, therefore blocked the entire application
-for the duration of the native call, with no busy indicator and no way to
-cancel.
+``_on_calculate_hash``, ``_on_hash_selection``, ``_on_verify_pe_checksum`` and ``_on_repair_pe_checksum`` must not call the
+hexcore document's hash and PE-checksum methods directly on the Qt GUI thread. Hashing a large binary, or scanning or
+repairing its PE checksum, would block the entire application for the duration of the native call, with no busy
+indicator and no way to cancel.
 
-The fix routes every one of those document calls through a background
+Every one of those document calls is routed through a background
 ``GenericCallableWorker`` QThread (``HashingMixin._spawn_hex_worker``) and
-only mutates the result label from the ``call_finished``/``call_error``
+the result label is mutated only from the ``call_finished``/``call_error``
 slots that Qt marshals back onto the GUI thread.
 
 Each test below drives the real ``HashingMixin`` slot through a small
@@ -35,10 +33,9 @@ itself:
   thread (proves the worker's ``pyqtSignal`` marshalled the result instead
   of the label being touched from the background thread).
 
-Pre-fix, every one of these assertions is false: the call blocks for the
-full sleep duration, the label never shows a placeholder, the document
-method's recorded thread identity equals the GUI thread's, and the mixin
-has no ``_hash_worker``/``_pe_checksum_worker`` attribute at all (so
+Without the worker dispatch, every one of these assertions would be false: the call would block for the
+full sleep duration, the label would never show a placeholder, the document method's recorded thread identity would equal
+the GUI thread's, and the mixin would have no ``_hash_worker``/``_pe_checksum_worker`` attribute at all (so
 ``isinstance(worker, GenericCallableWorker)`` fails outright).
 """
 
@@ -310,16 +307,16 @@ def _answer_yes(*_args: object, **_kwargs: object) -> QMessageBox.StandardButton
 
 
 def test_h5_calculate_hash_offloads_to_worker_thread(qtbot: QtBot) -> None:
-    """H5: ``_on_calculate_hash`` must run ``document.compute_hash`` off the GUI thread.
+    """``_on_calculate_hash`` must run ``document.compute_hash`` off the GUI thread.
 
     Drives the real slot with a document whose ``compute_hash`` sleeps for
-    ``_DOC_SLEEP_S``. Pre-fix, the slot called ``document.compute_hash``
+    ``_DOC_SLEEP_S``. If the slot called ``document.compute_hash``
     inline: this call would then block for the full sleep duration, the
     label would never show a "Computing..." placeholder, the document would
     record the GUI thread's own identity as the caller, and there would be
     no ``_hash_worker`` attribute to type-check as a
-    ``GenericCallableWorker``. Each of those four checks fails pre-fix and
-    passes post-fix.
+    ``GenericCallableWorker``. Each of those four checks fails against that code and
+    passes with the worker dispatch.
 
     Args:
         qtbot: pytest-qt bot fixture used to wait on the worker's completion
@@ -362,10 +359,10 @@ def test_h5_calculate_hash_offloads_to_worker_thread(qtbot: QtBot) -> None:
 
 
 def test_h5_hash_selection_offloads_to_worker_thread(qtbot: QtBot) -> None:
-    """H5: ``_on_hash_selection`` must run ``document.compute_hash_range`` off the GUI thread.
+    """``_on_hash_selection`` must run ``document.compute_hash_range`` off the GUI thread.
 
     Mirrors ``test_h5_calculate_hash_offloads_to_worker_thread`` for the
-    selection-hashing slot. Pre-fix this slot called
+    selection-hashing slot. This slot must not call
     ``document.compute_hash_range`` inline, so it would block for the full
     sleep duration and the recorded calling thread would be the GUI thread.
 
@@ -408,9 +405,9 @@ def test_h5_hash_selection_offloads_to_worker_thread(qtbot: QtBot) -> None:
 
 
 def test_h5_verify_pe_checksum_offloads_to_worker_thread(qtbot: QtBot) -> None:
-    """H5: ``_on_verify_pe_checksum`` must run ``document.verify_pe_checksum`` off the GUI thread.
+    """``_on_verify_pe_checksum`` must run ``document.verify_pe_checksum`` off the GUI thread.
 
-    Pre-fix this slot called ``document.verify_pe_checksum`` inline, so
+    This slot must not call ``document.verify_pe_checksum`` inline, since
     the call would block the caller for the sleep duration, the status
     label would never show a "Verifying..." placeholder, and the recorded
     calling thread would equal the GUI thread's identity.
@@ -455,12 +452,12 @@ def test_h5_repair_pe_checksum_offloads_to_worker_thread(
     qtbot: QtBot,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """H5: ``_on_repair_pe_checksum`` must run repair and post-repair verify off the GUI thread.
+    """``_on_repair_pe_checksum`` must run repair and post-repair verify off the GUI thread.
 
-    Pre-fix this slot called ``document.repair_pe_checksum`` and the
+    This slot must not call ``document.repair_pe_checksum`` and the
     subsequent ``document.verify_pe_checksum`` inline, blocking the caller
     for two sleep durations combined and recording the GUI thread's own
-    identity for both calls. The fix chains two background workers
+    identity for both calls. It chains two background workers
     (repair, then verify) and only ever touches the status label from
     their ``call_finished`` callbacks.
 

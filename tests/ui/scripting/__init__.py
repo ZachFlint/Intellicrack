@@ -3,4 +3,4 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 UI panels remediation tests."""
+"""Tests for the scripting panels."""

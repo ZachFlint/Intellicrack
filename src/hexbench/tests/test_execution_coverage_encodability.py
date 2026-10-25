@@ -5,15 +5,13 @@
 
 """``require_encodable`` must itself be able to fail when the codec cannot encode a value.
 
-The check it replaced, ``self.require(bool(json.dumps(result.value)), ...)``,
-could never turn red: ``json.dumps`` never returns a falsy string for a value
+A bare check of ``bool(json.dumps(result.value))`` could never turn red: ``json.dumps`` never returns a falsy string for a value
 it *can* encode, and raises rather than returning anything for a value it
-*cannot* -- so the assertion's condition was always true whenever it was
-reached, and a genuinely unencodable value would instead escape as a bare,
-unattributed ``TypeError``. These tests drive ``require_encodable`` with a
+*cannot*. The condition would be true whenever it was reached, and a genuinely
+unencodable value would escape as a bare, unattributed ``TypeError``. These tests drive ``require_encodable`` with a
 real unencodable Python object and check that the failure it produces is an
-``AssertionError`` naming both the operation and the offending type, not the
-raw ``TypeError`` the old check could never turn into anything better.
+``AssertionError`` naming both the operation and the offending type, not a raw
+``TypeError``.
 """
 
 from __future__ import annotations

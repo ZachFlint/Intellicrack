@@ -39,7 +39,7 @@ _MAX_PREVIEW_ICONS: int = 20
 
 # SVG-only icon keys: loading SVG icons via QIcon is stable on all platforms.
 # PNG icons are listed in ICON_MAP but QIcon(png_path) triggers a Qt internal
-# crash in this test environment (image-format plugin initialisation race
+# crash in this test environment (image-format plugin initialization race
 # during pytest teardown). Tests that call get_icon() or get_pixmap() MUST
 # use only SVG-backed keys; PNG icon presence is verified via icon_exists().
 _SVG_ICON_KEYS: frozenset[str] = frozenset(name for name, filename in ICON_MAP.items() if str(filename).endswith(".svg"))
@@ -66,9 +66,8 @@ _MAX_SVG_BATCH: int = 20
 # derived from the production code.
 _SVG_NAMESPACE: str = "http://www.w3.org/2000/svg"
 
-# All 71 Intellicrack SVG icons use a 24x24 viewBox.  This is the design
-# constraint documented at creation time and confirmed by direct XML inspection
-# of every file in assets/icons (run python3 over the tree to regenerate).
+# All 71 Intellicrack SVG icons use a 24x24 viewBox, the design constraint for the icon set.
+# Confirmed by direct XML inspection of every file in assets/icons.
 _EXPECTED_VIEWBOX: str = "0 0 24 24"
 _EXPECTED_SVG_WIDTH: str = "24"
 _EXPECTED_SVG_HEIGHT: str = "24"
@@ -154,7 +153,7 @@ class TestIconLoading:
 
         Calling QIcon() on a PNG path triggers a Qt internal crash during
         pytest teardown in this test environment (image-format plugin
-        initialisation race). This test validates PNG icon presence via
+        initialization race). This test validates PNG icon presence via
         icon_exists(), which performs a filesystem check without loading
         the image into a QIcon/QPixmap renderer.
 
@@ -332,7 +331,7 @@ class TestApplicationIconStructure:
 
     IconManager.get_app_icon() loads icon.ico via QIcon(path) which triggers
     a Qt process crash (exit 127) during pytest teardown on Windows, for the
-    same reason as PNG icon loading: the image-format plugin initialisation
+    same reason as PNG icon loading: the image-format plugin initialization
     race in the Qt teardown sequence.  Tests here validate the icon file
     presence and the cache key contract without invoking the pixel decoder.
     """
@@ -447,8 +446,7 @@ class TestFallbackIcons:
         chosen name is independently verified to be absent from ICON_MAP (so
         _load_icon falls back to ``<name>.svg`` which does not exist) and absent
         from UNICODE_FALLBACK (so _create_fallback_icon returns ``QIcon()``).
-        The spec-mandated outcome is therefore a null QIcon, which the original
-        type-only assertion could never catch.
+        The expected outcome is therefore a null QIcon.
 
         This complements test_no_fallback_icon_returns_null_qicon (which calls
         _create_fallback_icon directly): this one exercises the full public
@@ -682,7 +680,7 @@ class TestIconIntegrity:
 
 
 class TestAllMappedIconsLoad:
-    """Genuine falsifiability gate for the full ICON_MAP asset corpus.
+    """Gate for the full ICON_MAP asset corpus.
 
     Each test in this class would go red if:
     - An SVG file is deleted, truncated, or replaced with a corrupt file.
@@ -760,7 +758,7 @@ class TestAllMappedIconsLoad:
         The namespace 'http://www.w3.org/2000/svg' is required for a
         standards-compliant SVG.  Qt's SVG renderer requires a properly
         namespaced root element.  If the namespace is stripped (e.g. by a
-        minimiser that incorrectly removes it) the icon will fail to render.
+        minimizer that incorrectly removes it) the icon will fail to render.
         The expected URI is the independently-known W3C constant.
         """
         icons_dir = get_assets_path() / "icons"

@@ -362,8 +362,7 @@ async def test_thinking_request_omits_temperature_but_keeps_thinking(
 ) -> None:
     """Thinking-enabled chat() sends the thinking block and no temperature.
 
-    The old-style thinking path used to pin ``temperature=1.0``; the wire
-    body must now carry the ``thinking`` config and an inflated
+    The wire body carries the ``thinking`` config and an inflated
     ``max_tokens`` while sending no sampling params at all.
     """
     provider = await _connected_provider(recording_server)

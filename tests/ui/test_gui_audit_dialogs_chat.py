@@ -2,13 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for GUI audit finding: chat auto-scroll lag.
+"""Tests for chat auto-scroll lag.
 
-``ChatPanel._scroll_to_bottom`` set the scrollbar to ``maximum()`` synchronously
-right after inserting a new message bubble, before the layout had recomputed
-the scrollbar's maximum, so the newest bubble could be left partially
-off-screen. The fix defers the scroll to the next GUI event-loop iteration via
-``QTimer.singleShot(0, ...)`` so the layout is up to date when the scroll runs.
+``ChatPanel._scroll_to_bottom`` must not set the scrollbar to ``maximum()`` synchronously right after inserting a new message
+bubble, since the layout may not yet have recomputed the scrollbar's maximum, which can leave the newest bubble partially
+off-screen. The scroll is deferred to the next GUI event-loop iteration via ``QTimer.singleShot(0, ...)`` so the layout is up
+to date when the scroll runs.
 """
 
 from __future__ import annotations

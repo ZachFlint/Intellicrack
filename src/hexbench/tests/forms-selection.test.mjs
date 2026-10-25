@@ -54,7 +54,7 @@ check(
   `forms.js read as only ${formsSource.length} characters`,
 );
 
-/* --------------------------------------------------------------- finding #2 */
+/* --------------------------------------------------------------- caret defaults */
 
 const defaultForBody = extractBlock(formsSource, /function defaultFor\(operation, parameter, context\) \{/).full;
 const caretParamBlock = extractBlock(defaultForBody, /if \(CARET_PARAMETERS\.has\(parameter\.name\) && parameter\.kind === 'int'\) \{/).full;
@@ -71,7 +71,7 @@ check(
   'the no-selection fallback to context.caret is gone from the CARET_PARAMETERS default',
 );
 
-/* -------------------------------------------------------------- finding #11 */
+/* -------------------------------------------------------------- byte range editor */
 
 const intPairBody = extractBlock(formsSource, /function intPairEditor\(parameter, context, initial\) \{/).full;
 const byteRangeBlock = extractBlock(intPairBody, /if \(parameter\.name === 'byte_range'\) \{/).full;
@@ -88,7 +88,7 @@ check(
   'the no-selection fallback (caret + selection length) is gone from the byte_range button',
 );
 
-/* -------------------------------------------------------- findings #1 and #2 */
+/* -------------------------------------------------------- bytes editor */
 
 const bytesEditorBody = extractBlock(formsSource, /function bytesEditor\(parameter, context, initial\) \{/).full;
 

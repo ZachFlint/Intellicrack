@@ -10,9 +10,9 @@ sizes before it reads a header, a patch source too large to hold in memory --
 while only a few sectors of it carry data. Extending a file with
 :meth:`io.IOBase.truncate` leaves a hole on the filesystems Linux and macOS
 use, but NTFS allocates every cluster of the extension unless the file was
-first marked sparse. Every such fixture therefore cost its full size in real
+first marked sparse. Without that, every such fixture would cost its full size in real
 disk on Windows, and pytest keeps each test's directory until the session
-ends, so one run held tens of gigabytes and exhausted the CI runner's disk.
+ends, so a single run could hold tens of gigabytes and exhaust the CI runner's disk.
 
 :func:`extend_sparse` marks the file sparse on Windows before extending it, so
 the extension is a hole everywhere, and :func:`allocated_bytes` reports what a

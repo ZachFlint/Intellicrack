@@ -2,13 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit7 F-0001: ``SandboxManager.create()`` deadlock.
+"""Tests that ``SandboxManager.create()`` evicts at capacity without deadlock.
 
-The original defect: when the manager reached ``_max_instances`` running
-sandboxes, the eviction branch inside :meth:`SandboxManager.create` called the
-public :meth:`SandboxManager.destroy` while still holding the manager's
-``asyncio.Lock``. Since :class:`asyncio.Lock` is non-reentrant, ``destroy``
-would block forever trying to re-acquire it, hanging ``create()`` indefinitely.
+When the manager reaches ``_max_instances`` running sandboxes, the eviction
+branch inside :meth:`SandboxManager.create` must not call the public
+:meth:`SandboxManager.destroy` while holding the manager's ``asyncio.Lock``.
+Since :class:`asyncio.Lock` is non-reentrant, ``destroy`` would block forever
+trying to re-acquire it, hanging ``create()`` indefinitely.
 
 These tests exercise the eviction path through the real ``create()`` method
 and assert that:
@@ -160,11 +160,10 @@ async def _fill_manager_to_capacity(
 async def test_create_eviction_does_not_deadlock() -> None:
     """Capacity eviction inside ``create`` must complete without deadlock.
 
-    Before the fix, ``create`` acquired ``self._lock`` and then awaited
-    ``self.destroy(...)``, which tried to re-acquire the same non-reentrant
-    lock and hung forever. This test fills the manager, then issues one more
-    ``create`` under :func:`asyncio.wait_for` with a short timeout. A timeout
-    here proves the deadlock is present; a clean return proves it is fixed.
+    Awaiting ``self.destroy(...)`` while holding ``self._lock`` would hang
+    forever on the non-reentrant lock. This test fills the manager, then issues
+    one more ``create`` under :func:`asyncio.wait_for` with a short timeout. A
+    timeout here proves a deadlock; a clean return proves there is none.
     """
     manager = manager_module.SandboxManager(max_instances=_MAX_INSTANCES)
     created = await _fill_manager_to_capacity(manager, _MAX_INSTANCES)
@@ -190,7 +189,7 @@ async def test_create_eviction_does_not_deadlock() -> None:
 async def test_create_eviction_invokes_sandbox_stop() -> None:
     """Eviction must call ``sandbox.stop()`` on the evicted instance exactly once.
 
-    This guards against a regression where the deadlock fix bypasses teardown:
+    This guards against eviction bypassing teardown:
     if ``_destroy_locked`` were skipped, the evicted instance's sandbox would
     leak resources. Counting ``stop_calls`` on the fake sandbox verifies the
     real teardown path ran.

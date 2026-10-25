@@ -5,18 +5,14 @@
 """Gate: importing a bridge, the core or the providers package loads no provider SDK, PyTorch or Transformers.
 
 ``intellicrack.core.config`` reads the provider ids, so every bridge and the
-whole of ``intellicrack.core`` import the providers package. That package once
-imported every provider with it. Each provider module imports its SDK, and the
-local Transformers provider imports PyTorch and Transformers: a fresh
-interpreter loaded some 5,500 modules and took about seventeen seconds on a
-workstation before it could import one bridge, on a loaded CI runner the
-first-import gates ran past their two-minute limit, and
-``python -m intellicrack --version`` ran past thirty seconds.
+whole of ``intellicrack.core`` import the providers package. Each provider
+module imports its SDK, and the local Transformers provider imports PyTorch and
+Transformers, so importing the package must not load them eagerly.
 
-Every name the package exports is now resolved on first use. These gates start
+Every name the package exports is resolved on first use. These gates start
 real interpreters whose first import is the module under test and require the
 SDK-backed submodules, and their libraries, to be absent afterwards; and they
-hold the lazy exports to behaving like the eager ones did -- same objects, same
+hold the lazy exports to behaving like eager ones -- same objects, same
 public names, same error for a name the package does not export.
 """
 

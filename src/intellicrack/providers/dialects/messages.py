@@ -168,7 +168,7 @@ class MessagesAdapter(DialectAdapter):
     ) -> list[dict[str, Any]]:
         """Describe every tool function as an Anthropic tool definition.
 
-        Without tool search this is the historical shape exactly: one
+        Without tool search this is exactly the plain shape: one
         ``{"name", "description", "input_schema"}`` entry per function, in
         input order.
 

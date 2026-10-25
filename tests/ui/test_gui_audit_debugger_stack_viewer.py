@@ -2,16 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""GUI-audit regression gates for :mod:`intellicrack.ui.panels.stack_viewer`.
+"""Gates for :mod:`intellicrack.ui.panels.stack_viewer` refresh dispatch and in-flight guard.
 
-Finding M1: ``StackViewerPanel.refresh`` fetched stack frames with the
-blocking ``run_bridge_coroutine`` helper while being driven from a 500ms
-GUI-thread ``QTimer``. That blocked the Qt event loop on every tick. The fixed
-panel dispatches the bridge round-trip through the off-GUI-thread async worker
-``run_bridge_coroutine_logged`` and guards against overlapping refreshes.
+``StackViewerPanel.refresh`` must not fetch stack frames with the blocking ``run_bridge_coroutine`` helper while being driven from
+a 500ms GUI-thread ``QTimer``, which would block the Qt event loop on every tick. The panel dispatches the bridge round-trip through
+the off-GUI-thread async worker ``run_bridge_coroutine_logged`` and guards against overlapping refreshes.
 
-These tests fail against the pre-fix code because the pre-fix ``refresh``
-called the blocking helper and never touched the async worker.
+These tests fail against code where ``refresh``
+calls the blocking helper and never touches the async worker.
 """
 
 from __future__ import annotations
@@ -75,7 +73,7 @@ class _CoroStackSource(X64DbgStackSource):
 
 @pytest.fixture
 def panel(qapp: QApplication) -> Iterator[StackViewerPanel]:
-    """Create a StackViewerPanel for GUI-audit tests.
+    """Create a StackViewerPanel for these tests.
 
     Args:
         qapp: Session QApplication fixture ensuring Qt is initialised.
@@ -90,10 +88,10 @@ def panel(qapp: QApplication) -> Iterator[StackViewerPanel]:
 
 
 def test_m1_refresh_dispatches_async_worker_not_blocking(panel: StackViewerPanel, monkeypatch: pytest.MonkeyPatch) -> None:
-    """M1: refresh dispatches via the async worker, not the blocking helper.
+    """Refresh dispatches via the async worker, not the blocking helper.
 
-    Pre-fix ``refresh`` called ``run_bridge_coroutine`` (blocking) on the GUI
-    thread. Post-fix it calls ``run_bridge_coroutine_logged`` (off-thread).
+    ``refresh`` must not call ``run_bridge_coroutine`` (blocking) on the GUI
+    thread. It calls ``run_bridge_coroutine_logged`` (off-thread).
 
     Args:
         panel: The StackViewerPanel under test.
@@ -135,10 +133,10 @@ def test_m1_refresh_dispatches_async_worker_not_blocking(panel: StackViewerPanel
 
 
 def test_m1_overlapping_refresh_skipped_while_in_flight(panel: StackViewerPanel, monkeypatch: pytest.MonkeyPatch) -> None:
-    """M1: a second refresh is skipped while one is already in flight.
+    """A second refresh is skipped while one is already in flight.
 
     The fake worker never completes the in-flight call, so the second refresh
-    must be skipped. Pre-fix there was no in-flight guard.
+    must be skipped. Without an in-flight guard it would not be.
 
     Args:
         panel: The StackViewerPanel under test.
@@ -171,7 +169,7 @@ def test_m1_overlapping_refresh_skipped_while_in_flight(panel: StackViewerPanel,
 
 
 def test_m1_refresh_redispatches_after_completion(panel: StackViewerPanel, monkeypatch: pytest.MonkeyPatch) -> None:
-    """M1: refresh dispatches again once the previous round-trip completes.
+    """Refresh dispatches again once the previous round-trip completes.
 
     The fake worker invokes the success callback with a real empty raw stack,
     clearing the in-flight guard so the next refresh dispatches.

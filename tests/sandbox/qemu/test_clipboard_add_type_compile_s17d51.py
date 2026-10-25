@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D51: the clipboard collector's embedded C# must compile.
+"""The clipboard collector's embedded C# must compile.
 
 Measured live: the first log line ``clipboard_monitor.ps1`` writes on every
 run is ``init.add_type_failed``, carrying the real CodeDom compiler diagnostic

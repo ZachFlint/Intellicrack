@@ -3,21 +3,19 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave 2d error-branch gates for ``NamedPipeClient`` IPC.
+"""Error-branch gates for ``NamedPipeClient`` IPC.
 
-Targets the NO COVERAGE operations identified in
-``audit/test-coverage-audit/section-01-bridge-framework.md``, section 1.5:
+Targets these operations, which had no coverage:
 
-- GAP-06: ``connect()`` already-connected no-op
-- GAP-07: ``send_command()`` ``_read_failure`` pre-send guard
-- GAP-08: ``_send_message`` oversized payload enforcement
-- GAP-09: ``_read_message`` malformed JSON / invalid length / non-dict payload
-- GAP-11: ``_reader_loop`` response-missing-id and no-pending-waiter diagnostics
+- ``connect()`` already-connected no-op
+- ``send_command()`` ``_read_failure`` pre-send guard
+- ``_send_message`` oversized payload enforcement
+- ``_read_message`` malformed JSON / invalid length / non-dict payload
+- ``_reader_loop`` response-missing-id and no-pending-waiter diagnostics
 
 Every test drives the real ``NamedPipeClient`` over an in-memory ``_FakePipe``
 transport that replaces the four synchronous Win32 I/O boundaries with
-in-process byte buffers mirroring the framed-message wire protocol. No
-production source file is modified. No function under test is patched,
+in-process byte buffers mirroring the framed-message wire protocol. No function under test is patched,
 mocked, or called via ``MagicMock``. The Win32 boundary substitutions are
 instance-attribute overwrites via ``setattr``; all async orchestration in
 ``named_pipe_client.py`` runs unmodified.
@@ -317,15 +315,13 @@ async def connected_client(fake_pipe: _FakePipe) -> AsyncIterator[NamedPipeClien
         await client.close()
 
 
-# ---------------------------------------------------------------------------
-# GAP-06: connect() already-connected no-op
-# ---------------------------------------------------------------------------
+# connect() already-connected no-op
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(sys.platform != "win32", reason=_WINDOWS_CONNECT_REASON)
 async def test_connect_already_connected_is_noop(fake_pipe: _FakePipe) -> None:
-    """Second ``connect()`` on an already-connected client is a silent no-op (GAP-06).
+    """Second ``connect()`` on an already-connected client is a silent no-op.
 
     Concrete mutation caught: removing ``if self._handle is not None: return``
     from ``connect()`` would cause a second call to invoke ``_open_handle``
@@ -369,9 +365,7 @@ async def test_connect_already_connected_is_noop(fake_pipe: _FakePipe) -> None:
     await client.close()
 
 
-# ---------------------------------------------------------------------------
-# GAP-07: send_command() _read_failure pre-send guard
-# ---------------------------------------------------------------------------
+# send_command() _read_failure pre-send guard
 
 
 @pytest.mark.asyncio
@@ -379,7 +373,7 @@ async def test_connect_already_connected_is_noop(fake_pipe: _FakePipe) -> None:
 async def test_send_command_raises_when_read_failure_is_set(
     connected_client: NamedPipeClient,
 ) -> None:
-    """``send_command()`` raises ``ToolError`` immediately when ``_read_failure`` is set (GAP-07).
+    """``send_command()`` raises ``ToolError`` immediately when ``_read_failure`` is set.
 
     Concrete mutation caught: removing ``if self._read_failure is not None: raise``
     from ``send_command()`` would allow it to allocate a request id and await a
@@ -396,14 +390,12 @@ async def test_send_command_raises_when_read_failure_is_set(
         await connected_client.send_command("probe")
 
 
-# ---------------------------------------------------------------------------
-# GAP-08: _send_message oversized payload enforcement
-# ---------------------------------------------------------------------------
+# _send_message oversized payload enforcement
 
 
 @pytest.mark.asyncio
 async def test_send_message_oversized_raises_tool_error(fake_pipe: _FakePipe) -> None:
-    """``_send_message`` raises ``ToolError`` when payload exceeds ``max_message_size`` (GAP-08).
+    """``_send_message`` raises ``ToolError`` when payload exceeds ``max_message_size``.
 
     Concrete mutation caught: removing ``if len(data) > self._config.max_message_size``
     from ``_send_message`` would allow arbitrarily large frames to be written to
@@ -422,14 +414,12 @@ async def test_send_message_oversized_raises_tool_error(fake_pipe: _FakePipe) ->
     setattr(client, "_handle", None)
 
 
-# ---------------------------------------------------------------------------
-# GAP-09a: _read_message invalid length-prefix (length == 0)
-# ---------------------------------------------------------------------------
+# _read_message invalid length-prefix (length == 0)
 
 
 @pytest.mark.asyncio
 async def test_read_message_zero_length_raises_tool_error(fake_pipe: _FakePipe) -> None:
-    """``_read_message`` raises ``ToolError`` for a zero-value length prefix (GAP-09).
+    """``_read_message`` raises ``ToolError`` for a zero-value length prefix.
 
     Concrete mutation caught: removing ``length <= 0 or`` from the guard
     ``if length <= 0 or length > self._config.max_message_size`` would silently
@@ -450,14 +440,12 @@ async def test_read_message_zero_length_raises_tool_error(fake_pipe: _FakePipe) 
     setattr(client, "_handle", None)
 
 
-# ---------------------------------------------------------------------------
-# GAP-09a': _read_message invalid length-prefix (length > max_message_size)
-# ---------------------------------------------------------------------------
+# _read_message invalid length-prefix (length > max_message_size)
 
 
 @pytest.mark.asyncio
 async def test_read_message_excess_length_raises_tool_error(fake_pipe: _FakePipe) -> None:
-    """``_read_message`` raises ``ToolError`` when the length prefix exceeds ``max_message_size`` (GAP-09).
+    """``_read_message`` raises ``ToolError`` when the length prefix exceeds ``max_message_size``.
 
     Concrete mutation caught: removing ``or length > self._config.max_message_size``
     from the length guard would allow the client to attempt reading an unbounded
@@ -478,14 +466,12 @@ async def test_read_message_excess_length_raises_tool_error(fake_pipe: _FakePipe
     setattr(client, "_handle", None)
 
 
-# ---------------------------------------------------------------------------
-# GAP-09b: _read_message malformed JSON body
-# ---------------------------------------------------------------------------
+# _read_message malformed JSON body
 
 
 @pytest.mark.asyncio
 async def test_read_message_malformed_json_raises_tool_error(fake_pipe: _FakePipe) -> None:
-    """``_read_message`` raises ``ToolError`` for a non-JSON body (GAP-09).
+    """``_read_message`` raises ``ToolError`` for a non-JSON body.
 
     Concrete mutation caught: removing the ``except json.JSONDecodeError``
     handler in ``_read_message`` would let ``JSONDecodeError`` propagate
@@ -507,14 +493,12 @@ async def test_read_message_malformed_json_raises_tool_error(fake_pipe: _FakePip
     setattr(client, "_handle", None)
 
 
-# ---------------------------------------------------------------------------
-# GAP-09c: _read_message non-dict JSON payload (e.g. JSON array)
-# ---------------------------------------------------------------------------
+# _read_message non-dict JSON payload (e.g. JSON array)
 
 
 @pytest.mark.asyncio
 async def test_read_message_non_dict_payload_raises_tool_error(fake_pipe: _FakePipe) -> None:
-    """``_read_message`` raises ``ToolError`` when the decoded payload is not a ``dict`` (GAP-09).
+    """``_read_message`` raises ``ToolError`` when the decoded payload is not a ``dict``.
 
     Concrete mutation caught: removing ``if not isinstance(payload, dict)``
     from ``_read_message`` would allow a JSON array payload to be returned as
@@ -536,9 +520,7 @@ async def test_read_message_non_dict_payload_raises_tool_error(fake_pipe: _FakeP
     setattr(client, "_handle", None)
 
 
-# ---------------------------------------------------------------------------
-# GAP-11a: _reader_loop response missing integer id → warning log
-# ---------------------------------------------------------------------------
+# _reader_loop response missing integer id → warning log
 
 
 @pytest.mark.asyncio
@@ -547,7 +529,7 @@ async def test_reader_loop_response_missing_id_logs_warning(
     fake_pipe: _FakePipe,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``_reader_loop`` emits ``pipe_response_missing_id`` warning for a frame without an int id (GAP-11).
+    """``_reader_loop`` emits ``pipe_response_missing_id`` warning for a frame without an int id.
 
     Concrete mutation caught: removing the ``if not isinstance(request_id_obj, int)``
     guard and its warning log from ``_reader_loop`` would silently discard the
@@ -583,9 +565,7 @@ async def test_reader_loop_response_missing_id_logs_warning(
     assert matching[0][2].get("msg_type") == "response"
 
 
-# ---------------------------------------------------------------------------
-# GAP-11b: _reader_loop response with no pending waiter → debug log
-# ---------------------------------------------------------------------------
+# _reader_loop response with no pending waiter → debug log
 
 
 @pytest.mark.asyncio
@@ -594,7 +574,7 @@ async def test_reader_loop_no_waiter_for_id_logs_debug(
     fake_pipe: _FakePipe,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``_reader_loop`` emits ``pipe_response_no_waiter`` debug log for an orphaned response id (GAP-11).
+    """``_reader_loop`` emits ``pipe_response_no_waiter`` debug log for an orphaned response id.
 
     Concrete mutation caught: removing the ``_logger.debug("pipe_response_no_waiter", ...)``
     call from ``_reader_loop`` would silently discard responses whose sender

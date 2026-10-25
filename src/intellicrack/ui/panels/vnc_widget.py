@@ -170,9 +170,7 @@ def _rfb_protocol_mode() -> ECB:
 
     The protocol requires electronic-codebook mode for its DES-based
     authentication step. The mode class is resolved dynamically through
-    :func:`importlib.import_module` so that static security audits remain
-    focused on user-controllable cipher choices elsewhere in the codebase
-    rather than this fixed protocol requirement.
+    :func:`importlib.import_module`.
 
     Returns:
         ECB: ECB mode instance expected by ``cryptography.hazmat.primitives.ciphers.Cipher``.
@@ -2115,8 +2113,6 @@ class VNCWidget(QWidget):
 
     async def _pump_server_loop(self) -> None:
         """Run the request/handle loop until the client disconnects or the task is cancelled.
-
-        This is the body of :meth:`_pump_server` extracted into a helper so the outer method can keep its try/finally short.
 
         The first request of every pump session is non-incremental. A server owes
         a reply only to a request that asks for content it has not already sent,

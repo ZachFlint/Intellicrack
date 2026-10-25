@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for defect A7 (S14-D19 residual): the System Function Call result row.
+"""Layout gate for the System Function Call result row.
 
 ``SystemFunctionCallControls.__init__`` builds its "Value / errno / GetLastError"
 result row (``frida_instrumentation_tab.py``, ``result_row``) from three
@@ -19,7 +19,7 @@ reserved, so later layout passes compress the value labels below their
 ~6px inter-widget spacing left unchanged, so the clipped value runs directly
 into the next caption with no visible separation.
 
-The fix reserves a sensible minimum width on each of the three dynamic value
+The row reserves a sensible minimum width on each of the three dynamic value
 labels (sized from a representative worst-case sample via
 ``QFontMetrics.horizontalAdvance``, the same reservation strategy
 ``make_control_row`` itself relies on for the row1/row2 controls that never
@@ -58,7 +58,7 @@ _MIN_READABLE_GAP_PX: Final[int] = 10
 """Minimum acceptable horizontal gap between a value label and the next caption.
 
 Set above the ~6px default ``QHBoxLayout`` inter-widget spacing so the check
-is falsifiable against the pre-fix row, which never adds spacing beyond that
+is falsifiable against a row that never adds spacing beyond that
 Qt default regardless of content or width.
 """
 
@@ -182,7 +182,7 @@ def _build_narrow_populated_controls(qapp: QApplication) -> SystemFunctionCallCo
 
 
 class TestSystemFunctionCallResultRowLayout:
-    """A7 / S14-D19 gate: populated result-row labels must stay readable and separated when docked narrow."""
+    """Populated result-row labels must stay readable and separated when docked narrow."""
 
     @staticmethod
     def test_populated_value_labels_do_not_intersect(qapp: QApplication) -> None:
@@ -220,12 +220,11 @@ class TestSystemFunctionCallResultRowLayout:
     def test_populated_value_labels_keep_their_natural_width(qapp: QApplication) -> None:
         """A populated result value label must not render narrower than its own text needs.
 
-        Regression test for A7: before the fix, ``make_control_row`` froze
-        the result row's minimum width from the *empty* value labels at
-        construction time, so once real call-result text landed, later
-        layout passes compressed the value labels below their ``sizeHint``,
-        clipping the text outright with no ellipsis. Falsifiable: reverting
-        the reserved-width fix reproduces exactly that compression.
+        ``make_control_row`` must not freeze the result row's minimum width from the
+        *empty* value labels at construction time. Once real call-result text lands,
+        later layout passes would otherwise compress the value labels below their
+        ``sizeHint``, clipping the text outright with no ellipsis. Falsifiable: removing
+        the reserved-width reservation reproduces exactly that compression.
 
         Args:
             qapp: Session QApplication fixture.
@@ -250,13 +249,12 @@ class TestSystemFunctionCallResultRowLayout:
     def test_populated_result_groups_keep_a_readable_gap(qapp: QApplication) -> None:
         """Each value label must keep a real visual gap before the next caption, not just the bare layout default.
 
-        Regression test for A7: before the fix, the three caption+value
-        groups in ``result_row`` had no spacing beyond the ~6px default
-        ``QHBoxLayout`` inter-widget gap, so a compressed value label's
-        clipped text ran directly into the next caption with no visible
-        separation. Falsifiable: reverting the explicit ``addSpacing()``
-        calls between groups leaves every value-label-to-next-caption gap at
-        the bare ~6px default, below ``_MIN_READABLE_GAP_PX``.
+        The three caption+value groups in ``result_row`` must not rely on the ~6px
+        default ``QHBoxLayout`` inter-widget gap alone, or a compressed value label's
+        clipped text runs directly into the next caption with no visible separation.
+        Falsifiable: removing the explicit ``addSpacing()`` calls between groups leaves
+        every value-label-to-next-caption gap at the bare ~6px default, below
+        ``_MIN_READABLE_GAP_PX``.
 
         Args:
             qapp: Session QApplication fixture.

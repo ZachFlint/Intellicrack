@@ -2,23 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D12 (dialog half): the sandbox test must build the same document.
+"""Gates for the sandbox test building the same document as the backend.
 
-``SandboxTestWorker._generate_wsb_config`` used to concatenate the ``.wsb``
-document by hand::
+``SandboxTestWorker._generate_wsb_config`` must not build the ``.wsb`` document by hand. A document
+built that way must not emit ``<VGpu>`` where the backend emits ``<vGPU>``: Windows Sandbox accepts
+only one spelling, so the dialog's test configuration must describe the same machine the product
+creates. A host folder must not be interpolated raw either, because a perfectly legal Windows
+directory name containing ``&`` produces a document no XML parser will accept.
 
-    config_lines = ["<Configuration>", "  <VGpu>Enable</VGpu>"]
-    ...
-    (f"      <HostFolder>{shared_path}</HostFolder>",)
-
-Two defects followed from that. It emitted ``<VGpu>``, while the backend - the
-generator verified to boot a real guest - emits ``<vGPU>``; Windows Sandbox
-accepts only one spelling, so the dialog's test configuration did not describe
-the same machine the product actually creates. And the host folder was
-interpolated raw, so a perfectly legal Windows directory name containing ``&``
-produced a document no XML parser will accept.
-
-Both call sites now build through :func:`intellicrack.sandbox.wsb.build_wsb_configuration`.
+Both call sites build through :func:`intellicrack.sandbox.wsb.build_wsb_configuration`.
 These gates drive the real worker method and cross-check it against the real
 backend method.
 """

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D59: a snapshot operation must report what QEMU actually did.
+r"""A snapshot operation must report what QEMU actually did.
 
 Every snapshot operation went out as QMP ``human-monitor-command`` and was
 judged by ``QMPResponse.success``. That is not a judgement at all: QEMU answers
@@ -14,7 +14,7 @@ monitor's output text, error included. Measured against QEMU 10.1.0:
 * a successful ``savevm`` -> ``{"return": ""}``
 
 Same reply shape, so a refused restore and a completed one were indistinguishable
-to every caller. Measured live through the GUI path on 2026-08-07:
+to every caller. Measured live through the GUI path:
 ``snapshot_create`` returned in **0.0 s** on a running 8192 MB guest, which no
 real ``savevm`` can do, ``snapshot_list`` then reported ``count: 0``, and
 ``snapshot_restore`` returned success for a snapshot that had never existed.

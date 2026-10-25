@@ -2,19 +2,19 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-02 GUI audit findings in ``tool_config``.
+"""Gates for ``tool_config`` mid-download transport errors, status label wrapping and tooltips.
 
-Each test targets one audit finding and fails against the pre-fix behaviour:
+Each test targets one defect and fails against the defective behaviour:
 
-* ``TestH30MidDownloadTransportError`` (H30): ``ToolInstallWorker._install_tool``
+* ``TestH30MidDownloadTransportError``: ``ToolInstallWorker._install_tool``
   must catch the full ``httpx.HTTPError`` hierarchy around ``_stream_download``,
   not just ``httpx.TimeoutException``/``httpx.ConnectError``, so a connection
   reset mid-download still emits ``install_finished`` instead of hanging the
   install worker forever.
-* ``TestM67StatusLabelWordWrap`` (M67): ``ToolSettingsWidget.status_label``
+* ``TestM67StatusLabelWordWrap``: ``ToolSettingsWidget.status_label``
   must have word wrap enabled and actually wrap long check-failure messages
   within the fixed-width settings panel instead of overflowing it.
-* ``TestM68StatusListTooltips`` (M68): ``ToolStatusDialog``'s status list items
+* ``TestM68StatusListTooltips``: ``ToolStatusDialog``'s status list items
   must carry a tooltip with the full status/error message so text elided by
   the fixed-width left panel remains readable.
 
@@ -109,7 +109,7 @@ def _install_mid_download_transport_error(monkeypatch: pytest.MonkeyPatch, error
 
 @pytest.mark.usefixtures("qapp")
 class TestH30MidDownloadTransportError:
-    """H30: httpx transport errors mid-stream must not hang the install worker."""
+    """httpx transport errors mid-stream must not hang the install worker."""
 
     @staticmethod
     def test_h30_read_error_mid_download_emits_failure_signal(
@@ -119,13 +119,10 @@ class TestH30MidDownloadTransportError:
     ) -> None:
         """A ``ReadError`` raised mid-stream must emit ``install_finished(False, ...)``.
 
-        Pre-fix, ``_install_tool`` only caught ``httpx.TimeoutException`` and
-        ``httpx.ConnectError`` around ``_stream_download()``. ``httpx.ReadError``
-        is a distinct ``httpx.HTTPError`` subclass raised from inside
-        ``response.iter_bytes()`` on a dropped connection; it escaped both that
-        except block and ``run()``'s outer ``(RuntimeError, OSError, ValueError)``
-        handler, so ``install_finished`` was never emitted and ``qtbot.waitSignal``
-        below would time out and fail this test.
+        ``_install_tool`` must not catch only ``httpx.TimeoutException`` and ``httpx.ConnectError`` around ``_stream_download()``.
+        ``httpx.ReadError`` is a distinct ``httpx.HTTPError`` subclass raised from inside ``response.iter_bytes()`` on a dropped connection.
+        Without a broader handler it would escape both that except block and ``run()``'s outer ``(RuntimeError, OSError, ValueError)``
+        handler, so ``install_finished`` would never be emitted and ``qtbot.waitSignal`` below would time out and fail this test.
 
         Args:
             qtbot: pytest-qt bot fixture used to wait on Qt signals.
@@ -157,11 +154,11 @@ class TestH30MidDownloadTransportError:
         """A ``RemoteProtocolError`` raised mid-stream is also caught and reported.
 
         Exercises a second ``httpx.HTTPError`` subclass outside the
-        ``TimeoutException``/``ConnectError`` pair to confirm the fix added a
+        ``TimeoutException``/``ConnectError`` pair to confirm a
         broad ``except httpx.HTTPError`` fallback -- matching the sibling
         ``_fetch_github_release`` handler -- rather than special-casing a single
-        exception type. Pre-fix this error also escapes ``run()`` uncaught and
-        ``install_finished`` is never emitted, so ``qtbot.waitSignal`` below
+        exception type. Without the fallback this error would also escape ``run()`` uncaught and
+        ``install_finished`` would never be emitted, so ``qtbot.waitSignal`` below
         would time out and fail this test.
 
         Args:
@@ -209,13 +206,13 @@ def _make_settings_widget(qapp: QApplication, tmp_path: Path) -> ToolSettingsWid
 
 
 class TestM67StatusLabelWordWrap:
-    """M67: status_label must wrap long text instead of overflowing the panel."""
+    """``status_label`` must wrap long text instead of overflowing the panel."""
 
     @staticmethod
     def test_m67_status_label_has_word_wrap_enabled(qapp: QApplication, tmp_path: Path) -> None:
         """``status_label`` must have word wrap enabled.
 
-        Pre-fix the label had no ``setWordWrap(True)`` call, so its
+        The label must call ``setWordWrap(True)``, otherwise its
         ``minimumSizeHint`` demanded the full single-line width of any status
         message regardless of the panel's fixed width.
 
@@ -239,12 +236,9 @@ class TestM67StatusLabelWordWrap:
         Reproduces the fixed-width settings panel (``_SPLIT_RIGHT`` = 570px)
         and drives the real ``_on_status_checked`` slot with a long
         ``Check failed: ...``-style message, matching what
-        ``ToolStatusCheckWorker`` sends for an ``OSError``. Pre-fix (word wrap
-        disabled), the label's minimum size hint equals the full single-line
-        text width, which is far wider than the panel and gets clipped at its
-        edge instead of wrapping. Post-fix the label's minimum size hint stays
-        small and its rendered geometry wraps to multiple lines within the
-        panel width.
+        ``ToolStatusCheckWorker`` sends for an ``OSError``. Without word wrap, the label's minimum size hint equals the full
+        single-line text width, which is far wider than the panel and gets clipped at its edge instead of wrapping. With word
+        wrap, the label's minimum size hint stays small and its rendered geometry wraps to multiple lines within the panel width.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -314,15 +308,15 @@ def _make_status_dialog(qapp: QApplication, statuses: dict[str, ToolStatusEntry]
 
 
 class TestM68StatusListTooltips:
-    """M68: status list rows must carry a tooltip with the full message text."""
+    """Status list rows must carry a tooltip with the full message text."""
 
     @staticmethod
     def test_m68_populate_from_prefetched_sets_full_message_tooltips(qapp: QApplication) -> None:
         """Every prefetched row's tooltip must carry the complete, unelided message.
 
         The list widget's default delegate elides overflowing text
-        (``Qt.TextElideMode.ElideRight``); pre-fix, no ``setToolTip()`` call
-        existed anywhere on these items, so a truncated row had no way for the
+        (``Qt.TextElideMode.ElideRight``), so the items must carry a ``setToolTip()`` call
+        for the complete text, otherwise a truncated row has no way for the
         user to read the rest of a long diagnostic message.
 
         Args:
@@ -359,8 +353,8 @@ class TestM68StatusListTooltips:
     def test_m68_status_unknown_fallback_item_has_tooltip(qapp: QApplication) -> None:
         """A tool missing from the prefetched snapshot still gets a tooltip.
 
-        Covers the ``"Status unknown"`` fallback branch, which pre-fix also
-        had no ``setToolTip()`` call.
+        Covers the ``"Status unknown"`` fallback branch, which must also
+        call ``setToolTip()``.
 
         Args:
             qapp: The shared QApplication fixture.

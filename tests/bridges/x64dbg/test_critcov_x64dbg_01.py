@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Coverage-gap tests for the x64dbg bridge that run without x64dbg installed.
+"""Coverage tests for the x64dbg bridge that run without x64dbg installed.
 
 Every expectation is derived independently of the bridge: the Win32 contracts of
 ``ReadProcessMemory`` / ``VirtualAlloc`` / ``OpenProcess`` / ``IsWow64Process``,

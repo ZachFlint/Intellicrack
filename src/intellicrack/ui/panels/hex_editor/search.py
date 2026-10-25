@@ -223,7 +223,7 @@ def execute_text_search(
 
     Returns:
         list[tuple[int, int]]: List of ``(offset, length)`` match tuples.
-            An empty list is returned for unrecognised modes.
+            An empty list is returned for unrecognized modes.
     """
     doc: Any = document
     if mode == "Hex":

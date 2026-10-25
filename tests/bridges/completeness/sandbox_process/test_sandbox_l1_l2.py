@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge-completeness remediation gates for the SANDBOX slice (L1 + L2).
 
-Covers agent-10 (``audit/bridge-completeness/agent-10-sandbox-process.md``)
-and its verifier (``audit/bridge-completeness/verify/agent-10-sandbox-process-verification.md``):
+Covers:
 
 * S14 -- ``SandboxBridge.stop`` (VM pause) is a real QMP-backed method (L1)
   and is now registered as ``sandbox.stop`` and dispatchable via
@@ -331,8 +330,8 @@ class TestSandboxDispatchL2:
     async def test_execute_tool_call_dispatches_stop_to_real_method(self, tmp_path: Path) -> None:
         """execute_tool_call('sandbox', 'stop', ...) reaches the real bridge method and is not capability-blocked.
 
-        This is the direct regression gate for the confirmed capability-gate
-        bug: reverting ``tools.py``'s ``TOOL_CAPABILITY_MAP.get(function_name)
+        This is the direct regression gate for the capability-gate bug: reverting ``tools.py``'s
+        ``TOOL_CAPABILITY_MAP.get(function_name)
         or TOOL_CAPABILITY_MAP.get(attr_name)`` back to a bare
         ``TOOL_CAPABILITY_MAP.get(attr_name)`` lookup resolves ``"stop"`` to
         the generic ``"debugging"`` capability. ``SandboxBridge`` never sets

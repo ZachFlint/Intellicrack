@@ -2,13 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for GUI audit finding M8: ThreadsTab combo selection reset.
+"""Regression tests for ThreadsTab combo selection reset.
 
 The auto-refresh timer rebuilds the Registers/Stack/Exceptions/Fibers/TLS
 thread selectors every three seconds by calling
-``ThreadsTab.update_thread_list``. The pre-fix implementation cleared and
-repopulated each combo unconditionally, which reset the user's chosen thread
-back to index 0 on every refresh. These tests pin the fixed contract:
+``ThreadsTab.update_thread_list``. It must not clear and repopulate each combo
+unconditionally, because that resets the chosen thread to index 0 on every refresh.
+These tests pin the contract:
 
 * When the previously selected thread is still present after a refresh, its
   selection is preserved (``currentData`` is unchanged).
@@ -78,13 +78,13 @@ def threads_tab(qapp: QApplication) -> Iterator[ThreadsTab]:
 
 
 class TestM8ThreadComboSelectionPreserved:
-    """M8: repopulating thread selectors must not clobber the user's selection."""
+    """Repopulating thread selectors must not clobber the user's selection."""
 
     def test_selection_preserved_when_thread_still_present(self, threads_tab: ThreadsTab) -> None:
         """Selecting TID 4000 then refreshing with 4000 still present keeps it selected.
 
-        This is the core regression: the pre-fix ``update_thread_list`` reset
-        the combo to index 0 (TID 4000) on every call. Here we deliberately
+        The defect to catch is ``update_thread_list`` resetting the combo to index 0 (TID 4000)
+        on every call. Here we deliberately
         select the *non-default* TID 4001 so a reset-to-index-0 bug is
         distinguishable from correct preservation.
 

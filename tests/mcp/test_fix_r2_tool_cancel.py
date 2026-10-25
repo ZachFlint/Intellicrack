@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 34: the operator sees a running MCP call's progress and can cancel that one call while the turn goes on.
+"""The operator sees a running MCP call's progress and can cancel that one call while the turn goes on.
 
 The gates run the real agent loop against a loopback model endpoint that asks for one call to a real ``MCPServer``'s slow tool, on
 2026-07-28 over stdio and 2025-11-25 over SSE. The orchestrator reports the call's progress under the call's id; cancelling the call

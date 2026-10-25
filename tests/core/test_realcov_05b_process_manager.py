@@ -5,15 +5,14 @@
 
 """Real-process coverage for :mod:`intellicrack.core.process_manager`.
 
-Audit shard 05 listed several ProcessManager public surfaces as untested. The
+Several ProcessManager public surfaces lack real-process coverage. The
 existing ``tests/test_core/test_process_manager.py`` and
 ``tests/core/test_process_manager_leaks.py`` already exercise ``register``,
 ``unregister``, ``run_tracked``/``run_tracked_async``, ``cleanup_all_async``,
 ``terminate_process`` (process-tree teardown), external-PID handling, and signal
 handler installation against real OS subprocesses.
 
-This module adds the remaining real-process coverage the audit called out and
-that the existing suites do not reach:
+This module adds the real-process coverage that the existing suites do not reach:
 
 * the public static :meth:`ProcessManager.terminate_tree` killing a real
   parent/child process tree;

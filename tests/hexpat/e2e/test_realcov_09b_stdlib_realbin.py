@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-binary coverage for HexPat ``stdlib`` builtins (audit shard 09b).
+"""Real-binary coverage for HexPat ``stdlib`` builtins.
 
 These tests drive the real :class:`BuiltinFunctions` implementations against
 genuine compiled binaries (System32 PE DLLs/EXEs and the committed ELF corpus

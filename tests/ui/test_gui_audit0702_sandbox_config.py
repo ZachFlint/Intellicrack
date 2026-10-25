@@ -3,22 +3,22 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for the GUI audit findings in ``sandbox_config``.
+"""Gates for ``sandbox_config`` background stop dispatch, worker ownership and status label layout.
 
-Each test targets one audit finding and fails against the pre-fix behaviour:
+Each test targets one defect and fails against the defective behaviour:
 
-* ``TestH18StopViaManagerAsyncDispatch`` (H18): stopping a manager-backed
+* ``TestH18StopViaManagerAsyncDispatch``: stopping a manager-backed
   sandbox must dispatch ``SandboxManager.destroy_all`` to the persistent
   background bridge loop instead of blocking the GUI thread on
   ``asyncio.run``, and must still finish (success or failure) via the
   ``sandbox_stopped`` signal.
-* ``TestM15SandboxTestWorkerLifecycle`` (M15): ``SandboxTestWorker`` must be
+* ``TestM15SandboxTestWorkerLifecycle``: ``SandboxTestWorker`` must be
   given the dialog as its Qt parent, and closing or rejecting the dialog
   while a test is in flight must cancel the worker and its subprocess.
-* ``TestM16TaskkillDispatchOffGuiThread`` (M16): the PID-based and
+* ``TestM16TaskkillDispatchOffGuiThread``: the PID-based and
   name-based ``taskkill`` stop paths must dispatch ``ProcessManager.run_tracked``
   to a background worker thread instead of blocking the GUI thread.
-* ``TestM66StatusLabelWrapping`` (M66): the availability status label must
+* ``TestM66StatusLabelWrapping``: the availability status label must
   word-wrap, expose a tooltip mirroring its text, and claim layout stretch
   instead of being compressed by a trailing stretch item.
 
@@ -108,7 +108,7 @@ class _SlowSandboxManager:
     Exercises the exact coroutine shape ``SandboxMonitorWidget._stop_via_manager``
     dispatches (an ``async def destroy_all(self)`` coroutine) using a real
     ``asyncio.sleep`` delay in place of VM/container teardown latency, so the
-    async-dispatch fix can be measured against genuine wall-clock and
+    async dispatch can be measured against genuine wall-clock and
     ordering behaviour instead of a mocked awaitable.
 
     Attributes:
@@ -148,17 +148,17 @@ class _SlowSandboxManager:
 
 @pytest.mark.usefixtures("qapp")
 class TestH18StopViaManagerAsyncDispatch:
-    """H18: sandbox teardown via ``SandboxManager`` must not block the GUI thread."""
+    """Sandbox teardown via ``SandboxManager`` must not block the GUI thread."""
 
     @staticmethod
     def test_h18_manager_stop_does_not_block_gui_thread_and_completes_via_signal(qtbot: QtBot) -> None:
         """``_stop_sandbox`` must return before teardown finishes and emit ``sandbox_stopped`` only once it does.
 
-        Pre-fix, ``_stop_via_manager`` called ``asyncio.run(manager.destroy_all())``
+        ``_stop_via_manager`` must not call ``asyncio.run(manager.destroy_all())``
         directly on the calling thread, so ``_stop_sandbox`` would not return
         until the full simulated teardown latency had elapsed, and
         ``sandbox_stopped`` would already have fired by the time this method
-        returned. Post-fix the coroutine is dispatched to the persistent
+        returned. The coroutine is dispatched to the persistent
         background bridge loop via ``run_bridge_coroutine_async``, so this
         call must return promptly with ``sandbox_stopped`` not yet emitted.
 
@@ -190,12 +190,10 @@ class TestH18StopViaManagerAsyncDispatch:
     def test_h18_manager_stop_failure_still_dispatches_asynchronously_and_finishes(qtbot: QtBot) -> None:
         """A failing teardown must not block the GUI thread and must still finish via the error callback.
 
-        Pre-fix, an exception raised out of ``asyncio.run(manager.destroy_all())``
-        was caught inline on the GUI thread and the function returned early;
-        the trailing ``set_running``/``sandbox_stopped`` calls that lived in
-        the (then-synchronous) caller were skipped on that path. Post-fix the
-        failure is delivered asynchronously to ``_on_manager_stop_failed``,
-        which still runs the stop-finish sequence and surfaces the error text.
+        An exception raised out of ``asyncio.run(manager.destroy_all())`` must not be caught inline on the GUI thread, because the
+        function would return early and skip the trailing ``set_running``/``sandbox_stopped`` calls on that path.
+        The failure must instead be delivered asynchronously to ``_on_manager_stop_failed``, which still runs the stop-finish
+        sequence and surfaces the error text.
 
         Args:
             qtbot: pytest-qt bot used to pump the event loop for the async callback.
@@ -218,14 +216,14 @@ class TestH18StopViaManagerAsyncDispatch:
 
 
 class TestM15SandboxTestWorkerLifecycle:
-    """M15: the sandbox test worker must be owned by the dialog and cancelled on dialog teardown."""
+    """The sandbox test worker must be owned by the dialog and cancelled on dialog teardown."""
 
     @staticmethod
     def test_m15_test_worker_is_owned_by_the_dialog(qapp: QApplication, qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
         """``_test_sandbox`` must construct ``SandboxTestWorker`` owned by the dialog, without a Qt parent.
 
-        Pre-fix ``SandboxTestWorker(...)`` was constructed with no owner at
-        all, so the worker survived purely on the Python attribute reference
+        ``SandboxTestWorker(...)`` must record an owner, since otherwise the
+        worker would survive purely on the Python attribute reference
         and could not be found for draining when the dialog went away. It
         must not be the dialog's Qt child either: Qt destroys a parent's
         children with it, and destroying a ``QThread`` whose OS thread is
@@ -277,10 +275,10 @@ class TestM15SandboxTestWorkerLifecycle:
     ) -> None:
         """Closing the dialog (title-bar X / ``closeEvent``) must cancel the in-flight test worker.
 
-        Pre-fix ``SandboxConfigDialog`` had no ``closeEvent`` override, so
+        ``SandboxConfigDialog`` must override ``closeEvent``, since otherwise
         ``QDialog.closeEvent`` simply accepted the close and the worker
         thread plus its already-launched subprocess kept running detached
-        from the now-closed dialog. Post-fix ``closeEvent`` calls
+        from the now-closed dialog. ``closeEvent`` must call
         ``_cancel_test``, which must stop the worker's thread and terminate
         its real subprocess well before that process's own 30 second sleep
         would end on its own.
@@ -344,9 +342,9 @@ class TestM15SandboxTestWorkerLifecycle:
     ) -> None:
         """Rejecting the dialog (Cancel button / Escape / ``reject``) must cancel the in-flight test worker.
 
-        Pre-fix ``button_box.rejected.connect(self.reject)`` routed straight
+        ``button_box.rejected.connect(self.reject)`` must not route straight
         to the unmodified ``QDialog.reject`` (also what Escape triggers),
-        which never touched ``_test_worker``. Post-fix ``reject`` calls
+        which never touches ``_test_worker``. ``reject`` must call
         ``_cancel_test`` first, which must stop the worker's thread and
         terminate its real subprocess.
 
@@ -402,16 +400,16 @@ class TestM15SandboxTestWorkerLifecycle:
 @pytest.mark.usefixtures("qapp")
 @pytest.mark.skipif(sys.platform != "win32", reason="the sandbox stop runs taskkill only on Windows; elsewhere it sends SIGKILL directly")
 class TestM16TaskkillDispatchOffGuiThread:
-    """M16: PID/name-based sandbox stop must not block the GUI thread on ``taskkill``."""
+    """PID/name-based sandbox stop must not block the GUI thread on ``taskkill``."""
 
     @staticmethod
     def test_m16_pid_kill_dispatches_off_gui_thread(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
         """Stopping by PID must dispatch ``run_tracked`` to a worker thread, not the GUI thread.
 
-        Pre-fix ``_dispatch_pid_kill`` called ``ProcessManager.run_tracked``
+        ``_dispatch_pid_kill`` must not call ``ProcessManager.run_tracked``
         directly inside the GUI-thread click handler with a 10 second
         timeout, so the call blocked the caller for up to 10 seconds.
-        Post-fix the call is dispatched to a ``GenericCallableWorker``
+        The call is dispatched to a ``GenericCallableWorker``
         background QThread, so this call must return promptly and the
         callable must run on a different thread than the caller.
 
@@ -472,9 +470,9 @@ class TestM16TaskkillDispatchOffGuiThread:
     def test_m16_name_kill_dispatches_off_gui_thread(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
         """Stopping by process name must dispatch ``run_tracked`` to a worker thread, not the GUI thread.
 
-        Pre-fix ``_invoke_taskkill_by_name`` (called from ``_terminate_sandbox_by_name``)
-        called ``ProcessManager.run_tracked`` directly on the GUI thread with
-        a 10 second timeout. Post-fix the call is dispatched to a
+        ``_invoke_taskkill_by_name`` (called from ``_terminate_sandbox_by_name``) must not call
+        ``ProcessManager.run_tracked`` directly on the GUI thread with
+        a 10 second timeout. The call is dispatched to a
         ``GenericCallableWorker`` background QThread.
 
         Args:
@@ -531,16 +529,16 @@ class TestM16TaskkillDispatchOffGuiThread:
 
 
 class TestM66StatusLabelWrapping:
-    """M66: the availability status label must wrap, tooltip, and claim layout space."""
+    """The availability status label must wrap, tooltip, and claim layout space."""
 
     @staticmethod
     def test_m66_unavailable_reason_wraps_instead_of_being_clipped(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """A long unavailability reason must word-wrap and not be clipped to one line.
 
-        Pre-fix the label had no ``setWordWrap(True)`` and was followed by
-        ``status_layout.addStretch()``, so a long OS-error reason either
+        The label must call ``setWordWrap(True)`` and must not be followed by
+        ``status_layout.addStretch()``, since otherwise a long OS-error reason would either
         overran the dialog or was compressed to a single clipped line.
-        Post-fix the label wraps, so at a realistic column width the
+        The label wraps, so at a realistic column width the
         required rendering height for a long reason exceeds a single line.
 
         Args:
@@ -580,8 +578,8 @@ class TestM66StatusLabelWrapping:
     ) -> None:
         """Both availability states must set a tooltip mirroring the visible text.
 
-        Pre-fix the label had no tooltip at all, so a clipped or overflowing
-        reason had no fallback way for the user to read the full text.
+        The label must have a tooltip, since otherwise a clipped or overflowing
+        reason would have no fallback way for the user to read the full text.
 
         Args:
             qapp: Session QApplication fixture.
@@ -605,10 +603,10 @@ class TestM66StatusLabelWrapping:
     ) -> None:
         """The status label must own layout stretch instead of a trailing spacer owning it.
 
-        Pre-fix ``status_layout.addWidget(self._status_label)`` was followed
-        by ``status_layout.addStretch()``, giving all the stretch to the
+        ``status_layout.addWidget(self._status_label)`` must not be followed
+        by ``status_layout.addStretch()``, which would give all the stretch to the
         trailing spacer and leaving the label pinned to its unwrapped
-        ``sizeHint`` width inside the ``QHBoxLayout``. Post-fix the label
+        ``sizeHint`` width inside the ``QHBoxLayout``. The label
         itself is added with stretch factor ``1`` and there is no competing
         trailing stretch item.
 

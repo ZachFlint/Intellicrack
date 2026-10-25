@@ -3,30 +3,19 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GHIDRA-C real-gate suite — xrefs/refs/relocations/namespaces/symbols/memory-layout.
+"""Gates for xref, reference, relocation, namespace, symbol and memory-layout GhidraBridge methods.
 
-Scope: ``delete_reference``, ``get_relocations``, ``create_namespace``,
-``get_namespaces``, ``search_symbols``, ``get_calling_conventions``,
-``get_memory_map``, ``get_segments``.
+Scope: ``delete_reference``, ``get_relocations``, ``create_namespace``, ``get_namespaces``, ``search_symbols``, ``get_calling_conventions``, ``get_memory_map``, ``get_segments``.
 
-``get_xrefs_to``, ``get_xrefs_from``, and ``add_reference`` already carry
-real functional gates in ``test_ghidra_audit6.py`` (F-0022/F-0026/F-0020)
-and are therefore skipped here per the audit's REAL verdict.
+``get_xrefs_to``, ``get_xrefs_from`` and ``add_reference`` are gated elsewhere and are not repeated here.
 
 Every gate asserts:
-  1. The bridge emitted the expected Ghidra API framing (exec payload check).
-  2. The bridge parsed the canned remote result into the exact typed return
-     structure the fake's known values dictate.
+1. The bridge emitted the expected Ghidra API framing (exec payload check).
+2. The bridge parsed the canned remote result into the exact typed return structure the fake's known values dictate.
 
-The seam: ``_FakeGhidraRemote`` captures every snippet the bridge sends via
-``remote_exec`` in ``exec_calls`` and ``remote_eval`` in ``eval_calls``, and
-returns ``eval_response`` as the deserialized remote result.  This mirrors the
-``FakeGhidraBridge`` contract used in ``test_ghidra_audit6.py`` but is kept
-self-contained — no cross-file fixture imports.
+The seam: ``_FakeGhidraRemote`` captures every snippet the bridge sends via ``remote_exec`` in ``exec_calls`` and ``remote_eval`` in ``eval_calls``, and returns ``eval_response`` as the deserialized remote result. The double is self-contained and does not import fixtures from other test modules.
 
-``search_symbols`` is gated through ``_ExecutingGhidraRemote`` instead: it runs
-the emitted script against a Ghidra-shaped symbol table so the wildcard
-matching the script performs is checked by its results.
+``search_symbols`` is gated through ``_ExecutingGhidraRemote`` instead: it runs the emitted script against a Ghidra-shaped symbol table, so the wildcard matching the script performs is checked by its results.
 """
 
 from __future__ import annotations

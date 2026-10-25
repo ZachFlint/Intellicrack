@@ -6,7 +6,7 @@
 
 ``ProviderCredentials.timeout`` carries the timeout saved in Provider
 Settings. OpenAI, Grok and Anthropic build ``openai``/``anthropic`` SDK clients,
-and Google builds a ``google-genai`` client; each used to ignore the value.
+and Google builds a ``google-genai`` client; each must honor the value.
 These gates connect the real providers to a loopback server through the real
 SDKs and read the timeout the SDK actually announces on the wire:
 

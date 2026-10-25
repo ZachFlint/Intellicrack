@@ -3,37 +3,29 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit4 C6 regression tests for the hex editor hashing mixin.
+"""Regression tests for the hex editor hashing mixin.
 
-Covers the two findings shipped together in audit4 unit C6:
+Covers two behaviours:
 
-* **F-0003** -- ``HashingMixin._on_repair_pe_checksum`` must publish a
+* ``HashingMixin._on_repair_pe_checksum`` must publish a
   :meth:`HexDocumentState.notify_data_modified` event after the
   document write so observers (the hex viewport, the bridge layer,
   the AI tool registry) update instead of displaying the stale
   ``CheckSum`` value.
-* **F-0022** -- ``HashingMixin._on_custom_crc`` must offload the CRC
+* ``HashingMixin._on_custom_crc`` must offload the CRC
   computation onto a :class:`GenericCallableWorker` and stream the
   document in bounded chunks (mmap for file-backed documents, the
   document API otherwise) instead of slurping the full payload onto
   the UI thread.
 
-**Repair-flow gate (04-F1 / 04-F2):** earlier revisions used a
-``StubPeDocument`` whose ``repair_pe_checksum`` wrote a hardcoded
-magic constant (``0xC0FFEE42``) and whose ``verify_pe_checksum``
-always reported ``calculated=0xC0FFEE42`` so ``valid`` was trivially
-``True``.  The stub is now replaced by a real MS PE checksum
-implementation cross-validated against :func:`pefile.generate_checksum`
-so that breaking the repair logic causes the checksum-value assertion
-to go red.
+``StubPeDocument`` implements a real MS PE checksum cross-validated against
+:func:`pefile.generate_checksum`.
 
-**Production defect P-001 (FIXED):** ``HashingMixin._on_repair_pe_checksum``
-previously emitted ``notify_data_modified`` with a hard-coded offset ``0x58``
-regardless of where the ``CheckSum`` field actually lived.  It now derives the
-offset from ``e_lfanew`` (``_pe_checksum_field_offset``), so for a PE with
-``e_lfanew=0x40`` it correctly reports ``0x98``.  ``test_insert_hash_fires_notify``
-and ``test_repair_notifies_correct_bytes`` assert that derived offset and would
-go red if the constant-offset regression returned.
+``HashingMixin._on_repair_pe_checksum`` derives the ``notify_data_modified``
+offset from ``e_lfanew`` (``_pe_checksum_field_offset``) rather than using a
+hard-coded offset, so for a PE with ``e_lfanew=0x40`` it reports ``0x98``.
+``test_insert_hash_fires_notify`` and ``test_repair_notifies_correct_bytes``
+assert that derived offset.
 """
 
 from __future__ import annotations
@@ -62,18 +54,12 @@ if TYPE_CHECKING:
     from pytestqt.qtbot import QtBot
 
 
-# ---------------------------------------------------------------------------
 # CRC-32 parameters used throughout (standard zlib / PKZIP CRC-32)
-# ---------------------------------------------------------------------------
 
 _CRC32_WIDTH: int = 32
 _CRC32_POLY: int = 0x04C11DB7
 _CRC32_INIT: int = 0xFFFFFFFF
 _CRC32_XOR_OUT: int = 0xFFFFFFFF
-
-# ---------------------------------------------------------------------------
-# Minimal valid PE32 construction helpers
-# ---------------------------------------------------------------------------
 
 #: ``e_lfanew`` value used by the synthetic PE created in these tests.
 _E_LFANEW: int = 0x40
@@ -187,11 +173,6 @@ def _ms_pe_checksum(file_data: bytes, checksum_offset: int) -> int:
     return acc
 
 
-# ---------------------------------------------------------------------------
-# StubPeDocument: in-memory document with REAL PE checksum logic
-# ---------------------------------------------------------------------------
-
-
 class StubPeDocument:
     """In-memory document exposing the methods the hashing mixin uses.
 
@@ -200,7 +181,7 @@ class StubPeDocument:
     ``verify_pe_checksum``, ``length``, ``read`` and ``file_path``
     without needing the real Rust hexcore module loaded.
 
-    Unlike the earlier stub, ``repair_pe_checksum`` computes the actual
+    ``repair_pe_checksum`` computes the actual
     Microsoft PE checksum using :func:`_ms_pe_checksum` and writes it to the
     real checksum field offset derived from ``e_lfanew``.
     ``verify_pe_checksum`` then independently re-computes and compares.
@@ -323,11 +304,6 @@ class StubPeDocument:
         self._data[offset : offset + len(data)] = data
 
 
-# ---------------------------------------------------------------------------
-# HashingHarness: concrete HashingMixin consumer for tests
-# ---------------------------------------------------------------------------
-
-
 class HashingHarness(QWidget, HashingMixin):
     """Concrete ``HashingMixin`` consumer used by the regression tests.
 
@@ -393,11 +369,6 @@ class HashingHarness(QWidget, HashingMixin):
         return self._resolve_custom_crc_file_path()
 
 
-# ---------------------------------------------------------------------------
-# NotifyRecorder
-# ---------------------------------------------------------------------------
-
-
 class NotifyRecorder:
     """Capture every ``notify_*`` event emitted on a state holder."""
 
@@ -413,11 +384,6 @@ class NotifyRecorder:
             data: Payload dict supplied with the event.
         """
         self.events.append((event_type, dict(data)))
-
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 
 class _DialogCallSpy:
@@ -480,9 +446,7 @@ def message_box_yes_spy(monkeypatch: pytest.MonkeyPatch) -> _DialogCallSpy:
 
     Unlike :func:`message_box_yes` (used via ``usefixtures``), this fixture
     returns the :class:`_DialogCallSpy` so tests can assert that the dialog
-    was actually invoked.  If ``_on_repair_pe_checksum`` were refactored to
-    skip the confirmation prompt, ``spy.call_count`` would remain ``0`` and
-    the assertion would fail.
+    was actually invoked.
 
     Args:
         monkeypatch: pytest monkeypatch fixture used to patch the
@@ -503,9 +467,6 @@ def message_box_no(monkeypatch: pytest.MonkeyPatch) -> _DialogCallSpy:
 
     Tests using this fixture verify that a ``No`` answer from the user
     prevents ``_on_repair_pe_checksum`` from writing to the document.
-    If the production code were changed to skip the confirmation dialog,
-    ``repair_calls`` would become non-zero and the test using this fixture
-    would fail.
 
     Args:
         monkeypatch: pytest monkeypatch fixture used to patch the
@@ -520,17 +481,10 @@ def message_box_no(monkeypatch: pytest.MonkeyPatch) -> _DialogCallSpy:
     return spy
 
 
-# ---------------------------------------------------------------------------
-# TestStubPeDocumentChecksumLogic: verify the stub itself is a real oracle
-# ---------------------------------------------------------------------------
-
-
 class TestStubPeDocumentChecksumLogic:
     """Verify that the stub's PE checksum implementation matches pefile.
 
-    These tests validate the oracle used by the repair-gate tests.
-    If the stub's checksum algorithm diverges from pefile the repair
-    tests would be checking against an incorrect expected value.
+    These tests validate the oracle used by the repair tests.
     """
 
     @staticmethod
@@ -621,14 +575,9 @@ class TestStubPeDocumentChecksumLogic:
         assert info["calculated"] == expected
 
 
-# ---------------------------------------------------------------------------
-# TestRepairPeChecksumFiresNotify: F-0003 gate
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.usefixtures("qapp", "message_box_yes")
 class TestRepairPeChecksumFiresNotify:
-    """F-0003 -- ``_on_repair_pe_checksum`` must call ``notify_data_modified``.
+    """``_on_repair_pe_checksum`` must call ``notify_data_modified``.
 
     These tests use a minimal but valid PE32 image so the stub's real checksum
     algorithm runs on genuine PE structure rather than an arbitrary byte buffer.
@@ -714,8 +663,7 @@ class TestRepairPeChecksumFiresNotify:
         document (``_pe_checksum_field_offset``) to locate the ``CheckSum`` field
         rather than assuming a fixed constant.  For the minimal PE32 used here
         (``e_lfanew=0x40``) the correct offset is ``0x98``
-        (= :data:`_REAL_PE_CHECKSUM_OFFSET`).  This gate would go red if the code
-        regressed to a hard-coded offset (the original P-001 defect).
+        (= :data:`_REAL_PE_CHECKSUM_OFFSET`).
         """
         pe_bytes = _build_minimal_pe32()
         document = StubPeDocument(pe_bytes)
@@ -750,11 +698,9 @@ class TestRepairPeChecksumFiresNotify:
     ) -> None:
         """``_on_repair_pe_checksum`` must call ``QMessageBox.question`` exactly once.
 
-        This test would go red if the production code were changed to skip the
-        confirmation dialog (e.g., by removing the ``QMessageBox.question`` call
-        or bypassing it with an early return).  The spy counts every invocation of
-        the patched static method; a ``call_count`` of zero means the dialog was
-        never shown, which would let the repair run without user confirmation.
+        The spy counts every invocation of the patched static method; a
+        ``call_count`` of zero means the dialog was never shown, which would let
+        the repair run without user confirmation.
 
         Args:
             message_box_yes_spy: Patched ``QMessageBox.question`` returning ``Yes``
@@ -782,13 +728,9 @@ class TestRepairPeChecksumFiresNotify:
     ) -> None:
         """A ``No`` answer to the confirmation dialog must prevent the document write.
 
-        This is the primary falsifiability gate for the ``message_box_yes``
-        monkeypatch.  If ``_on_repair_pe_checksum`` were refactored to remove the
-        ``QMessageBox.question`` call entirely, the repair would proceed regardless
-        of the user's answer.  This test catches that regression: ``message_box_no``
-        patches the dialog to return ``No``, and the assertion on
-        ``document.repair_calls == 0`` would fail the moment the dialog gate is
-        removed from the production code.
+        The write must be gated on the dialog answer: with ``message_box_no``
+        patching the dialog to return ``No``, ``document.repair_calls`` must stay
+        ``0``.
 
         Args:
             message_box_no: Patched ``QMessageBox.question`` returning ``No``
@@ -811,11 +753,6 @@ class TestRepairPeChecksumFiresNotify:
             f"but repair_calls == {document.repair_calls}. "
             f"Production code must gate the write on QMessageBox.question returning Yes."
         )
-
-
-# ---------------------------------------------------------------------------
-# TestCustomCrcOffloaded: F-0022 gate
-# ---------------------------------------------------------------------------
 
 
 def _build_synthetic_payload(size: int) -> bytes:
@@ -896,7 +833,7 @@ def _configure_crc_dialog(dlg: CustomCrcDialog) -> None:
 
 @pytest.mark.usefixtures("qapp")
 class TestCustomCrcOffloaded:
-    """F-0022 -- ``_on_custom_crc`` must offload + stream the CRC."""
+    """``_on_custom_crc`` must offload + stream the CRC."""
 
     @staticmethod
     def test_custom_crc_offloaded(qtbot: QtBot, tmp_path: Path) -> None:
@@ -954,9 +891,8 @@ class TestCustomCrcOffloaded:
         """The streaming worker returns the exact reference CRC value.
 
         Computes the CRC via the offloaded streaming path and compares
-        the result against the bit-serial reference shared by the
-        dialog's old code path plus two direct invocations of the
-        streaming helper (mmap and document-chunk sources) so a
+        the result against the bit-serial reference plus two direct
+        invocations of the streaming helper (mmap and document-chunk sources) so a
         regression in any branch surfaces independently.
 
         Args:

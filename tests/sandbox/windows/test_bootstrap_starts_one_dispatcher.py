@@ -4,14 +4,14 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gate: the guest bootstrap leaves one dispatcher running, and a command runs once.
 
-The dispatcher was staged in the monitor folder, and ``start_monitors.cmd``
-starts every script in that folder. The bootstrap had already started the
-dispatcher itself, so the guest ran two copies. Each copy keeps its own record
-of the trigger files it has handled, so both took every command. Driven on a
-real pair of copies, about half of a batch of short commands executed twice,
-and for the rest the second copy truncated or locked the first one's output
-file or appended a second exit code to its result file, which the host then
-could not read as a number.
+``start_monitors.cmd`` starts every script in the monitor folder, so the
+dispatcher must not be staged there while the bootstrap also starts it itself:
+the guest would run two copies. Each copy keeps its own record of the trigger
+files it has handled, so both take every command. Driven on a real pair of
+copies, about half of a batch of short commands execute twice, and for the rest
+the second copy truncates or locks the first one's output file or appends a
+second exit code to its result file, which the host then cannot read as a
+number.
 
 Nothing here stands in for the guest side. The dispatcher and the bootstrap are
 the ones the backend stages, with the guest path pointed at a scratch directory
@@ -327,9 +327,6 @@ def observation(tmp_path_factory: pytest.TempPathFactory) -> _Observation:
 def test_the_bootstrap_leaves_exactly_one_dispatcher_running(observation: _Observation) -> None:
     """Once the bootstrap has returned, one process is running the dispatcher.
 
-    Falsifiable: with the dispatcher staged in the monitor folder there are two,
-    the bootstrap's own and the one the launcher started.
-
     Args:
         observation: Outcome of the single bootstrap run.
     """
@@ -355,10 +352,6 @@ def test_the_launcher_does_not_track_the_dispatcher(observation: _Observation) -
 
 def test_every_command_runs_once_and_returns_its_own_result(observation: _Observation) -> None:
     """Each command's body runs exactly once and its exit code and output come back intact.
-
-    Falsifiable: a second dispatcher takes the same trigger file, so the body
-    runs twice, or the output file is truncated or locked under the reader, or
-    the result file holds two exit codes and reads back as unknown.
 
     Args:
         observation: Outcome of the single bootstrap run.

@@ -2,18 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D31 and S17-D32: the Linux guest must fill two report tabs.
+"""The Linux guest must fill two report tabs.
 
 The Sandbox panel renders seventeen report tabs from the monitor logs the
 in-guest agent leaves in the shared folder. Two of them were permanently empty
 whenever the QEMU guest ran Linux:
 
-* **S17-D31, Network Activity.** :meth:`QEMUSandbox._collect_monitoring_logs`
+* **Network Activity.** :meth:`QEMUSandbox._collect_monitoring_logs`
   only ever reads ``network_activity.log``, and that file was written
   exclusively by the Windows PowerShell agent. The generated Linux agent wrote
   ``file_changes.log`` and ``process_activity.log`` and nothing else, so the tab
   had no rows to draw however much the guest talked to the network.
-* **S17-D32, Resources.** The same shape, for ``resource_monitor.log``: the
+* **Resources.** The same shape, for ``resource_monitor.log``: the
   bundled ``resource_monitor.ps1`` produced it on Windows and no Linux
   equivalent existed.
 
@@ -235,7 +235,7 @@ class _ReportReadingSandbox(QEMUSandbox):
     def use_workspace(self, temp_dir: Path, share: Path) -> None:
         """Point the sandbox at its working directory and its shared folder.
 
-        Since S17-D69 the guest writes its logs to its own disk - the share is
+        Since the guest writes its logs to its own disk - the share is
         read-only to it, because vvfat's write-back path aborts the machine -
         and the host pulls them into the working directory's ``collected``
         tree, which is where the reader looks.
@@ -594,7 +594,7 @@ def _by_endpoint(records: list[NetworkActivity]) -> dict[tuple[str, str, int], N
 
 
 class TestNetworkActivityIsCollectedOnLinux:
-    """S17-D31: the Linux agent must fill the Network Activity tab."""
+    """The Linux agent must fill the Network Activity tab."""
 
     @pytest.mark.asyncio
     async def test_kernel_socket_tables_reach_the_host_report(self, tmp_path: Path) -> None:
@@ -720,7 +720,7 @@ class TestNetworkActivityIsCollectedOnLinux:
 
 
 class TestResourceUsageIsCollectedOnLinux:
-    """S17-D32: the Linux agent must fill the Resources tab."""
+    """The Linux agent must fill the Resources tab."""
 
     @pytest.mark.asyncio
     async def test_two_proc_snapshots_become_a_parsed_resource_sample(self, tmp_path: Path) -> None:

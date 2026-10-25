@@ -3,4 +3,4 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit 5 u4 regression tests: hexpat-aux (F-0023, F-0024, F-0026, F-0028)."""
+"""Regression tests for the hexpat compiler and parser."""

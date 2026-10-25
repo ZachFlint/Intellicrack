@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge-completeness remediation gates for the SANDBOX panel controls (L3).
 
-Covers agent-10 (``audit/bridge-completeness/agent-10-sandbox-process.md``)
+Covers the sandbox
 gap S2: the sandbox VM/environment configuration controls (timeout,
 network-enabled, memory-limit) are wired into ``SandboxPanel._on_create`` and
 threaded through to ``SandboxBridge.create``.
@@ -177,7 +177,7 @@ def _call_config(panel: SandboxPanel) -> dict[str, object]:
 
 
 class TestSandboxConfigRowExistsL3:
-    """S2: the toolbar exposes real timeout/network/memory controls, not just the sandbox-type combo."""
+    """The toolbar exposes real timeout/network/memory controls, not just the sandbox-type combo."""
 
     def test_timeout_spin_has_expected_range_and_default(self, panel: SandboxPanel) -> None:
         """The timeout QSpinBox has the documented range and default value.
@@ -212,7 +212,7 @@ class TestSandboxConfigRowExistsL3:
 
 
 class TestSandboxCreateConfigWiringL3:
-    """S2: _on_create threads the real toolbar widget values into bridge.create as keyword arguments."""
+    """_on_create threads the real toolbar widget values into bridge.create as keyword arguments."""
 
     def test_on_create_passes_custom_config_values_to_bridge(
         self,
@@ -223,7 +223,7 @@ class TestSandboxCreateConfigWiringL3:
 
         Falsified by: reverting ``sandbox_panel.py``'s ``_on_create`` to call
         ``self._bridge.create(sandbox_type=sandbox_type)`` without threading
-        ``**config`` (the pre-remediation behaviour per audit finding S2)
+        ``**config`` (the behaviour a regression would restore)
         turns this red, since the mock would then be called with only
         ``sandbox_type`` and this test's keyword-argument assertion would fail.
 

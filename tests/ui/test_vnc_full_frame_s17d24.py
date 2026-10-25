@@ -3,23 +3,22 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for S17-D24 and S17-D27: the VM Display never receives a frame.
+"""Gates for the VM Display receiving a full frame over RFB.
 
-Two independent protocol defects each kept the sandbox VM Display black, and
-either one alone is enough to do it.
+Two independent protocol defects each keep the sandbox VM Display black, and either one alone is
+enough to do it.
 
-S17-D24 - RFC 6143 section 7.5.3 lets a VNC server answer an *incremental*
-FramebufferUpdateRequest with nothing at all when no part of the screen changed
-since the previous update. Only a *non-incremental* request obliges the server
-to transmit the full framebuffer. A client that never sends a non-incremental
-request therefore stays black forever in front of a guest sitting at a static
-console, which is what the pump did: it asked for ``incremental=True`` on every
-iteration including the very first one after the handshake.
+RFC 6143 section 7.5.3 lets a VNC server answer an *incremental* FramebufferUpdateRequest with
+nothing at all when no part of the screen changed since the previous update. Only a
+*non-incremental* request obliges the server to transmit the full framebuffer. A client that never
+sends a non-incremental request therefore stays black forever in front of a guest sitting at a
+static console. The pump must send a non-incremental request, including on the first iteration
+after the handshake.
 
-S17-D27 - RFC 6143 section 7.5.1 defines SetPixelFormat as the message-type byte
-0, three bytes of padding, then the sixteen-byte PIXEL_FORMAT. The client wrote
-the bare sixteen-byte format, so a server read its leading bits-per-pixel value
-as a client message type and mis-parsed every byte that followed.
+RFC 6143 section 7.5.1 defines SetPixelFormat as the message-type byte 0, three bytes of padding,
+then the sixteen-byte PIXEL_FORMAT. The client must write that full framing: a bare sixteen-byte
+format would be read by the server with its leading bits-per-pixel value taken as a client message
+type, mis-parsing every byte that followed.
 
 These tests drive the real :class:`~intellicrack.ui.panels.vnc_widget.VNCWidget`
 and its real ``RFBClient`` against a genuine asyncio TCP server speaking RFB 3.8
@@ -483,7 +482,7 @@ def static_screen_run(qapp: object) -> _DriveResult:
 
 
 class TestFirstUpdateRequestIsNonIncremental:
-    """S17-D24: the first FramebufferUpdateRequest after connecting must be full."""
+    """The first FramebufferUpdateRequest after connecting must be full."""
 
     @staticmethod
     def test_first_request_on_the_wire_is_non_incremental(static_screen_run: _DriveResult) -> None:
@@ -503,7 +502,7 @@ class TestFirstUpdateRequestIsNonIncremental:
 
 
 class TestStaticScreenServerDeliversAFrame:
-    """S17-D24: a server that only answers full requests must still fill the display."""
+    """A server that only answers full requests must still fill the display."""
 
     @staticmethod
     def test_server_transmits_a_framebuffer_update(static_screen_run: _DriveResult) -> None:
@@ -552,7 +551,7 @@ class TestStaticScreenServerDeliversAFrame:
 
 
 class TestSetPixelFormatIsAWellFormedMessage:
-    """S17-D27: the pixel format must be sent as a SetPixelFormat message, not raw."""
+    """The pixel format must be sent as a SetPixelFormat message, not raw."""
 
     @staticmethod
     def test_first_client_message_after_server_init_is_set_pixel_format(

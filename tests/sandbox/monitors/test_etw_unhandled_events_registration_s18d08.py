@@ -3,44 +3,36 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""S18-D08 gates for the ETW collectors' trace-source statements.
+"""Gates for the ETW collectors' trace-source statements.
 
-Two defects, one statement apart, kept every ETW collector from ever
-consuming an event.
+``api_trace.ps1`` and ``injection_monitor.ps1`` register a catch-all handler for
+events no parser claimed by reading ``$source.UnhandledEvents`` and calling
+``add_All`` on the result. ``UnhandledEvents`` is a .NET *event* declared on
+``Microsoft.Diagnostics.Tracing.TraceEventDispatcher``, not a parser property like
+``Dynamic``. PowerShell exposes events only as ``add_``/``remove_`` methods, so the
+member read yields ``$null`` and the call on it throws ``You cannot call a method
+on a null-valued expression``.
 
-``api_trace.ps1`` and ``injection_monitor.ps1`` register a catch-all
-handler for events no parser claimed, and both did it by reading
-``$source.UnhandledEvents`` and calling ``add_All`` on the result.
-``UnhandledEvents`` is a .NET *event* declared on
-``Microsoft.Diagnostics.Tracing.TraceEventDispatcher``, not a parser
-property like ``Dynamic``; PowerShell exposes events only as ``add_``/
-``remove_`` methods, so the member read always produced ``$null`` and the
-call on it always threw ``You cannot call a method on a null-valued
-expression``.
+All three ETW collectors, ``dll_monitor.ps1`` included, must pump with
+``$source.psbase.Process()``. PowerShell's adapted-member binder refuses a direct
+``$source.Process()`` call with ``the result type 'System.Boolean' ... is not
+compatible with the result type 'System.Object' expected by the call site``, on both
+PowerShell editions, with or without a handler registered. The failure is specific
+to the member name: the equally Boolean ``EnableProvider`` binds normally, and
+``$source.psbase.Process()`` runs and delivers.
 
-One statement later, all three collectors - ``dll_monitor.ps1`` too -
-pumped with ``$source.Process()``. PowerShell's adapted-member binder
-refuses that specific call with ``the result type 'System.Boolean' ... is
-not compatible with the result type 'System.Object' expected by the call
-site``, on both PowerShell editions, against both ``ETWTraceEventSource``
-and ``EventPipeEventSource``, with or without a handler registered. It is
-specific to the member name: the equally Boolean ``EnableProvider``
-binds normally, and ``$source.psbase.Process()`` runs and delivers.
+Without a working pump the API Calls and Injections tabs stay empty, and every record
+in ``dll_monitor.log`` comes from the WMI fallback.
 
-So the API Calls and Injections tabs were empty on every run, and every
-record in ``dll_monitor.log`` came from that collector's WMI fallback.
+The gates below execute the collectors' own ``$source`` statements, lifted verbatim
+from the production scripts and in source order, against a real
+``TraceEventDispatcher`` fed by a real event stream, and require events to actually
+arrive. The stream is a genuine ``.nettrace`` captured from a child ``pwsh`` through
+EventPipe, which needs no elevation and no ETW session, so the gates exercise the
+real member surface of the real TraceEvent assembly the collectors load in the guest.
 
-The gates below execute the collectors' own ``$source`` statements,
-lifted verbatim from the production scripts and in source order, against
-a real ``TraceEventDispatcher`` fed by a real event stream, and require
-events to actually arrive. The stream is a genuine ``.nettrace`` captured
-from a child ``pwsh`` through EventPipe, which needs no elevation and no
-ETW session, so the gates exercise the real member surface of the real
-TraceEvent assembly the collectors load in the guest.
-
-A final gate covers why the failure stayed undiagnosable: the catch-all
-around ``Invoke-ApiTrace`` reported only ``$_.Exception.Message``, which
-names neither the statement nor the line.
+A final gate requires the catch-all around ``Invoke-ApiTrace`` to report the innermost
+frame. Reporting only ``$_.Exception.Message`` names neither the statement nor the line.
 """
 
 from __future__ import annotations
@@ -221,7 +213,7 @@ def _build_registration_harness(
     """Write a harness that runs a collector's own ``$source`` statements.
 
     The harness asserts up front that ``$source.UnhandledEvents`` still
-    reads as ``$null``, which is the property that made the old
+    reads as ``$null``, which is the property that makes the
     registration form throw. Without that precondition the gate could go
     quietly vacuous if a future TraceEvent exposed the event as a
     readable member.
@@ -405,8 +397,8 @@ def test_api_trace_fatal_record_names_the_failing_statement(tmp_path: Path) -> N
     Faults the assembly lookup in a copy of the collector so a real
     unguarded exception escapes to the catch-all that reports stage
     ``session``, then requires the logged record to carry the innermost
-    frame - function, script and line - rather than the bare exception
-    text that made S18-D08 unlocatable.
+    frame - function, script and line - rather than only the bare exception
+    text.
 
     Args:
         tmp_path: Pytest-provided temp directory.

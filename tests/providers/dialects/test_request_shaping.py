@@ -6,9 +6,8 @@
 
 Routing between OpenAI's two APIs, the name of the token-limit field, whether
 ``temperature`` is sent at all and whether the endpoint may retain the request
-are no longer decided by string-matching a model id. They read from a resolved
-:class:`~intellicrack.providers.capabilities.ModelCapabilities` record, which
-means a wrong record is now a wrong request body rather than a wrong branch.
+are decided from a resolved :class:`~intellicrack.providers.capabilities.ModelCapabilities`
+record, not by string-matching a model id, so a wrong record produces a wrong request body.
 
 These gates resolve capabilities the way the running provider does -- through
 the real presets -- and assert on what the adapter actually renders. Each one

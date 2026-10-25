@@ -86,7 +86,7 @@ _CONSOLE_DRAIN_BATCH_SIZE: Final[int] = 200
 _STDIO_FD_STDERR: Final[int] = 2
 # Derived from the console's own font metrics so the Console Output pane
 # always shows a legible number of lines instead of being squeezed to a
-# sliver by the taller top_splitter above it (D20): a plain QPlainTextEdit
+# sliver by the taller top_splitter above it: a plain QPlainTextEdit
 # reports only a tiny generic minimumSizeHint, which is not a real usability
 # floor for a log view that carries script send()/log()/error output.
 _CONSOLE_MIN_VISIBLE_LINES: Final[int] = 6
@@ -439,7 +439,7 @@ class FridaPanel(AnalysisPanelBase):
         its tabs' combined natural width both shows the ``< >`` overflow
         buttons *and* elides the visible labels down to unreadable fragments
         (e.g. "Advanced" -> "Adv"), rather than keeping full labels and
-        relying solely on the scroll buttons to reach the hidden ones (D02).
+        relying solely on the scroll buttons to reach the hidden ones.
         Setting both explicitly removes that ambiguity for every sub-tab
         strip in this panel.
 

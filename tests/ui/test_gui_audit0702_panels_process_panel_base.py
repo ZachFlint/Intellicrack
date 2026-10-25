@@ -2,18 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the GUI audit findings in ``process_panel.base``.
+"""Gates for ``process_panel.base`` privilege-change relay and bridge handle release.
 
-Each test targets one audit finding and fails against the pre-fix behaviour:
+Each test targets one defect and fails against the defective behaviour:
 
-* ``test_h10_*`` (H10): the bridge's privileges-changed callback must be a
+* The bridge's privileges-changed callback must be a
   thread-safe Qt-signal relay, never the GUI handler itself. Invoking the
   registered callback from a background thread (exactly as
   ``ProcessBridge._notify_privileges_changed`` does from the persistent
   bridge event-loop thread) must not run ``_refresh_privilege_label``
   synchronously on that thread; the handler must only execute once the GUI
   thread's event loop delivers the queued signal.
-* ``test_m26_*`` (M26): ``ProcessPanel`` teardown, and bridge replacement via
+* ``ProcessPanel`` teardown, and bridge replacement via
   ``set_bridge``, must release the OS handles (device, pipe, section) the
   current ``ProcessBridge`` tracked during the session by dispatching the
   bridge's real ``shutdown()`` coroutine, instead of leaking them.
@@ -99,15 +99,14 @@ class _ThreadRecordingProcessPanel(ProcessPanel):
 
 
 class TestPrivilegesChangedThreadSafety:
-    """H10: the bridge privileges-changed callback must be thread-safe."""
+    """The bridge privileges-changed callback must be thread-safe."""
 
     def test_h10_set_bridge_registers_signal_relay_not_gui_handler(self, qapp: QApplication) -> None:
         """``set_bridge`` must register ``_emit_privileges_changed``, not the GUI handler.
 
-        Pre-fix, ``set_bridge`` registered ``self._on_privileges_changed``
-        directly with the bridge, so the bridge's background event-loop
-        thread would invoke GUI-mutating logic in-place. The fix must
-        register the Qt-signal-emitting relay instead.
+        ``set_bridge`` must not register ``self._on_privileges_changed`` directly with the bridge, since the bridge's
+        background event-loop thread would otherwise invoke GUI-mutating logic in-place. It must register the
+        Qt-signal-emitting relay instead.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -155,7 +154,7 @@ class TestPrivilegesChangedThreadSafety:
         ``adjust_token_privilege``): it calls every registered callback from
         a plain background ``threading.Thread``, never the Qt GUI thread.
 
-        Pre-fix, the registered callback was ``_on_privileges_changed``
+        The registered callback must not be ``_on_privileges_changed``
         itself, so ``_refresh_privilege_label`` (and the ``BridgeCallWorker``
         it constructs with ``parent=self``) would run synchronously on that
         background thread -- an invalid cross-thread Qt operation. This test
@@ -225,16 +224,14 @@ def _bridge_with_fake_handles(kernel32: ctypes.WinDLL) -> ProcessBridge:
     reason="teardown releases real Win32 handles opened through kernel32 (ctypes.windll)",
 )
 class TestBridgeResourceTeardown:
-    """M26: panel teardown and bridge replacement must release bridge handles."""
+    """Panel teardown and bridge replacement must release bridge handles."""
 
     def test_m26_cleanup_releases_bridge_tracked_os_handles(self, qapp: QApplication) -> None:
         """``stop_tool`` must dispatch ``bridge.shutdown()`` and clear tracked handles.
 
-        Pre-fix, ``ProcessPanel._cleanup`` only called ``cleanup()`` on the
-        process and threads tabs and never touched the bridge at all, so a
-        device handle, pipe handle, and section handle opened through the
-        System tab stayed in the bridge's tracking dicts (and the
-        underlying Win32 handles stayed open) for the remaining lifetime of
+        ``ProcessPanel._cleanup`` must release the bridge too. It only calls ``cleanup()`` on the process and threads tabs, leaving a
+        device handle, pipe handle, and section handle opened through the System tab in the bridge's tracking dicts (with the
+        underlying Win32 handles still open) for the remaining lifetime of
         the bridge. This drives the real ``ProcessBridge.shutdown()``
         coroutine through the panel's teardown path and asserts every
         tracked dict is actually cleared.
@@ -260,7 +257,7 @@ class TestBridgeResourceTeardown:
     def test_m26_set_bridge_shuts_down_previous_bridges_handles(self, qapp: QApplication) -> None:
         """Replacing the bridge via ``set_bridge`` must shut down the old bridge's handles.
 
-        Pre-fix, ``set_bridge`` silently dropped the reference to the
+        ``set_bridge`` must not silently drop the reference to the
         previous bridge without releasing anything it tracked, leaking
         every open device/pipe/section handle held by the bridge being
         replaced. This asserts the previous bridge's tracked handles are

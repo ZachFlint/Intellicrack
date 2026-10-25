@@ -3,17 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate: the x64dbg bottom tabs must fit inside the viewport (D09).
+"""Falsifiable gate: the x64dbg bottom tabs must fit inside the viewport.
 
 The x64dbg panel's "Analysis" tab stacks a disassembly/inspect splitter pane
 above a bottom tabbed section (Breakpoints/Memory/Console/...) inside a
 draggable ``QSplitter``, which is itself wrapped in a scroll area so the
-whole cluster still fits a short window. Before the D09 fix, that scroll
-area's minimum height was hard-pinned to the *comfortable default* split
-size (450 + 250 = 700px) rather than a sane floor, so at a realistic window
-size the bottom tabs - and the Add-Breakpoint row inside them - rendered
-below the visible viewport instead of sharing the available space with the
-top pane. This module drives the real panel at a realistic window size and
+whole cluster still fits a short window. That scroll area's minimum height must be a sane floor, not
+the *comfortable default* split size (450 + 250 = 700px). Pinning it there renders the bottom tabs,
+and the Add-Breakpoint row inside them, below the visible viewport at a realistic window size instead
+of sharing the available space with the top pane. This module drives the real panel at a realistic window size and
 asserts the Breakpoints tab's "Add BP" button is genuinely inside every
 enclosing scroll viewport, not merely reachable by scrolling further down.
 """
@@ -33,13 +31,11 @@ if TYPE_CHECKING:
     from PyQt6.QtWidgets import QApplication, QWidget
 
 
-# A modest, realistic window size for a single docked analysis panel - wide
-# enough that the breakpoint control row never needs to scroll horizontally
-# (see test_x64dbg_control_rows.py, which only reproduces that at 560px),
-# so height is the only variable this test exercises. 580px is comfortably
-# inside the band (empirically ~560-600px) where the pre-D09 700px-forced
-# content minimum pushes the bottom tabs below the viewport while this
-# fix's ~300px sane floor still leaves them fully visible.
+# A modest, realistic window size for a single docked analysis panel: wide enough that the
+# breakpoint control row never needs to scroll horizontally (see test_x64dbg_control_rows.py,
+# which only reproduces that at 560px), so height is the only variable this test exercises.
+# 580px sits inside the band (empirically ~560-600px) where a 700px forced content minimum
+# pushes the bottom tabs below the viewport, while the ~300px floor still leaves them fully visible.
 _REALISTIC_WINDOW_WIDTH = 1000
 _REALISTIC_WINDOW_HEIGHT = 580
 
@@ -100,10 +96,9 @@ def _fully_visible_within_scroll_ancestors(widget: QWidget) -> tuple[bool, str]:
 def test_add_breakpoint_button_visible_at_realistic_window_size(qapp: QApplication) -> None:
     """The Breakpoints "Add BP" button must sit inside the viewport, not below it.
 
-    Falsifiable: reverting the D09 fix (restoring ``_MAIN_SPLIT_TOP=450``/
-    ``_MAIN_SPLIT_BOTTOM=250``, ``bottom_tabs.setMinimumHeight(_MIN_PANE_HEIGHT)``,
-    and the content scroll area's ``min_height=_MAIN_SPLIT_TOP + _MAIN_SPLIT_BOTTOM``
-    (700px)) forces the content cluster to demand 700px of height regardless
+    Falsifiable: restoring the fixed ``_MAIN_SPLIT_TOP=450``/``_MAIN_SPLIT_BOTTOM=250`` split,
+    ``bottom_tabs.setMinimumHeight(_MIN_PANE_HEIGHT)``, and the content scroll area's
+    ``min_height=_MAIN_SPLIT_TOP + _MAIN_SPLIT_BOTTOM`` (700px) forces the content cluster to demand 700px of height regardless
     of the window's actual size. At the realistic window size used here,
     that leaves the bottom tabbed section - and the "Add BP" button inside
     it - positioned below the scroll viewport's visible area, so

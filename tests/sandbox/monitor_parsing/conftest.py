@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Mark every Audit7 sandbox-monitor test as integration.
+"""Mark every sandbox-monitor test as integration.
 
 The tests in this directory invoke real Windows scripts via subprocess
 (``pwsh.exe`` / ``cmd.exe``) and exercise live kernel-object polling

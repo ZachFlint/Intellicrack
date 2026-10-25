@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for S16-D10: Gemini 3.x ``thought_signature`` round-trip.
+"""Falsifiable gates for Gemini 3.x ``thought_signature`` round-trip.
 
 Gemini 3.x attaches an opaque ``thought_signature`` to the ``Part`` that
 carries a ``function_call``.  When a multi-turn tool chain resumes (the
@@ -70,9 +70,8 @@ class TestThoughtSignatureExtraction:
     def test_parse_response_captures_thought_signature(self) -> None:
         """``_parse_response`` stores the part's signature on the ``ToolCall``.
 
-        Mutation caught: dropping the signature capture (reverting to the
-        pre-fix implementation that only reads ``response.function_calls``)
-        leaves ``ToolCall.thought_signature`` as ``None``; this assertion
+        Mutation caught: dropping the signature capture (an implementation that
+        only reads ``response.function_calls``) leaves ``ToolCall.thought_signature`` as ``None``; this assertion
         fails.
         """
         response = _response_with_signed_function_call("hex_editor.open_file", {"path": "/bin/target"})
@@ -122,7 +121,7 @@ class TestThoughtSignatureRoundTrip:
     def test_signature_survives_extract_then_rebuild_for_continuation(self) -> None:
         """The signature captured on extraction reappears on the rebuilt part.
 
-        This is the exact failure mode from S16-D10: approve
+        This is the failure mode: approve
         ``hex_editor.open_file`` (turn 1, captured here via
         ``_parse_response``), then the orchestrator replays the assistant's
         function-call turn back to Gemini for the tool-result continuation

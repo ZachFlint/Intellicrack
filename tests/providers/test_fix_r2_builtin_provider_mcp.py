@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 15: every provider sends a tool's images natively and says when the tool reported an error.
+"""Every provider sends a tool's images natively and says when the tool reported an error.
 
 Each gate runs a whole agent turn: a real MCP server over stdio, the real tool source, the real orchestrator, and a real provider writing
 a real request body to a loopback endpoint that asks for one tool call and then ends the turn. The built-in OpenAI chat, Grok, OpenRouter

@@ -2,26 +2,21 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the S19 GUI-audit findings in ``session_manager``.
+"""Gates for the session_manager findings on tag chip theming and the preview font.
 
 Covers:
 
-* D34 -- tag chips must follow the application theme. They were first styled
-  from Qt palette-role functions, which never change with the theme, and then
-  from a per-chip stylesheet rebuilt on every theme change. They are now
-  styled by the ``QPushButton#tagChip`` rules of the four theme stylesheets
-  and carry no stylesheet of their own, so this gate holds them to that:
-  no inline stylesheet, and the colours Qt resolves change with the theme.
+* Tag chips follow the application theme. They are styled by the ``QPushButton#tagChip``
+  rules of the four theme stylesheets and carry no stylesheet of their own. This gate holds
+  them to that: no inline stylesheet, and the colours Qt resolves change with the theme.
   The rule-by-rule checks live in ``test_theme_qss_widgets.py``.
-* D36 -- ``SessionManagerDialog``'s preview text widget hard-coded
-  ``font-family: 'Consolas', 'Courier New', monospace;`` via
-  ``setStyleSheet`` instead of using the shared :class:`FontManager`
-  monospace stack. The fix calls ``setFont(FontManager.get_instance().get_code_font(9))``.
+* ``SessionManagerDialog``'s preview text widget uses the FontManager monospace stack, not a
+  hard-coded ``font-family`` rule applied through ``setStyleSheet``. It calls
+  ``setFont(FontManager.get_instance().get_code_font(9))``.
 
-All tests drive real :class:`TagChipsWidget` / :class:`SessionManagerDialog`
-instances under an offscreen ``QApplication``, with themes applied through
-the real :class:`ThemeManager` singleton (backed by the actual bundled
-theme stylesheets) rather than any stand-in.
+All tests drive real :class:`TagChipsWidget` / :class:`SessionManagerDialog` instances under an
+offscreen ``QApplication``, with themes applied through the real :class:`ThemeManager`
+singleton (backed by the actual bundled theme stylesheets) rather than any stand-in.
 """
 
 from __future__ import annotations
@@ -78,7 +73,7 @@ def _apply_and_get_chip_colors(theme_manager: ThemeManager, theme: str, chip: QP
 
 
 def test_d34_tag_chip_recolors_across_theme_switch(qapp: QApplication) -> None:
-    """D34: an existing tag chip's colors must track a live theme switch across all four themes.
+    """An existing tag chip's colors must track a live theme switch across all four themes.
 
     The chip is created once and never rebuilt. Every dark<->light crossing
     (dark -> light, light -> dark2, dark2 -> light2, light2 -> dark) must
@@ -117,7 +112,7 @@ def test_d34_tag_chip_recolors_across_theme_switch(qapp: QApplication) -> None:
 
 
 def test_d34_new_chip_added_after_theme_switch_matches_current_theme(qapp: QApplication) -> None:
-    """D34: a chip added after a theme switch must use the new theme's colors.
+    """A chip added after a theme switch must use the new theme's colors.
 
     Guards against chips that only pick up the theme that was active when
     the widget was constructed.
@@ -149,15 +144,12 @@ def test_d34_new_chip_added_after_theme_switch_matches_current_theme(qapp: QAppl
 
 
 def test_d36_preview_text_font_is_fontmanager_code_font(qapp: QApplication) -> None:
-    """D36: the session preview text must use FontManager's monospace stack, not a hard-coded Consolas QSS rule.
+    """The session preview text must use FontManager's monospace stack, not a hard-coded Consolas QSS rule.
 
-    Pre-fix, ``setStyleSheet("font-family: 'Consolas', 'Courier New', monospace; ...")``
-    never called ``setFont``, so ``QTextEdit.font().family()`` reported
-    whatever default UI font the widget inherited (never a code-font
-    candidate), and the family was independent of ``FontManager``
-    entirely. Post-fix, ``setFont(FontManager.get_instance().get_code_font(9))``
-    makes the widget's actual ``QFont`` match one of FontManager's known
-    monospace candidates.
+    A ``setStyleSheet`` font-family rule does not set the widget font, so ``QTextEdit.font().family()``
+    reports the inherited UI font rather than a code-font candidate. The widget must call
+    ``setFont(FontManager.get_instance().get_code_font(9))`` so its ``QFont`` matches one of
+    FontManager's known monospace candidates.
 
     Args:
         qapp: Session ``QApplication`` fixture.

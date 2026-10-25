@@ -291,8 +291,7 @@ class TestBuiltinTypes:
     def test_is_reserved_name_true_for_all_builtins_including_128bit(self) -> None:
         """BuiltinTypes.is_reserved_name returns True for every known builtin name.
 
-        This includes u128 and s128 which were missing from the previous
-        _EXPECTED_BUILTIN_NAMES oracle. If either is removed from _TYPES,
+        This includes u128 and s128. If either is removed from _TYPES,
         this test goes red.
         """
         for name in _EXPECTED_BUILTIN_NAMES:
@@ -729,7 +728,7 @@ class TestTypeRegistryEdgeCases:
     def test_register_struct_with_u128_builtin_name_raises_hexpat_type_error(self) -> None:
         """Registering a struct named 'u128' raises HexPatTypeError.
 
-        u128 is a reserved built-in that the previous test oracle omitted.
+        u128 is a reserved built-in.
         This test validates that the 128-bit builtins are also guarded.
         """
         registry = TypeRegistry()
@@ -912,7 +911,7 @@ class TestTypeRegistryEdgeCases:
     def test_registry_state_isolation_bitfield_in_r1_invisible_in_r2(self) -> None:
         """Bitfield registered in r1 is invisible in r2 - confirms _bitfields dict is per-instance.
 
-        This is the previously untested isolation case for bitfields.  If _bitfields
+        This is the isolation case for bitfields.  If _bitfields
         is a class-level dict, r2 would return the BitfieldTypeInfo, making this test red.
         """
         r1 = TypeRegistry()

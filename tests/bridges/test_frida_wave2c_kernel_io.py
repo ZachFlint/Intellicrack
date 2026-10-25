@@ -2,11 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for FridaBridge kernel / socket / file / SQLite families.
+"""Falsifiable gates for the FridaBridge kernel, socket, file, and SQLite families.
 
-Finding ID: FRIDA-KERNEL-IO.  All 16 methods in the kernel, socket, file
-and sqlite families had 0 % test coverage at audit time.  These tests close
-that gap by driving the real bridge against a minimal offline fake that
+These tests drive the real bridge against a minimal offline fake that
 records every JS source the bridge emits and returns scripted payloads.
 
 Each gate asserts two independent invariants:
@@ -41,9 +39,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
 
-# ---------------------------------------------------------------------------
 # Independent byte / value oracles
-# ---------------------------------------------------------------------------
 
 _KERNEL_MODULE_BASE: int = 0xFFFFF80012340000
 _KERNEL_MODULE_SIZE: int = 8_192_000
@@ -85,9 +81,7 @@ _SQLITE_DUMP_TEXT: str = "CREATE TABLE t (id INTEGER);\nINSERT INTO t VALUES (1)
 _SQLITE_ROWS: list[list[object]] = [["Alice", 30], ["Bob", 25]]
 _SQLITE_SQL: str = "SELECT name, age FROM users"
 
-# ---------------------------------------------------------------------------
 # Fake Frida doubles (self-contained, no unittest.mock)
-# ---------------------------------------------------------------------------
 
 
 class _FakeExportsSync:
@@ -200,9 +194,7 @@ class _RecordingSession:
         self.detach_calls += 1
 
 
-# ---------------------------------------------------------------------------
 # Bridge construction and patching helpers
-# ---------------------------------------------------------------------------
 
 
 def _run[T](coro: Coroutine[object, object, T]) -> T:
@@ -305,9 +297,7 @@ def _patch_execute(
     return captured
 
 
-# ===========================================================================
-# KERNEL FAMILY
-# ===========================================================================
+# Kernel family
 
 
 def test_kernel_enumerate_modules_parses_name_base_size() -> None:
@@ -618,9 +608,7 @@ def test_kernel_protect_kernel_error_raises() -> None:
         _run(driver())
 
 
-# ===========================================================================
-# SOCKET FAMILY
-# ===========================================================================
+# Socket family
 
 
 def test_socket_listen_embeds_port_family_and_returns_script_id() -> None:
@@ -797,9 +785,7 @@ def test_socket_peer_address_returns_peer_dict_from_data_field() -> None:
     assert result == peer_data, f"returned dict {result!r} != oracle {peer_data!r}"
 
 
-# ===========================================================================
-# FILE FAMILY
-# ===========================================================================
+# File family
 
 
 def test_file_read_target_returns_exact_hex_oracle() -> None:
@@ -899,9 +885,7 @@ def test_file_write_target_file_error_raises() -> None:
         _run(driver())
 
 
-# ===========================================================================
-# SQLITE FAMILY
-# ===========================================================================
+# SQLite family
 
 
 def test_sqlite_open_registers_script_id_and_emits_correct_js() -> None:

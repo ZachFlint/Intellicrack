@@ -400,9 +400,8 @@ class TestProgressSignal:
     def test_progress_signal_emits(splash_screen: SplashScreen) -> None:
         """progress_updated signal delivers (value, message) to connected slots.
 
-        The previous test emitted the signal without connecting any handler
-        and made no assertions, so a completely broken signal-emit path would
-        still pass.  This gate connects an explicit capturing slot before
+        Emitting the signal with no connected handler and no assertion would pass even when the
+        signal path is broken. This gate connects an explicit capturing slot before
         emission, then asserts the captured arguments exactly match the emitted
         values and that the splash state was updated accordingly.  If signal
         emission is broken, ``received`` stays empty and the first assertion
@@ -569,10 +568,9 @@ _OLD_CAPITAL_C_WORDMARK: str = "IntelliCrack"
 class TestSplashAssetGeneration:
     """Tests for build_splash_image and its relationship to the shipped assets.
 
-    Regression gate for the branding fix: the shipped splash.png (and its
-    icons/splash.png duplicate) must be exactly build_splash_image's output
-    for the canonical "Intellicrack" wordmark, not the old "IntelliCrack"
-    (capital C) wordmark. build_splash_image freezes the canonical wordmark
+    Gate for the branding: the shipped splash.png (and its icons/splash.png duplicate) must be
+    exactly build_splash_image's output for the canonical "Intellicrack" wordmark, not the
+    "IntelliCrack" (capital C) wordmark. build_splash_image freezes the canonical wordmark
     as a pre-rendered PNG asset instead of shaping it live, so this
     comparison is pixel-exact and deterministic regardless of which fonts
     are installed in the environment running the test.
@@ -639,7 +637,7 @@ class TestSplashAssetGeneration:
 
     @staticmethod
     def test_shipped_splash_png_does_not_match_old_capital_c_wordmark(qapp: QApplication) -> None:
-        """splash.png does NOT match a build using the old "IntelliCrack" wordmark.
+        """splash.png does NOT match a build using the "IntelliCrack" wordmark.
 
         Args:
             qapp: QApplication fixture required by Qt widgets.
@@ -714,9 +712,8 @@ class TestSplashScreenIntegration:
     def test_splash_screen_no_exceptions_on_operations(qapp: QApplication) -> None:
         """Splash screen operations produce the expected state after completing.
 
-        The previous gate only checked that no exception was raised; a method
-        that silently returned without doing anything would still pass.  This
-        gate additionally asserts concrete observable state after each
+        Checking only that no exception is raised would pass a method that silently returns without
+        doing anything. This gate asserts concrete observable state after each
         operation so that a regression in set_progress, status tracking, or
         progress clamping is immediately detectable.
 
@@ -878,8 +875,7 @@ class TestProgressAnimation:
     def test_rapid_progress_calls_track_final_state(splash_screen: SplashScreen) -> None:
         """Rapid successive set_progress calls leave correct final state.
 
-        The previous test only checked that the loop did not raise. This gate
-        drives the same rapid loop but then asserts the observable end state:
+        Drives a rapid loop of set_progress calls, then asserts the observable end state:
         the final progress value, the animation end value tracking the last
         call, and all pipeline stages COMPLETE at full progress. A regression
         where rapid calls stopped updating internal state would fail here.
@@ -1229,8 +1225,7 @@ class TestSplashImageCompositing:
         """Image-source selection follows the brain-icon-preferred precedence.
 
         The production rule is ``_splash_image = load(splash.png) if
-        _brain_icon is None else None``. The previous test re-ran that exact
-        ladder against the same conditions, making it tautological. Here the
+        _brain_icon is None else None``. Re-running that ladder would be tautological, so the
         expected outcome is derived independently: the shipped
         ``splash-icon.png`` is decoded straight from disk via its PNG header,
         proving it is a valid (loadable) image, so production must select the

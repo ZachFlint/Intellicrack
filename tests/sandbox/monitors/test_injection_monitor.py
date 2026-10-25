@@ -3,24 +3,21 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 U6 tests for ``injection_monitor.ps1`` remediation.
+"""Tests for ``injection_monitor.ps1`` behavior.
 
-Validates the three fixes applied to
+Validates the following behavior of
 ``src/intellicrack/sandbox/scripts/injection_monitor.ps1``:
 
-* F-0015 - the dead ``$logmanStarted`` flag is removed; the script
-  never created a logman session of its own.
-* F-0016 - the top-level ``return`` paths that silently aborted on a
-  missing ``TraceEvent.dll`` are replaced with ``throw`` so callers
-  see a non-zero exit code.
-* F-0017 - the heuristic no longer fabricates ``CreateRemoteThread``,
-  ``LoadLibrary``, and ``WriteProcessMemory`` for every thread start.
-  Verified ETW provider events from
+* The script does not use a dead ``$logmanStarted`` flag, since it never creates
+  a logman session of its own.
+* A missing ``TraceEvent.dll`` ends the script with ``throw`` so callers see a
+  non-zero exit code.
+* The heuristic does not fabricate ``CreateRemoteThread``, ``LoadLibrary``, and
+  ``WriteProcessMemory`` for every thread start. Verified ETW provider events from
   ``Microsoft-Windows-Kernel-Process`` and
-  ``Microsoft-Windows-Threat-Intelligence`` are used; events that fall
-  back to the narrowed Kernel-Process heuristic are labelled
-  ``remote_thread_start`` (or one of its narrowed variants), not
-  ``shellcode_injection``.
+  ``Microsoft-Windows-Threat-Intelligence`` are used; events that fall back to the
+  narrowed Kernel-Process heuristic are labelled ``remote_thread_start`` (or one of
+  its narrowed variants), not ``shellcode_injection``.
 
 Tests run the real script under ``pwsh`` against the live filesystem
 and Windows ETW subsystem. They are skipped on non-Windows platforms
@@ -255,16 +252,16 @@ def _spawn_thread_helper(pwsh: str) -> Popen[str]:
 
 
 def test_script_file_exists() -> None:
-    """The remediated script must exist on disk."""
+    """The script must exist on disk."""
     assert _SCRIPT_PATH.is_file(), f"missing script: {_SCRIPT_PATH}"
 
 
 def test_script_no_longer_tracks_logman_started_flag() -> None:
-    """F-0015: the unused ``$logmanStarted`` flag must be removed.
+    """The script must not use an unused ``$logmanStarted`` flag.
 
-    The script never created a logman session of its own, so the flag
-    only fired a misleading branch that called ``logman stop`` /
-    ``logman delete`` against a session it did not own.
+    The script never creates a logman session of its own, so no flag may gate a
+    branch that calls ``logman stop`` or ``logman delete`` against a session it does
+    not own.
     """
     text = _SCRIPT_PATH.read_text(encoding="utf-8")
     assert "logmanStarted" not in text, "F-0015 regression: $logmanStarted re-introduced"
@@ -273,9 +270,9 @@ def test_script_no_longer_tracks_logman_started_flag() -> None:
 
 
 def test_script_throws_when_traceevent_dll_missing(tmp_path: Path) -> None:
-    """F-0016: missing ``TraceEvent.dll`` must surface as a non-zero exit.
+    """Missing ``TraceEvent.dll`` must surface as a non-zero exit.
 
-    The remediated script replaces silent ``return`` on missing
+    The script replaces silent ``return`` on missing
     TraceEvent assembly with ``throw``. We point the search-path at
     isolated empty directories so the assembly is not found, and
     assert the script exits non-zero with diagnostic output.
@@ -343,9 +340,9 @@ def test_script_throws_when_traceevent_dll_missing(tmp_path: Path) -> None:
 
 
 def test_script_uses_verified_provider_events_not_fabricated_apis() -> None:
-    """F-0017: fabricated API names must be removed from the source.
+    """The script must not contain fabricated API names.
 
-    The remediated script must not unconditionally append
+    The script must not unconditionally append
     ``CreateRemoteThread``, ``LoadLibrary``, or ``WriteProcessMemory``
     to every thread-start event. It must also reference the
     Microsoft-Windows-Threat-Intelligence provider for verified
@@ -364,7 +361,7 @@ def test_script_uses_verified_provider_events_not_fabricated_apis() -> None:
 def test_script_does_not_label_normal_thread_starts_as_shellcode_injection(
     tmp_path: Path,
 ) -> None:
-    """F-0017 runtime check: no captured thread-start event may be labelled ``shellcode_injection``.
+    """No captured thread-start event may be labelled ``shellcode_injection``.
 
     Run the monitor with no PID filter so it observes kernel thread-start
     events from all processes.  On admin the kernel ETW provider succeeds and
@@ -425,10 +422,10 @@ def test_script_does_not_label_normal_thread_starts_as_shellcode_injection(
 def test_script_emits_threat_intel_unavailable_warning_when_not_admin(
     tmp_path: Path,
 ) -> None:
-    """F-0017 runtime check: ThreatIntel unavailability must be reported, not silently ignored.
+    """ThreatIntel unavailability must be reported, not silently ignored.
 
     Without administrator rights the script cannot enable kernel ETW
-    providers and must exit with a non-zero code (F-0016) and write a
+    providers and must exit with a non-zero code and write a
     structured diagnostic to the diag log rather than silently
     degrading.  If the kernel provider phase succeeds but
     ``Microsoft-Windows-Threat-Intelligence`` specifically fails, the
@@ -481,14 +478,6 @@ def test_smoke_lifecycle_records_started_and_stopped(tmp_path: Path) -> None:
     and again in the ``finally`` block. Both paths must produce a
     pipe-delimited record whose third field (index 2) equals the
     expected state token.
-
-    Mutation that falsifies this test: removing either
-    ``Write-InjectionLifecycle -State 'started'`` or
-    ``Write-InjectionLifecycle -State 'stopped'`` from the production
-    script causes the corresponding assertion to fail because the
-    lifecycle file would then lack that state token. Verified on
-    2026-08-12: removing the ``stopped`` call fails the run with
-    ``states={'started'}``.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.

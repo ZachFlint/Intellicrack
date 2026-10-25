@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for branding and the toolbar model-combo readability fix.
+"""Gates for branding and the toolbar model-combo readability.
 
 * **Branding** -- the splash title and the About dialog must read
   "Intellicrack"/"INTELLICRACK" (never the capital-C "IntelliCrack").
-* **Model combo (prior UX #3 residual)** -- a long model id must remain
+* **Model combo** -- a long model id must remain
   readable: the collapsed field carries a full-id tooltip and the combo uses an
   adjust-to-contents size policy rather than a fixed width that truncates.
 

@@ -2,10 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Fourth-pass critical-coverage tests for the HexPat pattern editor mixin of the hex editor panel.
+"""Tests for the Compile slot of the HexPat pattern editor mixin.
 
-The Compile slot used to let a ``HexPatError`` escape (PD-023, now fixed), so the branch that reports a compiler error without an error
-pane never ran. The test here drives the production mixin through a small widget host with the real panes built by
+The Compile slot must catch a ``HexPatError`` and report it, including when there is no error pane. This module drives the production
+mixin through a small widget host with the real panes built by
 ``_build_pattern_editor`` and calls the slot the Compile button triggers. The source that makes the real HexPat compiler fail is the
 comment-only source the existing Compile gating test uses.
 """

@@ -2,63 +2,41 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for GUI audit findings C1, H1, M1, and M38 in ``ui.app``.
+"""Gates for ``ui.app`` findings: process-memory dispatch, sandbox teardown, region listing and window sizing.
 
-C1 -- ``_open_process_memory`` (the tail of ``_on_process_attached`` reached
-after the user picks a memory region) scheduled ``HexBridge.open_process_memory``
-with a bare ``asyncio.ensure_future(coro_result)``. That call resolves against
-``asyncio.get_event_loop()`` on the GUI thread; nothing ever drives that loop
-during normal operation (``main.py`` blocks synchronously inside
-``app.exec()``), so the scheduled task never actually advances -- the feature
-silently does nothing. The fix dispatches through
-``run_bridge_coroutine_logged``, which runs the coroutine on the persistent
-background bridge loop (a real ``asyncio`` loop that is actively
-``run_forever()``-ing on its own thread) and delivers the result back via a
+``_open_process_memory`` must not schedule ``HexBridge.open_process_memory`` with a bare
+``asyncio.ensure_future(coro_result)``. That call resolves against ``asyncio.get_event_loop()`` on the GUI thread,
+which nothing drives during normal operation (``main.py`` blocks synchronously inside ``app.exec()``), so the
+scheduled task would never advance and the feature would silently do nothing. The coroutine is dispatched
+through ``run_bridge_coroutine_logged`` instead, which runs it on the persistent background bridge loop (a real
+``asyncio`` loop that is actively ``run_forever()``-ing on its own thread) and delivers the result back via a
 queued Qt signal.
 
-H1 -- ``_apply_sandbox_settings`` called the **blocking**
-``run_bridge_coroutine(self.sandbox_manager.destroy_all())`` directly on the
-GUI thread, freezing the whole UI for as long as live sandbox instances took
-to tear down. The fix dispatches teardown through
-``run_bridge_coroutine_logged`` and defers the manager rebuild plus the
-``status_update`` signal to ``_finish_sandbox_settings_apply``, invoked only
-once the queued success/error signal fires.
+``_apply_sandbox_settings`` must not call the **blocking** ``run_bridge_coroutine(self.sandbox_manager.destroy_all())``
+on the GUI thread, because that freezes the whole UI for as long as live sandbox instances take to tear down. Teardown
+is dispatched through ``run_bridge_coroutine_logged``, and the manager rebuild plus the ``status_update`` signal are
+deferred to ``_finish_sandbox_settings_apply``, invoked only once the queued success/error signal fires.
 
-M1 -- ``_on_process_attached`` called the synchronous native FFI
-``_hexcore.HexDocument.list_process_memory_regions(pid)`` directly inline on
-the GUI thread, blocking the Qt event loop for the duration of the native
-enumeration. The fix dispatches the call through a background
-``GenericCallableWorker`` and resolves the region-picker (or the failure
-warning) via its queued ``call_finished``/``call_error`` signals.
+``_on_process_attached`` must not call the synchronous native FFI
+``_hexcore.HexDocument.list_process_memory_regions(pid)`` inline on the GUI thread, since that blocks the Qt event
+loop for the duration of the native enumeration. The call is dispatched through a background
+``GenericCallableWorker``, and the region picker (or the failure warning) is resolved via its queued
+``call_finished``/``call_error`` signals.
 
-M38 -- ``_apply_smart_window_size`` floored the window width at a fixed 800px
-even though ``_setup_ui`` gives the chat panel and tool panel each their own
-``setMinimumWidth`` inside a ``childrenCollapsible(False)`` splitter, whose
-combined effective floor exceeded that fixed 800px. On a screen whose
-available width lands between the old 800px floor and that combined panel
-minimum, the pre-fix floor produced a window narrower than its own splitter
-panes can honour. The fix raises the floor to the panels' combined minimum
-width (``_WINDOW_MIN_WIDTH``), read live from the panels rather than a
-hard-coded pixel count so it keeps gating correctly as those minimums are
-retuned.
+``_apply_smart_window_size`` must floor the window width at ``_WINDOW_MIN_WIDTH``, the panels' combined minimum width
+read live from the panels rather than a fixed pixel count. The chat and tool panels each set their own
+``setMinimumWidth`` inside a ``childrenCollapsible(False)`` splitter, so their combined floor can exceed a fixed 800px,
+and a floor below it produces a window narrower than its own splitter panes can honour. It must also not hard-cap the
+window at ``min(1400, avail_w - 6) x min(900, avail_h - 8)``: on a large screen that clips roughly 45% of a
+2560x1440 usable area off-screen with no scrollbar to reach it. The window sizes to the available geometry (minus the
+small margin) instead.
 
-S20-D15 -- ``_apply_smart_window_size`` separately hard-capped the window at
-``min(1400, avail_w - 6) x min(900, avail_h - 8)`` regardless of how much
-larger the screen actually was, clipping roughly 45% of a 2560x1440 screen's
-usable area off-screen with no scrollbar to reach it. That cap is removed:
-on a screen with more available space than the old cap allowed, the window
-now sizes to the available geometry (minus the small margin) instead of
-freezing at the removed 1400x900 constant.
-
-Every test below drives the real ``MainWindow`` handlers (extracted, testable
-seams: ``_open_process_memory``, ``_apply_sandbox_settings``,
-``_on_process_attached``, ``_apply_smart_window_size``) against real
-collaborators -- a real (subclassed) ``HexEditorBridge``, a real (subclassed)
-``SandboxManager``, and a real ``GenericCallableWorker`` / background bridge
-loop -- injecting an artificial delay so the non-blocking dispatch contract
-can be measured directly: the handler must return before the delayed
-operation completes, and every observable side effect must remain unset
-until the Qt event loop is pumped and the queued result signal fires.
+Every test below drives the real ``MainWindow`` handlers (extracted, testable seams:
+``_open_process_memory``, ``_apply_sandbox_settings``, ``_on_process_attached``, ``_apply_smart_window_size``) against
+real collaborators -- a real (subclassed) ``HexEditorBridge``, a real (subclassed) ``SandboxManager``, and a real
+``GenericCallableWorker`` / background bridge loop -- injecting an artificial delay so the non-blocking dispatch contract
+can be measured directly: the handler must return before the delayed operation completes, and every observable side
+effect must remain unset until the Qt event loop is pumped and the queued result signal fires.
 """
 
 from __future__ import annotations
@@ -148,10 +126,8 @@ def patched_window(
     window.close()
 
 
-# ---------------------------------------------------------------------------
-# C1 -- process-memory open must dispatch through the background bridge loop,
+# Process-memory open must dispatch through the background bridge loop,
 # never through a bare asyncio.ensure_future() on the (undriven) GUI loop.
-# ---------------------------------------------------------------------------
 
 
 class _DelayedHexEditorBridge(HexEditorBridge):
@@ -159,7 +135,7 @@ class _DelayedHexEditorBridge(HexEditorBridge):
 
     Lets a test distinguish "the coroutine actually ran to completion on a
     real, driven event loop" from "the coroutine was scheduled but nothing
-    ever advances it" -- exactly the C1 failure mode, where
+    ever advances it" -- the failure mode where
     ``asyncio.ensure_future`` scheduled a task against a loop nobody drives.
 
     Attributes:
@@ -205,17 +181,12 @@ def test_c1_open_process_memory_resolves_via_background_loop_not_a_dormant_task(
 ) -> None:
     """The dispatched coroutine must actually run to completion once pumped.
 
-    Pre-fix, ``asyncio.ensure_future(coro_result)`` schedules the task
-    against ``asyncio.get_event_loop()`` on the GUI thread. During real
-    operation nothing ever drives that loop (``main.py`` is blocked inside
-    a synchronous ``app.exec()`` for the app's entire usable lifetime), so
-    the task never executes any of its steps -- ``open_calls`` would never
-    become non-empty no matter how long the test waits. Post-fix, dispatch
-    goes through ``run_bridge_coroutine_logged``, which runs the coroutine
-    on the persistent background bridge loop -- a real ``asyncio`` loop
-    that is actively ``run_forever()``-ing on its own dedicated thread --
-    so the coroutine genuinely completes and the result is delivered back
-    via a queued signal once the Qt event loop is pumped.
+    A bare ``asyncio.ensure_future(coro_result)`` schedules the task against ``asyncio.get_event_loop()`` on the GUI thread.
+    During real operation nothing drives that loop (``main.py`` is blocked inside a synchronous ``app.exec()`` for the app's
+    entire usable lifetime), so the task never executes any of its steps and ``open_calls`` stays empty however long the test waits.
+    Dispatch must go through ``run_bridge_coroutine_logged``, which runs the coroutine on the persistent background bridge loop
+    -- a real ``asyncio`` loop that is actively ``run_forever()``-ing on its own dedicated thread -- so the coroutine genuinely
+    completes and the result is delivered back via a queued signal once the Qt event loop is pumped.
 
     Args:
         qapp: The shared offscreen QApplication fixture.
@@ -249,8 +220,8 @@ def test_c1_open_process_memory_never_uses_bare_asyncio_ensure_future(
 ) -> None:
     """``_open_process_memory`` must never schedule its coroutine via ``asyncio.ensure_future``.
 
-    Direct regression guard for the exact offending call site: pre-fix,
-    ``_open_process_memory`` called ``asyncio.ensure_future(coro_result)``
+    Guards the offending call site: ``_open_process_memory`` must not call
+    ``asyncio.ensure_future(coro_result)``
     unconditionally once a coroutine was obtained. This poisons
     ``asyncio.ensure_future`` so any reintroduction of that call raises
     immediately instead of silently scheduling a dormant task.
@@ -276,9 +247,7 @@ def test_c1_open_process_memory_never_uses_bare_asyncio_ensure_future(
     window._open_process_memory(4243, 0x1000, 0x1000)
 
 
-# ---------------------------------------------------------------------------
-# H1 -- applying sandbox settings must not block the GUI thread on teardown.
-# ---------------------------------------------------------------------------
+# Applying sandbox settings must not block the GUI thread on teardown.
 
 
 class _DelayedSandboxManager(SandboxManager):
@@ -314,12 +283,12 @@ def test_h1_apply_sandbox_settings_returns_before_teardown_completes(
 ) -> None:
     """``_apply_sandbox_settings`` must return before ``destroy_all`` finishes.
 
-    Pre-fix, ``_apply_sandbox_settings`` called the blocking
+    ``_apply_sandbox_settings`` must not call the blocking
     ``run_bridge_coroutine(self.sandbox_manager.destroy_all())``, which
     invokes ``future.result()`` on the calling (GUI) thread -- the whole
     method, including the manager rebuild and the ``status_update`` emit
     that followed it inline, would not complete until the full artificial
-    teardown delay had elapsed. Post-fix, teardown is dispatched via
+    teardown delay had elapsed. Teardown is dispatched via
     ``run_bridge_coroutine_logged`` and the rebuild/status-update only
     happen in ``_finish_sandbox_settings_apply``, invoked once the queued
     result signal fires.
@@ -378,8 +347,7 @@ def test_h1_apply_sandbox_settings_never_calls_blocking_run_bridge_coroutine(
 ) -> None:
     """``_apply_sandbox_settings`` must never call the blocking ``run_bridge_coroutine``.
 
-    Direct regression guard for the exact offending call site: pre-fix,
-    ``_apply_sandbox_settings`` called
+    Guards the offending call site: ``_apply_sandbox_settings`` must not call
     ``run_bridge_coroutine(self.sandbox_manager.destroy_all())``
     synchronously. This poisons the module-level ``run_bridge_coroutine``
     import so any reintroduction of that blocking call raises immediately
@@ -403,9 +371,7 @@ def test_h1_apply_sandbox_settings_never_calls_blocking_run_bridge_coroutine(
     )
 
 
-# ---------------------------------------------------------------------------
-# M1 -- process-attach memory-region listing must run off the GUI thread.
-# ---------------------------------------------------------------------------
+# Process-attach memory-region listing must run off the GUI thread.
 
 
 def _make_fake_hexcore(
@@ -468,10 +434,10 @@ def test_m1_on_process_attached_lists_regions_off_gui_thread(
 ) -> None:
     """``_on_process_attached`` must return before native enumeration completes.
 
-    Pre-fix, ``_on_process_attached`` called
+    ``_on_process_attached`` must not call
     ``_hexcore.HexDocument.list_process_memory_regions(pid)`` directly
     inline, blocking the whole method (and the Qt event loop) for the full
-    duration of the native call. Post-fix, the call is dispatched to a
+    duration of the native call. The call is dispatched to a
     background ``GenericCallableWorker`` and the result is delivered to
     ``_on_process_regions_listed`` via a queued signal.
 
@@ -517,10 +483,10 @@ def test_m1_on_process_attached_native_error_surfaced_asynchronously(
 ) -> None:
     """A failing native enumeration must warn only after the delayed call actually fails.
 
-    Pre-fix, the inline ``try/except`` around the blocking native call meant
+    An inline ``try/except`` around the blocking native call would mean
     ``QMessageBox.warning`` was already invoked, on the calling thread, by
     the time ``_on_process_attached`` returned -- after blocking for the
-    full artificial delay. Post-fix, ``GenericCallableWorker`` delivers the
+    full artificial delay. ``GenericCallableWorker`` delivers the
     exception via the queued ``call_error`` signal to
     ``_on_process_regions_failed``, so the handler returns immediately and
     no failure has been recorded until the Qt event loop is pumped and the
@@ -563,9 +529,7 @@ def test_m1_on_process_attached_native_error_surfaced_asynchronously(
     assert kwargs == {}
 
 
-# ---------------------------------------------------------------------------
-# M38 -- the window's minimum floor must cover the splitter panes' minimums.
-# ---------------------------------------------------------------------------
+# The window's minimum floor must cover the splitter panes' minimums.
 
 
 def test_m38_narrow_screen_window_not_narrower_than_splitter_minimum(
@@ -614,9 +578,9 @@ def test_m38_every_width_in_the_pre_fix_gap_still_floors_correctly(
 ) -> None:
     """Every width swept here must still floor the window at the panes' combined minimum.
 
-    A prior regression let ``_apply_smart_window_size`` size the window
+    A regression that lets ``_apply_smart_window_size`` size the window
     narrower than the chat and tool panels' combined ``setMinimumWidth``
-    inside a ``childrenCollapsible(False)`` splitter (see the M38 note in
+    inside a ``childrenCollapsible(False)`` splitter (see the window-floor note in
     this module's docstring). This sweeps a spread of available widths to
     confirm the floor holds across all of them, not just one sample point.
 
@@ -645,15 +609,15 @@ def test_m38_wide_screen_sizes_to_available_geometry_not_the_old_fixed_cap(
     patched_window: MainWindow,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """On a large screen the window must fill the available geometry, not the removed 1400x900 cap.
+    """On a large screen the window must fill the available geometry, not a fixed 1400x900 cap.
 
-    ``_apply_smart_window_size`` used to hard-cap the window at
-    ``min(1400, avail_w - 6) x min(900, avail_h - 8)`` (S20-D15), clipping
+    ``_apply_smart_window_size`` must not hard-cap the window at
+    ``min(1400, avail_w - 6) x min(900, avail_h - 8)``, which clips
     roughly 45% of a 2560x1440 screen's usable area off-screen with no
-    scrollbar to reach it. That cap is removed: on a screen with more
+    scrollbar to reach it. On a screen with more
     available space than the old cap ever allowed, the window must size to
     that available geometry (minus the small margin) rather than freezing
-    at the old 1400x900 constant.
+    at a fixed 1400x900 constant.
 
     Args:
         patched_window: A constructed MainWindow with SandboxManager stubbed.

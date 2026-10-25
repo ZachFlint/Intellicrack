@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-logic coverage for ``hex_editor.calculator.CalculatorMixin``.
 
-The audit (shard 13) flagged ``calculator.py`` as entirely untested. The
-calculator is a pure-logic unit: it parses a number in an auto-detected base
+The calculator is a pure-logic unit: it parses a number in an auto-detected base
 and renders every integer/float representation through :mod:`struct`. These
 tests drive the real :class:`CalculatorMixin` UI (a genuine
 ``QTreeWidget``/``QLineEdit`` built by ``_create_calculator_tab``) end to end

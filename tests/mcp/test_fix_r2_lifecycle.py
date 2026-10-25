@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 9: connecting, stopping and restarting leave no server running that nobody asked for, and no notice lost.
+"""Connecting, stopping and restarting leave no server running that nobody asked for, and no notice lost.
 
 Every gate runs real servers: the steerable lifecycle server over stdio, the OAuth-protected server over Streamable HTTP with the real
 loopback sign-in listener, and a legacy SSE server whose listing changes while the client is still reading it. Consent prompts are held

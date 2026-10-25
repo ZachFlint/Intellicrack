@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 22: a configured client id wins over a stored registration, and credentials filed under an old ``:443`` key are kept.
+"""A configured client id wins over a stored registration, and credentials filed under an old ``:443`` key are kept.
 
 The client id gates run the SDK's real OAuth client against a real authorization server and a real MCP resource server on different
-loopback origins, over a private keyring. A registration made dynamically before ``oauthClientId`` was configured no longer beats it, and a
-stored registration the SDK discards for naming another issuer no longer sends the flow to dynamic registration when a client id is
+loopback origins, over a private keyring. A registration made dynamically before ``oauthClientId`` is configured does not beat it, and a
+stored registration the SDK discards for naming another issuer does not send the flow to dynamic registration when a client id is
 configured. The migration gates file artefacts under the key an earlier release computed for an explicit default port and read them back
 through the functions the settings dialog and the connection use.
 """

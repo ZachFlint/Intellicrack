@@ -5,14 +5,9 @@
 
 """Eight threads at one document, and the ordering that keeps two from deadlocking.
 
-``HexDocument`` used to be a PyO3 class without interior mutability. Twenty-eight
-of its methods took a mutable Rust borrow, and several of its analyses release
-the GIL part way through, so two Python threads inside one document did not
-merely interleave -- the second got ``RuntimeError: Already borrowed`` and the
-operation was lost. The engine is now frozen and carries its own reader-writer
-lock, so what the guarded run below claims has changed from "the slot suppresses
-the error" to "concurrent use is survived": the same eight threads, the same
-document, and nothing raised.
+``HexDocument`` is a frozen PyO3 class that carries its own reader-writer lock, so
+concurrent use of one document is survived rather than refused: the guarded run
+below drives eight threads at one document and expects nothing to be raised.
 
 A test that only shows the guarded path staying quiet proves nothing on its own:
 it would pass equally well if the race were impossible to provoke on this
@@ -24,7 +19,7 @@ of the identical size, and fails the suite if the calls never actually overlap
 inside it. The two together are the gate: the control establishes that the race
 is live, and the guarded run establishes that contention is survived.
 
-The second invariant is structural, and it survived the engine change intact.
+The second invariant is structural.
 :func:`~hexbench.dispatch.resolve_references` runs as a pre-pass: it finishes
 with every referenced document before the receiver is engaged at all. That
 ordering is the only reason two invocations naming each other's documents cannot
@@ -32,7 +27,7 @@ deadlock, and it is one edit away from being lost -- moving the pre-pass inside
 the receiver's ``with`` block would leave a thread inside two documents at once
 and reinstate the lock-ordering hazard the moment a read ever takes a lock again.
 
-Counting locks would no longer measure this. Reads take none, so a lock counter
+Counting locks would not measure this. Reads take none, so a lock counter
 sees at most the single exclusive hold a mutation makes and reports depth one
 whatever the dispatcher does. :class:`_TrackingSlot` therefore records both
 access paths and the tracker counts *documents a thread is inside*, exclusive or
@@ -647,21 +642,10 @@ class UnguardedRaceControl(_ConcurrencyCase):
     def test_the_unguarded_race_really_does_overlap_one_document(self) -> None:
         """The race puts several calls inside one document at the same time.
 
-        This replaces a control that proved the point the other way round. It
-        used to drive the same race with no slot in the way and require that
-        PyO3 raised ``Already borrowed``, on the argument that until the defect
-        reproduced, the guarded test was not evidence the lock did anything.
-
-        That defect no longer exists to reproduce. ``HexDocument`` is now a
-        frozen class holding its own reader-writer lock, so a second thread
-        reaching one document is what the engine is built for rather than an
-        error, and no arrangement of callers can provoke the old message.
-
-        What still has to be shown is that the race is a race. A guarded run
-        that raised nothing would look identical to one where the threads never
-        actually met, so this drives the document with no slot in the way and
-        measures the overlap directly: the peak count of calls inside the
-        document at once must exceed one, and nothing may raise.
+        A guarded run that raised nothing would look identical to one where the
+        threads never actually met. So this drives the document with no slot in
+        the way and measures the overlap directly: the peak count of calls inside
+        the document at once must exceed one, and nothing may raise.
         """
         document = HexDocument.open_bytes(_contended_bytes(_DOCUMENT_SIZE))
         in_flight = _InFlight()

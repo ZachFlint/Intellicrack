@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Third-pass tests for the import-time fallbacks of ``intellicrack.bridges.hex_editor``.
+"""Tests for the import-time fallbacks of ``intellicrack.bridges.hex_editor``.
 
 The bridge imports seven optional pieces at module load: the native hexcore extension, the HexPat
 compiler, the HexPat interpreter package, the disassembler, the YARA scanner, the transform pipeline

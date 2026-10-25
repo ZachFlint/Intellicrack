@@ -2,14 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression test for S13-D01: 64-bit VA truncated by 32-bit Qt signals.
+"""Regression test: 64-bit VA truncated by 32-bit Qt signals.
 
-``XRefPanel.xref_selected`` and ``_ToolOutputPanelBase.address_clicked`` were
-declared as ``pyqtSignal(int)``, which PyQt6 maps to a C++ ``int`` (32-bit
-signed). Emitting a real x64 virtual address through either signal silently
-wrapped it to the low 32 bits, so cross-references never populated for the
-correct address on any binary loaded above the 2 GiB mark. Both signals must
-now carry the full 64-bit width (``qint64``).
+``XRefPanel.xref_selected`` and ``_ToolOutputPanelBase.address_clicked`` must carry the full 64-bit
+width (``qint64``). Declared as ``pyqtSignal(int)``, PyQt6 maps them to a C++ ``int`` (32-bit
+signed), which silently wraps a real x64 virtual address to its low 32 bits, so cross-references
+never populate for the correct address on any binary loaded above the 2 GiB mark.
 """
 
 from __future__ import annotations

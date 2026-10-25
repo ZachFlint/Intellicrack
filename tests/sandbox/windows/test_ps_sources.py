@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for PowerShell monitor source fixes (F-0008, F-0018, F-0019, F-0017).
+"""Tests for PowerShell monitor source fixes.
 
 Validates that the inline PowerShell scripts generated for file, process,
 registry, and network monitors no longer contain the defective patterns
@@ -17,7 +17,7 @@ from intellicrack.sandbox.windows import WindowsSandbox
 
 
 class TestFileMonitorSource:
-    """Tests for F-0008: file monitor must use -MessageData, not $using:."""
+    """File monitor must use -MessageData, not $using:."""
 
     def test_no_using_scope_in_action(self) -> None:
         """File monitor action block must not reference $using:logPath."""
@@ -36,7 +36,7 @@ class TestFileMonitorSource:
         so that the local variable carries the log path, not a $using:-scope
         capture.  Asserting the bare token ``$Event.MessageData`` anywhere in
         the source is insufficient because it could appear in a comment or dead
-        branch; the binding line is the functional artifact of F-0008.
+        branch; the binding line is the functional artifact of the fix.
         """
         source = getattr(WindowsSandbox, "_file_monitor_source")()
         assert "$lp = $Event.MessageData" in source
@@ -63,7 +63,7 @@ class TestFileMonitorSource:
 
 
 class TestProcessMonitorSource:
-    """Tests for F-0018: process monitor must not shadow $pid automatic variable."""
+    """Process monitor must not shadow $pid automatic variable."""
 
     def test_no_dollar_pid_assignment(self) -> None:
         """Process monitor must not assign to $pid (automatic variable)."""
@@ -74,7 +74,7 @@ class TestProcessMonitorSource:
     def test_uses_proc_id_variable(self) -> None:
         """Process monitor must use $procId in log lines, not the $pid automatic variable.
 
-        F-0018 requires that process IDs are captured in ``$procId`` and that
+        The fix requires that process IDs are captured in ``$procId`` and that
         this variable is what gets written to the log file.  Asserting only that
         ``$procId`` is defined (the assignment exists) is not sufficient; the
         log-emit lines must also interpolate ``$procId`` so a rename of the
@@ -88,7 +88,7 @@ class TestProcessMonitorSource:
 
 
 class TestNetworkMonitorSource:
-    """Tests for F-0018 extension: network monitor must not shadow $pid."""
+    """Tests for the network monitor must not shadow $pid."""
 
     def test_no_dollar_pid_assignment(self) -> None:
         """Network monitor must not assign to $pid (automatic variable)."""
@@ -98,7 +98,7 @@ class TestNetworkMonitorSource:
     def test_uses_owner_pid_variable(self) -> None:
         """Network monitor must interpolate $ownerPid into both TCP and UDP log lines.
 
-        F-0018 requires using ``$ownerPid`` rather than ``$pid``.  The assignment
+        The fix requires using ``$ownerPid`` rather than ``$pid``.  The assignment
         alone is insufficient: if the variable were defined but the log-emit lines
         still used a literal or the wrong variable the fix would be incomplete.
         Both the TCP connection log line and the UDP bind log line must carry
@@ -119,9 +119,9 @@ class TestNetworkMonitorSource:
 def _bundled_registry_monitor_source() -> str:
     """Return the text of the bundled registry monitor the backend stages.
 
-    S17-D66 converged the Windows Sandbox backend onto the single bundled
+    The Windows Sandbox backend uses the single bundled
     ``sandbox/scripts/registry_monitor.ps1``. The divergent inline copy these
-    tests previously inspected no longer exists, so F-0019's requirements are
+    tests inspected no longer exists, so those requirements are
     now checked against the surviving script - the one production actually
     copies into the guest monitor directory.
 
@@ -132,7 +132,7 @@ def _bundled_registry_monitor_source() -> str:
 
 
 class TestRegistryMonitorSource:
-    """Tests for F-0019: registry monitor must detect actual value type."""
+    """Registry monitor must detect actual value type."""
 
     def test_no_hardcoded_reg_sz(self) -> None:
         """Registry monitor must not hardcode REG_SZ; type must come from $vtype.
@@ -187,7 +187,7 @@ class TestRegistryMonitorSource:
     def test_key_field_is_a_hive_path_not_a_provider_path(self) -> None:
         r"""The emitted key must be normalised out of PowerShell's provider form.
 
-        S17-D66: the removed inline copy built its tracking key by joining the
+        The removed inline copy built its tracking key by joining the
         provider-qualified ``PSPath`` with ``'::'`` and split it back with
         ``-split '::', 3``.  ``PSPath`` already contains ``'::'``, so the key
         column reported the constant ``Microsoft.PowerShell.Core\Registry`` on
@@ -207,7 +207,7 @@ class TestRegistryMonitorSource:
 
 
 class TestDispatcherSource:
-    """Tests for F-0017: dispatcher catch block must not silently swallow errors."""
+    """Dispatcher catch block must not silently swallow errors."""
 
     def test_catch_block_logs_error(self) -> None:
         """Dispatcher outer catch block must log the error message."""

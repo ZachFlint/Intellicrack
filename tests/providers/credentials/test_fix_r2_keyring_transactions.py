@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, items 11 and 46: a chunked credential is written as a transaction, by one writer at a time, and never read half-changed.
+"""A chunked credential is written as a transaction, by one writer at a time, and never read half-changed.
 
 Every gate runs against a real file-backed keyring in the test's own directory. A write that fails part-way -- the keyring runs out of
 room -- must leave no chunk behind and the previous value intact, and must tell the operator the keyring is full. A process killed in the

@@ -2,17 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S20-D18: opening a tool must switch the tab widget to it.
+"""Gate for tab focus when a tool is opened: opening a tool must switch the tab widget to it.
 
-Before the fix, ``add_hex_editor_tab``/``add_x64dbg_tab``/``add_cutter_tab``/
-``add_ghidra_tab``/``add_frida_tab``/``add_process_tab``/``add_sandbox_tab``
-all called ``self.tab_widget.addTab(...)`` (or returned an already-created
-widget) without ever calling ``setCurrentWidget``/``setCurrentIndex``, so
-with any other tool tab already open the newly created or re-surfaced panel
-was appended/left behind the current tab and the user saw no visible change
-(S20-D18). This test drives the real ``ToolOutputPanel`` with real embedded
-tool widgets and asserts ``tab_widget.currentWidget()`` is the panel just
-opened, both when it is freshly created and when it already existed.
+The ``add_hex_editor_tab``/``add_x64dbg_tab``/``add_cutter_tab``/``add_ghidra_tab``/
+``add_frida_tab``/``add_process_tab``/``add_sandbox_tab`` methods must call
+``setCurrentWidget``/``setCurrentIndex`` on the panel they create or re-surface. Without
+that call, with another tool tab already open, the panel is appended or left behind the
+current tab and the user sees no visible change. This test drives the real
+``ToolOutputPanel`` with real embedded tool widgets and asserts
+``tab_widget.currentWidget()`` is the panel just opened, both when it is freshly created
+and when it already existed.
 """
 
 from __future__ import annotations

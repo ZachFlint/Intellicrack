@@ -443,10 +443,9 @@ class ProcessMemoryMixin:
         publishes a ``DOCUMENT_OPENED`` event on the shared state holder,
         updates ``binary_loaded`` / ``target_path`` / cursor / selection,
         and only then exposes the new document to subscribers (AI tools,
-        peer GUIs). The previous implementation hard-replaced
-        ``self.document`` and left the bridge pointing at the old map,
-        so every consumer asking the bridge what it had open got stale
-        state.
+        peer GUIs). Replacing ``self.document`` directly would
+        leave the bridge pointing at the old map, so every consumer
+        asking the bridge what it has open would see stale state.
         """
         parent = self if isinstance(self, QWidget) else None
 

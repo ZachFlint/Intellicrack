@@ -66,8 +66,6 @@ class TestToolDefinitionDispatchEndToEnd:
         ``status()`` path that corrupts or drops instances is caught by comparing
         the two id-sets.
 
-        Concrete falsifying mutations:
-
         * Changing ``status()`` to ``return {"instances": [], "total_count": 2,
           ...}`` makes ``status_ids == list_ids`` fail because ``status_ids`` is
           empty while ``list_ids`` is ``{"win-test-001", "qemu-test-001"}``.

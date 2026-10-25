@@ -507,8 +507,8 @@ _CANONICAL_FUNCTION_TO_DISPATCH_METHOD: dict[str, str] = {fn: fn.split(".", maxs
 class TestToolDefinition:
     """Verify ProcessBridge tool definition is fully wired to callable bridge methods.
 
-    The audit flagged a bare count assertion and a bare hasattr loop as non-gating:
-    neither proved the advertised functions are actually invokable through the
+    A bare count assertion or a bare hasattr loop does not prove that the advertised
+    functions are actually invokable through the production orchestration dispatch path.
     production orchestration dispatch path. These tests instead drive every
     advertised function through the real ToolRegistry.execute_tool_call resolution
     rule (suffix after the first dot) and confirm each resolves to a callable,
@@ -671,17 +671,15 @@ class TestToolDefinition:
 
 
 class TestAttachEnablesOnSelection:
-    """F5: selecting a process row must enable the Attach action.
+    """Selecting a process row must enable the Attach action.
 
-    Regression gate for ``ProcessPanel._on_process_selected`` (base.py):
-    pre-fix it only re-emitted ``process_selected`` and never called
-    ``_update_controls_for_state()``, so ``set_action_buttons_enabled`` was
-    never re-evaluated on selection and Attach stayed disabled until some
-    unrelated attach/detach transition happened to run. This drives a real,
-    live ``ProcessBridge`` process listing and a real row selection through
-    the actual ``QTableWidget`` selection model, so the test fails if the
-    ``_update_controls_for_state()`` call is removed from
-    ``_on_process_selected``.
+    Gate for ``ProcessPanel._on_process_selected`` (base.py). That method must call
+    ``_update_controls_for_state()`` so ``set_action_buttons_enabled`` is re-evaluated
+    on selection; without that call, Attach stays disabled until an unrelated attach
+    or detach transition runs. This drives a real, live ``ProcessBridge`` process
+    listing and a real row selection through the actual ``QTableWidget`` selection
+    model, so the test fails if the ``_update_controls_for_state()`` call is removed
+    from ``_on_process_selected``.
     """
 
     @_REQUIRES_WIN32_PROCESS_API
@@ -716,13 +714,12 @@ class TestAttachEnablesOnSelection:
 
 
 class TestProcessTablesReadOnly:
-    """F6: process-related tables must reject in-place cell editing.
+    """Process-related tables must reject in-place cell editing.
 
-    Regression gate for ``ProcessTab._build_system_tab`` /
-    ``_build_tracked_tab`` / ``_build_info_tab``: pre-fix none of the three
-    tables (system process list, tracked processes, environment variables)
-    called ``setEditTriggers(NoEditTriggers)``, so Qt's default
-    ``AllEditTriggers`` let a user double-click or press F2 on a populated
+    Gate for ``ProcessTab._build_system_tab`` / ``_build_tracked_tab`` /
+    ``_build_info_tab``. The system process list, tracked processes, and environment
+    variables tables must call ``setEditTriggers(NoEditTriggers)``; otherwise Qt's
+    default ``AllEditTriggers`` lets a user double-click or press F2 on a populated
     cell and overwrite live process data in the view. Each test drives a
     real, shown table through the actual Qt interaction pipeline (F2 on the
     current index) rather than asserting on the property alone, so the test

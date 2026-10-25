@@ -6,11 +6,9 @@
 """Gate for the large fixture files: big in size, small on disk, on every platform.
 
 The install-media and patch-source gates build files of two and three gibibytes
-that carry a few sectors of real data. They were extended with a bare
-``truncate``, which leaves a hole on Linux but allocates the whole extension on
-NTFS, so a single Windows run held some thirty-four gibibytes of zeros in
-pytest's temporary directories and the hosted runner ran out of disk partway
-through the suite. These tests hold :func:`tests._helpers.sparse_files.extend_sparse`
+that carry a few sectors of real data. A bare ``truncate`` would leave a hole on
+Linux but allocate the whole extension on NTFS, filling the disk of a hosted
+runner partway through the suite. These tests hold :func:`tests._helpers.sparse_files.extend_sparse`
 to the property those fixtures depend on.
 """
 
@@ -32,7 +30,7 @@ _ALLOWED_ON_DISK_BYTES: Final[int] = _FIXTURE_BYTES // 2
 """How much real disk the fixture may occupy: half of its size.
 
 A sparse file still occupies something, and how much depends on the volume rather than on the file: about one megabyte for this fixture
-on a workstation, and seventeen and then thirty-four on two runs of the hosted CI runner. Extended with a bare ``truncate`` it occupies
+on a workstation, and seventeen to thirty-four megabytes on the hosted CI runner. Extended with a bare ``truncate`` it occupies
 all of its size, which is the difference this bound has to tell apart, so it is set well clear of both.
 """
 _TAIL_PROBE_BYTES: Final[int] = 4096
@@ -58,7 +56,7 @@ def test_a_sparse_fixture_has_its_full_size_and_stores_almost_nothing(tmp_path: 
     """The fixture reports the size it was extended to while occupying next to no disk.
 
     Falsifiable: extended with a bare ``truncate``, the same file occupies its
-    whole size on NTFS, which is what filled the runner's disk.
+    whole size on NTFS, which fills the runner's disk.
 
     Args:
         tmp_path: Per-test directory.

@@ -320,7 +320,7 @@ if (-not $originalEngine) {
 Write-Success "Docker Desktop is running (engine: $originalEngine)"
 
 # Interleaving a WHPX-backed VM (QEMU, Windows Sandbox) with a Docker Desktop
-# engine switch has previously crashed this host outright -- both compete for
+# engine switch can crash the host outright -- both compete for
 # the same Host Compute Service layer. Refuse to switch engines while one is up.
 Write-Step 'MEGALINT' 'Checking for running QEMU / Windows Sandbox VMs...'
 if (Test-ProcessRunning -NamePatterns @('qemu-system-*', 'WindowsSandbox*')) {
@@ -400,7 +400,7 @@ try {
     # mega-linter-runner forwards every KEY=VALUE in a repo-root .env file into
     # the container. Running `just megalint` from inside the pixi shell puts a
     # Windows CONDA_PREFIX/VIRTUAL_ENV there, and pyo3's build script reads both
-    # when deciding which interpreter to query, so RUST_CLIPPY died with
+    # when deciding which interpreter to query, so RUST_CLIPPY would fail with
     # "failed to run the Python interpreter at D:\Intellicrack\.pixi\envs\default/bin/python".
     # PYO3_PYTHON takes precedence over both, and a bare command name resolves
     # through the container's PATH rather than pinning an image-specific path.

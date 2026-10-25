@@ -3,37 +3,29 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave-5 real-gate suite — sections/listing group (13 methods).
+"""Gates for the sections and listing accessors of CutterBridge (13 methods).
 
-Source-attribution note: The group-02-report.md lists these 13 methods under
-"GhidraBridge" findings (items 57-73 in the findings table, STILL OPEN items
-12-20 and 24-27).  Code search confirms the methods do NOT exist in
-``src/intellicrack/bridges/ghidra.py``; they live in
-``src/intellicrack/bridges/cutter.py`` as part of CutterBridge.  The audit
-misattributed the file. Gates are written against the ACTUAL implementations.
+Gates are written against the implementations in ``src/intellicrack/bridges/cutter.py``.
 
 Methods covered (all in ``CutterBridge``, ``src/intellicrack/bridges/cutter.py``):
 
-  ``get_sections``    — ``iSj`` command → ``SectionInfo`` field mapping
-  ``get_classes``     — ``icj`` command → ``ClassInfo`` + method/field normalisation
-  ``get_vtables``     — ``avj`` command → ``VtableInfo`` field mapping
-  ``get_syscalls``    — ``asj`` command → pass-through list
-  ``get_callgraph``   — ``agcj`` command → pass-through list
-  ``get_resources``   — ``irj`` command → ``ResourceInfo`` field mapping
-  ``get_symbols``     — ``isj`` command → ``SymbolInfo`` field mapping
-  ``get_flags``       — ``fj`` command → ``FlagInfo`` (address ← ``offset`` key)
-  ``add_flag``        — ``f {name} {size} @ {address}`` exact command form
-  ``get_libraries``   — ``ilj`` command → ``LibraryInfo``; string and dict entry forms
-  ``get_headers``     — ``ihj`` command → ``HeaderInfo`` with ``str(value)`` coercion
-  ``get_debug_info``  — ``iDj`` command → first element or ``{}`` on empty
-  ``get_all_strings`` — ``izzj`` command (NOT ``izj``) → ``StringInfo`` + encoding map
+``get_sections``    — ``iSj`` command → ``SectionInfo`` field mapping
+``get_classes``     — ``icj`` command → ``ClassInfo`` + method/field normalisation
+``get_vtables``     — ``avj`` command → ``VtableInfo`` field mapping
+``get_syscalls``    — ``asj`` command → pass-through list
+``get_callgraph``   — ``agcj`` command → pass-through list
+``get_resources``   — ``iRj`` command → ``ResourceInfo`` field mapping
+``get_symbols``     — ``isj`` command → ``SymbolInfo`` field mapping
+``get_flags``       — ``fj`` command → ``FlagInfo`` (address ← ``offset`` key)
+``add_flag``        — ``f {name} {size} @ {address}`` exact command form
+``get_libraries``   — ``ilj`` command → ``LibraryInfo``; string and dict entry forms
+``get_headers``     — ``ihj`` command → ``HeaderInfo`` with ``str(value)`` coercion
+``get_debug_info``  — ``iDj`` command → first element or ``{}`` on empty
+``get_all_strings`` — ``izzj`` command (NOT ``izj``) → ``StringInfo`` + encoding map
 
-Every gate asserts BOTH the exact rizin command the bridge emits AND the exact
-parsed return value fields against independently-specified oracle payloads.
+Every gate asserts BOTH the exact rizin command the bridge emits AND the exact parsed return value fields against independently-specified oracle payloads.
 
-Oracle: all oracle values are independently specified by the test (chosen by
-the test author, not derived from the production code).  No gate re-implements
-the production logic to compare against itself.
+Oracle: all oracle values are independently specified by the test (chosen by the test author, not derived from the production code).  No gate re-implements the production logic to compare against itself.
 """
 
 from __future__ import annotations
@@ -746,9 +738,7 @@ class TestGetResources:
 class TestGetSymbols:
     """Gate ``get_symbols``: ``isj`` command + ``SymbolInfo`` field mapping.
 
-    Existing tests in test_cutter.py:1448 assert ``name`` and ``address`` but
-    do NOT assert that ``isj`` was issued or that ``module_name`` (from the
-    ``libname`` key) is mapped correctly.  This class closes those gaps.
+    The gate also asserts that ``isj`` is issued and that ``module_name`` is mapped from the ``libname`` key.
 
     Key mutation targets:
 
@@ -855,9 +845,7 @@ class TestGetSymbols:
 class TestGetFlags:
     """Gate ``get_flags``: ``fj`` command + ``FlagInfo`` field mapping.
 
-    The critical mapping is ``offset`` → ``FlagInfo.address``.  The existing
-    test (test_cutter.py:1513) asserts name/address/size but does NOT assert
-    the ``fj`` command was issued.  This class closes that gap.
+    The critical mapping is ``offset`` → ``FlagInfo.address``.  The gate also asserts that the ``fj`` command is issued.
 
     Key mutation targets:
 
@@ -945,9 +933,7 @@ class TestGetFlags:
 class TestAddFlag:
     """Gate ``add_flag``: exact ``f {name} {size} @ {address}`` command form.
 
-    The existing test (test_cutter.py:1531) checks that the name and address
-    appear in the command but does NOT check that size is embedded in the exact
-    correct position.  This class closes that gap.
+    The gate also checks that size is embedded in the exact position of the command.
 
     Key mutation targets:
 

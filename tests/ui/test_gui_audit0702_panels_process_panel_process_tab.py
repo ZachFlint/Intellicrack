@@ -2,17 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""GUI-audit regression gates for :mod:`intellicrack.ui.panels.process_panel.process_tab`.
+"""Gates for :mod:`intellicrack.ui.panels.process_panel.process_tab` splitter collapsing.
 
-Finding M59: the ``QSplitter`` built for the "Process Info" sub-tab was left
-with Qt's default ``childrenCollapsible=True`` and neither pane (the info
-tree, nor the environment-variables widget) had a minimum size set. Dragging
-the splitter handle to either edge -- or a user double-clicking it, a
-standard Qt splitter gesture -- fully collapsed one pane to 0px with no
-visible affordance to restore it. The fix calls
-``splitter.setChildrenCollapsible(False)`` and gives both panes
-``setMinimumHeight(_SPLIT_MIN_HEIGHT)``, so Qt refuses to shrink either pane
-below its minimum size regardless of how far the handle is dragged.
+The ``QSplitter`` built for the "Process Info" sub-tab must disable pane collapsing, and both panes (the info tree and the
+environment-variables widget) must have a minimum size. Otherwise dragging the splitter handle to either edge, or double-clicking
+it (a standard Qt splitter gesture), fully collapses one pane to 0px with no visible affordance to restore it. The splitter
+calls ``splitter.setChildrenCollapsible(False)`` and both panes get ``setMinimumHeight(_SPLIT_MIN_HEIGHT)``, so Qt refuses to
+shrink either pane below its minimum size regardless of how far the handle is dragged.
 
 Each test drives a real, shown :class:`ProcessTab` and a real
 :class:`QSplitter` (no mocks/stubs) and calls ``QSplitter.moveSplitter`` --
@@ -84,10 +80,8 @@ def process_tab(qapp: QApplication) -> Generator[ProcessTab]:
 def test_m59_splitter_children_not_collapsible(process_tab: ProcessTab) -> None:
     """The info/env splitter must disable Qt's default pane-collapsing.
 
-    Pre-fix, the splitter was constructed with no call to
-    ``setChildrenCollapsible``, leaving Qt's default of ``True`` in effect,
-    which is what permits a drag-to-edge or handle double-click to snap a
-    pane to 0px.
+    The splitter must call ``setChildrenCollapsible(False)``, since Qt's default of ``True`` permits a drag-to-edge or handle
+    double-click to snap a pane to 0px.
 
     Args:
         process_tab: Real, shown ``ProcessTab`` fixture.
@@ -101,9 +95,9 @@ def test_m59_dragging_handle_to_top_edge_keeps_info_tree_visible(process_tab: Pr
 
     ``QSplitter.moveSplitter(0, 1)`` is the same primitive Qt uses when a
     user drags the handle (or double-clicks it) all the way to the top edge.
-    Pre-fix (default ``childrenCollapsible=True``, no minimum height on the
-    info tree) this collapsed the tree to 0px, as verified directly against
-    an unpatched splitter/widget pair with the same construction. Post-fix,
+    With the default ``childrenCollapsible=True`` and no minimum height on the
+    info tree this collapses the tree to 0px, as verified directly against
+    an unpatched splitter/widget pair with the same construction. With the minimum,
     the enforced minimum height keeps the tree at least ``_SPLIT_MIN_HEIGHT``
     px tall.
 
@@ -125,9 +119,8 @@ def test_m59_dragging_handle_to_bottom_edge_keeps_env_table_visible(process_tab:
     """Dragging the splitter handle to the bottom edge must not collapse the env pane.
 
     Mirrors the top-edge case for the second pane (the environment-variables
-    widget containing ``_env_table``): pre-fix this pane had no minimum
-    height either, so dragging the handle all the way down collapsed it to
-    0px, hiding the environment-variables table entirely.
+    widget containing ``_env_table``): without a minimum height this pane would collapse to 0px when the handle is dragged
+    all the way down, hiding the environment-variables table entirely.
 
     Args:
         process_tab: Real, shown ``ProcessTab`` fixture.
@@ -149,11 +142,11 @@ def test_m59_dragging_handle_to_bottom_edge_keeps_env_table_visible(process_tab:
 def test_m59_both_panes_have_minimum_height_configured(process_tab: ProcessTab) -> None:
     """Both splitter panes must carry an explicit, non-trivial minimum height.
 
-    This is the concrete configuration the fix introduces
+    This is the concrete configuration that sets the minimum height
     (``setMinimumHeight(_SPLIT_MIN_HEIGHT)`` on both the info tree and the
-    environment-variables widget); pre-fix neither widget had any minimum
+    environment-variables widget). Without it neither widget would have any minimum
     size set (``minimumHeight()`` defaults to ``0``), which is precisely
-    what let ``moveSplitter`` collapse either pane to zero.
+    what would let ``moveSplitter`` collapse either pane to zero.
 
     Args:
         process_tab: Real, shown ``ProcessTab`` fixture.

@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-gate tests for ProcessManager error paths (Group 06 Wave 5).
+"""Real-gate tests for ProcessManager error paths.
 
 Covers:
-  S7-09 — ``ProcessManager.run_tracked`` raises ``ProcessStateError`` with
+  ``ProcessManager.run_tracked`` raises ``ProcessStateError`` with
            correct attributes when ``returncode`` is ``None`` after communicate.
-  S7-10 — ``_pid_exists_windows`` kernel32 → psutil fallback path; also
+  ``_pid_exists_windows`` kernel32 → psutil fallback path; also
            tests ``_pid_exists`` zero-pid boundary.
 """
 
@@ -105,7 +105,7 @@ def _zombie_popen(*_args: object, **_kwargs: object) -> _ZombieProcess:
 
 
 class TestProcessStateError:
-    """Gate for S7-09: ProcessStateError attributes and message format."""
+    """Gate for ProcessStateError attributes and message format."""
 
     def test_constructor_sets_process_name_and_pid(self) -> None:
         """ProcessStateError sets process_name, pid, and includes them in str().
@@ -186,7 +186,7 @@ class TestProcessStateError:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="_pid_exists_windows is Windows-only")
 class TestPidExistsWindowsFallback:
-    """Gate for S7-10: _pid_exists_windows kernel32 and psutil fallback paths."""
+    """Gate for _pid_exists_windows kernel32 and psutil fallback paths."""
 
     def test_pid_exists_current_process_returns_true(self) -> None:
         """_pid_exists_windows returns True for the current process PID.

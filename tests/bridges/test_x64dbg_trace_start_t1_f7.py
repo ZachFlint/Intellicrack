@@ -3,25 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tier-1 Finding #7 regression gates for ``X64DbgBridge.trace_start``.
+"""Gates for ``X64DbgBridge.trace_start``.
 
-Finding closed:
-    T1-7  ``trace_start`` issued a ``TraceSetCondition {addr}, {condition}``
-          form that is not a real x64dbg command under any name or alias,
-          and framed ``TraceSetLog`` with an address it never accepts -
-          both additionally gated on ``address is not None``, which the
-          Trace tab's Condition/Log inputs never supply. The Trace tab's
-          Condition/Log text was therefore silently dropped on every GUI
-          call, with no error, and the debugger only ever ran a bare,
-          argument-less ``StartRunTrace``.
+``trace_start`` must apply a supplied condition or log text, or raise. It must not issue a ``TraceSetCondition`` command, which x64dbg does not register under any name or alias, and must not frame ``TraceSetLog`` with an address that the command does not accept. The Trace tab's Condition and Log inputs never supply an address, so address-gated framing silently dropped them and the debugger ran a bare, argument-less ``StartRunTrace``.
 
-Each test drives the real bridge method against an in-process
-``_FakePipeClient`` that records every ``(command, params)`` pair sent and
-returns scripted responses. Every oracle value (expected command strings,
-the auto-generated trace file's parent directory and suffix) is derived
-independently in this file from the real x64dbg command semantics
-documented at help.x64dbg.com, never by re-invoking the production code
-under test.
+Each test drives the real bridge method against an in-process ``_FakePipeClient`` that records every ``(command, params)`` pair sent and returns scripted responses. Every oracle value (expected command strings, the auto-generated trace file's parent directory and suffix) is derived independently in this file from the real x64dbg command semantics documented at help.x64dbg.com, never by re-invoking the production code under test.
 """
 
 from __future__ import annotations
@@ -168,20 +154,14 @@ def bridge() -> X64DbgBridge:
 
 @pytest.mark.asyncio
 class TestTraceStartLogAndConditionGenuinelyApply:
-    """T1-7: ``trace_start`` must genuinely apply a supplied condition/log, or raise."""
+    """``trace_start`` must genuinely apply a supplied condition/log, or raise."""
 
     async def test_no_params_opens_a_real_run_trace_file(self, bridge: X64DbgBridge) -> None:
         """No condition/log still issues a valid, argument-complete ``StartRunTrace``.
 
-        ``StartRunTrace``'s file-name argument is required (help.x64dbg.com),
-        so a bare ``StartRunTrace`` with no argument - what the old code
-        always sent - never actually opens a trace. This asserts the exec
-        command carries a real, non-empty, quoted file path under the
-        expected temp directory with the ``.trace64`` extension (default
-        ``is_64bit=True``).
+        ``StartRunTrace``'s file-name argument is required (help.x64dbg.com), so a bare ``StartRunTrace`` with no argument never opens a trace. This asserts the exec command carries a real, non-empty, quoted file path under the expected temp directory with the ``.trace64`` extension (default ``is_64bit=True``).
 
-        Mutation caught: reverting to a bare ``"StartRunTrace"`` command
-        (no file argument) fails the substring/suffix assertions below.
+        Mutation caught: reverting to a bare ``"StartRunTrace"`` command (no file argument) fails the substring and suffix assertions below.
 
         Args:
             bridge: Fixture bridge instance.
@@ -208,7 +188,7 @@ class TestTraceStartLogAndConditionGenuinelyApply:
 
         Independent oracle: ``TraceSetLog``'s only two arguments are log
         text and log condition (help.x64dbg.com TraceSetLog) - no address
-        is ever involved, unlike the old, always-suppressed
+        is ever involved, rather than an address-based
         ``TraceSetLog {hex(addr)}, {text}`` form.
 
         Mutation caught: omitting the ``TraceSetLog`` call, misspelling
@@ -230,17 +210,11 @@ class TestTraceStartLogAndConditionGenuinelyApply:
         assert result["log_condition"] is None
 
     async def test_condition_with_log_text_genuinely_applies_as_log_condition(self, bridge: X64DbgBridge) -> None:
-        """``condition`` + ``log_text`` sends ``TraceSetLog "<text>", "<condition>"``.
+        """An operator-typed condition with log text reaches x64dbg.
 
-        This is the core T1-7 regression gate: an operator-typed condition
-        must genuinely reach x64dbg. Here it takes effect as ``TraceSetLog``'s
-        second (log-condition) argument - the real, documented role a
-        condition plays alongside log text - never as the fabricated
-        ``TraceSetCondition`` command the old code sent.
+        The condition takes effect as ``TraceSetLog``'s second (log-condition) argument, the documented role a condition plays alongside log text. It is never sent as a ``TraceSetCondition`` command, which x64dbg does not register.
 
-        Mutation caught: dropping the condition from the ``TraceSetLog``
-        call (the original silent-drop defect) or reintroducing
-        ``TraceSetCondition`` anywhere fails these assertions.
+        Mutation caught: dropping the condition from the ``TraceSetLog`` call or reintroducing ``TraceSetCondition`` anywhere fails these assertions.
 
         Args:
             bridge: Fixture bridge instance.
@@ -296,18 +270,9 @@ class TestTraceStartLogAndConditionGenuinelyApply:
     ) -> None:
         """A bare condition with no log text raises rather than silently tracing unconditionally.
 
-        This is the exact silent-success defect Finding #7 describes: an
-        operator types only a Condition and clicks Start. ``TraceSetLog``
-        cannot set a condition without also setting log text, and
-        ``StartRunTrace`` accepts no condition of any kind, so there is no
-        real command this can bind to - the fix must raise here instead of
-        falling through to an unconditional ``StartRunTrace`` with no
-        error, which is what the old ``address is not None`` guard did on
-        every GUI call (the Trace tab has no address field).
+        An operator who types only a Condition and clicks Start must not get an unconditional trace with no error. ``TraceSetLog`` cannot set a condition without also setting log text, and ``StartRunTrace`` accepts no condition of any kind, so there is no real command this can bind to. The bridge must raise here.
 
-        Mutation caught: reverting to the old silent-drop behavior sends a
-        bare ``StartRunTrace`` and returns ``{"success": True}`` instead of
-        raising, so ``pytest.raises`` fails and ``fake.sent`` is non-empty.
+        Mutation caught: reverting to the silent-drop behaviour sends a bare ``StartRunTrace`` and returns ``{"success": True}`` instead of raising, so ``pytest.raises`` fails and ``fake.sent`` is non-empty.
 
         Args:
             bridge: Fixture bridge instance.

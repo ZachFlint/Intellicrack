@@ -12,11 +12,10 @@ why the ``python-test`` CI job can fail to report -- fails only the offending
 test. This module proves that containment with a real child process that really
 dies abnormally, rather than asserting on a simulated result.
 
-It also gates coverage of that containment. Three modules once self-attached
-through a fixture not named ``self_attached_bridge``, so they injected the Frida
-agent into the pytest process itself; the access violation that agent left
-behind surfaced later in unrelated tests (a LIEF section walk, a Qt paint event)
-and killed the CI run. The classifier gate below fails the moment any test
+It also gates coverage of that containment. A module that self-attaches through
+a fixture not named ``self_attached_bridge`` injects the Frida agent into the
+pytest process itself; the access violation that agent leaves behind can surface
+later in unrelated tests (a LIEF section walk, a Qt paint event) and kill the CI run. The classifier gate below fails the moment any test
 module self-attaches without declaring isolation.
 """
 
@@ -81,7 +80,7 @@ _FORMERLY_UNISOLATED_MODULES = (
     "tests/bridges/completeness/frida/test_frida_panel_wiring.py",
     "tests/ui/test_frida_instruction_disassemble_control.py",
 )
-"""Modules that self-attached in-process until isolation covered module-level marking."""
+"""Modules that self-attach in-process, which requires module-level isolation."""
 
 _SELF_ATTACH_SOURCE = """
     import os
@@ -460,7 +459,7 @@ def test_every_frida_self_attach_module_runs_isolated() -> None:
     """No test module may inject the Frida agent into the pytest process itself.
 
     Falsifiable: removing the ``frida_selfattach`` ``pytestmark`` from any of the
-    three formerly unisolated modules lists that module here, and a classifier
+    three modules that self-attach in-process lists that module here, and a classifier
     that stopped recognising them fails the coverage assertion before the
     isolation assertion could pass vacuously.
     """

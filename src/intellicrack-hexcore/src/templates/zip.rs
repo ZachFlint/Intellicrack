@@ -7,6 +7,7 @@ use super::{
     ConditionOp, Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry,
 };
 
+/// Registers the built-in ZIP structure templates into `registry`.
 pub fn register_templates(registry: &mut TemplateRegistry) {
     registry.register(zip_local_file_header());
     registry.register(zip_central_directory());
@@ -20,6 +21,7 @@ pub fn register_templates(registry: &mut TemplateRegistry) {
 
 fn fd(name: &str, field_type: FieldType, description: &str) -> FieldDefinition {
     FieldDefinition {
+        at: None,
         name: name.to_string(),
         field_type,
         endianness: None,
@@ -510,14 +512,6 @@ mod tests {
         assert!(list.iter().any(|(name, _)| name == "ZIP64_DATA_DESCRIPTOR"));
     }
 
-    /// Gate for finding #55: `ZIP_CENTRAL_DIRECTORY` and
-    /// `ZIP_END_OF_CENTRAL_DIRECTORY` each have a genuine unique 4-byte
-    /// signature per APPNOTE.TXT and must declare `magic_detection` like
-    /// every other ZIP record type with a stable signature, so a
-    /// magic/signature scanner can locate them at an arbitrary offset.
-    ///
-    /// Mutation caught: reverting either `magic_detection` back to `None`
-    /// makes the corresponding `.unwrap()` panic.
     #[test]
     fn test_central_directory_and_eocd_have_magic_detection() {
         let reg = TemplateRegistry::new();
@@ -643,17 +637,6 @@ mod tests {
         assert_eq!(total_size, 32);
     }
 
-    /// Gate for finding #56: when `data_size == 8` (only `original_size`
-    /// present, the common case for a local-file-header zip64 extra field),
-    /// the template must stop after `original_size` and must NOT read the
-    /// following unrelated bytes as `compressed_size`,
-    /// `relative_header_offset`, or `disk_start_number`.
-    ///
-    /// Mutation caught: reverting the four trailing fields from
-    /// `Conditional` back to unconditional `fd(...)` calls makes
-    /// `fields.len()` become 6 instead of 3, `total_size` become 32 instead
-    /// of 12, and `compressed_size` would be found with a fabricated value
-    /// derived from the poison/NTFS-header bytes rather than being absent.
     #[test]
     fn test_zip64_extra_field_partial_data_size_stops_at_boundary() {
         let mut data = Vec::with_capacity(32);

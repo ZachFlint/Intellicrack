@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit7 F-0007: ``QEMUSandbox.extract_dropped_files``.
+"""Tests for ``QEMUSandbox.extract_dropped_files``.
 
-The audit7 fix introduces two requirements:
+``extract_dropped_files`` has two requirements:
 
 1. **Allowlist-safe agent dispatch.** When the guest agent is connected, the
    sandbox must wrap the platform-specific copy command in an allowed shell
@@ -19,7 +19,7 @@ When both paths produce zero files, the call must raise ``SandboxError`` rather
 than returning an empty zip and a misleading success.
 
 Both requirements belong to the virtio-9p transport, which is what carries the
-share wherever QEMU supports it. S17-D69 made the FAT transport - every Windows
+share wherever QEMU supports it. The FAT transport - every Windows
 host, and every Windows guest - expose the share read-only, because vvfat's
 write-back path aborts the whole machine. A guest that cannot write to the share
 cannot mirror anything host-visible into it, so on that transport there is no
@@ -340,7 +340,7 @@ class TestScenarioAAgentPathWraps:
         the guest performs is invisible to the host until it is pulled back
         over the guest agent's file commands. With no such channel open the
         call must fail rather than hand back an archive built from a share the
-        guest has not been able to write to since S17-D69.
+        guest cannot write to.
 
         Args:
             tmp_path: Pytest temp directory used as the shared folder.

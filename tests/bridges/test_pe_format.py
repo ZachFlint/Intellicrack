@@ -350,7 +350,7 @@ class TestGetDataDirectoryOffset:
         assert offset == PE_OPTIONAL_HEADER_OFFSET + PE32PLUS_OPTIONAL_HEADER_SIZE
 
     def test_tls_directory_index_9(self) -> None:
-        """Verify TLS directory (entry index 9) computation matches legacy arithmetic."""
+        """Verify TLS directory (entry index 9) computation matches the direct offset arithmetic."""
         legacy_pe64 = 24 + (1 * 112 + 0 * 96) + 72
         helper_pe64 = get_data_directory_offset(0, is_pe64=True, entry_index=9)
         assert helper_pe64 == legacy_pe64
@@ -360,7 +360,7 @@ class TestGetDataDirectoryOffset:
         assert helper_pe32 == legacy_pe32
 
     def test_resource_directory_index_2(self) -> None:
-        """Verify Resource directory (entry index 2) computation matches legacy arithmetic."""
+        """Verify Resource directory (entry index 2) computation matches the direct offset arithmetic."""
         legacy_pe64 = 24 + (1 * 112 + 0 * 96) + 16
         helper_pe64 = get_data_directory_offset(0, is_pe64=True, entry_index=2)
         assert helper_pe64 == legacy_pe64
@@ -814,7 +814,7 @@ class TestEndToEndPe32Plus:
         assert rva_to_file_offset(sections, 0x2010) == 0x1410
 
     def test_data_directory_offset_matches_legacy(self) -> None:
-        """Verify Data Directory addressing matches the legacy x64dbg arithmetic."""
+        """Verify Data Directory addressing matches the x64dbg arithmetic."""
         sec = _build_section_header(
             name=b".text",
             virtual_size=0x100,

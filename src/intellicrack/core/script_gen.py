@@ -646,10 +646,9 @@ class ScriptValidator:
 
         Languages without a real validator (currently ``R2_COMMANDS`` and
         ``X64DBG_SCRIPT``) return ``(False, <reason>)`` and leave
-        :attr:`Script.verified` unchanged. The previous behaviour of
-        silently returning success is removed because callers used the
-        ``verified`` flag to gate execution and would otherwise treat
-        unvalidated scripts as trusted.
+        :attr:`Script.verified` unchanged. Callers use the
+        ``verified`` flag to gate execution, so reporting success without a
+        validator would treat unvalidated scripts as trusted.
 
         Args:
             script: Script to validate.

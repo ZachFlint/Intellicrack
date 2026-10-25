@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D65: a "ready" guest agent has to have run a command.
+"""A "ready" guest agent has to have run a command.
 
 ``_ensure_guest_agent_ready`` declared the agent ready as soon as
 ``guest-ping`` came back. A ping is answered by the agent's dispatch loop and
@@ -59,7 +59,7 @@ _HOPELESS_GUEST_BUDGET_S: Final[float] = 6.0
 _READY_GUEST_BUDGET_S: Final[float] = 30.0
 _ONE_PROBE: Final[int] = 1
 _TWO_PROBES: Final[int] = 2
-# Only ever used to build a sandbox whose probe command is read; nothing
+# Used only to build a sandbox whose probe command is read; nothing
 # connects to it.
 _UNCONNECTED_PORT: Final[int] = 65000
 

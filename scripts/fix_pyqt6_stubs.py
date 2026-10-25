@@ -22,14 +22,11 @@ turn every signal connection in the UI into a basedpyright error. The return
 type becomes ``object``: a slot's return value is discarded, so any callable
 is acceptable, and ``object`` states that without falling back to ``Any``.
 
-This script used to fix only the import, and only in ``QtWidgets.pyi``. An
-environment whose other stubs had been fixed by hand type-checked clean while
-a fresh install -- CI's -- reported over a thousand errors. Both defects are
-fixed now, in every affected stub.
+Both defects are fixed in every affected stub, not only ``QtWidgets.pyi``.
 
-The script is **idempotent**: a second run changes nothing, and a line an
-earlier version damaged with repeated ``collections.abc`` entries is repaired
-to a single one. It exits quietly when PyQt6 is absent.
+The script is **idempotent**: a second run changes nothing, and a line damaged
+with repeated ``collections.abc`` entries is repaired to a single one. It exits
+quietly when PyQt6 is absent.
 """
 
 from __future__ import annotations
@@ -111,9 +108,9 @@ def _needs_patch(text: str) -> bool:
 
     Defined through :func:`_apply_patch` rather than by a separate pattern, so
     the two can never disagree: a line the patch would leave alone is never
-    reported as needing it. The previous pattern backtracked over the space
-    after the comma and reported an already-patched line as unpatched, so
-    every run added another ``collections.abc`` to the same line.
+    reported as needing it. A separate pattern that backtracks over the space
+    after the comma would report an already-patched line as unpatched, and
+    every run would add another ``collections.abc`` to the same line.
 
     Args:
         text: Full text content of the type hint file.

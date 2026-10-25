@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L3 gate tests for the x64dbg memory-search GUI controls (slice-2 row 8).
+"""L3 gate tests for the x64dbg memory-search GUI controls .
 
 ``X64DbgBridge.scan_memory`` (an exact-byte memory scan that returns
 ``MemorySearchResult`` records carrying real surrounding-byte context) had
@@ -15,10 +15,8 @@ wired identically in ``_on_search``, both dispatching to ``find_pattern``
 ``scan_memory`` was reachable only indirectly, through ``find_pattern``'s
 own no-wildcard fallback.
 
-The remediation gives "Byte" mode its own branch in ``_on_search`` that
-calls ``self._bridge.scan_memory(pattern)`` directly, and extends
-``_on_search_complete`` to render ``MemorySearchResult`` dataclass rows (in
-addition to the pre-existing dict-shaped rows from ``find_pattern`` /
+The "Byte" mode has its own branch in ``_on_search`` that
+calls ``self._bridge.scan_memory(pattern)`` directly, and ``_on_search_complete`` renders ``MemorySearchResult`` dataclass rows (in addition to the dict-shaped rows from ``find_pattern`` /
 ``yara_scan``) so the Match and Context columns are populated with real
 matched-byte and surrounding-context data instead of staying permanently
 empty.
@@ -89,7 +87,7 @@ class TestByteModeDispatch:
     def test_byte_mode_click_calls_scan_memory_and_never_find_pattern(qapp: QApplication) -> None:
         """Clicking Search in "Byte" mode must invoke ``bridge.scan_memory`` directly.
 
-        Falsifiable: reverting ``_on_search`` to its pre-remediation form
+        Falsifiable: reverting ``_on_search`` to a two-way split
         (only ``"YARA"`` vs. an ``else`` branch calling ``find_pattern``)
         makes ``scan_calls`` stay empty and ``find_calls`` receive the
         pattern instead, failing both assertions below. Broken production
@@ -204,7 +202,7 @@ class TestSearchResultsRendering:
         """A real ``MemorySearchResult`` list must populate all three data columns with real field values.
 
         Falsifiable: reverting ``_on_search_complete`` to only branch on
-        ``isinstance(match, dict)`` (the pre-remediation form) makes every
+        ``isinstance(match, dict)`` (the dict-only form) makes every
         column past "#" stay empty for these rows, failing every assertion
         below. Broken production line: the
         ``if isinstance(match, MemorySearchResult):`` branch in
@@ -239,7 +237,7 @@ class TestSearchResultsRendering:
 
     @staticmethod
     def test_dict_shaped_results_still_render_without_regression(qapp: QApplication) -> None:
-        """The pre-existing ``find_pattern``/``yara_scan`` dict shape must keep rendering correctly.
+        """The ``find_pattern``/``yara_scan`` dict shape must keep rendering correctly.
 
         Args:
             qapp: Session QApplication fixture.

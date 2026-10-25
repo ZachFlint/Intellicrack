@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for S19-D02 with the Hex Editor tab specifically active.
+"""Falsifiable gate for the splitter with the Hex Editor tab specifically active.
 
 ``ToolOutputPanel`` (``ui/tools.py``) docks every embedded tool -- including
 the built-in Hex Editor -- inside a ``main_splitter`` whose left column
@@ -14,20 +14,19 @@ squeezed narrower than it can render (N2). Pinning that floor
 unconditionally, however, combines with ``right_panel``'s own minimum to
 exceed the splitter's available width once the window is narrower than
 their sum, freezing every handle and pushing ``right_panel`` toward (or
-past) the edge -- the original S19-D02 regression. The fix caps the floor
+past) the edge -- the regression this module guards against. The fix caps the floor
 to ``min(content_minimum, splitter_width - right_minimum - handle_slack)``
 once the splitter's width is known.
 
 ``tests/ui/test_dock_panel_min_width.py`` already covers this mechanism
 generically via the Frida/Ghidra tabs. This module re-verifies the same
-fix specifically with the Hex Editor tab active (the tab actually named in
-S19-D02), driving the real ``ToolOutputPanel`` and real
+fix with the Hex Editor tab active, driving the real ``ToolOutputPanel`` and
 ``HexEditorPanel`` -- no mocked geometry.
 
-Reverting the cap (pinning ``left_panel``'s floor to the Hex tab's raw,
-uncapped ``minimumSizeHint().width()``) turns
+Without the cap (pinning ``left_panel``'s floor to the Hex tab's raw,
+uncapped ``minimumSizeHint().width()``), the tests
 ``test_left_panel_floor_is_capped_below_raw_content_minimum`` and
-``test_splitter_handle_remains_movable`` RED: the floor no longer drops
+``test_splitter_handle_remains_movable`` fail: the floor no longer drops
 below the tab's raw content minimum, and the handle stops responding to
 ``setSizes`` because the splitter has no slack left to redistribute.
 """
@@ -79,7 +78,7 @@ class TestHexTabSplitterStaysWithinBounds:
         """``main_splitter.sizes()`` must sum to at most the splitter's own width.
 
         Checked at both a comfortably wide window and a window narrow
-        enough that the D02 cap must bind, since ``setChildrenCollapsible(False)``
+        enough that the cap must bind, since ``setChildrenCollapsible(False)``
         makes an uncapped floor capable of forcing the splitter's
         computed minimum size above the window's actual width.
 
@@ -104,7 +103,7 @@ class TestHexTabSplitterStaysWithinBounds:
 
 @pytest.mark.usefixtures("qapp")
 class TestHexTabLeftFloorCappedWhenNarrow:
-    """S19-D02: the left column's floor must be capped, not pinned, when the window is narrow."""
+    """The left column's floor must be capped, not pinned, when the window is narrow."""
 
     @staticmethod
     def test_left_panel_floor_is_capped_below_raw_content_minimum(qapp: QApplication) -> None:
@@ -119,7 +118,7 @@ class TestHexTabLeftFloorCappedWhenNarrow:
         right_min = panel.right_panel.minimumWidth()
 
         # A window narrower than content_minimum + right_minimum + handle slack:
-        # the D02 cap must bind here (uncapped code cannot shrink below required_width).
+        # the cap must bind here (uncapped code cannot shrink below required_width).
         narrow_width = max(500, required_width + right_min - 50)
         panel.show()
         panel.resize(narrow_width, 700)

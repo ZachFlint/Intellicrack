@@ -3,13 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for SystemTab audit4 F-0020/F-0021/F-0022/F-0023 remediations.
+"""Tests for SystemTab pipe close, job info, action gating and error callbacks.
 
 Covers:
-- F-0020: _on_pipe_close dispatches before removing the row; on error the row is kept.
-- F-0021: _on_job_info clears _res_tree before populating (double-click yields one set).
-- F-0022: privileges/debug/services/PEB actions gate on _attached_pid; None -> no dispatch.
-- F-0023: all queries pass an _on_error callback that surfaces bridge errors via warning log.
+- _on_pipe_close dispatches before removing the row; on error the row is kept.
+- _on_job_info clears _res_tree before populating (double-click yields one set).
+- privileges/debug/services/PEB actions gate on _attached_pid; None -> no dispatch.
+- all queries pass an _on_error callback that surfaces bridge errors via warning log.
 """
 
 from __future__ import annotations
@@ -108,8 +108,6 @@ class _AsyncError:
         Raises:
             self._exc: The exception instance supplied at construction is
                 re-raised unchanged so callers observe the scripted failure.
-                The Raises entry uses the literal raise target so static
-                analysis can correlate the body with the docstring.
         """
         raise self._exc
 
@@ -522,7 +520,7 @@ def _dispatcher_replaced(runner: Callable[..., None]) -> Generator[None]:
 
 @pytest.mark.usefixtures("qapp")
 class TestPipeCloseKeepsRowOnFailure:
-    """F-0020: row must not be removed before close succeeds."""
+    """Row must not be removed before close succeeds."""
 
     def test_pipe_close_keeps_row_on_failure(self) -> None:
         """Row stays in the table when the bridge returns an error."""
@@ -563,7 +561,7 @@ class TestPipeCloseKeepsRowOnFailure:
 
 @pytest.mark.usefixtures("qapp")
 class TestJobInfoClearsBeforePopulate:
-    """F-0021: _on_job_info must clear _res_tree before each populate."""
+    """_on_job_info must clear _res_tree before each populate."""
 
     def test_job_info_clears_before_populate(self) -> None:
         """Double-clicking Get Job Info yields exactly one set of entries."""
@@ -585,7 +583,7 @@ class TestJobInfoClearsBeforePopulate:
 
 @pytest.mark.usefixtures("qapp")
 class TestUnattachedDoesNotDispatchPrivileges:
-    """F-0022: pid-gated actions must not dispatch when _attached_pid is None."""
+    """Pid-gated actions must not dispatch when _attached_pid is None."""
 
     def test_unattached_does_not_dispatch_privileges(self) -> None:
         """Get Privileges with no attached pid must not invoke the bridge."""
@@ -664,7 +662,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
 
 @pytest.mark.usefixtures("qapp")
 class TestQueryErrorSurfacesToUser:
-    """F-0023: bridge errors must not be swallowed — on_error must be wired."""
+    """Bridge errors must not be swallowed; on_error must be wired."""
 
     def test_query_error_surfaces_to_user(self) -> None:
         """A bridge error on get_token_privileges must invoke on_error, not silently drop."""
@@ -724,7 +722,7 @@ class TestQueryErrorSurfacesToUser:
 
 @pytest.mark.usefixtures("qapp")
 class TestUserVisibleWarningDialogIsShown:
-    """F-0022/F-0023: production code must display the real ``QMessageBox.warning`` modal.
+    """Production code must display the real ``QMessageBox.warning`` modal.
 
     These tests intentionally use no bridge double: every warning here is raised
     entirely by production code in ``SystemTab`` and rendered by the genuine

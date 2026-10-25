@@ -3,29 +3,24 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GUI audit regression gate for ``intellicrack.ui.panels.hex_editor.export_report``.
+"""Gate for ``intellicrack.ui.panels.hex_editor.export_report`` export dispatch.
 
-Covers the 2026-07-02 audit finding H4: ``_on_export_annotated_html`` and
-``_on_export_annotated_pdf`` called the blocking ``run_bridge_coroutine``
-directly from the Qt GUI thread, freezing the whole application (including
-window repaint) for the full duration of rendering an annotated HTML/PDF
-report -- a potentially huge operation since the range dialog pre-fills the
-end offset with the entire document length.
+The export handlers ``_on_export_annotated_html`` and ``_on_export_annotated_pdf`` must not call the blocking
+``run_bridge_coroutine`` directly from the Qt GUI thread, which would freeze the whole application (including window
+repaint) for the full duration of rendering an annotated HTML/PDF report. That is a potentially huge operation, since the
+range dialog pre-fills the end offset with the entire document length.
 
-The fix replaced the blocking call with ``run_bridge_coroutine_logged``,
-splitting each export into a dispatch step (``_on_export_annotated_html`` /
-``_on_export_annotated_pdf``) and success/error callbacks
+The exports dispatch through ``run_bridge_coroutine_logged``, splitting each export into a dispatch step
+(``_on_export_annotated_html`` / ``_on_export_annotated_pdf``) and success/error callbacks
 (``_on_export_annotated_html_success`` / ``_on_export_annotated_html_error``
 and the PDF equivalents) invoked once the bridge round trip completes on a
 background ``BridgeCallWorker`` thread.
 
-Every test below fails against the pre-fix module: it imported the blocking
-``run_bridge_coroutine`` (not ``run_bridge_coroutine_logged``), so
-monkeypatching the post-fix dispatcher name raises ``AttributeError``, and
-the pre-fix handlers wrote the export file and showed the result dialog
-synchronously inline rather than from a callback -- so assertions that no
-file exists immediately after dispatch, or that the GUI-thread call returns
-well before a slow bridge coroutine completes, would fail.
+Every test below fails against a module that imports the blocking ``run_bridge_coroutine`` (not
+``run_bridge_coroutine_logged``): monkeypatching the dispatcher name would raise ``AttributeError``. A handler that writes
+the export file and shows the result dialog synchronously, inline rather than from a callback, would also fail the
+assertions that no file exists immediately after dispatch, or that the GUI-thread call returns well before a slow bridge
+coroutine completes.
 """
 
 from __future__ import annotations
@@ -309,11 +304,10 @@ def _drive_sync(
 
 
 def test_h4_blocking_bridge_helper_no_longer_used() -> None:
-    """H4: the blocking ``run_bridge_coroutine`` helper is no longer imported.
+    """The blocking ``run_bridge_coroutine`` helper must not be imported.
 
-    Pre-fix, ``export_report.py`` imported ``run_bridge_coroutine`` (the
-    blocking variant) and called it directly from the two GUI-thread export
-    handlers. Post-fix it imports only ``run_bridge_coroutine_logged``.
+    ``export_report.py`` must not import ``run_bridge_coroutine`` (the blocking variant) or call it directly from the two
+    GUI-thread export handlers. It imports only ``run_bridge_coroutine_logged``.
     """
     assert not hasattr(export_report_module, "run_bridge_coroutine"), (
         "export_report.py must not reference the blocking run_bridge_coroutine helper"
@@ -328,11 +322,11 @@ def test_h4_export_html_dispatches_via_logged_worker_not_inline(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """H4: exporting annotated HTML dispatches through the async worker, not inline.
+    """Exporting annotated HTML dispatches through the async worker, not inline.
 
-    Pre-fix, ``_on_export_annotated_html`` called the blocking
+    ``_on_export_annotated_html`` must not call the blocking
     ``run_bridge_coroutine`` and wrote the output file inline before
-    returning. Post-fix it hands a real coroutine to
+    returning. It hands a real coroutine to
     ``run_bridge_coroutine_logged`` and returns without waiting for a
     result: with a dispatcher that records the call but never invokes
     ``on_success``, the coroutine must never have run (so the bridge's call
@@ -404,15 +398,15 @@ def test_h4_export_html_call_site_returns_before_slow_bridge_completes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """H4: the GUI-thread call returns immediately even while the bridge is still rendering.
+    """The GUI-thread call returns immediately even while the bridge is still rendering.
 
-    This is the direct end-to-end regression gate for H4, using the real
+    This is a direct end-to-end check, using the real
     (unmocked) ``run_bridge_coroutine_logged`` dispatcher and a genuine
     background ``BridgeCallWorker`` thread. The fake bridge sleeps for
     ``_BRIDGE_DELAY_S`` inside its coroutine to simulate rendering a large
-    annotated range. Pre-fix, ``_on_export_annotated_html`` blocked on
+    annotated range. ``_on_export_annotated_html`` must not block on
     ``run_bridge_coroutine(...).result()`` for the full sleep duration
-    before returning; post-fix it must return almost immediately, and the
+    before returning; it must return almost immediately, and the
     output file must only appear once the background round trip completes
     and its result is marshalled back onto this (the widget's) thread.
 
@@ -461,7 +455,7 @@ def test_h4_export_html_success_callback_writes_real_bridge_output(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """H4: the async success callback writes the bridge's genuine rendered HTML.
+    """The async success callback writes the bridge's genuine rendered HTML.
 
     Drives the coroutine handed to ``run_bridge_coroutine_logged`` to real
     completion and asserts the HTML string produced by actually executing
@@ -496,7 +490,7 @@ def test_h4_export_html_error_callback_reports_failure_and_resets_pending_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """H4: a bridge failure surfaces via the async error callback, not a raised exception.
+    """A bridge failure surfaces via the async error callback, not a raised exception.
 
     Args:
         make_host: Factory fixture building a wired ``_ExportHost``.
@@ -537,10 +531,10 @@ def test_h4_export_pdf_dispatches_via_logged_worker_not_inline(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """H4: exporting an annotated PDF dispatches through the async worker, not inline.
+    """Exporting an annotated PDF dispatches through the async worker, not inline.
 
-    Mirrors the HTML dispatch gate for the PDF export path (the second call
-    site of the same defect, at ``export_report.py:230`` pre-fix).
+    Mirrors the HTML dispatch gate for the PDF export path, which is the second call
+    site that dispatches through the same helper.
 
     Args:
         make_host: Factory fixture building a wired ``_ExportHost``.
@@ -607,7 +601,7 @@ def test_h4_export_pdf_success_callback_confirms_bridge_written_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """H4: the async success callback confirms the path the bridge itself wrote.
+    """The async success callback confirms the path the bridge itself wrote.
 
     The bridge writes PDF bytes directly to ``output_path`` inside the
     coroutine (mirroring the real ``HexEditorBridge.export_annotated_pdf``
@@ -653,7 +647,7 @@ def test_h4_export_pdf_error_callback_reports_failure_and_resets_pending_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """H4: a PDF bridge failure surfaces via the async error callback, not a raised exception.
+    """A PDF bridge failure surfaces via the async error callback, not a raised exception.
 
     Args:
         make_host: Factory fixture building a wired ``_ExportHost``.

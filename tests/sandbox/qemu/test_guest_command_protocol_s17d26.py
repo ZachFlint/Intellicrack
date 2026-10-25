@@ -2,14 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D26: the two halves of the guest command protocol must agree.
+r"""The two halves of the guest command protocol must agree.
 
 ``QEMUSandbox.run_command`` is the app's host-side guest-command API. It takes a
 command line for the guest's own interpreter - shell operators, redirections,
 quoted paths and all - and is documented to answer with the
 ``(exit_code, stdout, stderr)`` that command line really produced. The other
 half of that protocol is the in-guest agent, whose source **the application
-itself generates** in :meth:`QEMUSandbox._create_guest_agent_script`. S17-D26 is
+itself generates** in :meth:`QEMUSandbox._create_guest_agent_script`. This is
 that the two halves do not describe the same thing: the host composes a shell
 command line, and the agent decides on its own what to do with it.
 
@@ -25,7 +25,7 @@ and run by a real ``powershell.exe`` subprocess listening on a real loopback
 socket, exactly as the guest runs them. Only the accept loop around them belongs
 to this test. Restating the agent's behaviour here instead would make the test
 agree with the code by construction and gate nothing, which is precisely the
-trap S17-D26 was found in.
+trap was found in.
 
 The production :class:`GuestAgentClient` connects to that socket, so every byte
 of the request and of the reply crosses a real TCP connection, and every command
@@ -37,10 +37,10 @@ Two properties of the pipeline are asserted:
   payload.txt && echo ERRTEXT 1>&2 && exit /b 3`` only produces the payload and
   the exit status 3 if an interpreter parsed the ``&&`` chain; an argv exec
   handed the same text as a program name produces neither. This is the half of
-  S17-D26 the host satisfies by naming the interpreter itself, and pinning it
+  The host satisfies by naming the interpreter itself, and pinning it
   keeps that from silently regressing.
 * What the command wrote has to come back, on the stream it wrote it to. The
-  agent used to capture the child with ``& $cmd @cmdArgs 2>&1 | Out-String``,
+  agent captures the child with ``& $cmd @cmdArgs 2>&1 | Out-String``,
   which folds a native child's standard error into the same PowerShell error
   stream that the script's own ``$ErrorActionPreference = 'SilentlyContinue'``
   discards, and then re-renders standard output through a formatter that

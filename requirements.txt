@@ -128,6 +128,7 @@ jpype1==1.7.1
 jsonlint==0.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
+jupyter-core==5.9.1
 keyring==25.7.0
 keyrings-alt==5.0.2
 keystone-engine==0.9.2
@@ -168,7 +169,7 @@ nab-markersets==0.0.20
 nab-project==0.0.20
 nab-provider==0.0.20
 nab-resolver==0.0.20
-narwhals==2.26.0
+nbformat==5.11.1
 networkx==3.7
 nh3==0.3.7
 nodeenv==1.11.0
@@ -201,13 +202,12 @@ pipdeptree==4.2.9
 pipx==1.18.4
 pkginfo==1.13
 platformdirs==4.12.2
-plotly==7.1.0
+plotly==5.24.1
 pluggy==1.6.0
 poetry==2.5.1
 poetry-core==2.5.0
 pre-commit==4.7.0
 pre-commit-hooks==6.0.0
-progress==1.6.1
 prompt-toolkit==3.0.53
 proxy-tools==0.1.0
 psutil==7.2.2
@@ -381,7 +381,7 @@ websockets==13.1
 wemake-python-styleguide==1.8.1
 wheel==0.48.0
 wheel-filename==1.4.2
-wily==1.12.2
+wily==2.0.0a1
 wrapt==2.5.0
 xenon==0.9.3
 xmod==1.10.0

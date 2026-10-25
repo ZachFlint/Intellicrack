@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Gate for S17-D80: the Test Sandbox path does not leave a sandbox running.
+r"""The Test Sandbox path does not leave a sandbox running.
 
 Pressing Test Sandbox launches a real Windows Sandbox to prove sandboxing
 works. The teardown then terminated ``self._process`` - the **launcher** - but

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 34: the chat shows a running MCP call's live progress, and its Cancel button stops that call while the turn goes on.
+"""The chat shows a running MCP call's live progress, and its Cancel button stops that call while the turn goes on.
 
 The gate runs the real main window over the real agent loop, a loopback model endpoint that asks for one call to a real ``MCPServer``'s
 slow tool, and that server on 2026-07-28 over stdio and 2025-11-25 over SSE. The turn starts on the window's orchestrator; the running call appears

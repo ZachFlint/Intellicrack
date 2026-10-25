@@ -9,9 +9,8 @@ the user home for a ``.env`` credential file. The project-root candidate must be
 resolved through :func:`intellicrack.core.config.get_project_root`, so a frozen
 build searches beside the executable rather than an ancestor of the read-only
 extraction directory. This gate creates a ``.env`` only in a synthetic frozen
-root and asserts the resolver finds it; before the fix the resolver computed the
-project root from ``__file__`` and would return the source checkout's ``.env``
-instead.
+root and asserts the resolver finds it. A resolver that derived the project
+root from ``__file__`` would return the source checkout's ``.env`` instead.
 """
 
 from __future__ import annotations

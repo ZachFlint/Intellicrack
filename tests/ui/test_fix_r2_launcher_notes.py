@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 10: the launch consent dialog tells the operator what a sandboxed launcher needs.
+"""The launch consent dialog tells the operator what a sandboxed launcher needs.
 
 The gates build the real consent dialog for a sandboxed server started by each kind of launcher and read what its sandbox label says.
 """

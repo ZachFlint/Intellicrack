@@ -2,29 +2,29 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave 5 gates for Group 01: bridge framework, hex editor bridge (F01-F13).
+"""Gates for the bridge framework and the hex editor bridge.
 
-Closes the following NOT_RESOLVED findings from group-01-report.md:
+Covers these findings:
 
-F01 - TOOL_CAPABILITY_MAP scripting family (base.py:74-82)
-F02 - TOOL_CAPABILITY_MAP decompilation entry (base.py:62)
-F03 - BinaryOperationsBridge.__init__ capability values (base.py:1046-1054)
-F04 - resolve() warning log on unknown attribute (lazy.py:60)
-F05 - resolve() TypeError for non-bridge attribute (lazy.py:68-71)
-F06 - build_schema_property array+object recursive (schemas.py:258-267)
-F07 - validate_tool_parameter unrecognized items_type (schemas.py:419-422)
-F08 - validate_tool_parameter array-of-objects no item_properties (schemas.py:427-434)
-F09 - _assert_never (schemas.py:28-48) -- UNTESTABLE (documented below)
-F10 - _read_exact timeout raises ToolError (named_pipe_client.py:597-605)
-F11 - _cancel_io log emission (named_pipe_client.py:869-882)
-F12 - bridges/__init__.py __dir__ sorted-union (bridges/__init__.py:90-96)
-F13 - HexEditorBridge.get_selection exact tuple (hex_editor.py:5928)
+TOOL_CAPABILITY_MAP scripting family (base.py:74-82)
+TOOL_CAPABILITY_MAP decompilation entry (base.py:62)
+BinaryOperationsBridge.__init__ capability values (base.py:1046-1054)
+resolve() warning log on unknown attribute (lazy.py:60)
+resolve() TypeError for non-bridge attribute (lazy.py:68-71)
+build_schema_property array+object recursive (schemas.py:258-267)
+validate_tool_parameter unrecognized items_type (schemas.py:419-422)
+validate_tool_parameter array-of-objects no item_properties (schemas.py:427-434)
+_assert_never (schemas.py:28-48): not testable through the public API
+_read_exact timeout raises ToolError (named_pipe_client.py:597-605)
+_cancel_io log emission (named_pipe_client.py:869-882)
+bridges/__init__.py __dir__ sorted-union (bridges/__init__.py:90-96)
+HexEditorBridge.get_selection exact tuple (hex_editor.py:5928)
 
-F09 is architecturally unreachable: get_schema_for_provider uses an exhaustive
+The else branch is architecturally unreachable: get_schema_for_provider uses an exhaustive
 if/elif/else chain whose else clause calls _assert_never.  Because every
 provider id value is handled by a named branch, the else is dead code that
 cannot be reached through any legal caller.  There is no production-code path
-that exercises it.  Marking it UNTESTABLE per WAVE5-INSTRUCTIONS.md.
+that exercises it.  Marking it untestable.
 """
 
 from __future__ import annotations
@@ -70,9 +70,7 @@ if TYPE_CHECKING:
 _FAKE_HANDLE: Final[int] = 0xABCDEF
 
 
-# ---------------------------------------------------------------------------
-# Log capture helper (mirrors _LogSink in test_named_pipe_client_errors_wave2d.py)
-# ---------------------------------------------------------------------------
+# Log capture helper (mirrors the _LogSink helper in the named pipe client error tests)
 
 
 class _LogSink:
@@ -187,9 +185,7 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
     return asyncio.run(coro)
 
 
-# ---------------------------------------------------------------------------
-# F01 -- TOOL_CAPABILITY_MAP scripting family (base.py:74-82)
-# ---------------------------------------------------------------------------
+# - TOOL_CAPABILITY_MAP scripting family (base.py:74-82)
 
 
 class TestToolCapabilityMapScripting:
@@ -287,9 +283,7 @@ class TestToolCapabilityMapScripting:
             assert TOOL_CAPABILITY_MAP.get(op) == "scripting", f"op {op!r} missing or wrong value"
 
 
-# ---------------------------------------------------------------------------
-# F02 -- TOOL_CAPABILITY_MAP decompilation entry (base.py:62)
-# ---------------------------------------------------------------------------
+# - TOOL_CAPABILITY_MAP decompilation entry (base.py:62)
 
 
 class TestToolCapabilityMapDecompilation:
@@ -317,9 +311,7 @@ class TestToolCapabilityMapDecompilation:
         assert "decompile" in TOOL_CAPABILITY_MAP
 
 
-# ---------------------------------------------------------------------------
-# F03 -- BinaryOperationsBridge.__init__ capability values (base.py:1046-1054)
-# ---------------------------------------------------------------------------
+# - BinaryOperationsBridge.__init__ capability values (base.py:1046-1054)
 
 
 class _ConcreteBinaryBridge(BinaryOperationsBridge):
@@ -580,9 +572,7 @@ class TestBinaryOperationsBridgeCapabilities:
         assert sorted(bridge.capabilities.supported_architectures) == expected
 
 
-# ---------------------------------------------------------------------------
-# F04 -- resolve() warning log on unknown attribute (lazy.py:60)
-# ---------------------------------------------------------------------------
+# - resolve() warning log on unknown attribute (lazy.py:60)
 
 
 class TestResolveLazyWarningLog:
@@ -634,9 +624,7 @@ class TestResolveLazyWarningLog:
         assert matching[0][2].get("attribute_name") == target
 
 
-# ---------------------------------------------------------------------------
-# F05 -- resolve() TypeError for non-bridge/non-installer (lazy.py:68-71)
-# ---------------------------------------------------------------------------
+# - resolve() TypeError for non-bridge/non-installer (lazy.py:68-71)
 
 
 class TestResolveLazyTypeError:
@@ -688,9 +676,7 @@ class TestResolveLazyTypeError:
         assert sink.has_event("lazy_resolve_non_bridge_attribute", level="warning")
 
 
-# ---------------------------------------------------------------------------
-# F06 -- build_schema_property array+object recursive (schemas.py:258-267)
-# ---------------------------------------------------------------------------
+# - build_schema_property array+object recursive (schemas.py:258-267)
 
 
 class TestBuildSchemaPropertyArrayObject:
@@ -793,9 +779,7 @@ class TestBuildSchemaPropertyArrayObject:
             jsonschema.validate(instance=invalid_doc, schema=schema)
 
 
-# ---------------------------------------------------------------------------
-# F07 -- validate_tool_parameter unrecognized items_type (schemas.py:419-422)
-# ---------------------------------------------------------------------------
+# - validate_tool_parameter unrecognized items_type (schemas.py:419-422)
 
 
 class TestValidateToolParameterUnrecognizedItemsType:
@@ -858,9 +842,7 @@ class TestValidateToolParameterUnrecognizedItemsType:
         assert not items_errors
 
 
-# ---------------------------------------------------------------------------
-# F08 -- validate_tool_parameter array-of-objects no item_properties (schemas.py:427-434)
-# ---------------------------------------------------------------------------
+# - validate_tool_parameter array-of-objects no item_properties (schemas.py:427-434)
 
 
 class TestValidateToolParameterArrayObjectsNoItemProperties:
@@ -926,20 +908,16 @@ class TestValidateToolParameterArrayObjectsNoItemProperties:
         assert not ip_errors
 
 
-# ---------------------------------------------------------------------------
-# F09 -- _assert_never (schemas.py:28-48) -- UNTESTABLE
-# ---------------------------------------------------------------------------
+# _assert_never (schemas.py:28-48): not testable through the public API
 # Architecturally unreachable: get_schema_for_provider uses an exhaustive
 # if/elif/else chain whose final else calls _assert_never.  Because every
 # provider id enum value has a dedicated branch, the else clause is dead
 # code.  No legal caller can reach it without bypassing the exhaustive
-# dispatch.  No fake gate is written; the finding is documented here as
-# UNTESTABLE per WAVE5-INSTRUCTIONS.md.
+# dispatch.  No fake gate is written; this case is
+# untestable.
 
 
-# ---------------------------------------------------------------------------
-# F10 -- _read_exact timeout raises ToolError (named_pipe_client.py:597-605)
-# ---------------------------------------------------------------------------
+# - _read_exact timeout raises ToolError (named_pipe_client.py:597-605)
 
 
 class TestReadExactTimeout:
@@ -1019,9 +997,7 @@ class TestReadExactTimeout:
             asyncio.run(read_exact(8, read_timeout=config.io_timeout))
 
 
-# ---------------------------------------------------------------------------
-# F11 -- _cancel_io log emission (named_pipe_client.py:869-882)
-# ---------------------------------------------------------------------------
+# - _cancel_io log emission (named_pipe_client.py:869-882)
 
 
 class TestCancelIOLogEmission:
@@ -1108,9 +1084,7 @@ class TestCancelIOLogEmission:
         assert matching[0][2].get("handle") == _FAKE_HANDLE
 
 
-# ---------------------------------------------------------------------------
-# F12 -- bridges/__init__.py __dir__ sorted-union (bridges/__init__.py:90-96)
-# ---------------------------------------------------------------------------
+# - bridges/__init__.py __dir__ sorted-union (bridges/__init__.py:90-96)
 
 
 class TestBridgesPackageDirSortedUnion:
@@ -1176,9 +1150,7 @@ class TestBridgesPackageDirSortedUnion:
         assert "BridgeCapabilities" in dir(bridges_pkg)
 
 
-# ---------------------------------------------------------------------------
-# F13 -- HexEditorBridge.get_selection exact tuple (hex_editor.py:5928)
-# ---------------------------------------------------------------------------
+# - HexEditorBridge.get_selection exact tuple (hex_editor.py:5928)
 
 
 class TestHexEditorBridgeGetSelectionExact:

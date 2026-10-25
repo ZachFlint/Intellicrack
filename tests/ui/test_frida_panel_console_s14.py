@@ -3,24 +3,21 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for two Frida panel console defects.
+"""Gates for two Frida panel console defects.
 
-* S14-D08: Frida delivers ``console.log(...)`` output as a message with
+* Console log: Frida delivers ``console.log(...)`` output as a message with
   ``type == "log"`` (carrying ``level``/``payload`` fields), distinct from
   ``type == "send"``. ``FridaPanel._on_frida_message`` only special-cased
   ``send``/``error``, so the built-in sample hook script -- which uses
   ``console.log`` in its ``onEnter``/``onLeave`` callbacks -- looked broken.
-* S14-D09: the Frida message pump had no backpressure. Every incoming
-  message was delivered straight to the console with no cap on the widget's
-  line count and no bound on how fast messages could be produced, so a
-  high-frequency ``send()`` hook could balloon memory and starve the GUI
-  event queue, leaving process controls like Detach unresponsive.
+* Backpressure: the Frida message pump must not deliver every incoming message
+  straight to the console with no cap on the widget's line count and no bound on how
+  fast messages are produced, or a high-frequency ``send()`` hook could balloon memory
+  and starve the GUI event queue, leaving process controls like Detach unresponsive.
 
-The fix routes ``log`` messages to the console (this file's D08 tests), caps
-the console's ``QPlainTextEdit`` block count, and replaces the previous
-per-message Qt signal delivery with a bounded, lock-protected
-``collections.deque`` drained in fixed-size batches by a ``QTimer`` tick
-(this file's D09 tests). All tests drive the real ``FridaPanel`` widget and
+``log`` messages are routed to the console, the console's ``QPlainTextEdit`` block count is capped, and
+per-message Qt signal delivery is replaced by a bounded, lock-protected
+``collections.deque`` drained in fixed-size batches by a ``QTimer`` tick. All tests drive the real ``FridaPanel`` widget and
 its real message-handling methods under an offscreen ``QApplication`` --
 ``_on_frida_message`` (the console renderer), ``_enqueue_frida_message``
 (the exact callable ``FridaBridge.set_message_handler`` is wired to), and
@@ -69,7 +66,7 @@ def _auto_dismiss_blocking_dialogs(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestS14D08LogMessageRouting:
-    """Falsifiable gates for S14-D08: Frida ``log`` messages must reach the console."""
+    """Falsifiable gates: Frida ``log`` messages must reach the console."""
 
     @staticmethod
     def test_on_frida_message_renders_log_type() -> None:
@@ -78,7 +75,7 @@ class TestS14D08LogMessageRouting:
         Drives ``_on_frida_message`` directly -- the same console-rendering
         method the existing ``send``/``error`` regression tests use -- with
         the exact message shape Frida emits for ``console.log``. Falsifiable:
-        before the fix this message fell through the generic ``else`` branch
+         without a ``log`` branch this message would fall through the generic ``else`` branch
         that renders the raw dict repr rather than the clean ``level``/
         ``payload`` text this asserts on.
         """
@@ -108,7 +105,7 @@ class TestS14D08LogMessageRouting:
 
 
 class TestS14D09Backpressure:
-    """Falsifiable gates for S14-D09: bounded console plus coalesced, bounded message queue."""
+    """Falsifiable gates: bounded console plus coalesced, bounded message queue."""
 
     @staticmethod
     def test_console_block_count_stays_capped_after_flood() -> None:

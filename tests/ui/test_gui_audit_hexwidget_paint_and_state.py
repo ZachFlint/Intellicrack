@@ -2,15 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the GUI audit findings in ``hex_editor_widget``.
+"""Gates for ``hex_editor_widget`` paint, minimap, cursor, offset and undo-mark behaviour.
 
-Each test class targets one audit finding and fails against the pre-fix
-behaviour:
+Each test class targets one defect and fails against the defective behaviour:
 
-* ``TestOffsetColor`` (M20): offsets must be painted with the opaque
+* ``TestOffsetColor``: offsets must be painted with the opaque
   ``offset_text`` colour, never the (partly transparent / blue) selection
   colour, and the cached colour must re-resolve on a live theme switch.
-* ``TestEntropyMinimap`` (M21): enabling the minimap must push real entropy
+* ``TestEntropyMinimap``: enabling the minimap must push real entropy
   into it and keep its geometry inside the widget, with a reserved viewport
   margin so it is actually visible.
 * ``TestCursorRect``: in multi-byte display modes the hex caret must track the
@@ -82,7 +81,7 @@ def _restore_theme() -> None:
 
 
 class TestOffsetColor:
-    """M20: offsets are painted with the opaque offset_text colour."""
+    """Offsets are painted with the opaque offset_text colour."""
 
     @staticmethod
     def _most_inked_offset_pixel(widget: HexEditorWidget) -> QColor:
@@ -121,8 +120,8 @@ class TestOffsetColor:
 
         Antialiasing blends ink toward the achromatic background, so the
         falsifiable invariant is chroma: offset_text is grey (R approximately
-        B) while ``selection_bg`` is blue (B noticeably greater than R). The
-        pre-fix code used ``selection_bg`` and would fail this in both themes.
+        B) while ``selection_bg`` is blue (B noticeably greater than R).
+        Painting with ``selection_bg`` instead would fail this in both themes.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -197,14 +196,14 @@ class TestOffsetColor:
 
 
 class TestEntropyMinimap:
-    """M21: the minimap receives entropy and stays within the widget."""
+    """The minimap receives entropy and stays within the widget."""
 
     def test_minimap_receives_entropy_and_fits_within_widget(self, qapp: QApplication, qtbot: QtBot) -> None:
         """Enabling the minimap pushes entropy and keeps geometry inside the widget.
 
-        Pre-fix: entropy was never pushed (empty bars) and the minimap was
-        placed past the scrollbar with no reserved margin, so its right edge
-        overran the widget and the viewport width did not shrink. The entropy
+        Entropy must be pushed (not left as empty bars) and the minimap must sit
+        past the scrollbar with a reserved margin, so its right edge stays inside
+        the widget and the viewport width shrinks. The entropy
         scan runs on a background worker so it never blocks the GUI thread,
         so the test waits for its result to reach the minimap.
 
@@ -338,8 +337,8 @@ class TestOffsetOverrun:
     def test_offset_field_widens_for_large_files(self, qapp: QApplication) -> None:
         """A >4 GiB document widens the offset field so 0x1_0000_0000 fits.
 
-        Pre-fix ``_OFFSET_CHARS`` was a fixed 10 (``0x`` + 8 digits), so a
-        9-digit offset overran into the hex column. The field must now size to
+        ``_OFFSET_CHARS`` must not be a fixed 10 (``0x`` + 8 digits), since a
+        9-digit offset would overrun into the hex column. The field must size to
         the document length.
 
         Args:
@@ -429,7 +428,7 @@ class TestModifiedOffsetRemap:
     def test_single_undo_reverts_only_that_steps_marks(self, qapp: QApplication) -> None:
         """One undo reverts only the last edit's mark, preserving earlier marks.
 
-        Pre-fix ``_do_undo`` cleared every mark; a single-step undo must leave
+        ``_do_undo`` must not clear every mark; a single-step undo must leave
         the earlier mark intact and redo must restore the reverted mark.
 
         Args:

@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 18: schema validation and reduction survive hostile shapes, run in linear time, and read patterns as ECMA-262.
+"""Schema validation and reduction survive hostile shapes, run in linear time, and read patterns as ECMA-262.
 
-The gates feed the real validator and the real schema passes the shapes the audit broke them with: a pattern nesting hundreds of groups,
+The gates feed the real validator and the real schema passes shapes that break naive validators: a pattern nesting hundreds of groups,
 an array of ten thousand items under ``uniqueItems``, a schema six thousand levels deep, a ``$ref`` inside ``dependencies``, a
 ``$dynamicRef``, and a recursive definition reduced for Gemini. Patterns are checked against what ECMA-262 says they match.
 """

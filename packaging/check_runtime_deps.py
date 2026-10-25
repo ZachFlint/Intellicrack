@@ -13,41 +13,56 @@ packages the core product imports: if the table is pruned, every shared
 foundational package (the provider/HTTP stack, ``psutil``, ``regex``,
 ``typing_extensions`` and the rest) stops being reachable from the core closure,
 gets misclassified as ML-only, and is moved out of the core runtime -- which the
-installer's core-runtime gate then rejects, breaking ``just build --all``.
+installer's core-runtime gate then rejects, breaking ``just build --all``. This
+is easy to trigger by accident: a maintenance edit "cleans up" the table believing
+it duplicates the ``[tool.pixi]`` manifest, not realising the installer reads it.
 
-The environment that ``just update`` maintains is governed by the ``[tool.pixi]``
-tables, not by this one, so a pruned ``[project.dependencies]`` leaves the
-installed environment untouched and the breakage stays invisible until the next
-installer build. This module is the fast, falsifiable gate that closes that gap:
-``just update`` runs it after every upgrade, so a manifest that can no longer
-support the ML split fails loudly at update time instead of days later.
+This guard closes that hole without a package list to maintain. The contract it
+enforces is derived entirely from the source tree and the pixi manifest, so it
+tracks real additions and removals on its own and never misfires on them:
 
-Three checks, each capable of reddening on a real regression:
+* **Requirement is derived, never declared.** A distribution belongs in
+  ``[project.dependencies]`` iff ``src/intellicrack`` imports it at module scope
+  and it resolves to an installed distribution. Add an import -> it becomes
+  required; drop the import -> it stops being required. A dependency legitimately
+  removed from both the code and the manifest raises nothing; only a dependency
+  the committed code still imports but the manifest forgot is flagged.
+* **Constraints are sourced, never invented.** When a required declaration is
+  missing, its version bound is read from the ``[tool.pixi]`` ``pypi-dependencies``
+  (or conda ``dependencies``) table -- the manifest ``just update`` already
+  maintains -- so the fix restores exactly what the environment pins.
 
-* every distribution added to close the historical under-declaration stays
-  declared (``REQUIRED_RUNTIME_DISTRIBUTIONS``);
-* every module-level third-party import in ``src/intellicrack`` that resolves to
-  an installed distribution is declared (catches future drift); and
-* the real ``ml_split`` projection keeps the foundational packaging entries in the
-  core runtime, which only holds when the core closure is complete.
+Two modes:
 
-Run directly (``python packaging/check_runtime_deps.py``) or with an explicit
-repository root as the first argument. Exit code ``0`` means the manifest is
-honest; ``1`` means it would ship a broken core runtime.
+* default (report): print every violation and exit non-zero. Used by the
+  ``verify-runtime-deps`` pre-commit hook and the packaging tests.
+* ``--fix`` (self-heal): restore any required-but-missing declaration from the
+  pixi constraint, rewrite ``[project.dependencies]`` in place, and exit zero. A
+  module imported but declared in no manifest at all (the one case a constraint
+  cannot be sourced for) is reported and exits non-zero even under ``--fix``,
+  because that is a genuine undeclared-everywhere error, not a prune. The
+  ``just git-commit`` prep runs this before ``git add -A``, with ``HEAD`` still
+  holding the pre-prune manifest, so an agent that drops dependencies is fully
+  healed before the commit is formed (see :func:`apply_fix` for the two sources).
 """
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import re
+import shutil
+import subprocess
 import sys
 import tomllib
+from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from types import ModuleType
 
 
@@ -56,30 +71,8 @@ _ML_SPLIT_PATH = _MODULE_DIR / "ml_split.py"
 
 _LOCAL_MODULES = frozenset({"intellicrack", "hexbench", "intellicrack_hexcore", "__future__"})
 _MODULE_IMPORT_RE = re.compile(r"^(?:import|from)\s+([a-zA-Z0-9_]+)")
-
-#: Distributions imported at module scope by the shipped app or loaded by the
-#: shipped interpreter. These were added to close an earlier under-declaration and
-#: must stay declared; the import-surface check below enforces completeness, while
-#: this explicit set stays meaningful even where a name does not resolve through
-#: ``packages_distributions`` on the building host.
-REQUIRED_RUNTIME_DISTRIBUTIONS: tuple[str, ...] = (
-    "anthropic",
-    "capstone",
-    "frida",
-    "google-genai",
-    "httpx",
-    "keystone-engine",
-    "lief",
-    "openai",
-    "pefile",
-    "PyQt6",
-    "r2pipe",
-    "rzpipe",
-    "setuptools",
-    "structlog",
-    "tiktoken",
-    "xxhash",
-)
+_DEPS_BLOCK_RE = re.compile(r"(?ms)^dependencies = \[\n(?P<body>.*?)^\]")
+_DEPS_ENTRY_RE = re.compile(r'^\s*"([^"]+)"\s*,?\s*$')
 
 #: Foundational packaging entries that must never be relocated into ``ml_overlay``.
 #: Their presence in the relocation set is the observable symptom of a collapsed
@@ -91,11 +84,37 @@ CORE_PACKAGING_ENTRIES: tuple[str, ...] = ("setuptools", "pkg_resources", "_dist
 ML_RELOCATED_ENTRIES: tuple[str, ...] = ("torch", "transformers", "tokenizers", "safetensors")
 
 
+@dataclass(frozen=True, slots=True)
+class Restoration:
+    """A declaration the fixer can restore to ``[project.dependencies]``.
+
+    Attributes:
+        name: The distribution name exactly as the pixi manifest spells it.
+        spec: The PEP 508 version bound (for example ``">=2.3.0,<3"``), or
+            ``None`` when the source table pins no version.
+        source: Which pixi table supplied the constraint (``"pixi-pypi"`` or
+            ``"pixi-conda"``).
+    """
+
+    name: str
+    spec: str | None
+    source: str
+
+    def requirement(self) -> str:
+        """Render the restoration as a PEP 508 requirement string.
+
+        Returns:
+            str: ``name`` with its spec appended, or the bare ``name`` when no
+            version is pinned.
+        """
+        return f"{self.name}{self.spec}" if self.spec else self.name
+
+
 def _canonical(name: str) -> str:
     """Return the canonical distribution name for comparison.
 
     Args:
-        name: A distribution name as written in a requirement or ``RECORD``.
+        name: A distribution name as written in a requirement or manifest.
 
     Returns:
         str: The lowercased, dash-normalised canonical form.
@@ -126,20 +145,17 @@ def _load_ml_split() -> ModuleType:
     return module
 
 
-def declared_dependencies(pyproject_path: Path) -> set[str]:
-    """Return the canonical names declared in ``[project.dependencies]``.
+def _load_pyproject(pyproject_path: Path) -> dict[str, Any]:
+    """Parse ``pyproject.toml`` into a mapping.
 
     Args:
         pyproject_path: Path to the project's ``pyproject.toml``.
 
     Returns:
-        set[str]: Canonical distribution names declared as core runtime
-        dependencies.
+        dict[str, Any]: The parsed TOML document.
     """
     with pyproject_path.open("rb") as handle:
-        data = tomllib.load(handle)
-    specs = data["project"]["dependencies"]
-    return {_canonical(_requirement_name(spec)) for spec in specs}
+        return tomllib.load(handle)
 
 
 def _requirement_name(spec: str) -> str:
@@ -159,6 +175,109 @@ def _requirement_name(spec: str) -> str:
     if match is None:
         return spec.strip()
     return match.group(1)
+
+
+def _project_dependency_specs(data: dict[str, Any]) -> list[str]:
+    """Return the raw requirement strings in ``[project.dependencies]``.
+
+    Args:
+        data: A parsed ``pyproject.toml`` document.
+
+    Returns:
+        list[str]: The requirement specifiers, in declaration order.
+    """
+    project = cast("dict[str, Any]", data.get("project", {}))
+    specs = cast("list[Any]", project.get("dependencies", []))
+    return [str(spec) for spec in specs]
+
+
+def declared_dependencies(pyproject_path: Path) -> set[str]:
+    """Return the canonical names declared in ``[project.dependencies]``.
+
+    Args:
+        pyproject_path: Path to the project's ``pyproject.toml``.
+
+    Returns:
+        set[str]: Canonical distribution names declared as core runtime
+        dependencies.
+    """
+    return {_canonical(_requirement_name(spec)) for spec in _project_dependency_specs(_load_pyproject(pyproject_path))}
+
+
+def _normalise_spec(raw: str) -> str | None:
+    """Convert a pixi version specifier into a PEP 508 bound.
+
+    Args:
+        raw: A pixi version string such as ``">=2.3.0, <3"`` or ``"*"``.
+
+    Returns:
+        str | None: The space-free PEP 508 bound, or ``None`` for an unpinned
+        (``"*"`` or empty) specifier.
+    """
+    text = raw.strip()
+    if not text or text == "*":
+        return None
+    return re.sub(r",\s+", ",", text)
+
+
+def _collect_table(table: object, source: str, index: dict[str, Restoration]) -> None:
+    """Add the entries of one pixi dependency table to the constraint index.
+
+    String values yield a version bound; mapping values (for example a pinned
+    ``{ version = "*", index = ... }``) contribute only their ``version`` key.
+    Entries already present are kept, so the first (root) table wins over a
+    feature table that re-declares the same name.
+
+    Args:
+        table: The raw value of a pixi ``dependencies`` / ``pypi-dependencies``
+            table, or any non-mapping (ignored).
+        source: The source label recorded on each restoration.
+        index: The canonical-name to :class:`Restoration` map being populated.
+    """
+    if not isinstance(table, dict):
+        return
+    for raw_name, raw_value in cast("dict[str, Any]", table).items():
+        name = str(raw_name)
+        canonical = _canonical(name)
+        if canonical in index:
+            continue
+        if isinstance(raw_value, str):
+            spec = _normalise_spec(raw_value)
+        elif isinstance(raw_value, dict):
+            version = cast("dict[str, Any]", raw_value).get("version")
+            spec = _normalise_spec(str(version)) if isinstance(version, str) else None
+        else:
+            spec = None
+        index[canonical] = Restoration(name=name, spec=spec, source=source)
+
+
+def _pixi_constraint_index(data: dict[str, Any]) -> dict[str, Restoration]:
+    """Build a canonical-name index of every pixi-declared distribution.
+
+    PyPI tables take precedence over conda tables, and the root tables over
+    feature tables, so the recorded constraint is the one the runtime resolves
+    against.
+
+    Args:
+        data: A parsed ``pyproject.toml`` document.
+
+    Returns:
+        dict[str, Restoration]: Canonical distribution name to its restoration.
+    """
+    tool = cast("dict[str, Any]", data.get("tool", {}))
+    pixi = cast("dict[str, Any]", tool.get("pixi", {}))
+    features = cast("dict[str, Any]", pixi.get("feature", {}))
+
+    index: dict[str, Restoration] = {}
+    _collect_table(pixi.get("pypi-dependencies"), "pixi-pypi", index)
+    for feature in features.values():
+        if isinstance(feature, dict):
+            _collect_table(cast("dict[str, Any]", feature).get("pypi-dependencies"), "pixi-pypi", index)
+    _collect_table(pixi.get("dependencies"), "pixi-conda", index)
+    for feature in features.values():
+        if isinstance(feature, dict):
+            _collect_table(cast("dict[str, Any]", feature).get("dependencies"), "pixi-conda", index)
+    return index
 
 
 def module_level_imports(src_root: Path) -> set[str]:
@@ -184,35 +303,81 @@ def module_level_imports(src_root: Path) -> set[str]:
     return modules
 
 
-def undeclared_module_level_imports(src_root: Path, declared: set[str]) -> dict[str, list[str]]:
-    """Map each module-scope third-party import to its distribution, if undeclared.
+def _import_distributions(src_root: Path) -> dict[str, list[str]]:
+    """Map each module-scope third-party import to its installed distribution(s).
 
-    Each top-level module imported at column zero in ``src_root`` is resolved to
-    its installed distribution(s); standard-library, first-party, and tokens that
-    do not resolve to an installed distribution (for example a Java ``ghidra``
-    import string) are ignored, so the result flags only genuine undeclared
-    runtime imports.
+    Standard-library, first-party, and tokens that do not resolve to an installed
+    distribution (for example a Java ``ghidra`` import string) are dropped, so the
+    result names only imports a shipped runtime must satisfy.
 
     Args:
         src_root: The ``src/intellicrack`` directory to scan.
-        declared: Canonical names declared in ``[project.dependencies]``.
 
     Returns:
-        dict[str, list[str]]: Each offending module mapped to the distribution
-        name(s) it resolves to.
+        dict[str, list[str]]: Each importable module mapped to the distribution
+        name(s) that provide it.
     """
     packages_to_dists = metadata.packages_distributions()
     stdlib = sys.stdlib_module_names
-    violations: dict[str, list[str]] = {}
+    resolved: dict[str, list[str]] = {}
     for module in sorted(module_level_imports(src_root)):
         if module in stdlib or module in _LOCAL_MODULES:
             continue
         dists = packages_to_dists.get(module, [])
-        if not dists:
+        if dists:
+            resolved[module] = list(dists)
+    return resolved
+
+
+@dataclass(frozen=True, slots=True)
+class MissingAnalysis:
+    """The outcome of comparing imports against ``[project.dependencies]``.
+
+    Attributes:
+        restorations: Required declarations that are missing but can be sourced
+            from a pixi table.
+        undeclared: Modules imported by the code whose providing distributions
+            are declared in no manifest at all (cannot be auto-restored).
+    """
+
+    restorations: tuple[Restoration, ...]
+    undeclared: tuple[tuple[str, tuple[str, ...]], ...]
+
+
+def analyse_missing(repo_root: Path) -> MissingAnalysis:
+    """Determine which required declarations are missing and how to restore them.
+
+    A module is satisfied when any distribution that provides it is already
+    declared. Otherwise the first providing distribution that the pixi manifest
+    pins yields a restoration; a module with no pinned provider is reported as
+    undeclared-everywhere.
+
+    Args:
+        repo_root: The repository root containing ``pyproject.toml`` and ``src``.
+
+    Returns:
+        MissingAnalysis: The restorations to apply and the unfixable modules.
+    """
+    pyproject_path = repo_root / "pyproject.toml"
+    src_root = repo_root / "src" / "intellicrack"
+    data = _load_pyproject(pyproject_path)
+    declared = {_canonical(_requirement_name(spec)) for spec in _project_dependency_specs(data)}
+    pixi_index = _pixi_constraint_index(data)
+
+    restorations: dict[str, Restoration] = {}
+    undeclared: list[tuple[str, tuple[str, ...]]] = []
+    for module, dists in _import_distributions(src_root).items():
+        canonicals = [_canonical(dist) for dist in dists]
+        if any(canonical in declared for canonical in canonicals):
             continue
-        if not ({_canonical(dist) for dist in dists} & declared):
-            violations[module] = list(dists)
-    return violations
+        chosen = next((canonical for canonical in canonicals if canonical in pixi_index), None)
+        if chosen is None:
+            undeclared.append((module, tuple(sorted(dists))))
+            continue
+        restoration = pixi_index[chosen]
+        restorations.setdefault(chosen, restoration)
+    ordered = tuple(sorted(restorations.values(), key=lambda item: item.name))
+    return MissingAnalysis(restorations=ordered, undeclared=tuple(undeclared))
 
 
 def relocated_ml_entries(pyproject_path: Path) -> set[str]:
@@ -238,62 +403,236 @@ def collect_violations(repo_root: Path) -> list[str]:
         list[str]: Human-readable violation messages; empty when the manifest is
         honest.
     """
-    pyproject_path = repo_root / "pyproject.toml"
-    src_root = repo_root / "src" / "intellicrack"
-    declared = declared_dependencies(pyproject_path)
-
     messages: list[str] = []
-
-    missing_required = [name for name in REQUIRED_RUNTIME_DISTRIBUTIONS if _canonical(name) not in declared]
-    if missing_required:
-        messages.append(
-            "runtime distributions missing from [project.dependencies]: " + ", ".join(sorted(missing_required)),
-        )
-
-    undeclared = undeclared_module_level_imports(src_root, declared)
+    analysis = analyse_missing(repo_root)
     messages.extend(
-        f"module-level import {module!r} resolves to undeclared distribution(s): " + ", ".join(undeclared[module])
-        for module in sorted(undeclared)
+        f"imported at module scope but missing from [project.dependencies]: "
+        f"{restoration.requirement()} (restorable from {restoration.source})"
+        for restoration in analysis.restorations
+    )
+    messages.extend(
+        f"imported module {module!r} resolves to distribution(s) declared in no manifest: {', '.join(dists)}"
+        for module, dists in analysis.undeclared
     )
 
+    pyproject_path = repo_root / "pyproject.toml"
     ml_only = relocated_ml_entries(pyproject_path)
     leaked = [entry for entry in CORE_PACKAGING_ENTRIES if entry in ml_only]
     if leaked:
-        messages.append(
-            "foundational packaging entries wrongly relocated to ml_overlay: " + ", ".join(sorted(leaked)),
-        )
+        messages.append("foundational packaging entries wrongly relocated to ml_overlay: " + ", ".join(sorted(leaked)))
 
-    if importlib.util.find_spec("torch") is not None and not any(
-        entry in ml_only for entry in ML_RELOCATED_ENTRIES
-    ):
+    if importlib.util.find_spec("torch") is not None and not any(entry in ml_only for entry in ML_RELOCATED_ENTRIES):
         messages.append("torch is installed but ml_split relocated none of the ML stack; the projection is broken")
 
     return messages
 
 
-def main(argv: list[str]) -> int:
-    """Check the runtime-dependency manifest and report any violations.
+def _rewrite_dependencies(pyproject_path: Path, additions: Iterable[Restoration]) -> list[str]:
+    """Insert missing declarations into ``[project.dependencies]`` in place.
+
+    The ``[project.dependencies]`` array is the only top-level ``dependencies = [``
+    block in the file; its entries are merged with the additions, sorted by
+    distribution name (the existing order), and written back with the file's
+    one-entry-per-line style preserved.
 
     Args:
-        argv: Optional ``argv[0]`` giving the repository root; defaults to the
-            repository that contains this script.
+        pyproject_path: Path to the project's ``pyproject.toml``.
+        additions: Restorations to add; entries whose name is already present are
+            skipped.
+
+    Returns:
+        list[str]: The requirement strings actually inserted.
+
+    Raises:
+        RuntimeError: If the ``[project.dependencies]`` block is not found exactly
+            once, which would make an in-place edit unsafe.
+    """
+    text = pyproject_path.read_text(encoding="utf-8")
+    matches = list(_DEPS_BLOCK_RE.finditer(text))
+    if len(matches) != 1:
+        message = f"expected exactly one top-level 'dependencies = [' block, found {len(matches)}"
+        raise RuntimeError(message)
+    block = matches[0]
+
+    existing = [match.group(1) for match in (_DEPS_ENTRY_RE.match(line) for line in block.group("body").splitlines()) if match]
+    present = {_canonical(_requirement_name(spec)) for spec in existing}
+
+    inserted: list[str] = []
+    merged = list(existing)
+    for restoration in additions:
+        if _canonical(restoration.name) in present:
+            continue
+        requirement = restoration.requirement()
+        merged.append(requirement)
+        present.add(_canonical(restoration.name))
+        inserted.append(requirement)
+
+    if not inserted:
+        return []
+
+    merged.sort(key=_requirement_name)
+    body = "".join(f'  "{spec}",\n' for spec in merged)
+    rebuilt = f"dependencies = [\n{body}]"
+    pyproject_path.write_text(text[: block.start()] + rebuilt + text[block.end() :], encoding="utf-8")
+    return inserted
+
+
+def _head_project_dependency_names(repo_root: Path) -> set[str] | None:
+    """Return the canonical ``[project.dependencies]`` names committed at ``HEAD``.
+
+    In the ``just git-commit`` prep this runs before ``git add -A``, so ``HEAD``
+    still holds the manifest as last committed -- the baseline a working-tree
+    prune is measured against.
+
+    Args:
+        repo_root: The repository root.
+
+    Returns:
+        set[str] | None: Canonical names declared at ``HEAD``, or ``None`` when
+        ``git`` or ``HEAD:pyproject.toml`` cannot be read (outside a work tree, an
+        unborn branch, or an unparseable committed manifest), in which case the
+        baseline is simply unavailable and only the import-surface heal applies.
+    """
+    git = shutil.which("git")
+    if git is None:
+        return None
+    try:
+        completed = subprocess.run(
+            [git, "-C", str(repo_root), "show", "HEAD:pyproject.toml"],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except OSError:
+        return None
+    if completed.returncode != 0:
+        return None
+    try:
+        data = tomllib.loads(completed.stdout)
+    except tomllib.TOMLDecodeError:
+        return None
+    return {_canonical(_requirement_name(spec)) for spec in _project_dependency_specs(data)}
+
+
+def apply_fix(repo_root: Path) -> MissingAnalysis:
+    """Restore every sourceable missing declaration and report what remains.
+
+    Two sources feed the restore, both constrained by the pixi manifest so a fix
+    only ever re-adds a genuine, still-declared runtime dependency:
+
+    * **Import surface** - a distribution imported at module scope in
+      ``src/intellicrack`` but absent from ``[project.dependencies]``.
+    * **Committed baseline** - a distribution present in ``HEAD``'s
+      ``[project.dependencies]`` but dropped from the working tree, as long as it
+      is still pinned in a ``[tool.pixi]`` runtime table. This recovers the
+      lazily-imported and subprocess-loaded entries the import surface cannot see,
+      so a prune is fully reverted rather than partially. A *legitimate* removal
+      drops the package from the pixi manifest too, so it is not in the restore
+      set and is left alone.
+
+    The restored version bound always comes from the current pixi table, never a
+    stale ``HEAD`` spec, so the manifest stays consistent with what the runtime
+    resolves.
+
+    Args:
+        repo_root: The repository root containing ``pyproject.toml`` and ``src``.
+
+    Returns:
+        MissingAnalysis: ``restorations`` lists what was inserted; ``undeclared``
+        lists modules whose provider is pinned in no manifest and so could not be
+        restored.
+    """
+    pyproject_path = repo_root / "pyproject.toml"
+    data = _load_pyproject(pyproject_path)
+    declared = {_canonical(_requirement_name(spec)) for spec in _project_dependency_specs(data)}
+    pixi_index = _pixi_constraint_index(data)
+
+    analysis = analyse_missing(repo_root)
+    restorations: dict[str, Restoration] = {_canonical(item.name): item for item in analysis.restorations}
+
+    head_names = _head_project_dependency_names(repo_root)
+    if head_names is not None:
+        for name in sorted(head_names - declared):
+            if name in restorations or name not in pixi_index:
+                continue
+            restorations[name] = pixi_index[name]
+
+    ordered = tuple(sorted(restorations.values(), key=lambda item: item.name))
+    if ordered:
+        _rewrite_dependencies(pyproject_path, ordered)
+    return MissingAnalysis(restorations=ordered, undeclared=analysis.undeclared)
+
+
+def _run_report(repo_root: Path) -> int:
+    """Report violations without modifying anything.
+
+    Args:
+        repo_root: The repository root to check.
 
     Returns:
         int: ``0`` when the manifest is honest, ``1`` otherwise.
     """
-    repo_root = Path(argv[0]).resolve() if argv else _MODULE_DIR.parent
     violations = collect_violations(repo_root)
     if violations:
         sys.stderr.write("ERROR: [project.dependencies] no longer describes the shipped runtime:\n")
         for message in violations:
             sys.stderr.write(f"  - {message}\n")
         sys.stderr.write(
-            "The ML split reads this table as its core-closure root set; restore the missing "
-            "declarations so the installer does not relocate core packages into ml_overlay.\n",
+            "The ML split reads this table as its core-closure root set. Run "
+            "'python packaging/check_runtime_deps.py --fix' to restore the pruned declarations.\n",
         )
         return 1
     sys.stdout.write("runtime dependency manifest check: [project.dependencies] describes the shipped runtime\n")
     return 0
+
+
+def _run_fix(repo_root: Path) -> int:
+    """Restore missing declarations and report any unfixable gaps.
+
+    Args:
+        repo_root: The repository root to heal.
+
+    Returns:
+        int: ``0`` when the manifest is now honest, ``1`` when a module is imported
+        whose provider is declared in no manifest (a constraint cannot be sourced).
+    """
+    analysis = apply_fix(repo_root)
+    for restoration in analysis.restorations:
+        sys.stdout.write(
+            f"restored runtime dependency to [project.dependencies]: "
+            f"{restoration.requirement()} (from {restoration.source})\n",
+        )
+    if analysis.undeclared:
+        sys.stderr.write("ERROR: imported modules whose providing distribution is declared in no manifest:\n")
+        for module, dists in analysis.undeclared:
+            sys.stderr.write(f"  - {module} -> {', '.join(dists)}\n")
+        sys.stderr.write("Declare each under [tool.pixi] pypi-dependencies so its version can be sourced.\n")
+        return 1
+    if not analysis.restorations:
+        sys.stdout.write("runtime dependency manifest check: nothing to restore\n")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    """Check the runtime-dependency manifest, optionally healing it.
+
+    Args:
+        argv: Command-line arguments (excluding the program name).
+
+    Returns:
+        int: ``0`` on success, ``1`` on an unresolved violation.
+    """
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--fix", action="store_true", help="Restore missing declarations instead of only reporting them.")
+    parser.add_argument("--repo", default=None, help="Repository root (defaults to the repository that contains this script).")
+    args = parser.parse_args(argv)
+
+    repo_root = Path(cast("str", args.repo)).resolve() if args.repo else _MODULE_DIR.parent
+    if bool(args.fix):
+        return _run_fix(repo_root)
+    return _run_report(repo_root)
 
 
 if __name__ == "__main__":

@@ -2,33 +2,29 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S20-D04: the Stack Viewer must pull already-live bridges.
+"""Gate for the Stack Viewer pulling bridges that are already live.
 
-Before the fix, ``X64DbgStackSource.is_connected``/``FridaStackSource.is_connected``
-only ever consulted a bridge previously handed in through ``set_bridge`` -- the
-push-based path fired by :mod:`intellicrack.ui.tools` when a NEW x64dbg/Frida
-panel tab is created. Opening View -> Stack Viewer while an x64dbg session was
-already paused and Frida was already attached (bridges connected *before* the
-Stack Viewer panel existed) left both sources permanently reporting "Not
-connected" and ``stack_frames_refreshed frame_count=0``, because nothing ever
-pulled the bridges that were already live.
+``X64DbgStackSource.is_connected`` and ``FridaStackSource.is_connected`` must consult the
+live bridge, not only one handed in through ``set_bridge``. ``set_bridge`` is the
+push-based path fired by :mod:`intellicrack.ui.tools` when a NEW x64dbg/Frida panel tab
+is created. A Stack Viewer opened while an x64dbg session is already paused and Frida is
+already attached (bridges connected before the Stack Viewer panel exists) must not report
+"Not connected" with ``stack_frames_refreshed frame_count=0``, because nothing else pulls
+bridges that are already live.
 
-The fix wires a live, duck-typed "bridge provider" onto the built-in
-``"x64dbg"``/``"Frida"`` sources whenever :meth:`StackViewerPanel.add_source` is
-handed an orchestrator/registry-like object (the reserved name ``"orchestrator"``,
-as used by ``ToolOutputPanel.add_stack_panel``) instead of a real
-``StackDataSource``. That provider is re-invoked on every connection check and
-refresh -- never cached -- so an already-connected bridge is detected
-immediately and a later bridge swap or detach is reflected on the very next
-check. The same wiring also produces a genuinely functional
-``OrchestratorStackSource`` for the previously untested ``"orchestrator"`` combo
-entry instead of one that raises when selected.
+``StackViewerPanel.add_source`` wires a live, duck-typed "bridge provider" onto the
+built-in ``"x64dbg"``/``"Frida"`` sources whenever it is handed an orchestrator/registry-like
+object (the reserved name ``"orchestrator"``, as used by
+``ToolOutputPanel.add_stack_panel``) instead of a real ``StackDataSource``. That provider
+is re-invoked on every connection check and refresh, never cached, so an already-connected
+bridge is detected immediately and a later bridge swap or detach is reflected on the very
+next check. The same wiring produces a functional ``OrchestratorStackSource`` for the
+``"orchestrator"`` combo entry, which must not raise when selected.
 
-These tests build the real ``StackViewerPanel`` widget and drive it through the
-exact ``add_source("orchestrator", provider)`` call site
-``ToolOutputPanel.add_stack_panel`` uses, with minimal fake bridge/provider
-objects standing in only for the external x64dbg/Frida bridge classes (which
-require a live debugging session to construct for real).
+These tests build the real ``StackViewerPanel`` widget and drive it through the exact
+``add_source("orchestrator", provider)`` call site ``ToolOutputPanel.add_stack_panel``
+uses, with minimal fake bridge/provider objects standing in only for the external
+x64dbg/Frida bridge classes (which require a live debugging session to construct for real).
 """
 
 from __future__ import annotations
@@ -245,7 +241,7 @@ def test_x64dbg_status_does_not_cache_a_stale_bridge(qapp: QApplication) -> None
 
 
 def test_orchestrator_combo_source_is_selectable_without_crashing(qapp: QApplication) -> None:
-    """The previously-untested 'orchestrator' combo entry must work, not raise, when selected.
+    """The 'orchestrator' combo entry must work, not raise, when selected.
 
     Args:
         qapp: Session QApplication fixture from ``tests/ui/conftest.py``.

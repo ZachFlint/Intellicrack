@@ -8,10 +8,10 @@ Intellicrack is GPL-3.0-or-later and redistributes third-party software two ways
 the x64dbg plugin SDK is committed under ``tools/x64dbg/pluginsdk`` (a build
 dependency ``src/x64dbg-plugin`` links against), and ``packaging/stage.ps1``
 bundles fetched tool binaries into ``Intellicrack-Setup.exe``. Both channels carry
-obligations that nothing previously enforced: ship the license text, and provide
+obligations that the gates below enforce: ship the license text, and provide
 access to the Corresponding Source.
 
-Four obligations are gated here, each of which was genuinely unmet before:
+Four obligations are gated here:
 
 * The verbatim license texts exist under ``licenses/``.
 * x64dbg's text is its **modified** GPL-3.0 carrying the "Treatment of plugins"

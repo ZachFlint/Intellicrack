@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Third-pass coverage for the Ghidra panel's optional-import fallbacks and the win32 embed style-write failure.
+"""Tests for the Ghidra panel's optional-import fallbacks and the win32 embed style-write failure.
 
 The Ghidra panel imports its CFG graph view and its Python syntax highlighter in ``try`` blocks. ``intellicrack.ui`` itself imports both
 modules unguarded (through ``cutter_panel``), so a fresh interpreter cannot start with either one blocked; the fallbacks are only reachable by
@@ -12,7 +12,7 @@ re-importing ``ghidra_panel`` after the package has loaded. One child interprete
 process.
 
 The reparent helper's failure branch for a refused style write is driven with the desktop window. Its style is readable, and the operating
-system refuses ``SetWindowLongPtrW`` on it with an access-denied error in the container, which is a measured fact; a window owned by another
+system refuses ``SetWindowLongPtrW`` on it with an access-denied error in the container; a window owned by another
 process that the test spawns accepts the write, so it cannot reach that branch.
 
 The Cutter panel's function-refresh error handler is reached through the refresh button. A real ``CutterBridge`` that never loaded a binary

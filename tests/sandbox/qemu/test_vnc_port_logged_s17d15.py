@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D15: ``enable_vnc_display`` must log the port it assigned.
+"""``enable_vnc_display`` must log the port it assigned.
 
 ``enable_vnc_display`` emitted ``vnc_display_enabled`` with ``vnc_port`` read
 before any port was assigned, so the structured record always carried ``None``
@@ -93,7 +93,7 @@ class TestEnableVncDisplayLogsTheAssignedPort:
     def test_logged_vnc_port_is_a_real_port_number(self) -> None:
         """The record carries an int in the VNC range, not an unassigned None.
 
-        This is the S17-D15 gate: logging before assignment yields ``None``.
+        Logging before assignment yields ``None``.
         """
         sandbox = QEMUSandbox(SandboxConfig(), QEMUConfig())
 

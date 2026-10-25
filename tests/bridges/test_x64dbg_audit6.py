@@ -3,112 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit6 regression tests for ``intellicrack.bridges.x64dbg``.
+"""Regression tests for ``intellicrack.bridges.x64dbg``.
 
-Combines the X64DBG-A, X64DBG-B, X64DBG-C, X64DBG-D, and X64DBG-E audit6
-work units into a single test module so their helpers and fixtures are
-shared.
+Covers process lifecycle, PE architecture detection, the anti-debug patch plumbing, pipe error classification, breakpoint and thread verification, memory scanning, resource and export enumeration, and API breakpoint resolution.
 
-X64DBG-A production-blocker findings:
-
-* F-0004 - step coroutines wait on the plugin's paused event with a
-  bounded timeout instead of a fixed sleep.
-* F-0011 - shutdown completes process termination, state clearing, and
-  super-shutdown even when an earlier cleanup phase raises.
-* F-0013 - `_start_debugger` refuses to launch when the C++ plugin is
-  not deployed.
-* F-0015 - `Popen` invocation routes stdout/stderr/stdin to `DEVNULL`
-  so the GUI cannot deadlock on a full pipe.
-* F-0017 - `_wait_for_pipe_ready` raises on non-Windows instead of
-  sleeping and returning.
-* F-0018 - `_detect_process_arch` returns `None` and `attach`
-  raises rather than guessing 64-bit on error.
-* F-0023 - `_detect_architecture` rejects unsupported / corrupt PE
-  inputs instead of silently returning 64-bit / 32-bit.
-
-The X64DBG-A tests exercise the actual defect surface: real PE bytes
-feed into the architecture detector, real `Popen` kwargs are
-inspected via a recording wrapper installed at the bridge's `Popen`
-import binding, and step waiting uses real `asyncio.Future`
-resolution scheduled through the bridge's threadsafe event handler.
-X64DBG-B production-blocker findings:
-
-* F-0003 - ``patch_anti_debug`` PEB-base plumbing and broader patch
-  coverage; ``read_peb`` tool definition advertises the ``address``
-  field.
-* F-0024 - ``_extract_command_line_from_peb`` rejects odd
-  ``UNICODE_STRING.Length`` values and lengths exceeding
-  ``MaximumLength`` instead of silently coercing them.
-* F-0025 - ``WIN_NO_INHERIT_HANDLE`` constant is removed from
-  ``intellicrack.bridges.x64dbg``; ``OpenProcess`` calls inline the
-  literal ``False``.
-* F-0027 - ``get_process_info`` raises ``ToolError`` when no process is
-  attached instead of returning ``None``.
-
-X64DBG-C production-blocker findings:
-
-* F-0001 - post-condition verification on ``set_breakpoint``,
-  ``patch_instruction``, ``nop_range``, and ``run_to``.
-* F-0008 - structured plugin error codes replacing substring matching
-  in ``_is_recoverable_pipe_error``.
-* F-0014 - ``evaluate_expression`` raises ``ToolError`` on non-int /
-  non-string responses instead of returning ``0``.
-* F-0016 - INFO-level "command_set" log lines downgraded to DEBUG
-  ``x64dbg_command_queued`` wording where no verification gates them.
-* F-0028 - fallback in ``save_database``/``load_database`` etc. only
-  triggers on ``unknown_command`` codes; pipe-disconnected errors must
-  propagate.
-* F-0029 - ``get_status`` raises ``ToolError`` instead of returning a
-  fake-default status dict when the plugin response is not a dict.
-
-The X64DBG-C tests substitute the bridge's ``_pipe_client`` with an
-in-process fake that records sent commands and replays scripted
-responses; this is the smallest viable boundary because launching real
-x64dbg from CI is not feasible.
-
-X64DBG-D production-blocker findings:
-
-* F-0002 - ``set_breakpoint`` round-trips the native breakpoint id and
-  verifies the debugger actually applied the breakpoint via ``bp_list``.
-* F-0006 - ``get_threads`` populates ``start_address``, ``current_pc``,
-  and ``state`` from real Win32 thread queries.
-* F-0007 - ``_read_module_entry_point`` validates the optional-header
-  layout (PE32 vs PE32+) and ``SizeOfOptionalHeader`` instead of blindly
-  trusting a 256-byte read.
-* F-0009 - ``except Exception`` swallow paths in ``disassemble_at``,
-  ``_get_threads``, ``_get_modules``, and ``_get_parent_pid`` are
-  narrowed to typed-failure handlers.
-* F-0010 - per-handle process-handle cache is populated on first
-  memory access and released on detach/shutdown.
-* F-0012 - ``_breakpoints``/``_watchpoints`` dictionaries are guarded
-  against concurrent mutation from coroutines and ``_handle_event``.
-* F-0026 - ``set_breakpoint`` issues ``bpcond`` after ``bp_set`` when a
-  conditional expression is supplied.
-
-The X64DBG-D tests also use a deterministic in-process pipe-client
-substitute that records every command/params pair without spawning
-x64dbg, so the failure modes above can be reproduced on a developer
-workstation.
-
-X64DBG-E production-blocker findings:
-
-* F-0005 - ``find_pattern`` with wildcards must stream regions in
-  chunks with rolling overlap so wildcard matches that fall outside the
-  first ``MAX_MEMORY_READ_SIZE`` window are still found.
-* F-0019 - ``get_resources`` must walk the resource tree recursively
-  and emit one dict per leaf with size and rva populated.
-* F-0020 - ``_build_export_entries`` must enumerate every export
-  reported by the PE export directory; no silent truncation.
-* F-0021 - ``analyze_entropy`` must read in chunks so a single
-  unreadable page does not abort the whole scan.
-* F-0022 - ``set_breakpoint_on_api`` must resolve the API VA via the
-  expression evaluator and place the breakpoint at the resolved VA.
-
-The X64DBG-E tests inject deterministic in-memory data through
-``monkeypatch`` of ``read_memory`` / ``get_memory_regions`` /
-``_send_pipe_command`` / ``set_breakpoint`` so the production code
-paths execute exactly as in production but without requiring a live
-x64dbg.exe.
+The tests use real PE bytes, real ``asyncio`` futures and scripted in-process pipe clients in place of a live x64dbg.exe, so the bridge's production code paths run without the debugger.
 """
 
 from __future__ import annotations
@@ -394,8 +293,7 @@ class _LoggerEventRecorder:
     :mod:`intellicrack.core.logging`, which returns a
     ``structlog.stdlib.BoundLogger``. Pytest's ``caplog`` fixture only
     sees stdlib-handler output, which depends on whether the structlog
-    config has been initialised in the running test session. To avoid
-    coupling the F-0016 regression tests to that config, this recorder
+    config has been initialised in the running test session. To avoid coupling these tests to that config, this recorder
     patches the bound logger's ``debug`` / ``info`` / ``warning``
     methods on entry and restores them on exit.
     """
@@ -473,9 +371,7 @@ def attached_bridge() -> X64DbgBridge:
     return b
 
 
-# ---------------------------------------------------------------------------
-# F-0025: WIN_NO_INHERIT_HANDLE constant removed
-# ---------------------------------------------------------------------------
+# WIN_NO_INHERIT_HANDLE is not defined
 
 
 class TestWinNoInheritHandleRemoved:
@@ -485,8 +381,7 @@ class TestWinNoInheritHandleRemoved:
     def test_open_process_called_with_inherit_handle_false(self) -> None:
         """Verify ``_get_cached_process_handle`` passes ``False`` as ``bInheritHandle``.
 
-        The audit finding F-0025 requires the constant ``WIN_NO_INHERIT_HANDLE`` to be
-        removed and ``False`` inlined directly.  This test intercepts ``kernel32.OpenProcess``
+        The constant ``WIN_NO_INHERIT_HANDLE`` is absent and ``False`` is inlined directly.  This test intercepts ``kernel32.OpenProcess``
         and confirms the ``bInheritHandle`` positional argument (index 1) is ``False`` when
         ``_get_cached_process_handle`` opens a handle for the current process.
         """
@@ -519,7 +414,7 @@ class TestWinNoInheritHandleRemoved:
         self,
         attached_bridge: X64DbgBridge,
     ) -> None:
-        """Verify ``read_memory`` (which used the constant) still works.
+        """Verify ``read_memory`` still works with the inlined ``False`` argument.
 
         Args:
             attached_bridge: Bridge attached to current process.
@@ -533,9 +428,8 @@ class TestWinNoInheritHandleRemoved:
     def test_constant_absent_from_module_raises_attribute_error(self) -> None:
         """Behavioral gate: accessing ``WIN_NO_INHERIT_HANDLE`` on the module raises ``AttributeError``.
 
-        The audit finding F-0025 demands that ``WIN_NO_INHERIT_HANDLE`` is removed so
-        callers cannot accidentally use the constant instead of the literal ``False``.
-        A static ``hasattr`` check only confirms the attribute is missing today; this
+        The constant ``WIN_NO_INHERIT_HANDLE`` is removed so callers cannot use it in place of the literal ``False``.
+        A static ``hasattr`` check only confirms the attribute is missing; this
         test also verifies the behavioral consequence — any code path that still relied
         on the name would produce an ``AttributeError`` at runtime rather than silently
         succeeding with a truthy integer that happens to equal ``False``.
@@ -555,12 +449,12 @@ class TestWinNoInheritHandleRemoved:
     def test_inherit_handle_false_is_not_truthy_integer(self) -> None:
         """Behavioral gate: the bridge passes boolean ``False``, not an integer ``0``.
 
-        Before F-0025, ``WIN_NO_INHERIT_HANDLE = 0`` was used.  Passing the integer
+        Passing the integer
         ``0`` and passing boolean ``False`` are identical to the Win32 API but differ
         in type, which matters when the caller inspects the exact Python value passed.
         This test confirms that the spy-recorded ``bInheritHandle`` is the Python
         singleton ``False`` (type ``bool``), not the integer ``0`` (type ``int`` but
-        not ``bool``).  If the old constant is reintroduced as ``0``, ``bool(0) is
+        not ``bool``).  If the constant is reintroduced as ``0``, ``bool(0) is
         False`` would still pass but ``isinstance(0, bool)`` would fail.
         """
         recorded: list[object] = []
@@ -591,9 +485,7 @@ class TestWinNoInheritHandleRemoved:
             assert val is False, f"bInheritHandle must be False, got {val!r}"
 
 
-# ---------------------------------------------------------------------------
-# F-0024: UNICODE_STRING odd-length and bounds rejection
-# ---------------------------------------------------------------------------
+# UNICODE_STRING odd-length and bounds rejection
 
 
 class TestUnicodeStringRejection:
@@ -658,13 +550,11 @@ class TestUnicodeStringRejection:
         assert result is None, "Length > MaximumLength must be rejected, not silently passed."
 
 
-# ---------------------------------------------------------------------------
-# F-0027: get_process_info raises when not attached
-# ---------------------------------------------------------------------------
+# get_process_info raises when not attached
 
 
 class TestGetProcessInfoRaisesWhenDetached:
-    """Verify ``get_process_info`` no longer returns ``None``."""
+    """Verify ``get_process_info`` does not return ``None``."""
 
     @pytest.mark.asyncio
     async def test_raises_when_not_attached(self, bridge: X64DbgBridge) -> None:
@@ -689,9 +579,7 @@ class TestGetProcessInfoRaisesWhenDetached:
     ) -> None:
         """Behavioral gate: ``get_process_info`` returns a real ``ProcessInfo`` object.
 
-        The removed ``test_return_annotation_is_processinfo`` only inspected the
-        function's type annotation and would pass even if the implementation was
-        changed to return ``None`` at runtime.  This test drives the real method
+        This test drives the real method
         with stubbed ``get_threads`` / ``get_modules`` co-routines and asserts
         that the returned object is an actual ``ProcessInfo`` instance whose ``pid``
         matches the bridge's ``attached_pid`` — a property that cannot be faked by
@@ -776,9 +664,7 @@ class TestGetProcessInfoRaisesWhenDetached:
         assert result.pid == _TARGET_PID
 
 
-# ---------------------------------------------------------------------------
-# F-0003: patch_anti_debug PEB plumbing + expanded check set
-# ---------------------------------------------------------------------------
+# patch_anti_debug PEB plumbing and expanded check set
 
 
 class _StubBridgeBase(X64DbgBridge):
@@ -999,13 +885,7 @@ class TestPatchAntiDebugClassConstant:
     async def test_every_supported_check_is_accepted_at_runtime(self) -> None:
         """Behavioral gate: each entry in ``SUPPORTED_ANTI_DEBUG_PATCHES`` is dispatched.
 
-        The removed ``test_constant_has_expected_entries`` only confirmed that
-        string literals appear inside the tuple — it would still pass if the
-        dispatch logic ignored the constant and hard-coded its own allowed set.
-        This test proves the contract end-to-end: every name in the constant is
-        accepted (no "unsupported" error), and a name absent from the constant is
-        rejected.  If the constant is trimmed or the dispatch diverges from it,
-        at least one parameterised call will produce an unexpected error entry.
+        Every name in the constant is accepted with no "unsupported" error, and a name absent from the constant is rejected. If the constant is trimmed or the dispatch diverges from it, at least one parameterised call produces an unexpected error entry.
         """
         supported = X64DbgBridge.SUPPORTED_ANTI_DEBUG_PATCHES
         assert len(supported) >= 3, "SUPPORTED_ANTI_DEBUG_PATCHES must contain at least 3 entries"
@@ -1031,15 +911,7 @@ class TestPatchAntiDebugClassConstant:
     async def test_unsupported_check_not_in_constant_is_rejected(self) -> None:
         """Behavioral gate: a check name absent from the constant is rejected with an error.
 
-        This test drives the runtime rejection path directly: if ``process_debug_flags``
-        were silently added to the constant in the future, this gate would go green and
-        the ``test_every_supported_check_is_accepted_at_runtime`` test would expand its
-        coverage automatically.  The static tuple check is not needed because the runtime
-        behaviour is verified here.
-
-        The independent oracle is the contract documented in audit6: any name NOT in
-        ``SUPPORTED_ANTI_DEBUG_PATCHES`` must appear in ``errors`` with an "unsupported"
-        message.
+        Drives the runtime rejection path directly. A name missing from ``SUPPORTED_ANTI_DEBUG_PATCHES`` must appear in ``errors`` with an "unsupported" message, while the names in the constant are accepted by ``test_every_supported_check_is_accepted_at_runtime``.
         """
         unsupported_name = "process_debug_flags"
         assert unsupported_name not in X64DbgBridge.SUPPORTED_ANTI_DEBUG_PATCHES, (
@@ -1066,20 +938,18 @@ class TestPatchAntiDebugClassConstant:
             )
 
 
-# F-0008 - structured plugin error codes
-# ---------------------------------------------------------------------------
+# Structured plugin error codes
 
 
 @pytest.mark.asyncio
 class TestStructuredErrorCodes:
-    """F-0008: ``_is_recoverable_pipe_error`` uses structured codes."""
+    """``_is_recoverable_pipe_error`` uses structured codes."""
 
     async def test_pipe_disconnected_is_not_recoverable(self, bridge: X64DbgBridge) -> None:
         """Pipe-disconnect failures must not classify as recoverable.
 
         A pipe-disconnected error means the script-fallback path would
-        travel the same broken pipe (audit6.md F-0008/F-0028) - the
-        bridge must propagate the failure instead of swallowing it.
+        travel the same broken pipe. The bridge must propagate the failure instead of swallowing it.
 
         Args:
             bridge: Fixture bridge instance.
@@ -1111,7 +981,7 @@ class TestStructuredErrorCodes:
     async def test_real_remote_error_propagates(self, bridge: X64DbgBridge) -> None:
         """A real plugin error (e.g. invalid address) is not recoverable.
 
-        Old marker matching swept up "address not found" because of the
+        Message-text matching would sweep up "address not found" because of the
         word "found"; the structured code path keeps that text as
         ``remote_error`` and lets it propagate.
 
@@ -1148,14 +1018,12 @@ class TestStructuredErrorCodes:
         assert _classify(bridge, exc_info.value) is True
 
 
-# ---------------------------------------------------------------------------
-# F-0014 - evaluate_expression must raise on protocol violations
-# ---------------------------------------------------------------------------
+# evaluate_expression raises on protocol violations
 
 
 @pytest.mark.asyncio
 class TestEvaluateExpression:
-    """F-0014: failure to evaluate must not collapse to ``0``."""
+    """Failure to evaluate must not collapse to ``0``."""
 
     async def test_string_value_is_parsed(self, bridge: X64DbgBridge) -> None:
         """Hex-string responses parse to ints.
@@ -1226,14 +1094,12 @@ class TestEvaluateExpression:
             await bridge.evaluate_expression("foo")
 
 
-# ---------------------------------------------------------------------------
-# F-0029 - get_status must not return a fake-default dict
-# ---------------------------------------------------------------------------
+# get_status does not return a fake-default dict
 
 
 @pytest.mark.asyncio
 class TestGetStatus:
-    """F-0029: invalid status payload must raise."""
+    """An invalid status payload must raise."""
 
     async def test_dict_payload_is_returned(self, bridge: X64DbgBridge) -> None:
         """Real status dict is returned verbatim.
@@ -1269,14 +1135,12 @@ class TestGetStatus:
             await bridge.get_status()
 
 
-# ---------------------------------------------------------------------------
-# F-0001 - post-condition verification
-# ---------------------------------------------------------------------------
+# Post-condition verification
 
 
 @pytest.mark.asyncio
 class TestSetBreakpointVerification:
-    """F-0001: ``set_breakpoint`` queries ``bp_list`` to confirm the bp."""
+    """``set_breakpoint`` queries ``bp_list`` to confirm the bp."""
 
     async def test_breakpoint_present_in_bp_list(self, bridge: X64DbgBridge) -> None:
         """When ``bp_list`` reports the address, the bridge succeeds.
@@ -1365,7 +1229,7 @@ class TestSetBreakpointVerification:
 
 @pytest.mark.asyncio
 class TestRunToVerification:
-    """F-0001: ``run_to`` polls ``reg_get rip`` to confirm arrival."""
+    """``run_to`` polls ``reg_get rip`` to confirm arrival."""
 
     async def test_run_to_reaches_target(self, bridge: X64DbgBridge) -> None:
         """When the IP reaches the target, succeed.
@@ -1437,7 +1301,7 @@ class TestRunToVerification:
 
 @pytest.mark.asyncio
 class TestNopRangeAndPatchVerification:
-    """F-0001: ``patch_instruction`` and ``nop_range`` verify the write.
+    """``patch_instruction`` and ``nop_range`` verify the write.
 
     These helpers do not require Win32 because the bridge skips the
     verifying read when ``_attached_pid is None`` and surfaces
@@ -1489,14 +1353,12 @@ class TestNopRangeAndPatchVerification:
         assert result["address"] == hex(_PATCH_ADDR)
 
 
-# ---------------------------------------------------------------------------
-# F-0028 - fallback only triggers on unknown_command
-# ---------------------------------------------------------------------------
+# Fallback only triggers on unknown_command
 
 
 @pytest.mark.asyncio
 class TestFallbackBehaviour:
-    """F-0028: ``save_database`` falls back only for unknown_command."""
+    """``save_database`` falls back only for unknown_command."""
 
     async def test_save_database_falls_back_on_unknown_rpc(self, bridge: X64DbgBridge) -> None:
         """When ``db_save`` is unknown, the script command path is used.
@@ -1526,10 +1388,7 @@ class TestFallbackBehaviour:
     async def test_save_database_propagates_pipe_disconnect(self, bridge: X64DbgBridge) -> None:
         """Pipe-disconnected errors must propagate (not fall back).
 
-        The previous behaviour swallowed any error that contained the
-        word "pipe" and routed through a script command on the same
-        broken pipe (audit6.md F-0028). The fix raises so the operator
-        sees the real failure.
+        An error that contains the word "pipe" must not route through a script command on the same broken pipe. The bridge raises so the operator sees the real failure.
 
         Args:
             bridge: Fixture bridge instance.
@@ -1543,19 +1402,14 @@ class TestFallbackBehaviour:
             await bridge.save_database()
 
 
-# ---------------------------------------------------------------------------
-# F-0016 - logging downgrade
-# ---------------------------------------------------------------------------
+# Logging downgrade
 
 
 @pytest.mark.asyncio
 class TestLoggingDowngrade:
-    """F-0016: fire-and-forget exec wrappers emit DEBUG ``x64dbg_command_queued``.
+    """Fire-and-forget exec wrappers emit DEBUG ``x64dbg_command_queued``.
 
-    INFO logs must not advertise success when the bridge has only
-    queued a console command. The post-fix behaviour emits a DEBUG log
-    explicitly tagged ``x64dbg_command_queued`` so log readers can tell
-    queued events apart from verified ones.
+    INFO logs must not advertise success when the bridge has only queued a console command. The DEBUG log is tagged ``x64dbg_command_queued`` so log readers can tell queued events apart from verified ones.
     """
 
     async def test_thread_suspend_logs_at_debug_with_queued_wording(
@@ -1613,14 +1467,12 @@ class TestLoggingDowngrade:
         assert all(name != "script_loading" for name, _level, _ in events.records)
 
 
-# ---------------------------------------------------------------------------
-# F-0008 - error_code propagated as structured detail
-# ---------------------------------------------------------------------------
+# error_code propagated as structured detail
 
 
 @pytest.mark.asyncio
 class TestErrorCodeDetails:
-    """F-0008: every ``ToolError`` from ``_send_pipe_command`` carries a code."""
+    """Every ``ToolError`` from ``_send_pipe_command`` carries a code."""
 
     async def test_pipe_disconnected_attaches_code(self, bridge: X64DbgBridge) -> None:
         """A pipe-disconnect surfaces the ``pipe_disconnected`` code.
@@ -1821,13 +1673,13 @@ def _attach_fake_pipe_d(bridge: X64DbgBridge) -> _FakePipeClientD:
 
 
 def _fake_of_d(bridge: X64DbgBridge) -> _FakePipeClientD:
-    """Return the fake pipe client previously attached to ``bridge``.
+    """Return the fake pipe client attached to ``bridge``.
 
     Args:
         bridge: Bridge whose pipe client to return.
 
     Returns:
-        _FakePipeClientD: The previously attached fake.
+        _FakePipeClientD: The attached fake.
     """
     raw: object = getattr(bridge, _PIPE_CLIENT_ATTR)
     return cast("_FakePipeClientD", raw)
@@ -1847,7 +1699,7 @@ def bridge_d() -> X64DbgBridge:
 
 @pytest.mark.asyncio
 async def test_set_breakpoint_returns_native_address_after_verification(bridge_d: X64DbgBridge) -> None:
-    """F-0002: native breakpoint id is the address; verified by ``bp_list``.
+    """The native breakpoint id is the address, verified by ``bp_list``.
 
     Args:
         bridge_d: Pre-wired bridge fixture.
@@ -1880,7 +1732,7 @@ async def test_set_breakpoint_returns_native_address_after_verification(bridge_d
 
 @pytest.mark.asyncio
 async def test_set_breakpoint_rejects_unverifiable_breakpoint(bridge_d: X64DbgBridge) -> None:
-    """F-0002: ``bp_set`` parse-success without ``bp_list`` confirmation raises.
+    """``bp_set`` parse-success without ``bp_list`` confirmation raises.
 
     Args:
         bridge_d: Pre-wired bridge fixture.
@@ -1896,10 +1748,9 @@ async def test_set_breakpoint_rejects_unverifiable_breakpoint(bridge_d: X64DbgBr
 
 @pytest.mark.asyncio
 async def test_set_breakpoint_with_condition_issues_bpcond(bridge_d: X64DbgBridge) -> None:
-    """F-0026: conditional bp issues a ``bpcond`` script command after ``bp_set``.
+    """A conditional breakpoint issues a ``bpcond`` script command after ``bp_set``.
 
-    The condition is then read back through a second ``bp_list`` (T1-3),
-    so a ``bpcond`` the debugger silently rejected cannot pass as
+    The condition is then read back through a second ``bp_list`` , so a ``bpcond`` the debugger silently rejected cannot pass as
     success. The software breakpoint resolved here must use ``bpcond``
     specifically - ``bphwcond``/``bpmcond`` address the hardware and
     memory breakpoint families and do nothing to a software breakpoint.
@@ -1958,7 +1809,7 @@ async def test_set_breakpoint_with_condition_issues_bpcond(bridge_d: X64DbgBridg
 
 @pytest.mark.asyncio
 async def test_remove_breakpoint_uses_address_keyed_native_id(bridge_d: X64DbgBridge) -> None:
-    """F-0002: removal is keyed by native id (address) and clears local registry.
+    """Removal is keyed by native id (address) and clears the local registry.
 
     Args:
         bridge_d: Pre-wired bridge fixture.
@@ -1992,7 +1843,7 @@ async def test_remove_breakpoint_uses_address_keyed_native_id(bridge_d: X64DbgBr
 
 @pytest.mark.asyncio
 async def test_concurrent_set_breakpoint_calls_serialise_state(bridge_d: X64DbgBridge) -> None:
-    """F-0012: parallel ``set_breakpoint`` does not corrupt the registry.
+    """Parallel ``set_breakpoint`` does not corrupt the registry.
 
     Args:
         bridge_d: Pre-wired bridge fixture.
@@ -2021,7 +1872,7 @@ async def test_concurrent_set_breakpoint_calls_serialise_state(bridge_d: X64DbgB
 
 
 def test_handle_event_breakpoint_hit_counts_under_concurrent_mutation() -> None:
-    """F-0012: ``_handle_event`` and coroutine mutation cannot race.
+    """``_handle_event`` and coroutine mutation cannot race.
 
     Spawns many threads that simultaneously dispatch breakpoint events
     and mutate ``_breakpoints`` so a missing lock would surface as a
@@ -2084,13 +1935,9 @@ def test_handle_event_breakpoint_hit_counts_under_concurrent_mutation() -> None:
 
 @pytest.mark.asyncio
 async def test_get_threads_populates_start_address_and_pc() -> None:
-    """F-0006: live threads expose non-zero start_address and a real state.
+    """Live threads expose non-zero start_address and a real state.
 
-    Verifies the audit's core complaint that the bridge advertised
-    ``start_address``/``current_pc`` but always returned 0. With the
-    fix in place, at least one thread reports a non-zero start address
-    produced by ``NtQueryInformationThread`` and at least one reports
-    a real running/suspended state.
+    At least one thread reports a non-zero start address produced by ``NtQueryInformationThread``, and at least one reports a real running or suspended state.
     """
     if sys.platform != "win32":
         pytest.skip("Windows only")
@@ -2165,7 +2012,7 @@ def _patch_read_pe_header(bridge: X64DbgBridge, payload: bytes) -> None:
 
 
 def test_read_module_entry_point_validates_pe32_magic() -> None:
-    """F-0007: PE32 (32-bit) magic is honoured by entry-point parsing."""
+    """PE32 (32-bit) magic is honoured by entry-point parsing."""
     bridge = X64DbgBridge()
     pe_header = _build_pe_header(magic=PE_OPTIONAL_HEADER_MAGIC_PE32, optional_header_size=PE32_OPTIONAL_HEADER_SIZE)
     _patch_read_pe_header(bridge, pe_header)
@@ -2177,7 +2024,7 @@ def test_read_module_entry_point_validates_pe32_magic() -> None:
 
 
 def test_read_module_entry_point_rejects_unknown_magic() -> None:
-    """F-0007: unknown optional-header magic returns 0 instead of garbage."""
+    """Unknown optional-header magic returns 0 instead of garbage."""
     bridge = X64DbgBridge()
     pe_header = _build_pe_header(magic=0x107, optional_header_size=PE32_OPTIONAL_HEADER_SIZE)
     _patch_read_pe_header(bridge, pe_header)
@@ -2188,7 +2035,7 @@ def test_read_module_entry_point_rejects_unknown_magic() -> None:
 
 
 def test_read_module_entry_point_rejects_undersized_optional_header() -> None:
-    """F-0007: ``SizeOfOptionalHeader`` below PE32 minimum returns 0."""
+    """``SizeOfOptionalHeader`` below PE32 minimum returns 0."""
     bridge = X64DbgBridge()
     pe_header = _build_pe_header(magic=PE_OPTIONAL_HEADER_MAGIC_PE32, optional_header_size=PE32_OPTIONAL_HEADER_SIZE - 16)
     _patch_read_pe_header(bridge, pe_header)
@@ -2200,11 +2047,9 @@ def test_read_module_entry_point_rejects_undersized_optional_header() -> None:
 
 @pytest.mark.asyncio
 async def test_disassemble_failure_raises_instead_of_swallowing(bridge_d: X64DbgBridge) -> None:
-    """F-0009: ``disassemble_at`` no longer silently returns ``[]`` on errors.
+    """``disassemble_at`` propagates memory read errors.
 
-    Uses a controlled ``read_memory`` failure to drive the previously
-    bare-``Exception`` branch in ``disassemble_at`` and asserts that
-    the error now propagates as a ``ToolError`` with the actual cause.
+    Uses a controlled ``read_memory`` failure to drive the error branch in ``disassemble_at`` and asserts that the error propagates as a ``ToolError`` with the actual cause.
 
     Args:
         bridge_d: Pre-wired bridge fixture.
@@ -2245,11 +2090,9 @@ async def test_disassemble_failure_raises_instead_of_swallowing(bridge_d: X64Dbg
 
 
 def test_get_parent_pid_narrow_exception_does_not_swallow_typeerror() -> None:
-    """F-0009: ``_get_parent_pid`` no longer swallows non-OS errors.
+    """``_get_parent_pid`` does not swallow non-OS errors.
 
-    A plain ``TypeError`` from a programming bug must surface to the
-    caller instead of being converted to a generic ``ToolError`` by
-    the previous bare-``except Exception`` clause.
+    A plain ``TypeError`` from a programming bug must surface to the caller rather than being converted to a generic ``ToolError``.
     """
     if sys.platform != "win32":
         pytest.skip("Windows only")
@@ -2271,8 +2114,7 @@ def test_get_parent_pid_narrow_exception_does_not_swallow_typeerror() -> None:
             int: Never returns.
 
         Raises:
-            TypeError: Always raised so the test can verify the
-                bare-Exception swallow path is gone.
+            TypeError: Always raised so the test can verify the error is not swallowed.
         """
         raise TypeError(failure_message)
 
@@ -2288,10 +2130,9 @@ def test_get_parent_pid_narrow_exception_does_not_swallow_typeerror() -> None:
 
 @pytest.mark.asyncio
 async def test_process_handle_cache_reused_across_reads() -> None:
-    """F-0010: repeated ``read_memory`` calls reuse one open handle.
+    """Repeated ``read_memory`` calls reuse one open handle.
 
-    Verifies the bridge no longer pays an ``OpenProcess`` /
-    ``CloseHandle`` cost on every memory access.
+    Verifies the bridge does not pay an ``OpenProcess`` / ``CloseHandle`` cost on every memory access.
     """
     if sys.platform != "win32":
         pytest.skip("Windows only")
@@ -2340,7 +2181,7 @@ async def test_process_handle_cache_reused_across_reads() -> None:
 
 
 def test_release_process_handles_empties_cache() -> None:
-    """F-0010: ``_release_process_handles`` closes and forgets every handle."""
+    """``_release_process_handles`` closes and forgets every handle."""
     if sys.platform != "win32":
         pytest.skip("Windows only")
 
@@ -2379,7 +2220,7 @@ def test_release_process_handles_empties_cache() -> None:
 
 @pytest.mark.asyncio
 async def test_detach_releases_cached_handles() -> None:
-    """F-0010: ``detach`` releases the per-handle cache.
+    """``detach`` releases the per-handle cache.
 
     Sets up a stand-in subprocess holder and a fake pipe so the
     detach control flow runs end-to-end without a live x64dbg, then
@@ -2431,9 +2272,7 @@ async def test_detach_releases_cached_handles() -> None:
     assert cast("dict[int, int]", handles_after) == {}
 
 
-# ---------------------------------------------------------------------------
-# X64DBG-E tests: F-0005, F-0019, F-0020, F-0021, F-0022
-# ---------------------------------------------------------------------------
+# Memory scan, resource, export, entropy and API breakpoint tests
 
 
 def _build_region(base: int, size: int) -> MemoryRegion:
@@ -2458,7 +2297,7 @@ def _build_region(base: int, size: int) -> MemoryRegion:
 
 @pytest.mark.asyncio
 class TestFindPatternWildcardStreaming:
-    """F-0005: wildcard ``find_pattern`` must stream the entire region."""
+    """Wildcard ``find_pattern`` must stream the entire region."""
 
     async def test_wildcard_match_beyond_first_chunk(
         self,
@@ -2547,7 +2386,7 @@ class TestFindPatternWildcardStreaming:
 
 @pytest.mark.asyncio
 class TestRecursiveResourceWalker:
-    """F-0019: ``get_resources`` must recurse through Type/Name/Language."""
+    """``get_resources`` must recurse through Type/Name/Language."""
 
     async def test_recursive_walk_emits_leaves_with_size_and_rva(
         self,
@@ -2742,7 +2581,7 @@ class TestRecursiveResourceWalker:
 
 @pytest.mark.asyncio
 class TestExportNoCap:
-    """F-0020: ``_build_export_entries`` must not silently truncate."""
+    """``_build_export_entries`` must not silently truncate."""
 
     async def test_no_truncation_above_pe_export_max(
         self,
@@ -2788,7 +2627,7 @@ class TestExportNoCap:
 
 @pytest.mark.asyncio
 class TestEntropyChunkedReads:
-    """F-0021: ``analyze_entropy`` must read each block independently."""
+    """``analyze_entropy`` must read each block independently."""
 
     async def test_partial_results_when_some_blocks_unreadable(
         self,
@@ -2865,7 +2704,7 @@ class TestEntropyChunkedReads:
 
 @pytest.mark.asyncio
 class TestApiBreakpointResolution:
-    """F-0022: ``set_breakpoint_on_api`` must resolve VA before installing bp."""
+    """``set_breakpoint_on_api`` must resolve the VA before installing the breakpoint."""
 
     async def test_resolves_via_get_proc_address(
         self,
@@ -2911,7 +2750,7 @@ class TestApiBreakpointResolution:
         bridge: X64DbgBridge,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """When GetProcAddress returns 0 the historical bpx path must run.
+        """When GetProcAddress returns 0 the bpx path must run.
 
         Args:
             bridge: Fresh bridge instance.
@@ -2993,12 +2832,7 @@ class TestApiBreakpointResolution:
         assert sent_commands == ["bpx user32.MessageBoxW"]
 
 
-# =====================================================================
-# X64DBG-A regression tests (lifecycle / subprocess / platform).
-# Helpers are suffixed ``_a`` to avoid collisions with the X64DBG-B/C/D/E
-# helpers above. The classes target one finding each as documented in
-# the module docstring.
-# =====================================================================
+# Lifecycle, subprocess and platform tests. Helpers use the ``_a`` suffix.
 
 
 _AWAIT_STEP_ATTR_A = "_await_step_complete"
@@ -3185,7 +3019,7 @@ class _FakeRegistersA:
 
 
 class TestArchitectureTriState:
-    """F-0023 - ``_detect_architecture`` rejects unsupported PE inputs."""
+    """``_detect_architecture`` rejects unsupported PE inputs."""
 
     @staticmethod
     def test_pe64_machine_returns_true(tmp_path: Path) -> None:
@@ -3298,7 +3132,7 @@ class TestArchitectureTriState:
 
 
 class TestProcessArchTriState:
-    """F-0018 - ``_detect_process_arch`` returns tri-state and ``attach`` raises."""
+    """``_detect_process_arch`` returns a tri-state value and ``attach`` raises."""
 
     @staticmethod
     def test_non_windows_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -3343,7 +3177,7 @@ class TestProcessArchTriState:
 
 
 class TestPipeReadyPlatformRefusal:
-    """F-0017 - non-Windows path raises rather than sleeping."""
+    """The non-Windows path raises rather than sleeping."""
 
     @staticmethod
     def test_non_windows_raises(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -3395,7 +3229,7 @@ class _FakeExternalProcessManager:
     corresponds to a live OS process via ``_pid_exists`` before recording it,
     which a synthetic hidden-desktop PID in these tests cannot satisfy. This
     fake mirrors the ``register_external_pid``/``unregister_external_pid``
-    surface :class:`X64DbgBridge` now calls (audit6.md F-0015 migration from
+    surface that :class:`X64DbgBridge` calls (the launch path moved from
     ``subprocess.Popen`` to ``spawn_on_hidden_desktop``) so the launch and
     shutdown paths can be exercised end to end without touching the real
     singleton or a live PID.
@@ -3521,17 +3355,9 @@ def _patch_bridge_pipe_ready(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestHiddenDesktopSpawnReplacesPopen:
-    """F-0015 - x64dbg is launched via the hidden-desktop ``CreateProcessW`` path.
+    """x64dbg is launched via the hidden-desktop ``CreateProcessW`` path.
 
-    ``subprocess.Popen`` cannot set ``STARTUPINFOW.lpDesktop``, so the
-    bridge now launches x64dbg exclusively through
-    ``intellicrack.core.win32_desktop_process.spawn_on_hidden_desktop``,
-    which owns the NUL-redirected stdio wiring that keeps a GUI child from
-    deadlocking on an undrained pipe (audit6.md F-0015; real NUL-redirection
-    behaviour is gated end to end in
-    ``tests/core/test_win32_desktop_process.py``). This test proves the
-    bridge routes through that real launcher, with no fallback to a bare
-    subprocess call, and hands it a real, non-empty environment mapping.
+    ``subprocess.Popen`` cannot set ``STARTUPINFOW.lpDesktop``, so the bridge launches x64dbg exclusively through ``intellicrack.core.win32_desktop_process.spawn_on_hidden_desktop``, which owns the NUL-redirected stdio wiring that keeps a GUI child from deadlocking on an undrained pipe. NUL redirection is covered end to end in ``tests/core/test_win32_desktop_process.py``. This test proves the bridge routes through that launcher, with no fallback to a bare subprocess call, and hands it a real, non-empty environment mapping.
     """
 
     @staticmethod
@@ -3637,7 +3463,7 @@ class TestHeadlessLaunch:
 
 
 class TestPluginRequiredStartGate:
-    """F-0013 - ``_start_debugger`` refuses without the plugin."""
+    """``_start_debugger`` refuses without the plugin."""
 
     @staticmethod
     def test_refuses_when_plugin_not_deployed(
@@ -3646,11 +3472,7 @@ class TestPluginRequiredStartGate:
     ) -> None:
         """``_start_debugger`` raises before spawning x64dbg.exe.
 
-        Sets up a working directory with a real ``x64dbg.exe`` file
-        present so the previous behaviour (spawn first, fail at the
-        first RPC call) would have proceeded to launching it. The fix
-        gates on ``_plugin_deployed`` and must therefore raise a
-        plugin-related ``ToolError`` instead.
+        Sets up a working directory with a real ``x64dbg.exe`` file present, then asserts that the bridge checks ``_plugin_deployed`` first and raises a plugin-related ``ToolError`` instead of launching the executable.
 
         Args:
             monkeypatch: pytest monkeypatch fixture.
@@ -3686,7 +3508,7 @@ class TestPluginRequiredStartGate:
 
 
 class TestShutdownTryFinally:
-    """F-0011 - shutdown reaches every cleanup phase even on early failure."""
+    """Shutdown reaches every cleanup phase even on early failure."""
 
     @staticmethod
     def test_close_connection_failure_still_terminates_process(
@@ -3745,7 +3567,7 @@ class TestShutdownTryFinally:
 
 
 class TestStepEventSync:
-    """F-0004 - step coroutines wait on the paused event with timeout."""
+    """Step coroutines wait on the paused event with a timeout."""
 
     @staticmethod
     def test_step_resolves_on_paused_event(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -3866,8 +3688,7 @@ class TestStepEventSync:
         Each of ``step_into``, ``step_over``, and ``step_out`` must
         register a waiter, send the step command, and return the
         instruction pointer delivered by the plugin's paused event.
-        A source-text proxy cannot gate this; only an end-to-end
-        behavioural call through the real production method can.
+        The check runs through the real production method end to end.
 
         Args:
             monkeypatch: pytest monkeypatch fixture.

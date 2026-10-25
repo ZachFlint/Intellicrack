@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 12: importing and saving keep every server, and the literal-secret check tells credentials from ids.
+"""Importing and saving keep every server, and the literal-secret check tells credentials from ids.
 
 The gates parse and save real configuration files. Keys that collide once normalized -- differing only in case, or alike in their first
 32 characters -- must all survive an import and a save, and an entry set aside as unusable must never overwrite, or be overwritten by, a
-usable one. The literal-secret check must pass the ids and settings the audit found it refusing, and refuse the credentials it found it
+usable one. The literal-secret check must pass the ids and settings a naive check refuses, and refuse the credentials it must catch
 missing.
 """
 

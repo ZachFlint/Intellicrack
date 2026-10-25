@@ -2,17 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D10: sandbox controls must be gated by backend capability.
+"""Gates for sandbox control enablement by backend capability.
 
-``_set_sandbox_controls_active`` used to enable every control whenever an
-instance was active, regardless of which backend was selected. On the Windows
-backend that made Snapshots, VM Control (Pause/Continue), Pending Messages,
-Screenshot, PCAP capture, Extract Dropped Files, Apply Anti-Evasion and the VM
-Display live but broken: ``WindowsSandbox`` inherits the ``SandboxBase``
-snapshot/guest-agent implementations that raise "not supported", has no QMP
-pause/continue, and inherits ``vnc_port = None``, while ``SandboxBridge``
-rejects the remaining operations outright for any instance whose
-``sandbox_type`` is not ``"qemu"``.
+``_set_sandbox_controls_active`` must enable a control only when the selected backend
+implements it. Enabling every control whenever an instance is active, regardless of
+backend, leaves Snapshots, VM Control (Pause/Continue), Pending Messages, Screenshot, PCAP
+capture, Extract Dropped Files, Apply Anti-Evasion and the VM Display live but broken on the
+Windows backend: ``WindowsSandbox`` inherits the ``SandboxBase`` snapshot/guest-agent
+implementations that raise "not supported", has no QMP pause/continue, and inherits
+``vnc_port = None``, while ``SandboxBridge`` rejects the remaining operations outright for
+any instance whose ``sandbox_type`` is not ``"qemu"``.
 
 The capability claims asserted here are checked against the real backend
 classes as well, so the gate stays honest if a future backend gains one of the

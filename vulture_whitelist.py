@@ -2,14 +2,14 @@
 # Bridge methods dispatched via getattr(), Qt virtual overrides, ctypes _fields_.
 
 intellicrack.__init__.__getattr__  # unused-function
-intellicrack.bridges.pe_format.PE_DOS_HEADER_SIZE  # unused-variable (public API, audit Group 20)
-intellicrack.bridges.pe_format.PE_DOS_SIGNATURE  # unused-variable (public API, audit Group 20)
-intellicrack.bridges.pe_format.PE_DOS_SIGNATURE_INT  # unused-variable (public API, audit Group 3)
-intellicrack.bridges.pe_format.PE_OPTIONAL_HEADER_MAGIC_PE32  # unused-variable (public API, audit Group 20)
-intellicrack.bridges.pe_format.PE_OPTIONAL_HEADER_MAGIC_ROM  # unused-variable (public API, audit Group 20)
-intellicrack.bridges.pe_format.PE_SIGNATURE_INT  # unused-variable (public API, audit Group 3)
-intellicrack.bridges.pe_format.iterate_section_headers  # unused-function (public API, audit Group 20)
-intellicrack.bridges.pe_format.rva_to_file_offset  # unused-function (public API, audit Group 20)
+intellicrack.bridges.pe_format.PE_DOS_HEADER_SIZE  # unused-variable (public API)
+intellicrack.bridges.pe_format.PE_DOS_SIGNATURE  # unused-variable (public API)
+intellicrack.bridges.pe_format.PE_DOS_SIGNATURE_INT  # unused-variable (public API)
+intellicrack.bridges.pe_format.PE_OPTIONAL_HEADER_MAGIC_PE32  # unused-variable (public API)
+intellicrack.bridges.pe_format.PE_OPTIONAL_HEADER_MAGIC_ROM  # unused-variable (public API)
+intellicrack.bridges.pe_format.PE_SIGNATURE_INT  # unused-variable (public API)
+intellicrack.bridges.pe_format.iterate_section_headers  # unused-function (public API)
+intellicrack.bridges.pe_format.rva_to_file_offset  # unused-function (public API)
 intellicrack.bridges.base.matched_bytes  # unused-variable
 intellicrack.bridges.cutter.get_function  # unused-method
 intellicrack.bridges.cutter.search_bytes  # unused-method
@@ -236,9 +236,9 @@ intellicrack.providers.xpu_utils._INTEL_VENDOR_ID  # unused-variable (API surfac
 intellicrack.ui.panels.vnc_widget._PIXEL_FORMAT_32BIT  # unused-variable (API surface constant)
 intellicrack.ui.panels.hex_editor.base.hex_state_available  # unused-variable (availability flag)
 intellicrack.ui.panels.hex_editor.base.transform_pipeline_available  # unused-variable (availability flag)
-intellicrack.ui.panels.hex_editor.base.pefile_available  # unused-variable (availability flag, audit Group 22)
-intellicrack.ui.panels.hex_editor.base.disassembler_available  # unused-variable (availability flag, audit Group 22)
-intellicrack.ui.panels.hex_editor.base.yara_scanner_available  # unused-variable (availability flag, audit Group 22)
+intellicrack.ui.panels.hex_editor.base.pefile_available  # unused-variable (availability flag)
+intellicrack.ui.panels.hex_editor.base.disassembler_available  # unused-variable (availability flag)
+intellicrack.ui.panels.hex_editor.base.yara_scanner_available  # unused-variable (availability flag)
 intellicrack.ui.panels.hex_editor_widget.DISPLAY_MODES  # unused-variable (API surface constant)
 intellicrack.credentials.oauth.AUTHORIZATION_CODE  # unused-variable (enum member)
 intellicrack.core.process_manager.ASYNC_SUBPROCESS  # unused-variable (enum member)
@@ -249,9 +249,7 @@ intellicrack.providers.model_loader.quantization_config  # unused-variable (conf
 intellicrack.bridges.hex_editor.execute_pattern_bytes  # unused-method (bridge tool_definitions dispatch)
 intellicrack.ui.tools.connect_hex_widget_to_tools  # unused-method (called by host panel at runtime)
 
-# === Vulture audit 2026-04-24: comprehensive FP whitelist ===
-
-# Frida bridge methods - dispatched via tool_definitions name="frida.<m>" (getattr in core/tools.py:480)
+# Frida bridge methods - dispatched via tool_definitions name="frida.<m>" (getattr in core/tools.py)
 intellicrack.bridges.frida_bridge.post_message  # unused-method (tool_definitions dispatch)
 intellicrack.bridges.frida_bridge.eternalize_script  # unused-method (tool_definitions dispatch)
 intellicrack.bridges.frida_bridge.rpc_call  # unused-method (tool_definitions dispatch)
@@ -492,7 +490,7 @@ intellicrack.providers.ollama.embedding  # unused-variable (TypedDict OllamaEmbe
 intellicrack.providers.ollama.size_vram  # unused-variable (TypedDict OllamaRunningModel field)
 intellicrack.providers.base.get_pending_usage  # unused-method (tested in tests/test_providers)
 intellicrack.providers.base.get_pending_thinking  # unused-method (tested in tests/test_providers)
-intellicrack.providers.huggingface._ChatCompletionCallable  # unused-class (Protocol used in cast() at L508,L649)
+intellicrack.providers.huggingface._ChatCompletionCallable  # unused-class (Protocol used in cast())
 
 # core/types.py - dataclass field declarations / AttachError used in tests
 intellicrack.core.types.methods  # unused-variable (ClassInfo/VtableInfo dataclass field)
@@ -539,6 +537,6 @@ intellicrack.ui.dialogs.splash_screen.mark_stage_failed  # unused-method (tested
 intellicrack.ui.xpu_status.XPUStatusDialog  # unused-class (tested in test_xpu_status.py)
 
 # ui/win32_embed.py - cast() string forward reference / tested constants
-intellicrack.ui.win32_embed.voidptr  # unused-import (string forward ref in cast("voidptr", hwnd) at L254)
+intellicrack.ui.win32_embed.voidptr  # unused-import (string forward ref in cast("voidptr", hwnd))
 intellicrack.ui.win32_embed.GW_OWNER  # unused-variable (tested in test_win32_embed.py)
 intellicrack.ui.win32_embed.MAX_TITLE_LEN  # unused-variable (tested in test_win32_embed.py)

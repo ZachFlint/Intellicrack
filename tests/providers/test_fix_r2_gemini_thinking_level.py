@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 25: Gemini 3 is asked to think by ``thinkingLevel``, and Gemini 2.5 by ``thinkingBudget``.
+"""Gemini 3 is asked to think by ``thinkingLevel``, and Gemini 2.5 by ``thinkingBudget``.
 
 The gates connect the real built-in :class:`GoogleProvider`, through the real ``google-genai`` SDK, and a user-defined Gemini instance to a
 loopback Gemini endpoint and read the ``thinkingConfig`` each ``generateContent`` request carried. Gemini 3 Pro takes ``low`` or ``high``,

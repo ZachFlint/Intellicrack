@@ -2,16 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for S19-D07: double-clicking a bookmark row navigates to it.
+"""Double-clicking a bookmark row navigates the hex cursor to its offset.
 
 ``HexEditorPanel._build_bookmarks_tab`` (``ui/panels/hex_editor/panel.py``)
 wires ``self._bookmarks_tree.itemDoubleClicked`` to
 ``BookmarksMixin._on_bookmark_double_clicked``, which parses the row's hex
 offset column and forwards it to ``self.goto_offset`` -> the real hex
-widget's ``goto_offset``, moving its cursor. The re-live audit could not
-drive this live end to end (the side pane was clipped off-screen at the
-audited window width -- a separate finding), but flagged the wiring as
-"code-verified, live-drive blocked."
+widget's ``goto_offset``, moving its cursor.
 
 This test drives the real, unmodified signal connection against a real
 ``intellicrack_hexcore`` document loaded from a real PE binary: it adds a
@@ -20,11 +17,6 @@ performs), refreshes the real bookmarks tree, then emits the tree's own
 ``itemDoubleClicked`` signal on that row -- not a direct method call -- so a
 regression that disconnects or removes the wiring itself (not just the
 handler body) is caught.
-
-Reverting the ``itemDoubleClicked.connect(self._on_bookmark_double_clicked)``
-line in ``_build_bookmarks_tab`` turns this RED: emitting the signal no
-longer reaches the handler, so the hex widget's cursor stays wherever it
-was left instead of moving to the bookmark's offset.
 """
 
 from __future__ import annotations

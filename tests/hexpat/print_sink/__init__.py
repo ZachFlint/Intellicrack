@@ -2,10 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit7 U12 regression tests for the HexPat ``std::print`` sink wiring.
+"""Regression tests for the HexPat ``std::print`` sink wiring.
 
-Pins the unit-12 remediation for core-hexpat F-0007 (``set_print_sink`` is dead
-code: never called from any consumer). Two regression layers:
+Pins the wiring of ``set_print_sink``, which every consumer must call. Two
+regression layers:
 
 * Bridge layer: :class:`intellicrack.bridges.hex_editor.HexEditorBridge`
   must accept a ``print_sink`` callback on :meth:`execute_pattern` /

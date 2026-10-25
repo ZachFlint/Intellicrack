@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Bridge-level regression tests for audit5 F-0007 (HexPat ``std::print`` sink).
+"""Bridge-level regression tests for the HexPat ``std::print`` sink.
 
-The pre-audit ``HexEditorBridge`` never wired the HexPat ``std::print``
-output to any consumer, so AI / CLI callers had no observable channel for
-``std::print`` payloads emitted by the pattern under evaluation. These
+``HexEditorBridge`` must wire the HexPat ``std::print`` output to a consumer, so AI /
+CLI callers have an observable channel for ``std::print`` payloads emitted by the
+pattern under evaluation. These
 regressions verify two distinct contracts:
 
 * :meth:`HexEditorBridge.execute_pattern` (and its ``_file`` sibling)
@@ -249,9 +249,8 @@ class TestExecutePatternWithOutputCapturesPrint:
     def test_pattern_without_print_returns_empty_hexpat_print(self, loaded_bridge: HexEditorBridge) -> None:
         """A silent pattern yields empty output while a printing pattern is captured.
 
-        The silent-pattern empty result alone is not falsifiable: the pre-fix
-        broken state (no print sink wired) ALSO produced an empty string for
-        every pattern.  This test therefore first drives a printing pattern
+        The silent-pattern empty result alone is not falsifiable: a bridge with no print
+        sink wired also yields an empty string for every pattern.  This test therefore first drives a printing pattern
         through the same bridge/sink path and asserts the captured text is the
         expected non-empty content - anchoring that the sink IS wired - then
         asserts the silent pattern yields exactly the empty string, proving the

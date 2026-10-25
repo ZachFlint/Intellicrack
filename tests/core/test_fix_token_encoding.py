@@ -6,8 +6,8 @@
 
 ``tiktoken.get_encoding`` downloads its BPE file with ``requests.get`` and no
 timeout, so a stalled network blocks whoever asked -- the GUI thread, when the
-MCP settings dialog priced a server's tools -- and a failed download was
-retried on every single call. These gates drive the real loader against real
+MCP settings dialog priced a server's tools -- and a failed download is
+retried on every call. These gates drive the real loader against real
 loopback servers that stall, fail, trickle or send the wrong bytes, and drive
 the real callers in child interpreters behind a proxy that never answers.
 """

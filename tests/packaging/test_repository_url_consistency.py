@@ -11,11 +11,11 @@ installer's ``AppUrl`` define in ``packaging/intellicrack.iss`` (which Windows
 shows in Add/Remove Programs), and the Sphinx ``html_context`` that builds the
 "Edit on GitHub" source links.
 
-Every one of those locations once pointed at a ``zacharyflint`` account, which is
-not the project's owner and differs from ``ZachFlint`` by more than case, so
-GitHub's case-insensitive resolution does not rescue it. The package metadata, the
-installer's uninstall entry, and every documentation source link resolved to the
-wrong account, and nothing detected it.
+Those locations must name the owner exactly. A ``zacharyflint`` account is not
+the project's owner and differs from ``ZachFlint`` by more than case, so
+GitHub's case-insensitive resolution does not rescue it. Pointing any of them there
+sends the package metadata, the installer's uninstall entry and every documentation
+source link to the wrong account, and nothing else detects it.
 
 These gates anchor each location on the canonical URL, so reverting any single one
 turns red. They read repository-root files that the sandbox does not mount, so

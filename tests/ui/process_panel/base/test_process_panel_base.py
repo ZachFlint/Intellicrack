@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit4 B1 ProcessPanel base fixes (F-0001, F-0002, F-0025).
+"""Regression tests for ProcessPanel base status labels and control gating.
 
-Each test exercises one finding and would fail without the corresponding
+Each test exercises one behaviour and would fail without the corresponding
 remediation in ``intellicrack.ui.panels.process_panel.base``.
 """
 
@@ -136,9 +136,7 @@ class _RecordingBridge(ProcessBridge):
 
         Raises:
             self.arch_should_raise: The stored ``ToolError`` instance is
-                re-raised unchanged. The Raises entry uses the literal
-                raise target so static analysis can correlate the body
-                with the docstring.
+                re-raised unchanged.
         """
         self.arch_calls.append(pid)
         if self.arch_should_raise is not None:
@@ -162,9 +160,7 @@ class _RecordingBridge(ProcessBridge):
 
         Raises:
             self.priv_should_raise: The stored ``ToolError`` instance is
-                re-raised unchanged. The Raises entry uses the literal
-                raise target so static analysis can correlate the body
-                with the docstring.
+                re-raised unchanged.
         """
         self.priv_calls.append(pid)
         if self.priv_should_raise is not None:
@@ -325,7 +321,7 @@ def _simulate_detach(panel: ProcessPanel) -> None:
 
 
 class TestF0001ArchLabelUpdatesOnAttach:
-    """F-0001: ``_status_arch`` must update from the bridge after every attach."""
+    """``_status_arch`` must update from the bridge after every attach."""
 
     def test_arch_label_is_dash_before_attach(self, panel: ProcessPanel) -> None:
         """Status arch label must be 'Arch: --' before any process is attached.
@@ -342,8 +338,6 @@ class TestF0001ArchLabelUpdatesOnAttach:
         bridge: _RecordingBridge,
     ) -> None:
         """Arch label must display the bridge-returned arch string after attach.
-
-        Fails without the fix because ``_status_arch`` is never updated.
 
         Args:
             qapp: Qt application.
@@ -424,7 +418,7 @@ class TestF0001ArchLabelUpdatesOnAttach:
 
 
 class TestF0002PrivilegeLabelRefreshesOnMutation:
-    """F-0002: ``_status_priv`` must be read from ``get_token_privileges``, not a stale private attribute."""
+    """``_status_priv`` must be read from ``get_token_privileges``, not a stale private attribute."""
 
     def test_priv_label_updates_after_attach(
         self,
@@ -434,8 +428,8 @@ class TestF0002PrivilegeLabelRefreshesOnMutation:
     ) -> None:
         """Privilege label must update from bridge after attach.
 
-        Fails without the fix because ``_status_priv`` relied on the private
-        ``_debug_privilege_enabled`` attribute which is set only at
+        ``_status_priv`` must come from the live token, not from the private
+        ``_debug_privilege_enabled`` attribute, which is set only at
         ``initialize()`` time and never refreshed.
 
         Args:
@@ -498,9 +492,6 @@ class TestF0002PrivilegeLabelRefreshesOnMutation:
     ) -> None:
         """Privilege label must refresh when bridge fires ``privileges_changed``.
 
-        Fails without the fix because the label was never subscribed to bridge
-        privilege-mutation events.
-
         Args:
             qapp: Qt application.
             panel: ProcessPanel fixture.
@@ -561,13 +552,10 @@ class TestF0002PrivilegeLabelRefreshesOnMutation:
 
 
 class TestF0025ProcessButtonsGatedWhenUnattached:
-    """F-0025: ``_update_controls_for_state`` must gate ProcessTab action buttons."""
+    """``_update_controls_for_state`` must gate ProcessTab action buttons."""
 
     def test_suspend_disabled_when_unattached(self, panel: ProcessPanel, bridge: _RecordingBridge) -> None:
         """Suspend button must be disabled when no process is attached.
-
-        Fails without the fix because ``_update_controls_for_state`` never
-        touched the ProcessTab buttons.
 
         Args:
             panel: ProcessPanel fixture.
@@ -770,9 +758,6 @@ class TestAttachHintOverlay:
     def test_overlays_show_no_bridge_message_before_bridge(self, panel: ProcessPanel) -> None:
         """A disconnected panel must show the no-bridge hint on all detail tabs.
 
-        Fails without the fix because the gated tabs were left blank and
-        non-interactive with no explanation.
-
         Args:
             panel: ProcessPanel fixture.
         """
@@ -860,9 +845,9 @@ class TestSystemTabConnectionGating:
     ) -> None:
         """A connected-but-detached panel must enable the System tab and hide its overlay.
 
-        Fails without the fix because the System tab was gated behind the
-        ATTACHED state despite exposing system-wide (registry/pipe/system-info)
-        operations that need only a connected bridge.
+        The System tab must not be gated behind the ATTACHED state, because it
+        exposes system-wide (registry/pipe/system-info) operations that need only
+        a connected bridge.
 
         Args:
             panel: ProcessPanel fixture.

@@ -8,7 +8,7 @@
 Covers the signatures tab's "Scan" action
 (``ui/panels/hex_editor/signatures.py``
 ``SignaturesMixin._on_scan_signatures`` /
-``_scan_signatures_via_bridge``), which now dispatches non-YARA scans to
+``_scan_signatures_via_bridge``), which dispatches non-YARA scans to
 the matching ``HexEditorBridge.scan_die_signatures`` /
 ``scan_clamav_signatures`` / ``scan_custom_signatures`` method (selected
 by the database-type combo) when a bridge is attached, instead of
@@ -78,7 +78,7 @@ class TestScanSignaturesRoutesThroughMatchingBridgeMethod:
 
         Falsifiable: if ``_on_scan_signatures`` were reverted to always
         run the ``GenericCallableWorker``/``execute_signature_scan_from_source``
-        path (the pre-remediation behaviour), ``scan_die_signatures_calls``
+        path (the unrouted behaviour), ``scan_die_signatures_calls``
         would stay empty even though a bridge was attached and "DIE
         (JSON)" was selected. Broken production line: the
         ``{"die": bridge.scan_die_signatures, ...}[db_type](self._sig_db_path)``

@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S18-D17: a Windows Sandbox run must report the exit code it actually got.
+r"""A Windows Sandbox run must report the exit code it actually got.
 
-Driven live on 2026-08-15: a target that ran to completion and printed its final line came
+A target that ran to completion and printed its final line came
 back as ``exit_code=-2, result=error``. The in-guest dispatcher publishes the code with
 ``Set-Content -LiteralPath $res -Value ([string]$code) -Encoding utf8``, and under Windows
 PowerShell 5.1 ``-Encoding utf8`` writes UTF-8 **with a BOM**. The host decoded that file as

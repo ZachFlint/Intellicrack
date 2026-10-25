@@ -8,10 +8,8 @@
 Parses the on-disk ``dark``, ``dark2``, ``light``, and ``light2`` ``.qss``
 assets and the two embedded fallback stylesheet strings in
 :mod:`intellicrack.ui.resources.theme_manager` as plain text, with no Qt
-runtime involved, and asserts on the concrete selector rules the S19 GUI
-audit required (D29-D33, D35, D36, D04, D37). Every assertion targets a
-specific rule addition, removal, or rename and fails if that fix is
-reverted.
+runtime involved, and asserts on the concrete selector rules the themes must carry. Every assertion
+targets a specific rule addition, removal, or rename and fails if that rule is reverted.
 """
 
 from __future__ import annotations
@@ -123,7 +121,7 @@ _ALL_SOURCES: tuple[tuple[str, str], ...] = (
 
 
 class TestCodePreviewTextSelector:
-    """D30: ``code_preview_text`` is a QTextEdit, not a QPlainTextEdit."""
+    """``code_preview_text`` is a QTextEdit, not a QPlainTextEdit."""
 
     @staticmethod
     def test_qtextedit_selector_present_in_all_sources() -> None:
@@ -139,7 +137,7 @@ class TestCodePreviewTextSelector:
 
 
 class TestUserNotesTextRule:
-    """D31: the ``user_notes_text`` QTextEdit has a real themed rule."""
+    """The ``user_notes_text`` QTextEdit has a real themed rule."""
 
     @staticmethod
     def test_user_notes_text_rule_present_in_all_sources() -> None:
@@ -149,7 +147,7 @@ class TestUserNotesTextRule:
 
 
 class TestToolButtonRule:
-    """D29: 227 widgets set objectName('tool_button') with no matching rule."""
+    """Every widget that sets objectName('tool_button') needs a matching rule."""
 
     @staticmethod
     def test_tool_button_base_rule_present_in_all_sources() -> None:
@@ -175,7 +173,7 @@ class TestToolButtonRule:
 
 
 class TestDeadSelectorsRemoved:
-    """D32: dead attribute selectors and the dead #muted_label rule are gone."""
+    """Dead attribute selectors and the dead #muted_label rule are gone."""
 
     @staticmethod
     def test_dead_attribute_selectors_absent_in_all_sources() -> None:
@@ -213,7 +211,7 @@ class TestDeadSelectorsRemoved:
 
 
 class TestPushButtonCheckedState:
-    """D04: QPushButton needs a generic :checked visual state for toggles."""
+    """QPushButton needs a generic :checked visual state for toggles."""
 
     @staticmethod
     def test_generic_checked_rule_present_in_all_sources() -> None:
@@ -223,7 +221,7 @@ class TestPushButtonCheckedState:
 
 
 class TestAttachHintOverlayRules:
-    """D37: attach-hint overlay object names need themed dark AND light rules."""
+    """Attach-hint overlay object names need themed dark AND light rules."""
 
     @staticmethod
     def test_overlay_and_label_rules_present_in_all_sources() -> None:
@@ -234,7 +232,7 @@ class TestAttachHintOverlayRules:
 
 
 class TestFontSizeUnitsNormalized:
-    """D35: font-size units are normalized to px across all style sources."""
+    """Font-size units are normalized to px across all style sources."""
 
     @staticmethod
     def test_no_point_sized_font_declarations_remain() -> None:
@@ -265,7 +263,7 @@ class TestFontSizeUnitsNormalized:
 
 
 class TestMonospaceFontFallback:
-    """D36: every monospace font-family declaration carries a fallback stack."""
+    """Every monospace font-family declaration carries a fallback stack."""
 
     @staticmethod
     def test_consolas_declarations_include_generic_monospace_fallback() -> None:
@@ -287,7 +285,7 @@ class TestMonospaceFontFallback:
 
 
 class TestFallbackSelectorSetMatchesQss:
-    """D33: the embedded fallback selector-set equals the .qss selector-set."""
+    """The embedded fallback selector-set equals the .qss selector-set."""
 
     @staticmethod
     def test_dark_fallback_selectors_equal_dark_qss_selectors() -> None:
@@ -315,13 +313,13 @@ class TestFallbackSelectorSetMatchesQss:
 
     @staticmethod
     def test_close_button_selector_present_in_qss_files() -> None:
-        """QTabBar::close-button, previously fallback-only, now lives in the .qss too."""
+        """QTabBar::close-button lives in the .qss and in the embedded fallback."""
         assert "QTabBar::close-button" in _DARK_QSS
         assert "QTabBar::close-button" in _LIGHT_QSS
 
     @staticmethod
     def test_chat_surface_selectors_present_in_fallbacks() -> None:
-        """The chat surface selectors, previously qss-only, now live in the fallbacks too."""
+        """The chat surface selectors live in the .qss and in the embedded fallbacks."""
         for selector in (
             "QFrame#chat_panel",
             "QFrame#chat_header",

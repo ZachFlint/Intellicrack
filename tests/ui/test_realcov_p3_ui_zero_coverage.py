@@ -4,16 +4,16 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-Qt coverage for three zero-coverage UI modules.
 
-Covers (section 15): StackFrame / StackFrameTable / StackViewerPanel - full
+Covers StackFrame / StackFrameTable / StackViewerPanel - full
 structural and text-content assertions against known stack-frame inputs drive
 the real offscreen widget.
 
-Covers (section 14): Five syntax highlighters - exact QTextLayout format-range
-colour and bold/italic assertions for single-line constructs, plus multi-line
+Covers five syntax highlighters - exact QTextLayout format-range
+color and bold/italic assertions for single-line constructs, plus multi-line
 block-state propagation (C/JS/HexPat ``/* */`` comments, Python triple-quote
 strings) checked via ``QTextBlock.userState()``.
 
-Covers (section 14): ``_screen_compat`` bootstrap helpers - exact return-type
+Covers ``_screen_compat`` bootstrap helpers - exact return-type
 structure from ``get_screen_geometry``, exact widget position after
 ``move_widget``, and exact ``AttributeError`` contract from ``_resolve``.
 
@@ -780,7 +780,7 @@ class TestJavaScriptSyntaxHighlighter:
 
 @pytest.mark.usefixtures("qapp")
 class TestTokenRolePalette:
-    """Gate tests keeping the role-based colour assertions above discriminating."""
+    """Gate tests keeping the role-based color assertions above discriminating."""
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -796,7 +796,7 @@ class TestTokenRolePalette:
     def test_token_roles_resolve_to_distinct_colors(highlighter_cls: Callable[[QTextDocument], _Highlighter]) -> None:
         """Every asserted token role must have its own color in the active theme.
 
-        The colour assertions compare a token against its role's theme color,
+        The color assertions compare a token against its role's theme color,
         so two roles sharing one color would let a token highlighted with the
         wrong role pass unnoticed.
 
@@ -889,7 +889,7 @@ class TestGetHighlighterForLanguage:
 
     @staticmethod
     def test_unknown_language_returns_none() -> None:
-        """An unrecognised language string must return None.
+        """An unrecognized language string must return None.
 
         Mutation caught: returning a default highlighter instead of None for unknown input.
         """

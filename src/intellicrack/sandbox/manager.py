@@ -566,7 +566,7 @@ class SandboxManager:
         Naming an instance is the only option that can produce two comparable
         runs, because ``reuse_instance`` cannot express a preference: with
         several sandboxes running it always lands on the same one, so a caller
-        wanting to diff two runs got two reports from a single instance.
+        wanting to diff two runs gets two reports from a single instance.
 
         Args:
             binary_path: Path to the binary to run.

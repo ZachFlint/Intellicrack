@@ -2,14 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-data coverage for previously untested credential-store entry points.
+"""Real-data coverage for the credential-store entry points.
 
 These tests exercise the public surface of
 :mod:`intellicrack.credentials.store` against the real OS keyring backend
 (Windows Credential Manager on the CI host and inside the Windows Docker
 container) and against real on-disk ``.env`` files.
 
-The following capabilities, previously without any test, are covered here:
+The following capabilities are covered here:
 
 * The module-level async wrapper :func:`get_credentials`.
 * :meth:`CredentialStore.migrate_from_env` (env -> keyring copy semantics,
@@ -321,7 +321,7 @@ def test_validate_accepts_a_foreign_anthropic_prefix(anthropic_clean: str) -> No
     """``validate`` accepts an Anthropic key without the ``sk-ant-`` prefix.
 
     A gateway in front of Anthropic issues keys in its own format, so the
-    prefix alone is no longer grounds for rejection.
+    prefix alone is not grounds for rejection.
 
     Args:
         anthropic_clean: Purged ANTHROPIC provider name.

@@ -2,10 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Regression tests for S17-D45: chain trust, and what ``pnputil`` 259 means.
+r"""Chain trust, and what ``pnputil`` 259 means.
 
 Measured on a real Windows 11 guest installing from a real virtio-win 0.1.285
-medium, with the S17-D42 publisher-trust step in place::
+medium, with the publisher-trust step in place::
 
     publisher CN=Microsoft Windows Hardware Compatibility Publisher... signs balloon.cat
     publisher CN=Red Hat Inc., OU=Dev, O=virtio-win signs smbus.cat

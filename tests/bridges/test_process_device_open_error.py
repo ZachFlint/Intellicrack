@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-syscall regression test for the D26 ``device_open`` error-discard defect.
+"""Real-syscall test that ``device_open`` surfaces the Win32 error code.
 
 Exercises ``ProcessBridge.device_open`` against real Win32
 ``CreateFileW`` targets - a raw disk device that a medium-integrity
@@ -10,9 +10,8 @@ Exercises ``ProcessBridge.device_open`` against real Win32
 does not exist - and asserts the raised ``ToolError`` carries the real
 Win32 error code (``5`` / ``ERROR_ACCESS_DENIED`` and ``2`` /
 ``ERROR_FILE_NOT_FOUND`` respectively) instead of the bare, code-less
-failure constant. A regression back to the bare constant leaves
-``error_code`` ``None`` and drops the number from the message, so this
-test fails whenever the discard defect reappears.
+failure constant. A bare, code-less failure constant leaves
+``error_code`` ``None`` and drops the number from the message, so this test fails whenever the code is discarded.
 """
 
 from __future__ import annotations
@@ -89,7 +88,7 @@ async def test_device_open_physical_drive_reports_access_denied(bridge: ProcessB
     path, even a read-only open; that specific, independently-verified
     code is treated as an environment limitation and skipped rather
     than asserted on, since the elevation gate cannot be exercised
-    there. Any other outcome - including the pre-fix bare, code-less
+    there. Any other outcome - including a bare, code-less
     failure (``error_code is None``) - fails the test: the real Win32
     error number must always be threaded through into the raised
     ``ToolError`` rather than discarded.

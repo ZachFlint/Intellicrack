@@ -9,8 +9,8 @@ PyQt6 6.11.0 ships 35 ``.pyi`` stubs with two defects: they use
 ``PYQT_SLOT`` with a return type of ``Any`` that is never imported. Left
 unpatched, basedpyright resolves the slot type of every ``signal.connect`` to
 partially Unknown, and a fresh environment reports over a thousand errors that
-a hand-patched one does not. The fixer used to repair only the import, and
-only in ``QtWidgets.pyi``.
+a hand-patched one does not. A fix that repairs only the import, and only
+in ``QtWidgets.pyi``, leaves the defect in place.
 
 The gate works on copies of the real installed stubs with both lines restored
 to the exact form the 6.11.0 wheel ships, so it exercises the real files
@@ -181,11 +181,10 @@ def test_patching_is_idempotent_and_leaves_other_stubs_alone(shipped_stubs: Path
 
 
 def test_a_line_damaged_by_repeated_runs_is_repaired(tmp_path: Path) -> None:
-    """Repeated ``collections.abc`` entries from the old script collapse to one.
+    """Repeated ``collections.abc`` entries collapse to one.
 
-    The previous version reported an already-patched line as unpatched and
-    appended another entry on every run; a developer environment had
-    accumulated 148 of them in ``QtWidgets.pyi``.
+    An already-patched line is recognised as patched, so a rerun does not append
+    another entry to ``QtWidgets.pyi``.
 
     Args:
         tmp_path: Per-test directory for the damaged stub.

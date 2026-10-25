@@ -2,14 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""L3 wiring gates for finding T2-8d (``ProcessBridge.enumerate_heaps`` GUI reachability).
+"""Wiring gates for ``ProcessBridge.enumerate_heaps`` GUI reachability.
 
-``ProcessBridge.enumerate_heaps`` (the budget/cap-bounded per-block heap
-walker, distinct from the shallow heap-list-only ``get_heaps``) had no
-caller anywhere in the codebase. The fix adds a "Walk Heap Blocks" button to
-``ModulesTab``'s existing "Heap" sub-tab, alongside the pre-existing
-"Enumerate Heaps" (``get_heaps``) control, dispatching to the real
-``enumerate_heaps`` bridge method and rendering a heap/block tree.
+``ProcessBridge.enumerate_heaps`` (the budget/cap-bounded per-block heap walker,
+distinct from the shallow heap-list-only ``get_heaps``) is reachable from the GUI
+through a "Walk Heap Blocks" button on the "Heap" sub-tab of ``ModulesTab``, alongside
+"Enumerate Heaps" (``get_heaps``) control. The button dispatches to
+``enumerate_heaps`` and renders the heap/block tree.
 
 Each wiring test replaces ``run_bridge_coroutine_logged`` in the
 ``modules_tab`` module with a capture shim (never the bridge) and asserts

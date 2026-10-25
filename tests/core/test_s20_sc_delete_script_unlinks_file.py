@@ -5,7 +5,7 @@
 
 """Tests for ScriptManager.delete_script durably removing backing files.
 
-Covers S20-D05: a deleted script must not leave an orphaned, still-loadable
+Covers a deleted script must not leave an orphaned, still-loadable
 file on disk, and a delete that cannot unlink its backing file (for example a
 read-only file on Windows) must not silently drop the in-memory entry.
 """
@@ -28,11 +28,10 @@ if TYPE_CHECKING:
 def test_delete_script_unlinks_backing_file_and_blocks_reload(tmp_path: Path) -> None:
     """Deleting a saved script must remove its file, not just the dict entry.
 
-    Reproduces the S20-D05 repro directly: save a script (writing
+    Saves a script (writing
     ``scripts_dir/<name>.r2``), delete it, and confirm the file that
-    ``Test-Path``/``load_script`` would have found is actually gone -
-    closing the gap where ``delete_script`` previously mutated only the
-    in-memory dict and left the persisted file orphaned and reloadable.
+    ``Test-Path``/``load_script`` would find is actually gone. ``delete_script``
+    must remove the persisted file, not only the in-memory dict entry.
     """
     manager = ScriptManager(scripts_dir=tmp_path)
     script = Script(
@@ -74,10 +73,10 @@ def test_delete_script_retains_entry_when_backing_file_cannot_be_unlinked(tmp_pa
     Marks the saved file read-only, which on Windows makes ``DeleteFile``
     fail with access-denied regardless of the calling process's own
     ownership of the file - a genuine Windows delete failure mode, not a
-    mock. The fix must report the failure via its return value and must
-    retain the in-memory entry so the user can retry (for example after
-    clearing the read-only attribute), rather than leaving the list
-    entry gone while the file whose deletion failed still exists.
+    mock. The failure must be reported via the return value, and the in-memory
+    entry must be retained so the user can retry (for example after clearing the
+    read-only attribute), rather than leaving the list entry gone while the file
+    whose deletion failed still exists.
     """
     manager = ScriptManager(scripts_dir=tmp_path)
     script = Script(

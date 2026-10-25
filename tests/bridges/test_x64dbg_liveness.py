@@ -3,29 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable session-liveness gates for the x64dbg bridge (D19).
+"""Falsifiable session-liveness gates for the x64dbg bridge.
 
-Drives the real :class:`X64DbgBridge` against a real, vendored x64dbg
-installation and a real ``notepad.exe`` debuggee - no pipe transport or
-process is mocked. Two coupled regressions are gated:
+Drives the real :class:`X64DbgBridge` against a real, vendored x64dbg installation and a real ``notepad.exe`` debuggee; no pipe transport or process is mocked. Two coupled behaviours are gated:
 
-* ``load()`` previously could report success (``self._state.connected =
-  True``) without ever confirming the bridge pipe was genuinely
-  connected, so the very first write issued afterwards (a breakpoint)
-  could fail with ``"pipe not available"`` even though ``load()`` claimed
-  the session was up. :class:`TestSessionLiveness` proves that once
-  ``load()`` returns without raising, a subsequent ``get_registers()``
-  returns real values and a subsequent ``set_breakpoint()`` genuinely
-  succeeds - the false-success path is unreachable.
-* Once the underlying x64dbg process is killed mid-session, every bridge
-  read (``get_registers``, ``get_breakpoints``) must report the session
-  as lost (raise ``ToolError``) rather than returning stale cached
-  values from before the process died.
+* ``load()`` must not report success without confirming that the bridge pipe is genuinely connected. The first write issued afterwards (a breakpoint) must not fail with "pipe not available" after ``load()`` claimed the session was up. :class:`TestSessionLiveness` proves that once ``load()`` returns without raising, a subsequent ``get_registers()`` returns real values and a subsequent ``set_breakpoint()`` succeeds.
+* Once the underlying x64dbg process is killed mid-session, every bridge read (``get_registers``, ``get_breakpoints``) must report the session as lost (raise ``ToolError``) rather than returning stale cached values from before the process died.
 
-Skips (with a documented reason) when not running on Windows, when no
-vendored x64dbg release build is present, or when the bridge plugin could
-not be deployed on this host - the same skip conditions already used by
-``test_x64dbg_load_attach_s13.py``.
+Skips (with a documented reason) when not running on Windows, when no vendored x64dbg release build is present, or when the bridge plugin could not be deployed on this host. These are the same skip conditions used by ``test_x64dbg_load_attach_s13.py``.
 """
 
 from __future__ import annotations
@@ -68,29 +53,15 @@ def _x64dbg_release_exists() -> bool:
 @pytest.mark.skipif(not _x64dbg_release_exists(), reason="vendored x64dbg install not present on this host")
 @pytest.mark.asyncio
 class TestSessionLiveness:
-    """D19: session death must never be reported as success or masked by stale data."""
+    """Session death must never be reported as success or masked by stale data."""
 
     async def test_load_yields_a_genuinely_live_session_and_death_is_reported(self) -> None:
         """load() must not lie about session health, and a killed session must surface.
 
         Falsifiable in two independent ways:
 
-        1. Before the fix, ``load()`` unconditionally set
-           ``self._state.connected = True`` after issuing ``InitDebug``,
-           without ever re-checking that the pipe was still connected.
-           If that regressed, ``set_breakpoint()`` immediately after a
-           "successful" ``load()`` could raise ``ToolError`` for a pipe
-           that was never actually available - the exact "reports
-           success, then the first write hard-fails" bug this test
-           pins down via the ``get_registers``/``set_breakpoint``
-           assertions below.
-        2. Before the fix, ``get_breakpoints()`` special-cased
-           ``self._pipe_client.is_connected`` and, when it was False,
-           silently returned the locally cached breakpoint dict instead
-           of attempting the RPC (and therefore never raised). Reverting
-           that fix makes the post-kill ``get_breakpoints()`` call below
-           return ``[bp_address]`` from the stale local cache instead of
-           raising, failing the ``pytest.raises`` assertion.
+        1. ``load()`` must not set ``self._state.connected = True`` without re-checking that the pipe is still connected. If it did, ``set_breakpoint()`` immediately after a "successful" ``load()`` could raise ``ToolError`` for a pipe that was never available, which the ``get_registers`` and ``set_breakpoint`` assertions below pin down.
+        2. ``get_breakpoints()`` must not special-case ``self._pipe_client.is_connected`` by returning the locally cached breakpoint dict when it is False. Such a fallback would return ``[bp_address]`` from the stale local cache after the kill instead of raising, failing the ``pytest.raises`` assertion.
         """
         if not _TARGET_EXE.exists():
             pytest.skip(f"debuggee target not present on this host: {_TARGET_EXE}")
@@ -140,13 +111,13 @@ class TestSessionLiveness:
 
 
 class TestScanMemoryUnaffectedByLivenessProbe:
-    """The new process-liveness probe must not disturb bridge construction."""
+    """The process-liveness probe must not disturb bridge construction."""
 
     @staticmethod
     def test_fresh_bridge_has_no_tracked_process() -> None:
         """A freshly constructed bridge tracks no process, so the liveness probe is a no-op.
 
-        Falsifiable: if the D19 liveness probe (``_raise_if_process_exited``)
+        Falsifiable: if the liveness probe (``_raise_if_process_exited``)
         were changed to dereference ``self._process`` without the
         ``is None`` guard, constructing a bridge and reading its private
         state would crash instead of leaving ``_process`` at ``None``.

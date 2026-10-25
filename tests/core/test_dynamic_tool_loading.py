@@ -2,23 +2,23 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for dynamic tool loading and the Part 0 empty-content-turn fix.
+"""Falsifiable gates for dynamic tool loading and the empty-content-turn fix.
 
 Covers:
-  Part 0 -- ``_run_agent_loop`` appends the assistant message when
+  ``_run_agent_loop`` appends the assistant message when
             ``response.content or tool_calls`` (not ``response.content``
             alone), so a tool-only turn with empty text -- the norm for a
             model that just calls ``tools.search`` -- survives into
             ``session.messages`` and replays without an orphaned tool
             result.
-  Part D -- The full dynamic-loading loop: a session starts with only the
+  The full dynamic-loading loop: a session starts with only the
             ``tools.search`` meta-tool advertised; the scripted provider
             calls it; the match lands in ``session.loaded_tools``; the next
             iteration's advertised tool set includes the discovered
             function; the meta-tool's own result is JSON-serializable; and
             a call to a tool that has not been loaded gets a guiding
             failure result instead of reaching the bridge.
-  Part C -- The dynamic-loading meta-tool and always-on core tools are
+  The dynamic-loading meta-tool and always-on core tools are
             placed first in the active set, so a capped provider's
             tail-truncating ``_enforce_tool_count_cap`` can never drop
             them.
@@ -322,7 +322,7 @@ class _ScriptedProviderBase(LLMProviderBase):
 
 
 class _ToolOnlyTurnProvider(_ScriptedProviderBase):
-    """Part 0: emits a tool call with empty text content, then a final summary."""
+    """Emits a tool call with empty text content, then a final summary."""
 
     def __init__(self) -> None:
         """Initialize with a zero call counter."""
@@ -427,17 +427,15 @@ class _ProbeBridge(ToolBridgeBase):
 
 
 class TestPart0EmptyContentToolOnlyTurn:
-    """Gate for Part 0: an empty-content tool-only assistant turn survives and replays cleanly."""
+    """Gate for an empty-content tool-only assistant turn survives and replays cleanly."""
 
     def test_tool_only_turn_survives_into_session_messages(self, tmp_path: Path) -> None:
         """An assistant turn with ``content=""`` and tool_calls is appended to session history.
 
-        Oracle: before the Part 0 fix, ``_run_agent_loop`` only appended the
-        assistant message ``if response.content:``, dropping a tool-only
-        turn entirely while still appending the paired ``tool`` result
+        Oracle: gating ``_run_agent_loop`` on ``response.content`` alone drops a
+        tool-only turn entirely while still appending the paired ``tool`` result
         message -- producing an orphaned ``role: "tool"`` entry with no
-        preceding assistant ``tool_calls``. Mutation: reverting the gate
-        back to ``if response.content:`` makes this test fail because the
+        preceding assistant ``tool_calls``. Mutation: gating on ``if response.content:`` makes this test fail because the
         assistant message never lands in ``session.messages``.
         """
         bridge = _ProbeBridge()
@@ -500,7 +498,7 @@ class TestPart0EmptyContentToolOnlyTurn:
 
 
 class _DynamicLoadingProvider(_ScriptedProviderBase):
-    """Part D: searches for the breakpoint tool, then calls it once discovered."""
+    """Searches for the breakpoint tool, then calls it once discovered."""
 
     def __init__(self) -> None:
         """Initialize with a zero call counter and empty observed-tools log."""
@@ -562,7 +560,7 @@ class _DynamicLoadingProvider(_ScriptedProviderBase):
 
 
 class TestDynamicToolLoadingFullLoop:
-    """Part D gate: the full agent loop driven by a real scripted provider."""
+    """The full agent loop driven by a real scripted provider."""
 
     def test_search_discovers_and_loads_the_breakpoint_tool(self, tmp_path: Path) -> None:
         """``tools.search`` results land in ``session.loaded_tools`` and the next iteration advertises them.
@@ -699,7 +697,7 @@ class TestDynamicToolLoadingFullLoop:
 
 
 class TestMetaToolAndCoreNeverTrimmed:
-    """Part C gate: the meta-tool and core tools survive a provider's tool-count cap."""
+    """The meta-tool and core tools survive a provider's tool-count cap."""
 
     def test_meta_tool_and_core_tools_survive_the_cap(self, tmp_path: Path) -> None:
         """A capped provider's ``_enforce_tool_count_cap`` never drops the meta-tool or configured core tools.

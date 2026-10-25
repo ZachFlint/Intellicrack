@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit4 C9 regression tests."""
+"""Regression tests for the hex editor disassembly mixin."""

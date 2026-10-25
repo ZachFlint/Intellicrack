@@ -6,8 +6,8 @@ r"""Falsifiable gates for the Win32 version resource on the frozen launchers.
 
 ``Intellicrack.exe`` and ``Hexbench.exe`` shipped with entirely empty file
 properties: PyInstaller stamps a ``VS_VERSIONINFO`` resource only when ``EXE()``
-is given a ``version=`` argument, and ``icon=`` does not supply one. The fix adds
-``packaging/launcher/version_resource.py``, which renders that resource for both
+is given a ``version=`` argument, and ``icon=`` does not supply one. The
+``packaging/launcher/version_resource.py`` renders that resource for both
 spec files out of ``src/intellicrack/_metadata.py``.
 
 The interesting risk is not that the resource is missing - that is one keyword
@@ -60,7 +60,7 @@ _SPECS: Final[tuple[tuple[str, str], ...]] = (
 # the installer's VersionInfoVersion can disagree for some future version.
 _SHARED_VERSION_CASES: Final[tuple[str, ...]] = ("0.1.0a1", "1.2.3", "2.0.0rc2", "1.4.0.dev5", "3.1")
 
-# A version that exists nowhere in the repository, used to prove the generator
+# A version that exists nowhere in the repository. It proves the generator
 # reads metadata rather than carrying a literal.
 _SENTINEL_VERSION: Final[str] = "47.11.3b9"
 _SENTINEL_NUMERIC: Final[tuple[int, int, int, int]] = (47, 11, 3, 0)
@@ -241,7 +241,7 @@ def _literal(node: ast.expr) -> object:
     return value
 
 
-# --- The numeric transform stays tied to the installer's ---------------------
+# The numeric transform stays tied to the installer's
 
 
 def test_launcher_and_installer_numeric_transforms_agree() -> None:
@@ -279,7 +279,7 @@ def test_out_of_range_and_non_numeric_versions_fail_the_build() -> None:
         version_resource.derive_file_version("70000.0.0")
 
 
-# --- The version is read, not written down -----------------------------------
+# The version is read, not written down
 
 
 def test_version_resource_is_single_sourced_from_the_metadata_module(tmp_path: Path) -> None:
@@ -393,7 +393,7 @@ def test_rendered_resource_declares_a_us_english_translation() -> None:
     assert "VarStruct('Translation', [1033, 1200])" in text, "the translation entry does not match the 040904B0 table key"
 
 
-# --- Both spec files actually consume the generated resource ------------------
+# Both spec files actually consume the generated resource
 
 
 @pytest.mark.parametrize(("executable", "spec_name"), _SPECS)
@@ -401,7 +401,7 @@ def test_spec_passes_the_generated_version_resource_to_exe(executable: str, spec
     """Real gate: each spec builds a resource and hands it to ``EXE(version=...)``.
 
     Without the ``version=`` keyword PyInstaller stamps no ``VS_VERSIONINFO`` at
-    all - the original defect - and no other part of the build would notice.
+    all - that defect - and no other part of the build would notice.
 
     Args:
         executable: The executable base name the spec produces.

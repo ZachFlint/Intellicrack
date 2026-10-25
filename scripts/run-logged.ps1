@@ -7,8 +7,8 @@ param(
 )
 
 # PowerShell 7.4+ turns a healthy non-zero native exit into a terminating error.
-# The recipe bodies below check $LASTEXITCODE at each call site, so keep the old
-# behaviour and let them drive their own exit handling.
+# The recipe bodies below check $LASTEXITCODE at each call site, so that default
+# is turned off and they drive their own exit handling.
 $PSNativeCommandUseErrorActionPreference = $false
 Set-StrictMode -Version Latest
 

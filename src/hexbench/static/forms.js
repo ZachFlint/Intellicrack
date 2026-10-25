@@ -30,6 +30,8 @@ const DEFAULT_NUMERIC_WIDTH = 4;
 const DEFAULT_CHUNK_HINT = 65536;
 const DEFAULT_BUDGET_HINT = 268435456;
 const DEFAULT_SNAPSHOT_SIZE = 65536;
+const DEFAULT_DIFF_MIN_MATCH = 1;
+const DEFAULT_DIFF_MAX_REGIONS = 100000;
 const DEFAULT_LENGTH = 16;
 const BOOKMARK_COLOR_TOKEN = '--hb-bookmark';
 const ASCII_PRINT_LOW = 0x20;
@@ -65,6 +67,10 @@ const DEFAULT_OVERRIDES = new Map([
   ['search_numeric_float.size', DEFAULT_NUMERIC_WIDTH],
   ['search_numeric_range.size', DEFAULT_NUMERIC_WIDTH],
   ['from_process_memory.size', DEFAULT_SNAPSHOT_SIZE],
+  ['diff_bytes.min_match', DEFAULT_DIFF_MIN_MATCH],
+  ['diff_bytes.max_regions', DEFAULT_DIFF_MAX_REGIONS],
+  ['diff_files.min_match', DEFAULT_DIFF_MIN_MATCH],
+  ['diff_files.max_regions', DEFAULT_DIFF_MAX_REGIONS],
   ['set_chunk_size_hint.size', DEFAULT_CHUNK_HINT],
   ['set_memory_budget_hint.budget', DEFAULT_BUDGET_HINT],
   ['compute_hash_custom_crc.poly', CRC32_POLY],

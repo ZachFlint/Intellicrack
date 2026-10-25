@@ -5,40 +5,17 @@
 
 """Registry gates: every console command the x64dbg bridge emits must exist.
 
-``X64DbgBridge`` reaches x64dbg's command interpreter two ways -
-``_send_command`` (which wraps the string in an ``exec`` RPC) and a direct
-``_send_pipe_command("exec", ...)``. Both are parsed by the interpreter, which
-accepts only names registered by ``registercommands()`` in
-``src/dbg/x64dbg.cpp``.
+``X64DbgBridge`` reaches x64dbg's command interpreter two ways: ``_send_command`` (which wraps the string in an ``exec`` RPC) and a direct ``_send_pipe_command("exec", ...)``. Both are parsed by the interpreter, which accepts only names registered by ``registercommands()`` in ``src/dbg/x64dbg.cpp``.
 
-Every command string the bridge emits was checked against three independent
-sources: that ``registercommands()`` table, the per-category command reference
-on help.x64dbg.com, and the literal strings compiled into the shipped
-``x64dbg.dll``, ``x64dbg.exe`` and ``x64bridge.dll``. Seven names appear in
-none of the three, so a real x64dbg rejects them as unknown commands:
+Every command string the bridge emits is checked against three independent sources: that ``registercommands()`` table, the per-category command reference on help.x64dbg.com, and the literal strings compiled into the shipped ``x64dbg.dll``, ``x64dbg.exe`` and ``x64bridge.dll``. Seven names appear in none of the three, so a real x64dbg rejects them as unknown commands:
 
-* ``runto`` - :meth:`run_to` never moved the instruction pointer. Replaced by
-  the plugin's ``run_to`` RPC, which arms ``bp <address>, ss`` then ``run``.
-* ``AnimateInto``/``AnimateOver`` - :meth:`animate_start` never started
-  stepping. Animation is GUI-only (Ctrl+F7/Ctrl+F8) and the table registers
-  only ``AnimateWait``. Replaced by a conditional trace whose break condition
-  never trips.
-* ``AnimateStop`` - :meth:`animate_stop` never stopped anything. Replaced by
-  ``pause``, documented as "Pause the debuggee or stop animation if animation
-  is in progress".
-* ``scriptabort`` - :meth:`script_abort` never aborted the running script.
-  Replaced by the plugin's ``script_abort`` RPC, which calls the bridge SDK's
-  ``DbgScriptAbort()``.
-* ``patchrestore`` and ``pluglist`` - dead console fallbacks that reported
-  success while doing nothing, masking the real RPC failure behind them. Both
-  fallbacks are removed so the RPC error reaches the caller.
+* ``runto`` - :meth:`run_to` never moved the instruction pointer. Replaced by the plugin's ``run_to`` RPC, which arms ``bp <address>, ss`` then ``run``.
+* ``AnimateInto``/``AnimateOver`` - :meth:`animate_start` never started stepping. Animation is GUI-only (Ctrl+F7/Ctrl+F8) and the table registers only ``AnimateWait``. Replaced by a conditional trace whose break condition never trips.
+* ``AnimateStop`` - :meth:`animate_stop` never stopped anything. Replaced by ``pause``, documented as "Pause the debuggee or stop animation if animation is in progress".
+* ``scriptabort`` - :meth:`script_abort` never aborted the running script. Replaced by the plugin's ``script_abort`` RPC, which calls the bridge SDK's ``DbgScriptAbort()``.
+* ``patchrestore`` and ``pluglist`` - console fallbacks that reported success while doing nothing, masking the real RPC failure. Neither fallback exists, so the RPC error reaches the caller.
 
-These gates record every ``(command, params)`` pair the bridge emits and assert
-the exact replacement plus an explicit negative assertion against the
-unregistered spelling, so a reversion fails loudly instead of silently issuing
-a command x64dbg will reject. The fake pipe client is reproduced here rather
-than imported, matching the isolation the sibling command-framing suite
-documents.
+These gates record every ``(command, params)`` pair the bridge emits and assert the exact replacement plus an explicit negative assertion against the unregistered spelling, so a reversion fails loudly instead of silently issuing a command x64dbg will reject. The fake pipe client is defined locally so the module stays self-contained.
 """
 
 from __future__ import annotations
@@ -171,8 +148,7 @@ def _rpc_missing(command: str) -> dict[str, Any]:
     """Build the response an older plugin returns for an unimplemented RPC.
 
     The ``unknown_command`` code is the single member of the bridge's
-    recoverable-error set, so this is exactly the failure that used to
-    trigger the removed console-command fallbacks.
+    recoverable-error set, so this is the failure that would otherwise reach a console-command fallback.
 
     Args:
         command: RPC name the plugin does not implement.
@@ -422,11 +398,7 @@ class TestScriptAbortUsesThePluginRpc:
 class TestDeadConsoleFallbacksAreGone:
     """A failing RPC must surface, never fall back to an unregistered command.
 
-    ``restore_patch`` and ``plugin_list`` used to answer an
-    ``unknown_command`` RPC failure by sending ``patchrestore`` /
-    ``pluglist``. Neither is a registered x64dbg command, so the fallback
-    restored nothing and listed nothing while still reporting success,
-    hiding the real failure from the caller.
+    ``restore_patch`` and ``plugin_list`` must not answer an ``unknown_command`` RPC failure by sending ``patchrestore`` or ``pluglist``. Neither is a registered x64dbg command, so such a fallback would restore nothing and list nothing while still reporting success, hiding the real failure from the caller.
     """
 
     async def test_restore_patch_propagates_rpc_failure_without_sending_patchrestore(
@@ -491,11 +463,7 @@ class TestDeadConsoleFallbacksAreGone:
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """A working ``plugin_list`` RPC is marshalled straight through.
-
-        Guards the repaired plugin handler's contract: it now returns a
-        JSON array of plugin objects rather than the bare ``"true"`` the
-        old ``DbgCmdExec("pluglist")`` implementation produced.
+        """Guards the plugin handler's contract: it returns a JSON array of plugin objects, not a bare ``"true"`` string.
 
         Args:
             bridge: Fixture bridge instance.

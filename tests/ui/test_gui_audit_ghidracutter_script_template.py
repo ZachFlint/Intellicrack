@@ -2,12 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the 2026-07-01 GUI audit script-template fix.
+"""Gate that the Cutter/Rizin (``r2``) script template has no leading indentation.
 
-The Cutter/Rizin (``r2``) template literal was indented to the Python source,
-so every emitted command carried ~24 leading spaces, producing a malformed r2
-script. This gate fails against that indented literal and passes once the
-template is dedented to column zero like the other templates.
+Indented template text would make every emitted command carry ~24 leading spaces,
+producing a malformed r2 script, so the template must stay at column zero like the
+other templates.
 """
 
 from __future__ import annotations

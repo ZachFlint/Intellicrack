@@ -2,17 +2,17 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S13-D10: the "Attached" confirmation must never block.
+"""The "Attached" confirmation must never block.
 
-Before the fix, ``ProcessTab._on_attach``'s success handler showed the post-attach confirmation via the blocking
-``QMessageBox.information`` convenience function *before* emitting ``process_attached``. Because that call opens an application-modal nested
-Qt event loop, nothing scheduled after it -- including the ``process_attached`` emission that triggers sibling-tab auto-populate (region /
+``ProcessTab._on_attach``'s success handler must not show the post-attach confirmation via the blocking
+``QMessageBox.information`` convenience function *before* emitting ``process_attached``. That call opens an application-modal nested
+Qt event loop, so nothing scheduled after it -- including the ``process_attached`` emission that triggers sibling-tab auto-populate (region /
 module / thread enumeration, dispatched off the UI thread through the project's existing ``run_bridge_coroutine_logged`` /
-``BridgeCallWorker`` pattern) -- could run until a user dismissed the dialog, and OK/close did nothing in the meantime.
+``BridgeCallWorker`` pattern) -- could run until a user dismissed the dialog.
 
-The fix (in ``ProcessTab._on_attach`` / ``ProcessTab._show_attached_confirmation``) reorders the handler to emit ``process_attached`` first,
-scheduling auto-populate before the dialog exists, and shows the confirmation as a non-modal ``QMessageBox`` so it can never gate anything on
-the UI thread regardless of how long background work takes.
+The handler in ``ProcessTab._on_attach`` and ``ProcessTab._show_attached_confirmation`` emits ``process_attached`` first,
+scheduling auto-populate before the dialog exists, and shows the confirmation as a non-modal ``QMessageBox`` so it can never gate
+anything on the UI thread regardless of how long background work takes.
 
 Both tests drive the real ``ProcessTab._on_attach`` entry point against a real ``ProcessBridge`` attached to the live test process
 (``os.getpid()``), with ``open_process`` wrapped in a test-local subclass that adds a deliberate delay so the async round trip is non-trivial
@@ -135,7 +135,7 @@ def tab(qapp: QApplication) -> Generator[ProcessTab]:
 
 
 class TestAttachConfirmationDoesNotBlockUIThread:
-    """S13-D10: the Attached confirmation must never gate anything on the UI thread."""
+    """The Attached confirmation must never gate anything on the UI thread."""
 
     def test_on_attach_returns_before_open_process_delay_elapses(self, tab: ProcessTab, qapp: QApplication) -> None:
         """``_on_attach`` must return promptly even though ``open_process`` sleeps first.
@@ -163,8 +163,8 @@ class TestAttachConfirmationDoesNotBlockUIThread:
         """The Attached dialog must be non-modal and must appear only after ``process_attached`` fires.
 
         A ``QTimer`` armed before the attach is dispatched polls for the confirmation dialog on every iteration of the Qt event loop --
-        including inside a nested modal loop, since Qt timers still fire there -- so this assertion is safe against both the fixed
-        (non-modal) and a reverted (modal) implementation: whichever kind of dialog appears gets detected and closed the moment it shows,
+        including inside a nested modal loop, since Qt timers still fire there -- so this assertion is safe against both a non-modal
+        and a modal implementation: whichever kind of dialog appears gets detected and closed the moment it shows,
         without ever depending on a human clicking it, which is what makes it safe to run unattended instead of risking an indefinite hang.
 
         Args:

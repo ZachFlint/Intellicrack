@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S17-D44: WinPE driver-family staging was hardcoded to Windows 11.
+r"""WinPE driver-family staging was hardcoded to Windows 11.
 
 :data:`~scripts.sandbox.provision_windows_guest.WINPE_DRIVER_FAMILY_PREFERENCE`
 always ranked ``w11`` first, so :func:`~scripts.sandbox.provision_windows_guest
@@ -12,7 +12,7 @@ or ARM64 guest for which a Windows 11 driver is the wrong OS build entirely.
 The WinPE ``DriverPaths`` block WinPE searches before Setup can even see the
 virtio-blk system disk is built from this selection, so the wrong family here
 means Setup finds no disk for any guest that is not Windows 11 amd64, the
-exact failure mode S17-D44's sibling gates already cover for architecture.
+exact failure mode the sibling gates already cover for architecture.
 
 These gates are pure descriptor logic: no VM, no ISO, no mounted medium. They
 drive the real production functions -
@@ -104,7 +104,7 @@ def test_select_winpe_driver_packages_prefers_the_guests_own_family_over_windows
     """The real selection function picks the guest's OS family, not Windows 11's.
 
     This is the production defect made concrete: a medium carrying both a
-    ``w10`` and a ``w11`` package for the same driver used to always yield the
+    ``w10`` and a ``w11`` package for the same driver must always yield the
     ``w11`` one, regardless of which edition was actually being installed,
     because :func:`~scripts.sandbox.provision_windows_guest
     .select_winpe_driver_packages` ranked by the hardcoded

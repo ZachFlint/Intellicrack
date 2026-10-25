@@ -1185,8 +1185,8 @@ for (const slot of ['status-offset', 'status-selection', 'status-pane']) {
   check(`the ${slot} status slot exists to be checked`, statusMarkup.includes(`id="${slot}"`), `${slot} was not found inside the status bar, so this gate is examining the wrong markup`);
 }
 /* The caret readout carries a key rather than standing as a bare number. Which
-   word it is belongs to UX-3, which shortened it to `off` because the value is
-   already 0x-prefixed, so this gate asks that the offset slot is labelled at
+   word it is is not fixed here: `off` is short because the value is already
+   0x-prefixed, so this gate asks that the offset slot is labelled at
    all - not that it is labelled with any particular string. The pane slot is
    deliberately unlabelled: it reads `hex hi` or `ascii`, which names itself. */
 const offsetItem = /<span class="hb-status-item"[^>]*>(?:(?!<\/span><span class="hb-status-item").)*?id="status-offset"/s.exec(statusMarkup);
@@ -1210,9 +1210,9 @@ const renderStatus = methodBody(shellSource, '#renderStatus');
 check('#renderStatus could be located in shell.js', renderStatus !== null, 'the method that writes the status slots was not found, so this gate examined nothing');
 const statusBody = renderStatus ?? '';
 
-/* UX-3 turned the status bar into three tiers driven by one readout object, so
-   the slots are no longer written by name here - they are written by iterating
-   what statusReadout produced. The gate follows: the readout must still carry
+/* The status bar is three tiers driven by one readout object, so
+   the slots are written by iterating what statusReadout produced, not by name
+   here. The gate follows: the readout must still carry
    the caret, pane and selection values, and #renderStatus must still write each
    one into its own node. */
 const readoutStart = shellSource.indexOf('function statusReadout(');

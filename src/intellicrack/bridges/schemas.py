@@ -566,9 +566,8 @@ def validate_tool_for_dialect(
     the raw ``ToolDefinition`` list to ``_call_llm`` and each provider
     re-converts on its own.
 
-    The provider-has-a-converter check that used to live here is gone: every
-    dialect has an adapter by construction, and provider identity no longer
-    constrains which schemas can be built.
+    Every dialect has an adapter by construction, so provider identity does
+    not constrain which schemas can be built.
 
     Args:
         tool: The tool definition to validate.

@@ -132,7 +132,7 @@ class TestBasicBlockItem:
         line (body font) or the address header (bold font), whichever is wider.
         A long instruction must exceed both the minimum and the short-instruction
         item, and must match the advance recomputed with the same fonts, proving
-        the fixed len*7 estimate is no longer used.
+        no fixed len*7 estimate is used.
         """
         long_disasm = "mov rax, qword ptr [rbx + rcx*8 + 0x12345678]"
         short_disasm = "nop"
@@ -158,8 +158,7 @@ class TestBasicBlockItem:
             f"long width {long_item.rect().width()} must exceed short width {short_item.rect().width()}"
         )
 
-        # The pre-fix code sized the block as a raw ``len(disasm) * 7`` estimate
-        # with no padding; the metric-based width adds ``_BLOCK_PADDING * 2``, so
+        # A raw ``len(disasm) * 7`` estimate has no padding; the metric-based width adds ``_BLOCK_PADDING * 2``, so
         # the two differ font-independently even when the fallback advance is 7px.
         legacy_long_width = len(long_disasm) * 7
         assert long_item.rect().width() != pytest.approx(float(legacy_long_width)), "width must not use the raw len*7 estimate"

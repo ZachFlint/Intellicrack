@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""L1/L2 gate tests for ``GhidraBridge.run_headless_batch`` (slice 6, "Headless / Scripting").
+"""L1/L2 gate tests for ``GhidraBridge.run_headless_batch``.
 
 ``run_headless_batch`` launches a real OS subprocess and never touches the
 ``ghidra_bridge`` RPC transport, so the package's ``FakeGhidraBridge`` (a

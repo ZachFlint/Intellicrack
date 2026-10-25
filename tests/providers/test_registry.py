@@ -464,10 +464,10 @@ class _StaticCredentialLoader:
 
 
 class TestF0001ConnectExceptionTuple:
-    """F-0001: connect_provider must catch ProviderError subclasses.
+    """connect_provider must catch ProviderError subclasses.
 
-    Without the fix the handler only caught generic exceptions; provider
-    implementations raising ProviderError/AuthenticationError bypassed it.
+    If the handler only caught generic exceptions, provider
+    implementations raising ProviderError/AuthenticationError would bypass it.
     """
 
     @pytest.mark.asyncio
@@ -511,7 +511,7 @@ class TestF0001ConnectExceptionTuple:
 
 
 class TestF0002ConnectReturnsExplicitTrue:
-    """F-0002: connect_provider returns explicit True on success."""
+    """connect_provider returns explicit True on success."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -526,7 +526,7 @@ class TestF0002ConnectReturnsExplicitTrue:
 
 
 class TestF0003CredentialLoaderConsumed:
-    """F-0003: ProviderRegistry consumes the configured credential loader."""
+    """ProviderRegistry consumes the configured credential loader."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -564,7 +564,7 @@ class TestF0003CredentialLoaderConsumed:
 
 
 class TestF0004GetProviderRegistryExport:
-    """F-0004: get_provider_registry is exported from providers package."""
+    """get_provider_registry is exported from providers package."""
 
     @staticmethod
     def test_get_provider_registry_imports_from_package() -> None:
@@ -574,7 +574,7 @@ class TestF0004GetProviderRegistryExport:
 
 
 class TestF0005NameToClassMapping:
-    """F-0005: Registry can map a provider id to a class for construction."""
+    """Registry can map a provider id to a class for construction."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -594,8 +594,8 @@ class TestF0005NameToClassMapping:
         """register() must record the concrete class in the internal class mapping.
 
         Verifies that ``_provider_classes[name]`` is set to ``type(instance)``
-        when ``register(instance)`` is called, which is the fix introduced by
-        F-0005 so that :meth:`connect_provider` can later reconstruct a
+        when ``register(instance)`` is called. This is needed so
+        that :meth:`connect_provider` can later reconstruct a
         provider from its class when the instance is absent.
         """
         reg = ProviderRegistry()
@@ -610,7 +610,7 @@ class TestF0005NameToClassMapping:
 
 
 class TestF0013DisconnectAllAggregates:
-    """F-0013: disconnect_all wraps each provider and aggregates failures."""
+    """disconnect_all wraps each provider and aggregates failures."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -635,7 +635,7 @@ class TestF0013DisconnectAllAggregates:
 
 
 class TestF0014ProviderErrorsCarryProviderName:
-    """F-0014: ProviderError raised by registry includes provider_name."""
+    """ProviderError raised by registry includes provider_name."""
 
     @staticmethod
     def test_get_or_raise_unknown_carries_provider_name() -> None:
@@ -666,7 +666,7 @@ class TestF0014ProviderErrorsCarryProviderName:
 
 
 class TestF0015SingletonResetAndDI:
-    """F-0015: reset hook plus credential_loader DI in get_provider_registry."""
+    """Reset hook plus credential_loader DI in get_provider_registry."""
 
     @staticmethod
     def test_reset_creates_fresh_singleton() -> None:
@@ -684,12 +684,11 @@ class TestF0015SingletonResetAndDI:
         reset_provider_registry()
         loader: CredentialLoaderProtocol = _StaticCredentialLoader({})
         reg = get_provider_registry(credential_loader=loader)
-        # subsequent calls return the same instance
         assert get_provider_registry() is reg
 
 
 class TestF0016DisconnectClearsActive:
-    """F-0016: disconnect_provider clears _active_provider when active."""
+    """disconnect_provider clears _active_provider when active."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -720,7 +719,7 @@ class TestF0016DisconnectClearsActive:
 
 
 class TestF0022ThreadSafeRegister:
-    """F-0022: register/unregister/set_active are protected by an RLock."""
+    """register/unregister/set_active are protected by an RLock."""
 
     @staticmethod
     def test_concurrent_register_does_not_corrupt_state() -> None:
@@ -744,7 +743,6 @@ class TestF0022ThreadSafeRegister:
             t.join()
 
         assert not errors
-        # Every provider name in the cycle should be present
         registered = set(reg.list_registered())
         assert registered == set(names)
 
@@ -757,7 +755,7 @@ class TestF0022ThreadSafeRegister:
 
 
 class TestGetActiveProviderHelper:
-    """Cover the get_active_provider() public helper added with F-0022 plumbing."""
+    """Cover the get_active_provider() public helper."""
 
     @staticmethod
     def test_returns_none_when_unset() -> None:

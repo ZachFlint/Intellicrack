@@ -4,14 +4,13 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for ``hex_editor.pattern_code_editor.PatternCodeEditor``.
 
-The audit (shard 13) flagged ``pattern_code_editor.py`` as entirely untested:
-the HexPat identifier completer popup, completion matching, and insertion were
-unexercised. These tests feed the editor the REAL HexPat built-in type names
+The HexPat identifier completer popup, completion matching, and insertion are exercised.
+These tests feed the editor the REAL HexPat built-in type names
 sourced from :class:`intellicrack.core.hexpat.completer.HexPatCompleter` and
 assert the completer offers the correct real completions for a type prefix and
 that accepting a completion inserts exactly the missing suffix into the buffer.
 The pattern DSL completion is pure widget logic with no external dependency, so
-real type-name data drives the behaviour under test directly.
+real type-name data drives the behavior under test directly.
 """
 
 from __future__ import annotations

@@ -5,11 +5,7 @@
 
 """Real-data coverage for :mod:`intellicrack.core.tools`.
 
-Audit shard 05 flagged ``ToolRegistry.execute_tool_call`` as exercised only
-through error cases (unknown tool, unknown function, not callable) and
-``get_tool_definitions`` / ``set_session`` as effectively untested on the happy
-path. These tests close those gaps by driving the production registry end to
-end:
+These tests drive the production registry end to end:
 
 * ``execute_tool_call`` dispatches to the real :class:`HexEditorBridge` against
   a real Windows System32 PE, opening the file through the Rust hexcore and

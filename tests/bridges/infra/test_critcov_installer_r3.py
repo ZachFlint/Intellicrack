@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Third-pass critical-coverage tests for ``intellicrack.bridges.installer``.
+"""Coverage tests for ``intellicrack.bridges.installer``.
 
 These tests reach the lines that need a different interpreter, token or path than the one
 pytest runs with, and each one starts a real child process or uses a real path that

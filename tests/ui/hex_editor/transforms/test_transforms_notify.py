@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for F-0003: TransformsMixin notify_data_modified on every byte mutation.
+"""Tests for TransformsMixin notify_data_modified on every byte mutation.
 
 Verifies that every document mutation path in TransformsMixin fires
 ``state_holder.notify_data_modified(offset, length, source=...)`` with the

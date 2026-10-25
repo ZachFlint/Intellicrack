@@ -37,7 +37,7 @@ _CUTTER_REF_KEYS: Final[int] = 6
 _X64DBG_REF_KEYS: Final[int] = 5
 
 
-# --- ScriptLanguage enum ---
+# ScriptLanguage enum
 
 
 def test_script_language_values() -> None:
@@ -50,7 +50,7 @@ def test_script_language_values() -> None:
     assert ScriptLanguage.X64DBG_SCRIPT.value == "x64dbg_script"
 
 
-# --- BypassStrategy enum ---
+# BypassStrategy enum
 
 
 def test_bypass_strategy_members_complete() -> None:
@@ -144,7 +144,7 @@ def test_bypass_strategy_description_all_nonempty() -> None:
     )
 
 
-# --- ScriptContext ---
+# ScriptContext
 
 
 def test_script_context_defaults() -> None:
@@ -324,7 +324,7 @@ def test_script_context_target_function_unknown_strategy() -> None:
     assert "custom_strat" in result
 
 
-# --- Script ---
+# Script
 
 
 def _make_script(**overrides: str | int | ScriptLanguage) -> Script:
@@ -578,7 +578,7 @@ def test_script_context_to_prompt_full_structure_exact_layout() -> None:
     assert result == "\n".join(expected_lines)
 
 
-# --- ScriptValidator ---
+# ScriptValidator
 
 
 def test_validator_python_valid() -> None:
@@ -731,7 +731,7 @@ def test_validator_validate_method_whitespace_only_rejected() -> None:
         assert script.verified is False
 
 
-# --- ScriptManager ---
+# ScriptManager
 
 
 def test_manager_add_and_get(tmp_path: Path) -> None:
@@ -1034,7 +1034,7 @@ def test_manager_record_execution_not_found(tmp_path: Path) -> None:
     assert mgr.record_execution("no_such", "frida", {}) is False
 
 
-# --- API reference getters ---
+# API reference getters
 
 
 def test_frida_api_reference_keys() -> None:
@@ -1097,7 +1097,7 @@ def test_x64dbg_reference_keys() -> None:
     assert "patch " in ref["patching"]
 
 
-# --- ScriptGenerator ---
+# ScriptGenerator
 
 
 def test_script_generator_prepare_ai_prompt() -> None:

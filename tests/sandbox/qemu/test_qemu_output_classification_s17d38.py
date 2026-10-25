@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D38: the WHPX null-MSI warning must not surface as noise.
+"""Gate: the WHPX null-MSI warning must not surface as noise.
 
 Under WHPX with ``kernel-irqchip=on`` (see ``_build_qemu_command``), QEMU's
 own in-hypervisor APIC emulation (``target/i386/whpx/whpx-apic.c``,
@@ -18,8 +18,7 @@ Only this one line is exempted. Every other line QEMU tags with its own
 ``warning:`` convention (``warn_report()`` is used throughout the QEMU tree,
 not only for this message) must still surface at the level an operator would
 notice - demoting more than the one known-benign line would hide a genuine
-fault behind the same reasoning that excuses this one, which is exactly what
-the project's "don't silence warnings" rule forbids.
+fault behind the same reasoning that excuses this one.
 :meth:`QemuOutputRecorder._classify_output_line` is the pure function both
 properties are gated against, and :meth:`QemuOutputRecorder._retain` is
 checked directly against the module logger to confirm the classification
@@ -56,8 +55,7 @@ class _TestableOutputRecorder(QemuOutputRecorder):
     """``QemuOutputRecorder`` subclass exposing its classification internals.
 
     Only public wrappers are added; every wrapped method is the real
-    production implementation, matching the pattern already established for
-    ``QEMUSandbox`` in ``test_guest_agent_channel_retention_s17d57.py``.
+    production implementation.
     """
 
     def classify(self, text: str) -> Literal["benign", "warning", "routine"]:

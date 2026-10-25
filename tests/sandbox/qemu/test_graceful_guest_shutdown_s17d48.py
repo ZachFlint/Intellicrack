@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D48: stopping a sandbox must power the guest off, not yank it.
+"""Stopping a sandbox must power the guest off, not yank it.
 
-``QEMUSandbox._stop_impl`` used to disconnect both agent channels and then send
+Stopping disconnects both agent channels and then sends
 QMP ``quit``, which ends the QEMU process immediately with the guest never told
 anything. That is a power-cord yank, and it has two consequences. Whatever the
 in-guest monitors had buffered but not yet flushed to the shared volume is

@@ -2,27 +2,27 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S19 hex-editor defects D01, D05, D06, D07, D24, D25.
+"""Gates for hex editor search, bookmark and Go-field behaviour, driven end to end.
 
 Drives the real ``HexEditorPanel`` (with a real ``intellicrack_hexcore``
-document) end to end for each fix:
+document) end to end for each behaviour:
 
-* D01 -- a uint32 little-endian numeric search for a value known to exist
+* A uint32 little-endian numeric search for a value known to exist
   at a specific offset must navigate to and highlight that offset.
-* D05 -- an invalid hex pattern fed to Replace All must produce a
+* An invalid hex pattern fed to Replace All must produce a
   friendly message that never contains the substring ``fromhex``.
-* D06 -- entering a bare numeral (no ``0x`` prefix) into the "Offset
+* A bare numeral (no ``0x`` prefix) entered into the "Offset
   (hex)" Go field must be parsed as hex, matching the field's own label.
-* D07 -- double-clicking a bookmark row must move the hex cursor to that
+* Double-clicking a bookmark row must move the hex cursor to that
   bookmark's offset.
-* D24 -- a bookmark added to a file must survive closing and reopening
+* A bookmark added to a file must survive closing and reopening
   that same file (persisted to a JSON sidecar).
-* D25 -- switching from one open file to another must reset the
+* Switching from one open file to another must reset the
   bookmarks tree so it reflects the newly opened document only.
 
 Each test drives the production ``SearchMixin`` / ``BookmarksMixin`` /
 ``HexEditorPanel`` handlers directly (no behaviour is reimplemented in the
-test) so a regression in the fixed wiring makes the corresponding test
+test) so a regression in the wiring makes the corresponding test
 fail.
 """
 
@@ -101,13 +101,13 @@ def _pump_until(qapp: QApplication, predicate: Callable[[], bool], timeout_s: fl
 
 
 def _resolve_numeric_search_target(tmp_path: Path) -> tuple[Path, int, int]:
-    """Resolve a file, a uint32-LE value, and its offset for the D01 gate.
+    """Resolve a file, a uint32-LE value, and its offset for the numeric search test.
 
-    Prefers the real S19 audit target (``ida_9.4.exe``) when present on
+    Prefers the real target (``ida_9.4.exe``) when present on
     disk, deriving the expected offset directly from the file's own bytes
     (never hardcoding an offset for real data). Falls back to a
     deterministically generated fixture -- never an unconditional skip --
-    when the audit target is unavailable.
+    when the target is unavailable.
 
     Args:
         tmp_path: Per-test temporary directory used for the fallback fixture.
@@ -146,7 +146,7 @@ def _make_panel() -> HexEditorPanel:
 
 
 class TestNumericSearchNavigatesToKnownOffset:
-    """D01: a uint32-LE numeric search must find and navigate to a known offset."""
+    """A uint32-LE numeric search must find and navigate to a known offset."""
 
     @staticmethod
     def test_numeric_search_finds_and_navigates(tmp_path: Path, qapp: QApplication) -> None:
@@ -195,7 +195,7 @@ class TestNumericSearchNavigatesToKnownOffset:
 
 
 class TestInvalidHexReplaceMessage:
-    """D05: invalid-hex Replace All must never leak the raw ``fromhex`` exception text."""
+    """Invalid-hex Replace All must never leak the raw ``fromhex`` exception text."""
 
     @staticmethod
     def test_replace_all_invalid_hex_shows_friendly_message(
@@ -252,7 +252,7 @@ class TestInvalidHexReplaceMessage:
 
 
 class TestGotoOffsetParsesBareInputAsHex:
-    """D06: the "Offset (hex)" Go field must parse bare digits as hex, not decimal."""
+    """The "Offset (hex)" Go field must parse bare digits as hex, not decimal."""
 
     @staticmethod
     def test_bare_numeral_goes_to_hex_offset(tmp_path: Path, qapp: QApplication) -> None:
@@ -283,7 +283,7 @@ class TestGotoOffsetParsesBareInputAsHex:
 
 
 class TestBookmarkDoubleClickNavigates:
-    """D07: double-clicking a bookmark row must move the hex cursor to its offset."""
+    """Double-clicking a bookmark row must move the hex cursor to its offset."""
 
     @staticmethod
     def test_double_click_moves_cursor_to_bookmark_offset(tmp_path: Path, qapp: QApplication) -> None:
@@ -325,7 +325,7 @@ class TestBookmarkDoubleClickNavigates:
 
 
 class TestBookmarkPersistsAcrossReload:
-    """D24: a bookmark added to a file must survive closing and reopening that file."""
+    """A bookmark added to a file must survive closing and reopening that file."""
 
     @staticmethod
     def test_bookmark_survives_close_and_reopen(tmp_path: Path, qapp: QApplication) -> None:
@@ -367,7 +367,7 @@ class TestBookmarkPersistsAcrossReload:
 
 
 class TestBookmarksTreeResetsOnFileSwitch:
-    """D25: opening a different file must reset the bookmarks tree, not show the prior file's rows."""
+    """Opening a different file must reset the bookmarks tree, not show the prior file's rows."""
 
     @staticmethod
     def test_tree_reflects_newly_opened_file_only(tmp_path: Path, qapp: QApplication) -> None:

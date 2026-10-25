@@ -3,17 +3,17 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Audit3 U4 tests for ``resource_monitor.ps1`` remediation.
+r"""Tests for ``resource_monitor.ps1`` behavior.
 
-Validates the two fixes applied to
+Validates the following behavior of
 ``src/intellicrack/sandbox/scripts/resource_monitor.ps1``:
 
-* F-0005 - the script honors the caller-supplied ``-LogDir`` instead of
-  the hardcoded ``C:\sandbox_shared\logs`` path.
-* F-0006 - the script no longer suppresses errors with a file-level
-  ``$ErrorActionPreference = 'SilentlyContinue'``; ``Get-Counter``
-  failures are caught explicitly and emitted as structured JSONL records
-  in ``resource_monitor.errors.jsonl``.
+* The script honors the caller-supplied ``-LogDir`` instead of the hardcoded
+  ``C:\sandbox_shared\logs`` path.
+* The script does not suppress errors with a file-level
+  ``$ErrorActionPreference = 'SilentlyContinue'``. ``Get-Counter`` failures are
+  caught explicitly and emitted as structured JSONL records in
+  ``resource_monitor.errors.jsonl``.
 
 The tests run the real script under ``pwsh`` against the live
 filesystem and live performance counters. They are skipped on
@@ -139,12 +139,12 @@ def _terminate(proc: Popen[str]) -> tuple[str, str, int | None]:
 
 
 def test_script_file_exists() -> None:
-    """The remediated script must exist on disk."""
+    """The script must exist on disk."""
     assert _SCRIPT_PATH.is_file(), f"missing script: {_SCRIPT_PATH}"
 
 
 def test_script_does_not_use_blanket_silentlycontinue() -> None:
-    """F-0006: the file-level ``SilentlyContinue`` preference must be gone.
+    """The file-level ``SilentlyContinue`` preference must not be set.
 
     The script must opt into ``$ErrorActionPreference = 'Stop'`` so that
     failed counter reads surface as catchable errors instead of being
@@ -156,7 +156,7 @@ def test_script_does_not_use_blanket_silentlycontinue() -> None:
 
 
 def test_script_does_not_hardcode_legacy_log_path() -> None:
-    r"""F-0005: the hardcoded ``C:\sandbox_shared\logs`` path must be gone.
+    r"""The hardcoded ``C:\sandbox_shared\logs`` path must not appear.
 
     The script must not reference the legacy hardcoded shared-folder
     location anywhere; every log write must be derived from the
@@ -169,13 +169,13 @@ def test_script_does_not_hardcode_legacy_log_path() -> None:
 
 
 def test_script_declares_logdir_parameter() -> None:
-    """F-0005: the script must declare a ``-LogDir`` parameter."""
+    """The script must declare a ``-LogDir`` parameter."""
     text = _SCRIPT_PATH.read_text(encoding="utf-8")
     assert "[string]$LogDir" in text, "resource_monitor.ps1 must declare -LogDir parameter"
 
 
 def test_script_writes_logs_to_supplied_logdir(tmp_path: Path) -> None:
-    """F-0005 runtime check: log lines must land in the supplied ``-LogDir``.
+    """Log lines must land in the supplied ``-LogDir``.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
@@ -230,7 +230,7 @@ def _has_bogus_counter_error(error_log_text: str) -> bool:
 def test_script_logs_counter_failure_instead_of_silently_continuing(
     tmp_path: Path,
 ) -> None:
-    """F-0006 runtime check: invalid counters must be reported, not swallowed.
+    """Invalid counters must be reported, not swallowed.
 
     Pointing ``-CounterPaths`` at a counter that does not exist must
     cause the script to write structured JSONL error records to

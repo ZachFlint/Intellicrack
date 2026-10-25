@@ -226,7 +226,7 @@ class TestSaveToSandboxPreconditionOrdering:
         guard must NOT fire; instead the bridge forwards an invalid
         ``sandbox_type`` to the real ``SandboxBridge.create``, which raises a
         :class:`ToolError` whose exact message proves the argument was passed
-        through unchanged. This is the boundary the audit demanded: the same
+        through unchanged. This is the boundary under test: the same
         operation that fails on an empty registry succeeds past the guard here.
 
         Args:

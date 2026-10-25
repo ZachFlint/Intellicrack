@@ -472,10 +472,10 @@ for (const [name, pattern] of CANVAS_CHARTS) {
 
 /* ---------------------- the entropy chart paints the design system's fill */
 
-/* The entropy card fills the area under its curve with var(--hb-chart-fill),
-   and for a long time the running application painted no such area at all: it
-   drew ramp-coloured columns, so the token was documented by the gallery and
-   used by nothing the user ever saw. This exercises the real draw callback
+/* The entropy card fills the area under its curve with var(--hb-chart-fill).
+   The application must paint that same area: a chart drawing ramp-coloured
+   columns instead would leave the token documented by the gallery and used by
+   nothing the user sees. This exercises the real draw callback
    through a recording context and insists the application paints the same
    token the card does. Every token resolves to a distinct sentinel, so an
    assertion cannot pass by accident on a shared colour or on a fallback. */

@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Backward-compatible re-export of HexEditorPanel.
 
-The implementation has moved to the hex_editor package.
+The implementation lives in the hex_editor package.
 """
 
 from __future__ import annotations

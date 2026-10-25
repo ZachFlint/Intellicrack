@@ -2,14 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression test for finding M18: block-transform dialogs must not crash on bad input.
+"""Block-transform dialogs must not crash on bad input.
 
-Pre-fix, ``_on_block_fill`` / ``_on_block_copy`` / ``_on_block_move`` /
-``_on_block_swap`` called ``dlg.get_values()`` -- which parses fields with
-``int(text, 0)`` and ``bytes.fromhex(...)`` -- *outside* the try/except that
-guarded the document mutation. Entering ``0xZZ`` or ``GG`` and clicking OK raised
-an uncaught ``ValueError`` out of the Qt slot and aborted the app. This test
-replaces each dialog with a stand-in that auto-accepts and whose ``get_values``
+``_on_block_fill`` / ``_on_block_copy`` / ``_on_block_move`` / ``_on_block_swap``
+call ``dlg.get_values()``, which parses fields with ``int(text, 0)`` and
+``bytes.fromhex(...)``. That call must sit inside the try/except that guards the
+document mutation, so entering ``0xZZ`` or ``GG`` and clicking OK surfaces a
+validation warning instead of an uncaught ``ValueError`` escaping the Qt slot.
+This test replaces each dialog with a stand-in that auto-accepts and whose ``get_values``
 runs the *same* ``int(_BAD_HEX, 0)`` parse the real dialog performs on malformed
 input, then asserts no exception escapes each real handler, a validation warning
 is surfaced, and the document mutation is never attempted.
@@ -249,7 +249,7 @@ def _install_warning_recorder(monkeypatch: pytest.MonkeyPatch, sink: list[tuple[
 
 @pytest.mark.usefixtures("qapp")
 class TestBlockDialogInvalidInput:
-    """M18: malformed block-dialog input must be surfaced, never escape the slot."""
+    """Malformed block-dialog input must be surfaced, never escape the slot."""
 
     @staticmethod
     def test_fill_bad_input_does_not_raise_and_warns(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:

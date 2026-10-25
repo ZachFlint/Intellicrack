@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D49: the Registry Changes tab must have a source on QEMU.
+"""The Registry Changes tab must have a source on QEMU.
 
 Measured live: the Registry Changes tab parses ``registry_changes.log``, but
 no component ever wrote a file by any name that carries registry data.
@@ -110,7 +110,7 @@ class _ReportReadingSandbox(QEMUSandbox):
     def use_workspace(self, temp_dir: Path, share: Path) -> None:
         """Point the sandbox at its working directory and its shared folder.
 
-        Since S17-D69 the guest's logs are pulled out of the guest and land
+        The guest's logs are pulled out of the guest and land
         under the working directory's ``collected`` tree rather than on the
         share, which the guest cannot write to, so both are needed for the
         reader to find anything.
@@ -271,7 +271,7 @@ class TestARealRegistryWriteReachesTheReportedChangeList:
     async def test_a_written_registry_key_is_named_in_the_registry_changes_report(self, tmp_path: Path) -> None:
         """A key the guest writes must be named by the host's registry-changes reader.
 
-        This drives the whole S17-D49 path for real: the bundled script is
+        This drives the whole path for real: the bundled script is
         staged by production code, launched under the real Windows PowerShell
         that a guest would run it under, and made to observe a real registry
         write. The resulting log is then handed to the same

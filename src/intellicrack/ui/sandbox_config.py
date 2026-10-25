@@ -159,7 +159,7 @@ def _post_wm_close(pid: int) -> bool:
 class _AvailabilityCache:
     """Process-wide cache for the Windows Sandbox availability probe result.
 
-    The probe may spawn a bounded PowerShell subprocess, so its ``(available, reason)`` result is memoised here to avoid repeating the work
+    The probe may spawn a bounded PowerShell subprocess, so its ``(available, reason)`` result is memoized here to avoid repeating the work
     on every caller (for example each time the Sandbox tab is constructed).
     """
 
@@ -358,7 +358,7 @@ class SandboxTestWorker(RetainedWorker):
         """Generate the WSB config, launch Windows Sandbox, and wait for it.
 
         Returns:
-            bool: ``True`` when the helper handled finish signalling itself
+            bool: ``True`` when the helper handled finish signaling itself
             (the caller should return without emitting a success), ``False``
             when the run completed normally and the caller should emit success.
         """
@@ -425,8 +425,8 @@ class SandboxTestWorker(RetainedWorker):
             if (session_pid := find_sandbox_session_pid(wsb_name)) is not None:
                 # Keep the session's pid: it is the process that actually owns
                 # the Host Compute Service session, and it is the only handle
-                # the teardown has on it. Discarding it left a full sandbox VM
-                # running after every test (S17-D80).
+                # the teardown has on it. Discarding it leaves a full sandbox VM
+                # running.
                 self._session_pid = session_pid
                 self.output.emit("Sandbox session is running")
                 return False
@@ -598,7 +598,7 @@ class SandboxTestWorker(RetainedWorker):
         Windows Sandbox can run its own teardown of the Host Compute Service
         session it owns instead of only ever being force-killed, which can
         leave that session orphaned and block a subsequent sandbox
-        ``Create`` (S16-D11). Falls back to a forced process-tree
+        ``Create``. Falls back to a forced process-tree
         termination when no window is found or the graceful close does not
         complete within :data:`_GRACEFUL_CLOSE_TIMEOUT_S`. Unconditionally
         unregisters the process from ``ProcessManager`` afterwards so no
@@ -608,7 +608,7 @@ class SandboxTestWorker(RetainedWorker):
         Reaps the sandbox session first via :meth:`_terminate_sandbox_session`,
         because the launcher this method handles does not own the session and
         has usually exited by now, so everything below would otherwise return
-        at the liveness guard and leave a sandbox running (S17-D80).
+        at the liveness guard and leave a sandbox running.
         """
         self._terminate_sandbox_session()
         if self._process is None or self._process.poll() is not None:
@@ -942,7 +942,7 @@ class SandboxConfigDialog(QDialog):
 
     @staticmethod
     def _coerce_availability_result(result: object) -> tuple[bool, str]:
-        """Normalise a probe worker payload into an ``(available, reason)`` pair.
+        """Normalize a probe worker payload into an ``(available, reason)`` pair.
 
         Args:
             result: Value emitted by the availability worker; expected to be a

@@ -2,16 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S20-D11: Windows Sandbox Create failed with "dispatcher did not signal ready".
+"""Gates for the adaptive dispatcher-ready wait in Windows Sandbox create.
 
-Measured live: the launch sequence fired correctly all the way through
-``windows_sandbox_session_bound`` and a real session process stayed alive, but
-the in-guest dispatcher never signalled ready within the previous fixed
-120-second budget, so the whole create aborted with a modal failure and gave
-no indication of which startup stage the guest had actually reached.
+The launch sequence can run correctly all the way through
+``windows_sandbox_session_bound`` with a real session process alive while the
+in-guest dispatcher is slow to signal ready. A fixed 120-second budget would
+abort the whole create with a modal failure and give no indication of which
+startup stage the guest had actually reached.
 
-:meth:`WindowsSandbox._wait_for_dispatcher_ready` is now adaptive: it starts
-with the same 120-second budget, but every time real evidence of guest
+:meth:`WindowsSandbox._wait_for_dispatcher_ready` is therefore adaptive: it
+starts with a 120-second budget, but every time real evidence of guest
 progress appears - the guest logon command actually having run (recorded by
 :attr:`WindowsSandbox.DISPATCHER_LOGON_MARKER`, written by the bootstrap
 script before it even launches the dispatcher), or any monitor having

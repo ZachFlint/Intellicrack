@@ -4,10 +4,9 @@
     Unified Intellicrack documentation dispatcher.
 
 .DESCRIPTION
-    Single entry point for all documentation actions. Replaces the previous
-    docs-build / docs-clean / docs-apidoc / docs-linkcheck / docs-pdf /
-    docs-open / docs-rebuild recipes. Chooses behavior by the -Action
-    parameter, forwards any remaining flags to the underlying tool.
+    Single entry point for all documentation actions (build, clean, apidoc,
+    linkcheck, pdf, open, rebuild). Chooses behavior by the -Action parameter,
+    forwards any remaining flags to the underlying tool.
 
 .PARAMETER Action
     One of: build, clean, apidoc, linkcheck, pdf, open, rebuild. Defaults to

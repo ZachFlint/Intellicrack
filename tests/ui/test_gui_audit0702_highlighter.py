@@ -2,23 +2,20 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-02 GUI audit findings in ``highlighter``.
+"""Gates for block-comment and template-literal tracking in ``highlighter``.
 
-Covers two audit findings in :mod:`intellicrack.ui.highlighter`:
+Covers two highlighter defects in :mod:`intellicrack.ui.highlighter`:
 
-- H22: ``_scan_block_comments`` used a raw ``/*`` regex with no awareness of
-  string literals, so a ``/*`` inside a double/single/backtick-quoted string
+- Block comments: ``_scan_block_comments`` must track string literals. A raw ``/*`` regex with no awareness of
+  string literals treats a ``/*`` inside a double/single/backtick-quoted string
   (e.g. a Windows path fragment or a truncated URL extracted from a stripped
-  binary) was treated as a genuine block-comment opener. Because no matching
-  ``*/`` followed on the same line, the highlighter's block state stayed
-  "inside a block comment" and every subsequent line in the document was
-  mis-highlighted until an unrelated ``*/`` was eventually found.
-- M18: ``JavaScriptSyntaxHighlighter`` highlighted backtick template literals
-  with a single-line regex rule only, so a template literal that spans
-  multiple lines (routine in Frida scripts) lost its string coloring on the
-  second and later lines, and keyword-like tokens inside the unterminated
-  literal (e.g. ``if``) were mis-highlighted as JavaScript keywords instead
-  of string content.
+  binary) as a genuine block-comment opener. With no matching ``*/`` on the same line,
+  the highlighter's block state stays "inside a block comment" and every subsequent line is
+  mis-highlighted until an unrelated ``*/`` is found.
+- Template literals: ``JavaScriptSyntaxHighlighter`` must track backtick template literals across
+  blocks. A single-line regex rule alone loses the string coloring on the second and later lines of a
+  literal that spans multiple lines (routine in Frida scripts), and keyword-like tokens inside it (e.g. ``if``)
+  must stay string content rather than being highlighted as JavaScript keywords.
 """
 
 from __future__ import annotations
@@ -93,7 +90,7 @@ def _format_color_at(block: QTextBlock, position: int) -> QColor | None:
 
 
 class TestH22BlockCommentExcludesStringLiterals:
-    """H22: a ``/*`` inside a string literal must not open a block comment."""
+    """A ``/*`` inside a string literal must not open a block comment."""
 
     @pytest.mark.parametrize(
         ("factory", "text"),
@@ -112,12 +109,12 @@ class TestH22BlockCommentExcludesStringLiterals:
     ) -> None:
         """A ``/*`` inside a quoted string never sets the block-comment flag.
 
-        Reconstructing the pre-fix ``_scan_block_comments`` (a raw
-        ``self._comment_start.match(text)`` with no quote tracking) against
-        this same three-line text produces block states ``[1, 1, 1]``: the
+        A scanner built on a raw
+        ``self._comment_start.match(text)`` with no quote tracking, run against
+        this same three-line text, would produce block states ``[1, 1, 1]``: the
         ``/*`` inside ``"C:/temp/*"`` is treated as a genuine opener, has no
         matching ``*/`` on that line, so the block-comment state is set and
-        carried into every following line. The fixed scanner tracks string
+        carried into every following line. The scanner tracks string
         state via ``_block_comment_start_index`` and must leave every
         block's state clear of ``_BLOCK_COMMENT_FLAG``.
 
@@ -144,7 +141,7 @@ class TestH22BlockCommentExcludesStringLiterals:
     ) -> None:
         """A genuine ``/*`` after a string with an embedded ``/*`` still tracks correctly.
 
-        Proves the string-exclusion fix does not disable block-comment
+        Proves string exclusion does not disable block-comment
         tracking outright: the embedded ``/*`` inside ``"C:/temp/*"`` is
         ignored, but the real ``/*`` later on the same line still opens a
         comment that spans the middle line and closes at its ``*/``.
@@ -167,7 +164,7 @@ class TestH22BlockCommentExcludesStringLiterals:
 
 
 class TestM18TemplateLiteralsTrackAcrossBlocks:
-    """M18: multi-line JS/Frida template literals must track across blocks."""
+    """Multi-line JS/Frida template literals must track across blocks."""
 
     def test_m18_multiline_template_literal_tracks_across_blocks(
         self,
@@ -175,12 +172,11 @@ class TestM18TemplateLiteralsTrackAcrossBlocks:
     ) -> None:
         """A template literal spanning two blocks paints both as string, not keyword.
 
-        Reconstructing the pre-fix single-line-only backtick rule against
-        this same text leaves the first block's backtick-opened tail
-        unformatted (the regex requires both delimiters on one line, so it
-        never matches) and the second block's ``if`` token is painted with
-        the keyword color because nothing tracks the open literal across the
-        block boundary. The fixed ``_highlight_template_literals`` must
+        A single-line-only backtick rule run against this same text would leave the first block's
+        backtick-opened tail unformatted (the regex requires both delimiters on one line, so it
+        never matches), and the second block's ``if`` token would be painted with the keyword color,
+        because nothing tracks the open literal across the block boundary. The fixed
+        ``_highlight_template_literals`` must
         carry ``_TEMPLATE_LITERAL_FLAG`` into the second block and repaint
         the still-open literal's prefix (``if broken`` plus the closing
         backtick) with the string color, overriding the keyword format
@@ -224,8 +220,8 @@ class TestM18TemplateLiteralsTrackAcrossBlocks:
     ) -> None:
         """A template literal that opens and closes on one line stays fully string-colored.
 
-        Guards against a regression where the cross-block tracking added for
-        M18 stops repainting a literal that never crosses a block boundary.
+        Guards against a regression where the cross-block tracking stops
+        repainting a literal that never crosses a block boundary.
 
         Args:
             theme_manager: The theme manager singleton fixture.

@@ -7,7 +7,7 @@
 
 Covers the calculator tab's "Convert" action
 (``ui/panels/hex_editor/calculator.py`` ``CalculatorMixin._on_convert``),
-which now dispatches to ``HexEditorBridge.base_convert`` when a bridge is
+which dispatches to ``HexEditorBridge.base_convert`` when a bridge is
 attached, so the AI-callable tool and the GUI's base/type-representation
 computation share a single implementation. A local, purely synchronous
 fallback (``_convert_local``) remains for headless/no-bridge callers and
@@ -44,8 +44,7 @@ class TestBaseConvertRoutesThroughBridge:
         """Triggering convert with a bridge attached must call ``bridge.base_convert`` and render its result.
 
         Falsifiable: if ``_on_convert`` were reverted to call
-        ``self._convert_local(...)`` unconditionally (the
-        pre-remediation behaviour), ``base_convert_calls`` would stay
+        ``self._convert_local(...)`` unconditionally (a regression to the local path), ``base_convert_calls`` would stay
         empty even though a bridge was attached. Broken production
         line: ``run_bridge_coroutine_logged(bridge.base_convert(text,
         from_base="auto"), ...)`` in ``CalculatorMixin._on_convert``

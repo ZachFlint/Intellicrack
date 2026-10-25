@@ -24,7 +24,7 @@ from intellicrack.core.types import ToolError
 
 
 # Private module symbols accessed via getattr + cast to avoid reportPrivateUsage,
-# matching the established pattern in test_installer_ops_wave5.py.
+# matching the established pattern in the installer ops tests.
 _extract_rizin_json: Callable[[str, str], object] = cast(
     Callable[[str, str], object],
     getattr(cutter, "_extract_rizin_json"),

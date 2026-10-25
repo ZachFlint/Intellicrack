@@ -5,8 +5,7 @@
 
 """Shared fixtures and test doubles for the hex-editor bridge-completeness gates.
 
-Covers ``audit/bridge-completeness/agent-09-hex-editor.md`` and its verifier
-``audit/bridge-completeness/verify/agent-09-hex-editor-verification.md``: the
+Covers the
 Search-and-Replace feature backed by ``HexEditorBridge.replace_bytes``, the
 sandbox-reroute fix in ``ui/panels/hex_editor/sandbox.py``, the
 ``list_process_regions`` reroute in ``process_memory.py``, the
@@ -23,8 +22,7 @@ package is a fake ``SandboxBridge`` collaborator registered under
 the Docker test sandbox (no real sandbox VM/container manager is available
 there). That fake never replaces the ``HexEditorBridge`` method under test;
 it only stands in for the downstream sandbox tool the hex-editor bridge
-calls into, exactly the pattern already established in
-``tests/test_bridges/test_hex_editor_bridge_methods_wave4.py``.
+calls into, the pattern used across the bridge tests.
 """
 
 from __future__ import annotations
@@ -395,7 +393,7 @@ class FakeSandboxBridge(ToolBridgeBase):
         return self.run_binary_result
 
     async def execute(self, instance_id: str, command: str, time_limit: int = 30) -> dict[str, Any]:
-        """Record a raw ``execute`` invocation (the pre-remediation GUI path).
+        """Record a raw ``execute`` invocation (a GUI path that bypasses the bridge).
 
         Tests assert this is NEVER called by the remediated GUI handlers,
         since ``save_to_sandbox``/``test_in_sandbox`` route through
@@ -436,13 +434,12 @@ def make_registry_with_sandbox(fake: FakeSandboxBridge) -> ToolRegistry:
 class RecordingHexEditorBridge(HexEditorBridge):
     """``HexEditorBridge`` subclass that records calls to select dispatch-reroute targets.
 
-    Stands in for the real bridge in the five newly-rerouted controls
+    Stands in for the real bridge in the rerouted controls
     (``base_convert``, ``generate_structure_bookmarks``,
     ``list_templates_detailed``, ``scan_die_signatures`` /
     ``scan_clamav_signatures`` / ``scan_custom_signatures``,
     ``toggle_bit``) so tests can assert the GUI handler dispatched to
-    THIS bridge method rather than falling back to its local,
-    pre-remediation implementation. Every override still performs the
+    THIS bridge method rather than falling back to its local implementation. Every override still performs the
     real, unmodified operation via ``super()`` -- only the call ledger
     is added -- so assertions on the returned/rendered data remain
     genuine end-to-end checks, not canned responses.

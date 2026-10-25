@@ -5,7 +5,7 @@
 """One adapter per API dialect, and the exhaustive dispatch that selects them.
 
 Provider identity is an open string, so the exhaustiveness guarantee that the
-closed provider enum used to give basedpyright lives here instead:
+closed provider enum would give basedpyright lives here instead:
 :func:`adapter_for` dispatches over the closed
 :class:`~intellicrack.providers.capabilities.ApiDialect` and ends in
 ``_assert_never``. Removing a branch is a type error, not a runtime surprise.

@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Second-pass coverage tests for ``CutterBridge`` against real rizin and radare2 sessions.
+"""Coverage tests for ``CutterBridge`` against real rizin and radare2 sessions.
 
 Every expectation is derived independently of the bridge: the ``pefile`` parse of
 the same System32 DLL, the file's own size on disk, the argument vector of the

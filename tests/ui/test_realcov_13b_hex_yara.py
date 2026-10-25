@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for the hex editor YARA result rendering path.
 
-The audit (shard 13) flagged the YARA UI mixin (``yara.py``) as untested at
-the panel level. These tests run a REAL YARA scan (via
+The YARA UI mixin (``yara.py``) is exercised at the panel level. These tests run a REAL YARA scan (via
 :class:`intellicrack.core.yara_scanner.YaraScanner`) against a genuine Windows
 PE binary, convert the real :class:`YaraMatch` objects into the exact dict
 shape the bridge emits (hex-encoded match ``data``), and drive the mixin's

@@ -4,25 +4,25 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Runtime (non source-inspection) coverage for :class:`MainWindow` slots.
 
-The audit5 U5 suite verified several behaviors by scanning ``inspect.getsource``
+Source-inspection tests verify behaviours by scanning ``inspect.getsource``
 text for identifier fragments. Source-text assertions cannot detect wrong
 logic, wrong argument order, missing-attribute errors, or broken signal/slot
 wiring. These tests instead drive the *real* :class:`MainWindow` methods over
 real registries, real binaries, and real Qt dialogs (with only the blocking
 modal ``exec`` isolated), asserting on genuine runtime outcomes.
 
-Findings strengthened here:
+Behaviours covered:
 
-* 15-F002 - ``_on_save_patched_binary`` routes to the embedded hex editor's
+* ``_on_save_patched_binary`` routes to the embedded hex editor's
   ``save_as`` and produces a real, valid PE file on disk.
-* 15-F003 - ``_apply_provider_settings`` disconnects a really-connected,
+* ``_apply_provider_settings`` disconnects a really-connected,
   user-disabled provider in the real :class:`ProviderRegistry`.
-* 15-F004 - the ``XPU Status...`` Help action constructs the real
+* The ``XPU Status...`` Help action constructs the real
   :class:`XPUStatusDialog`.
-* 15-F014 - ``_on_open_sandbox_panel`` drives the full post-panel path:
+* ``_on_open_sandbox_panel`` drives the full post-panel path:
   ``start_tool()`` is called on the panel and the bridge is wired, both
   asserted against runtime state independent of the sandbox backend.
-* 15-F015 - the session-manager dialog signals are really connected to live
+* The session-manager dialog signals are really connected to live
   :class:`MainWindow` slots (the emitted payload reaches the slot).
 """
 
@@ -430,7 +430,7 @@ class _MinimalSandboxPanel(QWidget):
     """Minimal real QWidget stub satisfying SandboxPanelProtocol for pre-seeding.
 
     Pre-seeded into ``tool_panel.sandbox_panel`` before the slot runs so that
-    ``add_sandbox_tab()`` short-circuits at line 1906-1907 (returns the
+    ``add_sandbox_tab()`` short-circuits at its early-return guard (returns the
     already-set panel) without touching the unavailable Windows Sandbox /
     WDAG backend.  The ``start_tool()`` method records whether the slot
     actually invoked it via ``start_tool_called``.
@@ -472,7 +472,7 @@ def test_open_sandbox_panel_drives_full_post_panel_path(
     """``_on_open_sandbox_panel`` calls ``start_tool()`` and wires the bridge.
 
     Pre-seeds ``tool_panel.sandbox_panel`` with a real ``QWidget`` stub so
-    ``add_sandbox_tab()`` short-circuits at the early-return guard (line 1906)
+    ``add_sandbox_tab()`` short-circuits at the early-return guard
     and returns the stub directly, bypassing the unavailable Windows Sandbox /
     WDAG backend.  This brings the full post-panel body of
     ``_on_open_sandbox_panel`` into scope: bridge creation, bridge wiring, and
@@ -480,29 +480,15 @@ def test_open_sandbox_panel_drives_full_post_panel_path(
 
     Three independent runtime outcomes are asserted:
 
-    1. ``start_tool_called is True`` — the slot reached line 3041
-       (``panel.start_tool()``) and invoked it on the real pre-seeded panel.
-       Documented mutation: change ``panel.start_tool()`` at line 3041 in
-       ``_on_open_sandbox_panel`` to ``panel.stop_tool()`` — assertion fails
-       because ``start_tool_called`` remains ``False``.
+    1. ``start_tool_called is True``: the slot reaches ``panel.start_tool()`` and
+       invokes it on the real pre-seeded panel.
 
-    2. ``tool_panel._pending_sandbox_bridge is not None`` — ``wire_sandbox_bridge``
-       was called at line 3040, storing the bridge in ``_pending_sandbox_bridge``
-       (since our stub has no ``set_bridge``).
-       Documented mutation: remove the ``self.tool_panel.wire_sandbox_bridge(bridge)``
-       call at line 3040 — assertion fails because ``_pending_sandbox_bridge``
-       stays ``None``.
+    2. ``tool_panel._pending_sandbox_bridge is not None``: ``wire_sandbox_bridge``
+       stores the bridge in ``_pending_sandbox_bridge`` because the stub has no ``set_bridge``.
 
-    3. ``tool_panel.get_panel("sandbox") is sandbox_stub`` — the panels dict
-       is consistent with the pre-seeded widget, confirming ``get_panel`` is
-       backed by the real ``panels`` mapping.
-       Documented mutation: change ``self.tool_panel.get_panel("sandbox")`` at
-       line 3047 to ``self.tool_panel.get_panel("ghidra")`` — this assertion
-       itself does not fail (it checks the dict directly), but ``_wire_sandbox_monitor_widgets``
-       would be invoked on the wrong widget (or None), revealing the regression.
-       Alternatively, remove ``self.panels["sandbox"] = qwidget`` inside
-       ``_create_sandbox_panel`` — ``get_panel("sandbox")`` returns None and the
-       assertion fails.
+    3. ``tool_panel.get_panel("sandbox") is sandbox_stub``: the panels dict is
+       consistent with the pre-seeded widget, confirming ``get_panel`` is backed by
+       the real ``panels`` mapping.
 
     Args:
         window_factory: Factory yielding a real, auto-closed MainWindow.

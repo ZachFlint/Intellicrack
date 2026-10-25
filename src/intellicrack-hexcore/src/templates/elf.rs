@@ -5,6 +5,7 @@
 
 use super::{Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry};
 
+/// Registers the built-in ELF structure templates into `registry`.
 pub fn register_templates(registry: &mut TemplateRegistry) {
     registry.register(elf32_ehdr());
     registry.register(elf64_ehdr());
@@ -25,6 +26,7 @@ pub fn register_templates(registry: &mut TemplateRegistry) {
 
 fn fd(name: &str, field_type: FieldType, description: &str) -> FieldDefinition {
     FieldDefinition {
+        at: None,
         name: name.to_string(),
         field_type,
         endianness: None,

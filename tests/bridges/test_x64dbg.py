@@ -172,7 +172,7 @@ def _empty_bp_list_responder(command: str, _params: dict[str, Any] | None) -> di
 def test_bridge_initial_state() -> None:
     """Verify bridge initializes with correct default state and then tracks mutations.
 
-    Supersedes the pure dataclass-default check by also verifying that the
+    Verify that the
     bridge correctly accepts real state mutations: attaching a pid, setting a
     binary path, and toggling the 64-bit flag.  If the bridge's setter logic
     were removed or broken these assertions would go red.
@@ -200,7 +200,7 @@ def test_bridge_initial_state() -> None:
 def test_bridge_has_capabilities() -> None:
     """Verify bridge reports correct capabilities and they are internally consistent.
 
-    Supersedes the pure-value check by verifying that the capability object
+    Verify that the capability object
     accurately describes a debugger bridge (supports_debugging must be True) and
     that the architecture and format lists are non-empty and contain the
     specifically required entries.  Deleting or renaming a required entry from
@@ -260,7 +260,7 @@ async def test_breakpoint_retrieved_via_get_breakpoints(x64dbg_bridge: X64DbgBri
     ``bp_list`` RPC round-trip: the plugin reports no GUI breakpoints (empty
     result), so the locally tracked breakpoint must survive the merge. This
     exercises the real pipe path rather than inspecting the backing dict
-    directly, and does not rely on the removed silent local-cache fallback.
+    directly, and does not depend on any silent local-cache fallback.
 
     Args:
         x64dbg_bridge: Fresh X64DbgBridge instance supplied by the fixture.
@@ -601,14 +601,12 @@ async def test_memory_protection_changes(x64dbg_bridge_attached: X64DbgBridge) -
     buffer = ctypes.create_string_buffer(BUFFER_SIZE_4K)
     buffer_address = ctypes.addressof(buffer)
 
-    # Change to readonly
     old_protect = wintypes.DWORD()
     ctypes.windll.kernel32.VirtualProtect(ctypes.c_void_p(buffer_address), BUFFER_SIZE_4K, PAGE_READONLY, ctypes.byref(old_protect))
 
     try:
         await _assert_readonly_region_present(x64dbg_bridge_attached, buffer_address)
     finally:
-        # Restore
         ctypes.windll.kernel32.VirtualProtect(ctypes.c_void_p(buffer_address), BUFFER_SIZE_4K, old_protect, ctypes.byref(old_protect))
 
 

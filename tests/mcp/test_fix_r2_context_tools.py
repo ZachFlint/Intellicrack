@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 35: the model reaches a server's resources and prompts, and hears when they change.
+"""The model reaches a server's resources and prompts, and hears when they change.
 
 The gates run a real ``MCPServer`` on 2026-07-28 over stdio and 2025-11-25 over SSE. Through the real agent loop and a loopback model
 endpoint, the model is offered each server's ``context.*`` functions, reads a text resource that comes back fenced and cleaned, and a

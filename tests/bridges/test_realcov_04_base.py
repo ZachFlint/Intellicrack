@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-data coverage for ``intellicrack.bridges.base`` (SHARD 04).
+"""Real-data coverage for ``intellicrack.bridges.base``.
 
 These tests replace trivial dataclass round-trip checks with assertions
 over real computed results:
@@ -12,13 +12,13 @@ over real computed results:
   (``kernel32.dll``) disassembled with the same capstone pipeline the
   concrete debugger bridge uses, and the decoded mnemonics are verified
   to be real x86 instructions located inside the section's virtual
-  range (finding 04-F001).
+  range.
 * :class:`BridgeCapabilities` defaults are validated through the real
   ``__init__`` path of concrete bridge subclasses rather than the bare
-  dataclass constructor (finding 04-F002).
+  dataclass constructor.
 * The abstract bridge base classes are checked for interface compliance
   against their concrete subclasses, with capability flags asserted to
-  match documented values (finding 04-F011).
+  match documented values.
 """
 
 from __future__ import annotations
@@ -197,7 +197,7 @@ def _oracle_decode_first(
 
 
 class TestDisassemblyLineFromRealBinary:
-    """04-F001: DisassemblyLine carries genuine disassembly of a real PE."""
+    """Verify DisassemblyLine carries genuine disassembly of a real PE."""
 
     @staticmethod
     def test_decodes_real_text_mnemonics(real_pe_dll: Path) -> None:
@@ -266,7 +266,7 @@ class TestDisassemblyLineFromRealBinary:
 
 
 class TestConcreteBridgeCapabilities:
-    """04-F002: capability defaults exercised through real bridge __init__."""
+    """Verify capability defaults are exercised through real bridge __init__."""
 
     @staticmethod
     def test_sandbox_bridge_capabilities() -> None:
@@ -303,7 +303,7 @@ class TestConcreteBridgeCapabilities:
 
 
 class TestBridgeInterfaceCompliance:
-    """04-F011: concrete bridges satisfy their abstract base contracts."""
+    """Verify concrete bridges satisfy their abstract base contracts."""
 
     @staticmethod
     def test_ghidra_is_static_analysis_bridge() -> None:

@@ -3,21 +3,16 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for the 2026-07-02 GUI audit findings in ``vnc_widget``.
+"""Gates for ``vnc_widget`` disconnect dispatch and theme repaints.
 
-* **H12** — ``VNCWidget.disconnect_from_server`` used to call the *blocking*
-  ``run_bridge_coroutine(self.client.disconnect())`` with no timeout on the Qt
-  GUI thread. ``RFBClient.disconnect()`` awaits ``self._writer.wait_closed()``,
-  which can hang indefinitely against an unresponsive peer (e.g. a paused or
-  crashed QEMU sandbox), freezing the whole application. The fix dispatches the
-  teardown through the non-blocking ``run_bridge_coroutine_logged`` async
-  worker path instead, matching every sibling bridge call in this module, and
-  removes the blocking ``run_bridge_coroutine`` import entirely.
-* **L3** — ``VNCWidget`` never subscribed to ``ThemeManager.theme_changed``, so
-  the idle "VNC Display" placeholder kept rendering with stale theme colors
-  until some unrelated event (resize, tab switch) forced a repaint. The fix
-  connects ``ThemeManager.theme_changed`` to a new ``_on_theme_changed`` slot
-  that calls ``self.update()``.
+* ``VNCWidget.disconnect_from_server`` must not call the *blocking* ``run_bridge_coroutine(self.client.disconnect())`` with no timeout
+  on the Qt GUI thread. ``RFBClient.disconnect()`` awaits ``self._writer.wait_closed()``, which can hang indefinitely against an
+  unresponsive peer (e.g. a paused or crashed QEMU sandbox), freezing the whole application. The teardown is dispatched through the
+  non-blocking ``run_bridge_coroutine_logged`` async worker path instead, matching every sibling bridge call in this module, and the
+  blocking ``run_bridge_coroutine`` import is removed entirely.
+* ``VNCWidget`` must subscribe to ``ThemeManager.theme_changed``, otherwise the idle "VNC Display" placeholder keeps rendering with
+  stale theme colors until some unrelated event (resize, tab switch) forces a repaint. The widget connects
+  ``ThemeManager.theme_changed`` to an ``_on_theme_changed`` slot that calls ``self.update()``.
 
 Both tests drive a real :class:`VNCWidget` under an offscreen QApplication; no
 part of the widget under test is mocked.
@@ -42,12 +37,12 @@ if TYPE_CHECKING:
 
 
 def test_h12_blocking_run_bridge_coroutine_no_longer_imported() -> None:
-    """H12: the blocking ``run_bridge_coroutine`` symbol must not be importable.
+    """The blocking ``run_bridge_coroutine`` symbol must not be importable.
 
-    Pre-fix, ``vnc_widget`` imported ``run_bridge_coroutine`` (the blocking
-    variant) alongside ``run_bridge_coroutine_logged`` specifically so
-    ``disconnect_from_server`` could call it directly. That import is removed
-    entirely as part of the fix, so the symbol no longer exists in the
+    ``vnc_widget`` must not import ``run_bridge_coroutine`` (the blocking
+    variant) alongside ``run_bridge_coroutine_logged``, which would let
+    ``disconnect_from_server`` call it directly. That import is removed
+    entirely, so the symbol does not exist in the
     module's namespace at all.
     """
     assert not hasattr(vnc_widget_mod, "run_bridge_coroutine"), (
@@ -57,7 +52,7 @@ def test_h12_blocking_run_bridge_coroutine_no_longer_imported() -> None:
 
 
 def test_h12_disconnect_dispatches_via_async_logged_runner(qapp: object, monkeypatch: pytest.MonkeyPatch) -> None:
-    """H12: disconnect_from_server must hand the coroutine to the async-logged runner.
+    """disconnect_from_server must hand the coroutine to the async-logged runner.
 
     Args:
         qapp: Session QApplication fixture (ensures a Qt app exists).
@@ -100,14 +95,14 @@ def test_h12_disconnect_dispatches_via_async_logged_runner(qapp: object, monkeyp
 
 
 def test_h12_disconnect_is_non_blocking_even_when_peer_hangs(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
-    """H12: disconnect_from_server must return promptly even if the peer never closes.
+    """disconnect_from_server must return promptly even if the peer never closes.
 
     Replaces the real ``RFBClient`` instance's ``disconnect`` coroutine with a
     stand-in that sleeps for longer than the assertion threshold, emulating an
     unresponsive VNC peer whose TCP close handshake never completes (dead
-    network, paused/crashed sandbox VM). The pre-fix implementation called the
+    network, paused/crashed sandbox VM). An implementation that calls the
     blocking ``run_bridge_coroutine`` with no timeout, so the calling (GUI)
-    thread would block for the full sleep duration; the fix dispatches the
+    thread would block for the full sleep duration; dispatching the
     coroutine onto a background worker thread and returns immediately.
 
     Args:
@@ -151,11 +146,11 @@ def _restore_theme(original_theme: str) -> None:
 
 
 def test_l3_theme_changed_signal_triggers_idle_widget_repaint(qapp: object, monkeypatch: pytest.MonkeyPatch) -> None:
-    """L3: emitting ThemeManager.theme_changed must call update() on an idle widget.
+    """Emitting ThemeManager.theme_changed must call update() on an idle widget.
 
     Directly emits the real ``ThemeManager.theme_changed`` bound signal (the
     exact signal ``apply_theme`` emits on every theme switch) and asserts the
-    widget's own ``update()`` is invoked in response. Pre-fix, ``VNCWidget``
+    widget's own ``update()`` is invoked in response. Without the connection, ``VNCWidget``
     never connected to this signal, so nothing would call ``update()`` here;
     the idle "VNC Display" placeholder would keep painting whatever colors
     were resolved the last time some unrelated event forced a repaint.
@@ -189,7 +184,7 @@ def test_l3_theme_changed_signal_triggers_idle_widget_repaint(qapp: object, monk
 
 
 def test_l3_apply_theme_repaints_placeholder_without_external_trigger(qapp: object, monkeypatch: pytest.MonkeyPatch) -> None:
-    """L3: a real ``ThemeManager.apply_theme`` switch must repaint the idle placeholder.
+    """A real ``ThemeManager.apply_theme`` switch must repaint the idle placeholder.
 
     Exercises the full production entry point (``ThemeManager.apply_theme``,
     which every theme-toggle action in the application calls) rather than

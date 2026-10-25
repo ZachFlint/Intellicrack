@@ -120,10 +120,10 @@ function Write-InjectionDiagnostic {
         [string]$Detail,
         [System.Management.Automation.ErrorRecord]$ErrorRecord
     )
-    # $_.Exception.Message alone named neither the statement nor the line, so a
-    # null-receiver failure could not be located (S17-D79). The error record's
-    # InvocationInfo carries the offending source line and its number; folding
-    # them into the detail makes the diagnostic point at the exact statement.
+    # $_.Exception.Message alone names neither the statement nor the line, so a
+    # null-receiver failure cannot be located. The error record's InvocationInfo
+    # carries the offending source line and its number; folding them into the
+    # detail makes the diagnostic point at the exact statement.
     $located = $Detail
     if ($null -ne $ErrorRecord -and $null -ne $ErrorRecord.InvocationInfo) {
         $info = $ErrorRecord.InvocationInfo
@@ -143,11 +143,11 @@ function Assert-TraceObject {
         [Parameter(Mandatory = $true)][string]$Category,
         [Parameter(Mandatory = $true)][string]$Detail
     )
-    # A null Source or Kernel is the shape S17-D79 saw live: reading a property
-    # off $null never throws, so the null propagated silently to the first
-    # method call on the parser and surfaced three lines on as an unlocated
-    # "call a method on a null-valued expression". Failing at the read itself,
-    # with a named category, states the real cause where it happens.
+    # A null Source or Kernel is a common failure shape: reading a property off
+    # $null never throws, so the null propagates silently to the first method
+    # call on the parser and surfaces a few lines later as an unlocated "call a
+    # method on a null-valued expression". Failing at the read itself, with a
+    # named category, states the real cause where it happens.
     if ($null -eq $Value) {
         $ts = Get-Date -Format 'o'
         Write-InjectionDiagnostic -Timestamp $ts -Category $Category -Detail $Detail
@@ -472,10 +472,9 @@ try {
     # KernelTraceEventParser calls these VirtualMemAlloc/VirtualMemFree, both
     # carrying VirtualAllocTraceData. There is no VirtualMemVirtualAlloc, and
     # PowerShell resolves add_* late, so registering that name did not fail at
-    # load: the monitor started, reported itself healthy, enabled its kernel
-    # provider and then died on this line about a second in - taking the
-    # narrowed Kernel-Process fallback with it and leaving the Injections tab
-    # empty on every run (S17-D71).
+    # load: the monitor starts, reports itself healthy, enables its kernel
+    # provider and then dies on this line about a second in, taking the narrowed
+    # Kernel-Process fallback with it.
     $kernelParser.add_VirtualMemAlloc({
         param($evt)
         try {
@@ -557,10 +556,10 @@ try {
     $dynamicParser.add_All($threatIntelHandler)
     # UnhandledEvents is a .NET *event* on TraceEventDispatcher, not a parser
     # property. PowerShell surfaces events only as add_/remove_ methods, so
-    # reading $source.UnhandledEvents always yielded $null and the .add_All()
-    # on it threw with every provider enabled and every kernel handler already
-    # registered, one statement short of Process() - the Injections tab was
-    # empty on every run (S18-D08). The event accessor takes the delegate.
+    # reading $source.UnhandledEvents yields $null and the .add_All() on it
+    # throws with every provider enabled and every kernel handler already
+    # registered, one statement short of Process(). The event accessor takes the
+    # delegate.
     $source.add_UnhandledEvents($threatIntelHandler)
 
     $script:CurrentInjectionSource = $source
@@ -592,7 +591,7 @@ try {
     # call ("result type 'System.Boolean' ... not compatible with ... 'System.Object'
     # expected by the call site") on both PowerShell editions and both source
     # types, while the Boolean EnableProvider above binds normally. psbase
-    # reaches the .NET object directly and events are delivered (S18-D08).
+    # reaches the .NET object directly and events are delivered.
     [void]$source.psbase.Process()
 } catch {
     $ts = Get-Date -Format 'o'

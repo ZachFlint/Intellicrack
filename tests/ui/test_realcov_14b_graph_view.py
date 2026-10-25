@@ -5,14 +5,13 @@
 
 """Real-disassembly coverage for :mod:`intellicrack.ui.panels.graph_view`.
 
-The audit flagged the control-flow graph view as "never verified" against real
-binary code: its block layout and edge generation were only exercised with
-hand-authored graph dicts.
+The control-flow graph view is verified against real binary code, not hand-authored graph
+dicts: its block layout and edge generation are exercised on real disassembly.
 
 These tests disassemble a genuine code window from a real Windows System32
 PE ``.text`` section with :mod:`capstone`, split it into real basic blocks at
 real branch boundaries, and feed the resulting ``agj``-shaped blocks into
-:meth:`CFGGraphScene.load_graph`. Assertions verify the scene materialised one
+:meth:`CFGGraphScene.load_graph`. Assertions verify the scene materialized one
 :class:`BasicBlockItem` per real block, keyed by the real instruction offsets,
 that real edges were created between real jump/fall-through targets, and that
 clicking a block emits its real address. The instruction stream and addresses
@@ -159,7 +158,7 @@ def real_blocks(real_pe_exe: Path) -> list[dict[str, Any]]:
 
 @pytest.mark.usefixtures("qapp")
 class TestGraphViewRealDisassembly:
-    """The CFG scene must materialise real disassembled basic blocks."""
+    """The CFG scene must materialize real disassembled basic blocks."""
 
     @staticmethod
     def test_block_items_match_real_offsets(real_blocks: list[dict[str, Any]]) -> None:
@@ -243,7 +242,7 @@ class TestGraphViewClickRealBlock:
         real_blocks: list[dict[str, Any]],
         qapp: QApplication,
     ) -> None:
-        """A scene hit-test at a block's laid-out centre resolves its real offset.
+        """A scene hit-test at a block's laid-out center resolves its real offset.
 
         This exercises the same scene lookup ``CFGGraphView.mousePressEvent``
         relies on: the block geometry computed from the real instruction text

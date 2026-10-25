@@ -2,16 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit4 D1 (F-0001): pyproject.toml runtime/extras separation tests.
+"""pyproject.toml runtime/extras separation tests.
 
-The defect: ``pyproject.toml`` declared 95+ dev/test/docs/profile packages
-in ``[project].dependencies``. ``pip install intellicrack`` would pull
+Dev, test, docs and profile packages must not be declared in
+``[project].dependencies``, or ``pip install intellicrack`` would pull
 pytest, mypy, bandit, basedpyright, ruff, sphinx, mkdocs-material,
 pre-commit, tox, nox, twine, monkeytype, pyannotate, safety, commitizen,
 bumpversion as runtime requirements - none of which the production
 runtime needs.
 
-The fix: every dev/test/docs/profile-only package was moved into the
+Dev, test, docs and profile-only packages belong in the
 appropriate ``[project.optional-dependencies]`` extra (``dev``, ``test``,
 ``docs``, ``profile``). The runtime ``[project].dependencies`` keeps
 only the packages the code actually imports at runtime.
@@ -165,7 +165,7 @@ class TestRuntimeDependenciesAreLean:
 
     @staticmethod
     def test_runtime_deps_are_modest_in_size() -> None:
-        """Runtime dependency count must be far below the pre-fix bloat (<= 40).
+        """Runtime dependency count must stay small (<= 40).
 
         The ceiling matches ``tests/core/config/test_runtime_deps.py``: the
         runtime list must also name every distribution ``src/intellicrack``
@@ -182,9 +182,9 @@ class TestRuntimeDependenciesAreLean:
 
     @staticmethod
     def test_runtime_and_extras_tables_are_declared() -> None:
-        """The F-0001 restructure must keep both the runtime and the extras tables.
+        """The runtime and extras restructure must keep both tables.
 
-        The defect fix relies on two concrete tables existing: a non-empty
+        The separation relies on two concrete tables: a non-empty
         ``[project].dependencies`` list (the lean runtime set) and a
         ``[project.optional-dependencies]`` table holding the moved dev/test
         tooling. Asserting these specific tables — rather than only that the
@@ -210,7 +210,7 @@ class TestRuntimeDependenciesAreLean:
 
 
 class TestDevExtrasGroupContainsTooling:
-    """The dev-extras group must contain the audit-defined dev/test packages."""
+    """The dev-extras group must contain the dev/test packages."""
 
     @staticmethod
     def test_dev_extras_contains_canonical_dev_tools() -> None:
@@ -229,7 +229,7 @@ class TestPyprojectIsValid:
     def test_runtime_deps_disjoint_from_moved_extras() -> None:
         """No package moved into an extras group may also remain a runtime dep.
 
-        This is the core F-0001 separation invariant: every dev/test/docs/profile
+        This is the core separation invariant: every dev/test/docs/profile
         package must live in exactly one place — its extras group, never also in
         ``[project].dependencies``. A double-declaration regression (re-adding a
         moved tool to runtime while leaving it in its extra) would make

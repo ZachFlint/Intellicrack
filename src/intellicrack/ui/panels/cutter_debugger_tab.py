@@ -5,8 +5,7 @@
 """Debugger tab widget for the Cutter/Rizin analysis panel.
 
 Provides a self-contained Qt widget exposing every native rizin debugger operation (attach/detach, breakpoints, stepping, continue,
-registers, memory read/write, memory regions, threads, and loaded modules) driven by the ``CutterBridge`` debug surface
-(``cutter.py:4029-4551``).
+registers, memory read/write, memory regions, threads, and loaded modules) driven by the ``CutterBridge`` debug surface.
 """
 
 from __future__ import annotations
@@ -195,7 +194,7 @@ class DebuggerTab(QWidget):
         attach_row.addWidget(self._status_label)
         # Wrapped in a fixed-height, horizontally scrollable control row rather
         # than added as a plain layout: when the surrounding sub-tab pane is
-        # squeezed short (S20-D21), a bare QHBoxLayout lets Qt clip the
+        # squeezed short, a bare QHBoxLayout lets Qt clip the
         # Start/Attach/Spawn controls off the left edge instead of keeping
         # them at natural size and reachable via horizontal scroll.
         layout.addWidget(make_control_row(attach_row))

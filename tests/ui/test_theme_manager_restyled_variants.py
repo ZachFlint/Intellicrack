@@ -75,7 +75,7 @@ class TestRestyledVariantStylesheets:
 
     @staticmethod
     def test_dark2_carries_new_accent_not_old(theme_manager: ThemeManager) -> None:
-        """dark2 stylesheet uses the restyled accent and drops the old one."""
+        """dark2 stylesheet uses its own accent colour, not the base dark theme's."""
         sheet = theme_manager.get_stylesheet(THEME_DARK2)
         assert len(sheet) > _MIN_STYLESHEET_LENGTH
         assert _DARK2_ACCENT in sheet
@@ -83,7 +83,7 @@ class TestRestyledVariantStylesheets:
 
     @staticmethod
     def test_light2_carries_new_accent_not_old(theme_manager: ThemeManager) -> None:
-        """light2 stylesheet uses the restyled accent and drops the old one."""
+        """light2 stylesheet uses its own accent colour, not the base light theme's."""
         sheet = theme_manager.get_stylesheet(THEME_LIGHT2)
         assert len(sheet) > _MIN_STYLESHEET_LENGTH
         assert _LIGHT2_ACCENT in sheet

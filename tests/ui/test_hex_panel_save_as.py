@@ -2,14 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for F14: hex panel "Save Patched Binary" must never overwrite in place.
+"""Gate that hex panel "Save Patched Binary" must never overwrite in place.
 
 ``app.py::_on_save_patched_binary`` probes the hex panel for a public
-``save_as`` method. Pre-fix, ``HexEditorPanel`` only exposed public ``save()``
-(unconditional in-place overwrite of the loaded source path) and a *private*
-``_on_save_as``, so the probe always fell through to ``save()`` -- silently
-overwriting the original binary (e.g. a system DLL/EXE) with no Save-As
-prompt.
+``save_as`` method. Without one, the probe falls through to ``save()``, which is an
+unconditional in-place overwrite of the loaded source path. A private ``_on_save_as``
+handler does not satisfy the probe, so the original binary (e.g. a system DLL/EXE)
+would be overwritten silently with no Save-As prompt.
 
 These tests drive the real, public ``HexEditorPanel.save_as()`` against a
 genuine PE file loaded through ``load_file`` and a real
@@ -59,8 +58,8 @@ class TestF14HexPanelSaveAsExists:
         """``HexEditorPanel`` must expose a public ``save_as`` callable.
 
         This is exactly the probe ``app.py::_on_save_patched_binary`` performs
-        (``getattr(hex_panel, "save_as", None)``); pre-fix it returned
-        ``None`` and the caller silently fell back to in-place ``save()``.
+        (``getattr(hex_panel, "save_as", None)``); it must not return
+        ``None``, which would make the caller silently fall back to in-place ``save()``.
 
         Args:
             qapp: The shared offscreen QApplication fixture.
@@ -116,8 +115,8 @@ class TestF14HexPanelSaveAsNeverOverwritesSource:
         document, then drives the real ``save_as()`` with
         ``QFileDialog.getSaveFileName`` monkeypatched to return a brand new
         temp path. Asserts the patched byte appears at the new path and the
-        original source file's bytes are unchanged -- the exact regression
-        this finding describes.
+        original source file's bytes are unchanged, which is the exact
+        regression this test guards against.
 
         Args:
             qapp: The shared offscreen QApplication fixture.

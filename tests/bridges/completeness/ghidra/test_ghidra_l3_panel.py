@@ -4,9 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """L3 GUI-wiring gate tests for the Ghidra bridge-completeness slices 5 and 6.
 
-Covers the panel-layer remediation for the NO-CONTROL / MISSING rows
-identified in ``audit/bridge-completeness/agent-05-ghidra-code-analysis.md``
-and ``audit/bridge-completeness/agent-06-ghidra-program-model-scripting.md``:
+Covers the panel layer for the Ghidra slices 5 and 6:
 the new XRefs add/delete-reference form, the Labels/Bookmarks "Primary"
 checkbox and bookmark removal, the memory-block remove/split/join rows, the
 "Go to Function" lookup, the new Data Type Manager "Create Type" sub-form,
@@ -22,7 +20,7 @@ invoked. ``run_bridge_coroutine_logged`` is patched at the module level (the
 same wrapper used everywhere in production) with a synchronous
 capture-and-drive stand-in so the coroutine executes for real without
 spinning up a background Qt worker thread, which is the standard technique
-already used by ``tests/test_audit3/ui/test_ghidra_panel.py`` for this exact
+already used by the Ghidra panel UI tests for this exact
 panel.
 """
 
@@ -65,7 +63,7 @@ if TYPE_CHECKING:
 
 
 class _RecordingBridge:
-    """Recording stub exposing real async coroutines for every remediated L3 row.
+    """Recording stub exposing real async coroutines for every L3 row.
 
     Every method is a genuine ``async def`` that records its call
     arguments and returns a caller-controlled payload -- never a
@@ -456,9 +454,7 @@ def _attach(panel: GhidraPanel, bridge: _RecordingBridge) -> None:
     panel.set_bridge(cast("GhidraBridge", bridge))
 
 
-# ---------------------------------------------------------------------------
-# XRefs tab: Add/Delete Reference (row 23/24)
-# ---------------------------------------------------------------------------
+# XRefs tab: Add/Delete Reference
 
 
 class TestXRefsAddDeleteReferenceWiring:
@@ -545,9 +541,7 @@ class TestXRefsAddDeleteReferenceWiring:
         assert bridge.add_reference_calls == []
 
 
-# ---------------------------------------------------------------------------
-# Labels/Bookmarks tab: Primary checkbox (row 32) + Remove bookmark (row 26)
-# ---------------------------------------------------------------------------
+# Labels/Bookmarks tab: Primary checkbox and Remove bookmark
 
 
 class TestLabelsBookmarksWiring:
@@ -678,9 +672,7 @@ class TestLabelsBookmarksWiring:
         assert bridge.remove_bookmark_calls == [(0x403000, "Error", "Warning")]
 
 
-# ---------------------------------------------------------------------------
-# Labels tab: Remove Selected label (previously NO-CONTROL remove_label)
-# ---------------------------------------------------------------------------
+# Labels tab: Remove Selected label
 
 
 class TestLabelsRemoveLabelWiring:
@@ -777,9 +769,7 @@ class TestLabelsRemoveLabelWiring:
         assert bridge.remove_label_calls == []
 
 
-# ---------------------------------------------------------------------------
-# Memory tab: Remove/Split/Join block rows (previously MISSING bridge methods)
-# ---------------------------------------------------------------------------
+# Memory tab: Remove/Split/Join block rows
 
 
 class TestMemoryBlockOpsWiring:
@@ -876,13 +866,11 @@ class TestMemoryBlockOpsWiring:
         assert bridge.remove_memory_block_calls == []
 
 
-# ---------------------------------------------------------------------------
-# Functions sidebar: Go to Function (row 13, get_function singular)
-# ---------------------------------------------------------------------------
+# Functions sidebar: Go to Function
 
 
 class TestGoToFunctionWiring:
-    """L3 gates for the new Go-to-Function lookup (row 13, get_function singular)."""
+    """L3 gates for the Go-to-Function lookup."""
 
     @staticmethod
     def test_goto_button_calls_get_function_with_parsed_address(
@@ -970,9 +958,7 @@ class TestGoToFunctionWiring:
         assert bridge.get_function_calls == []
 
 
-# ---------------------------------------------------------------------------
-# Data Type Manager: Create Type sub-form (rows 3-6, create_data_type)
-# ---------------------------------------------------------------------------
+# Data Type Manager: Create Type sub-form
 
 
 class TestDataTypeManagerCreateTypeWiring:
@@ -1096,9 +1082,7 @@ class TestDataTypeManagerCreateTypeWiring:
         assert calls[0][2] == "union"
 
 
-# ---------------------------------------------------------------------------
-# Program Tree tab: Refresh + Create/Move (row 11, MISSING row 12)
-# ---------------------------------------------------------------------------
+# Program Tree tab: Refresh + Create/Move
 
 
 class TestProgramTreeWiring:
@@ -1231,9 +1215,7 @@ class TestProgramTreeWiring:
         assert not calls
 
 
-# ---------------------------------------------------------------------------
 # Analysis Extras tab: instruction flow / register / thunk / ext-refs / properties / call graph
-# ---------------------------------------------------------------------------
 
 
 class TestAnalysisExtrasWiring:
@@ -1449,8 +1431,7 @@ class TestAnalysisExtrasWiring:
         """Clicking Build Bidirectional Graph must call bridge.get_call_graph, not get_call_tree.
 
         Falsifiable: rewiring this button to call ``get_call_tree``
-        (the pre-existing, single-direction method the audit flagged
-        as the accidental duplicate path) instead of ``get_call_graph``
+        (the single-direction method that duplicates this path) instead of ``get_call_graph``
         would leave ``calls`` empty since only ``get_call_graph`` is
         implemented on this stub.
 

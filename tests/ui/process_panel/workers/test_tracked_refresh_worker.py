@@ -2,14 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit4 B7 F-0026: TrackedRefreshWorker error surfacing.
+"""Regression tests for TrackedRefreshWorker error surfacing.
 
 These tests verify that when ProcessManager raises inside
 TrackedRefreshWorker.run(), the worker emits ``refresh_error`` with the
 failure reason and does NOT emit ``refresh_finished`` with an empty list
-(the old silent-swallow behaviour).  Each test would fail against the
-pre-fix code where the exception was swallowed and ``refresh_finished``
-was always emitted with ``result == []``.
+(a silent swallow).  Each test would fail if the exception were swallowed and
+``refresh_finished`` were emitted with ``result == []``.
 """
 
 from __future__ import annotations
@@ -70,8 +69,7 @@ class _RaisingProcessManager:
 
     Substituted into the ``workers`` module namespace during tests so that
     TrackedRefreshWorker.run() encounters a real exception on the actual
-    ProcessManager call site — the same code path that was broken before
-    the fix.
+    ProcessManager call site, the code path under test.
     """
 
     @staticmethod
@@ -85,7 +83,7 @@ class _RaisingProcessManager:
 
 
 class TestTrackedRefreshWorkerError:
-    """Tests that verify error-path behaviour of TrackedRefreshWorker (F-0026)."""
+    """Tests that verify error-path behaviour of TrackedRefreshWorker."""
 
     def test_error_emits_refresh_error_signal(
         self,
@@ -93,10 +91,6 @@ class TestTrackedRefreshWorkerError:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Worker emits ``refresh_error`` when ProcessManager.get_instance raises.
-
-        This test would FAIL without the fix because the pre-fix code caught
-        the exception, logged it, and fell through to
-        ``refresh_finished.emit([])`` — ``refresh_error`` did not exist.
 
         Args:
             qapp: Qt application fixture.
@@ -123,9 +117,8 @@ class TestTrackedRefreshWorkerError:
     ) -> None:
         """Worker must NOT emit ``refresh_finished`` when an exception occurs.
 
-        Without the fix, a caught error fell through to
-        ``refresh_finished.emit([])`` making an empty list indistinguishable
-        from a successful refresh of a genuinely empty tracked list.
+        A caught error must not fall through to ``refresh_finished.emit([])``, which would make
+        an empty list indistinguishable from a successful refresh of a genuinely empty tracked list.
 
         Args:
             qapp: Qt application fixture.
@@ -180,7 +173,7 @@ class TestTrackedRefreshWorkerError:
     ) -> None:
         """``refresh_error`` is a string-typed pyqtBoundSignal that delivers payloads intact.
 
-        This replaces the former ``hasattr`` smoke test.  It would fail if:
+        It would fail if:
 
         - ``refresh_error`` were removed from the class
         - its type signature were changed away from a single ``str`` argument

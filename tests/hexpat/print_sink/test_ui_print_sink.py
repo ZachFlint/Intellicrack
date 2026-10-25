@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""UI regression tests for audit5 F-0007 (HexPat ``std::print`` sink wiring).
+"""UI regression tests for the HexPat ``std::print`` sink wiring.
 
 Verifies the ``PatternEditorMixin`` consumer-side wiring:
 
@@ -131,7 +131,7 @@ class _StubInterpreterWithPrintSink:
 
 
 class _PatternHarness(QWidget, PatternEditorMixin):
-    """Concrete ``PatternEditorMixin`` consumer for the U12 regressions.
+    """Concrete ``PatternEditorMixin`` consumer for the regression cases.
 
     Provides every attribute slot declared by ``PatternEditorMixin`` so the
     mixin's interpreter helpers run without raising. The harness binds the
@@ -337,9 +337,8 @@ class TestPrintSinkRebindsOnCachedInterpreter:
     ) -> None:
         """A second apply against a cached interpreter must call ``set_print_sink``.
 
-        Pre-audit code would have called ``HexPatInterpreter_cls()`` once
-        without forwarding any sink, leaving every subsequent apply silent
-        for the user. The remediation reinstalls the sink each apply.
+        The sink is reinstalled on every apply, so a cached interpreter never leaves
+                the user with silent output.
 
         Args:
             qapp: Session-scoped QApplication fixture.

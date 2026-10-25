@@ -2,16 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-02 GUI audit findings in ``font_manager``.
+"""Gates for ``font_manager`` config-driven font family and size selection.
 
-``L2`` -- ``font_config.json`` is loaded into ``FontManager._font_config`` but
-was never consulted for actual font selection: ``_setup_fonts_from_loaded``,
-``_setup_fallback_fonts``, and ``_find_available_font`` operated exclusively
-on the hardcoded ``FALLBACK_CODE_FONTS``/``FALLBACK_UI_FONTS`` module
-constants, and ``get_code_font``/``get_ui_font``/``get_heading_font`` used
-hardcoded default size parameters rather than the JSON's ``font_sizes``
-values. Editing ``font_config.json``'s primary/fallback font lists or
-``font_sizes`` therefore silently did nothing.
+``font_config.json`` is loaded into ``FontManager._font_config`` and must be consulted for actual font selection: ``_setup_fonts_from_loaded``,
+``_setup_fallback_fonts``, and ``_find_available_font`` must not operate exclusively on the hardcoded ``FALLBACK_CODE_FONTS``/``FALLBACK_UI_FONTS`` module
+constants, and ``get_code_font``/``get_ui_font``/``get_heading_font`` must not use hardcoded default size parameters instead of the JSON's ``font_sizes``
+values. Otherwise editing ``font_config.json``'s primary/fallback font lists or ``font_sizes`` would silently do nothing.
 
 Each test below points ``FontManager`` at a synthetic ``font_config.json``
 with font family names guaranteed not to exist on the test machine and font
@@ -111,14 +107,14 @@ def test_l2_config_font_candidates_select_configured_family_over_hardcoded_fallb
 ) -> None:
     """Configured monospace/UI font names, not the hardcoded lists, are selected.
 
-    Pre-fix, ``_setup_fallback_fonts`` called
+    ``_setup_fallback_fonts`` must not call
     ``FontManager._find_available_font(FALLBACK_CODE_FONTS)`` and
     ``FALLBACK_UI_FONTS`` directly, so it would resolve to whichever
     hardcoded candidate (``"JetBrains Mono"``, ``"Consolas"``, ``"Segoe UI"``,
     ``"monospace"``, etc.) is installed on the test machine -- never the
     config's ``"ZzzTestCodeFontL2"``/``"ZzzTestUiFontL2"`` placeholder names,
     which are guaranteed absent from the system font database. This
-    assertion therefore fails against the pre-fix code and only passes once
+    assertion therefore fails against code that bypasses the config and only passes once
     ``_config_font_candidates`` is consulted first.
 
     Args:
@@ -143,11 +139,11 @@ def test_l2_get_code_font_default_size_uses_config_code_default(
 ) -> None:
     """``get_code_font()`` with no explicit size uses the config's ``code_default``.
 
-    Pre-fix, ``get_code_font`` had a hardcoded ``size: int = 10`` parameter
+    ``get_code_font`` must not use a hardcoded ``size: int = 10`` parameter
     that was used verbatim regardless of ``font_config.json``, so calling it
     without an explicit size always produced a 10pt font even though the
     config specifies ``code_default: 17``. This assertion fails against the
-    pre-fix code (``pointSize() == 10``) and passes once the default resolves
+    hardcoded code (``pointSize() == 10``) and passes once the default resolves
     through ``_config_font_size``.
 
     Args:
@@ -171,10 +167,10 @@ def test_l2_get_ui_font_default_size_uses_config_ui_default(
 ) -> None:
     """``get_ui_font()`` with no explicit size uses the config's ``ui_default``.
 
-    Pre-fix, ``get_ui_font`` had a hardcoded ``size: int = 9`` parameter used
+    ``get_ui_font`` must not have a hardcoded ``size: int = 9`` parameter used
     verbatim regardless of ``font_config.json``, so calling it without an
     explicit size always produced a 9pt font even though the config
-    specifies ``ui_default: 15``. This assertion fails against the pre-fix
+    specifies ``ui_default: 15``. This assertion fails against the hardcoded
     code (``pointSize() == 9``) and passes once the default resolves through
     ``_config_font_size``.
 
@@ -199,11 +195,11 @@ def test_l2_get_heading_font_default_size_uses_config_ui_large(
 ) -> None:
     """``get_heading_font()`` with no explicit size uses the config's ``ui_large``.
 
-    Pre-fix, ``get_heading_font`` had a hardcoded ``size: int = 12``
+    ``get_heading_font`` must not have a hardcoded ``size: int = 12``
     parameter forwarded straight into ``get_ui_font(size)`` regardless of
     ``font_config.json``, so calling it without an explicit size always
     produced a 12pt heading font even though the config specifies
-    ``ui_large: 21``. This assertion fails against the pre-fix code
+    ``ui_large: 21``. This assertion fails against the hardcoded code
     (``pointSize() == 12``) and passes once the default resolves through
     ``_config_font_size``.
 
@@ -229,10 +225,10 @@ def test_l2_explicit_size_argument_still_overrides_config_default(
 ) -> None:
     """An explicit ``size`` argument still wins over the config default.
 
-    Confirms the ``size is not None`` branch added by the fix does not
+    Confirms the ``size is not None`` branch does not
     regress the pre-existing ability to request a specific size, so a caller
     that already passes an explicit size (e.g. a hex-view widget honoring a
-    user zoom level) keeps working identically before and after the fix.
+    user zoom level) keeps working identically.
 
     Args:
         qapp: The shared QApplication fixture (required for QFontDatabase).

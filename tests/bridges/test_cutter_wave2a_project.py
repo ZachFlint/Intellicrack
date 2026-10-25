@@ -5,8 +5,7 @@
 
 """Gates for CutterBridge project management and write-transform operations.
 
-Covers the NONE-verdict operations identified in the section-02 test-coverage
-audit under the CUTTER-PROJECT scope:
+Covers the following operations:
 
 - Project management: save_project, open_project, list_projects
 - Write transforms: write_xor, write_add, write_sub, write_from_file,

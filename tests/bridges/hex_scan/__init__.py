@@ -3,4 +3,4 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit7 regression tests for the hex editor bridge."""
+"""Regression tests for the hex editor bridge."""

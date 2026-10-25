@@ -3,32 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave 2b breakpoint and watchpoint RPC gate tests for ``X64DbgBridge``.
+"""Breakpoint and watchpoint RPC gate tests for ``X64DbgBridge``.
 
-Directly fixes FG-2 (breakpoints tautology): drives the real ``bp_list`` /
-``wp_set`` / ``wp_remove`` RPCs via a canned in-process fake pipe and asserts
-exact parsed ``BreakpointInfo`` / ``WatchpointInfo`` field values plus exact
-command framing for set/remove/configure/api/dll/logging operations.  No
-``BreakpointInfo`` objects are pre-inserted into ``_breakpoints`` and then
-re-found (the tautology this file replaces).
+Drives the real ``bp_list``, ``wp_set`` and ``wp_remove`` RPCs via a canned in-process fake pipe and asserts exact parsed ``BreakpointInfo`` and ``WatchpointInfo`` field values plus exact command framing for set, remove, configure, API, DLL and logging operations. No ``BreakpointInfo`` objects are pre-inserted into ``_breakpoints`` and then re-found, since that would exercise only local tracking.
 
-Operations gated and their audit verdict:
-
-* ``get_breakpoints`` — FG-2 tautology replaced with bp_list RPC round-trip
-* ``remove_breakpoint`` — WEAK (only ToolError path existed)
-* ``set_watchpoint`` — WEAK (only ToolError path existed)
-* ``remove_watchpoint`` — NO COVERAGE
-* ``set_breakpoint_on_api`` — WEAK (only monkeypatched, not RPC-verified)
-* ``set_logging_breakpoint`` — NO COVERAGE
-* ``configure_breakpoint`` — NO COVERAGE
-* ``set_dll_breakpoint`` — NO COVERAGE
-
-Operations skipped (verdict=REAL, do not duplicate):
-
-* ``set_breakpoint`` — REAL (test_x64dbg_audit6.py TestSetBreakpointVerification)
-* ``enable_breakpoint`` — REAL (test_x64dbg_audit7_f0001.py)
-* ``disable_breakpoint`` — REAL (test_x64dbg_audit7_f0001.py)
-* ``get_watchpoints`` — REAL (test_x64dbg.py:213-235)
+Covered operations: ``get_breakpoints``, ``remove_breakpoint``, ``set_watchpoint``, ``remove_watchpoint``, ``set_breakpoint_on_api``, ``set_logging_breakpoint``, ``configure_breakpoint`` and ``set_dll_breakpoint``. ``set_breakpoint``, ``enable_breakpoint``, ``disable_breakpoint`` and ``get_watchpoints`` are covered by other test modules and are not repeated here.
 """
 
 from __future__ import annotations
@@ -163,13 +142,9 @@ def bridge() -> X64DbgBridge:
 
 @pytest.mark.asyncio
 class TestGetBreakpointsViaBpListRpc:
-    """FG-2 fix: ``get_breakpoints`` drives the real ``bp_list`` RPC.
+    """``get_breakpoints`` drives the real ``bp_list`` RPC.
 
-    The removed tautological test pre-inserted ``BreakpointInfo`` objects
-    into ``bridge.breakpoints`` then called ``get_breakpoints()`` and found
-    them — exercising only local tracking, never the plugin-side ``bp_list``
-    RPC path.  These tests start with an empty local registry and verify the
-    entire flow from RPC response to parsed ``BreakpointInfo`` field values.
+    These tests start with an empty local registry and verify the entire flow from RPC response to parsed ``BreakpointInfo`` field values.
     """
 
     async def test_bp_list_rpc_is_driven_and_fields_parsed(
@@ -379,11 +354,9 @@ class TestGetBreakpointsViaBpListRpc:
 
 @pytest.mark.asyncio
 class TestRemoveBreakpointCommandFraming:
-    """WEAK fix: ``remove_breakpoint`` drives the real ``bp_remove`` RPC.
+    """``remove_breakpoint`` drives the real ``bp_remove`` RPC.
 
-    The previous test only checked the no-plugin ``ToolError`` path and
-    manually inserted a ``BreakpointInfo`` without exercising the actual
-    removal command sent to the debugger.
+    The test checks the removal command sent to the debugger rather than only the no-plugin ``ToolError`` path.
     """
 
     async def test_bp_remove_issued_with_exact_address(
@@ -462,10 +435,7 @@ class TestRemoveBreakpointCommandFraming:
     ) -> None:
         """Calling ``remove_breakpoint`` with no plugin raises ``ToolError``.
 
-        Guards the no-plugin path that was the only gate in the previous WEAK
-        test.  The ``match=`` argument pins the exact error text so any
-        generic ``ToolError`` propagation from an unrelated path is not
-        accidentally accepted.
+        Guards the no-plugin path. The ``match=`` argument pins the exact error text so that a generic ``ToolError`` from an unrelated path is not accepted.
 
         Args:
             bridge: Fresh bridge fixture.
@@ -476,10 +446,9 @@ class TestRemoveBreakpointCommandFraming:
 
 @pytest.mark.asyncio
 class TestSetWatchpointCommandFraming:
-    """WEAK fix: ``set_watchpoint`` drives the real ``wp_set`` RPC.
+    """``set_watchpoint`` drives the real ``wp_set`` RPC.
 
-    Verifies the access-type mapping (``read`` → ``r``, ``write`` → ``w``,
-    ``execute`` → ``x``) and that the address and size reach the plugin.
+    Verifies the access-type mapping (``read`` to ``r``, ``write`` to ``w``, ``execute`` to ``x``) and that the address and size reach the plugin.
     """
 
     async def test_write_watch_type_maps_to_w_access(
@@ -597,7 +566,7 @@ class TestSetWatchpointCommandFraming:
 
 @pytest.mark.asyncio
 class TestRemoveWatchpoint:
-    """NO COVERAGE → real gates: ``remove_watchpoint`` drives ``wp_remove`` RPC."""
+    """``remove_watchpoint`` drives the ``wp_remove`` RPC."""
 
     async def test_wp_remove_issued_with_watchpoint_address(
         self,
@@ -697,10 +666,9 @@ class TestRemoveWatchpoint:
 
 @pytest.mark.asyncio
 class TestSetBreakpointOnApi:
-    """WEAK fix: ``set_breakpoint_on_api`` drives the real eval + bp_set RPCs.
+    """``set_breakpoint_on_api`` drives the real eval and ``bp_set`` RPCs.
 
-    The existing test only monkeypatched ``set_breakpoint`` so the eval →
-    resolution path was never exercised end-to-end over a fake pipe.
+    The eval-to-resolution path is exercised end to end over the fake pipe rather than through a monkeypatched ``set_breakpoint``.
     """
 
     async def test_resolved_path_drives_eval_then_bp_set(
@@ -831,7 +799,7 @@ class TestSetBreakpointOnApi:
 
 @pytest.mark.asyncio
 class TestSetLoggingBreakpoint:
-    """NO COVERAGE → real gates: ``set_logging_breakpoint`` exec command framing."""
+    """``set_logging_breakpoint`` exec command framing."""
 
     async def test_three_exec_commands_emitted_when_non_stopping(
         self,
@@ -906,7 +874,7 @@ class TestSetLoggingBreakpoint:
 
 @pytest.mark.asyncio
 class TestConfigureBreakpoint:
-    """NO COVERAGE → real gates: ``configure_breakpoint`` per-property command framing."""
+    """``configure_breakpoint`` per-property command framing."""
 
     async def test_condition_issues_bpcond_with_quoted_expression(
         self,
@@ -1049,7 +1017,7 @@ class TestConfigureBreakpoint:
 
 @pytest.mark.asyncio
 class TestSetDllBreakpoint:
-    """NO COVERAGE → real gates: ``set_dll_breakpoint`` exec command framing."""
+    """``set_dll_breakpoint`` exec command framing."""
 
     async def test_load_event_issues_librarian_set_break_point(
         self,

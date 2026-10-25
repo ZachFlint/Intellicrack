@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Production-grade tests for audit4 A3: QEMU sandbox findings F-0002 through F-0035.
+"""Tests for the QEMU sandbox backend.
 
-Each test class addresses one or more audit findings and is structured so that
-the test would have failed against the original defective code and passes on
-the fixed implementation.
+Covers guest agent connection, result polling, command-line construction, snapshots,
+anti-evasion, YARA scanning and ``run_binary`` behavior.
 """
 
 from __future__ import annotations
@@ -42,11 +41,6 @@ from intellicrack.sandbox.qemu import (
     QMPResponse,
 )
 from tests.sandbox.qemu.guest_agent_server import IntellicrackAgentServer
-
-
-# ---------------------------------------------------------------------------
-# Test-only subclass that exposes controlled state manipulation
-# ---------------------------------------------------------------------------
 
 
 class _TestQEMUSandbox(QEMUSandbox):
@@ -280,11 +274,6 @@ class _TestQEMUSandbox(QEMUSandbox):
         return QEMUSandbox._anti_evasion_smbios_entries(profile)
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
 def _resolve_cmd_exe() -> str:
     """Return the absolute path to the Windows command interpreter.
 
@@ -412,20 +401,15 @@ class _ConnectableAgent(GuestAgentClient):
         return (0, "", "")
 
 
-# ---------------------------------------------------------------------------
-# F-0002: GuestAgentClient.connect must be called after start()
-# ---------------------------------------------------------------------------
-
-
 class TestF0002AgentConnectCalled:
-    """F-0002: start() must drive GuestAgentClient.connect against a live agent socket.
+    """start() must drive GuestAgentClient.connect against a live agent socket.
 
     These tests exercise the real production method ``_ensure_agent_connected``
     (the single code path that ``start`` -> ``_start_impl`` -> ``_attach_qemu_agents``
     uses to await ``agent.connect``) against a *real* ``GuestAgentClient`` and a
     *real* loopback TCP server. Nothing in the connect path is mocked: a genuine
     socket is opened end to end. If production stopped awaiting ``agent.connect``
-    (the original bug) the agent would never reach ``is_connected == True`` and
+    the agent would never reach ``is_connected == True`` and
     the failure path would not raise, so both tests would go red.
     """
 
@@ -437,7 +421,7 @@ class TestF0002AgentConnectCalled:
         production ``QEMUSandbox._ensure_agent_connected`` helper. The peer
         records the accepted connection, proving an actual TCP connection was
         established by the production connect path. A socket that merely
-        accepts would not do: that is the dead hostfwd of S17-D25, and a client
+        accepts would not do: that is a dead hostfwd, and a client
         that called it connected would pass a test written against one.
         """
 
@@ -504,13 +488,8 @@ class TestF0002AgentConnectCalled:
         assert after is True, "is_connected must be True after a successful real connect()"
 
 
-# ---------------------------------------------------------------------------
-# F-0003: _poll_for_result returns real exit code from result file
-# ---------------------------------------------------------------------------
-
-
 class TestF0003PollForResult:
-    """F-0003: _poll_for_result must parse the exit code from the result file."""
+    """_poll_for_result must parse the exit code from the result file."""
 
     def test_poll_reads_exit_code_from_result_file(self, tmp_path: Path) -> None:
         """_poll_for_result returns the full 3-tuple with the parsed exit code.
@@ -634,8 +613,7 @@ class TestF0003PollForResult:
     def test_poll_returns_nonzero_exit_on_nonzero_file(self, tmp_path: Path) -> None:
         """_poll_for_result preserves non-zero exit codes.
 
-        The old hardcoded path always returned 0; this test ensures real
-        values are passed through.
+        Real values are passed through rather than a hardcoded 0.
 
         Args:
             tmp_path: Pytest temp directory.
@@ -654,9 +632,8 @@ class TestF0003PollForResult:
         """_poll_for_result returns stdout/stderr content from sidecar files.
 
         Simulates a guest command that emitted both stdout and stderr by
-        writing the sidecar files alongside the result file. On the unfixed
-        ``main`` branch the function returns empty stdout/stderr regardless;
-        on the fixed branch both streams must come back to the caller.
+        writing the sidecar files alongside the result file. Both streams
+        must come back to the caller.
 
         Args:
             tmp_path: Pytest temp directory.
@@ -688,8 +665,7 @@ class TestF0003PollForResult:
     def test_poll_returns_empty_when_sidecar_missing(self, tmp_path: Path) -> None:
         """Missing sidecars yield empty strings without raising.
 
-        The fix must distinguish ``sidecar absent`` from ``sidecar contains
-        empty string`` only by returning ``""`` either way; it must not raise
+        An absent sidecar and an empty one both yield ``""``; neither may raise
         FileNotFoundError or leak the missing-path exception to the caller.
 
         Args:
@@ -855,13 +831,8 @@ class TestF0003PollForResult:
         assert result_text == "5", f"result file must record the command exit code 5; got {result_text!r}"
 
 
-# ---------------------------------------------------------------------------
-# F-0004: -cpu host must NOT appear when accelerator is TCG
-# ---------------------------------------------------------------------------
-
-
 class TestF0004CpuArgNotHostForTCG:
-    """F-0004: -cpu host requires hardware virtualisation; must be absent with TCG."""
+    """-cpu host requires hardware virtualisation; must be absent with TCG."""
 
     def _build_command_sync(self, sb: _TestQEMUSandbox, tmp_path: Path) -> list[str]:
         """Run _build_qemu_command synchronously.
@@ -918,19 +889,14 @@ class TestF0004CpuArgNotHostForTCG:
         assert "host" in cpu_value.lower(), f"Expected 'host' in -cpu with KVM; got '{cpu_value}'"
 
 
-# ---------------------------------------------------------------------------
-# F-0005: Windows shared folder uses FAT drive, not SMB/9p
-# ---------------------------------------------------------------------------
-
-
 class TestF0005SharedFolderWindowsCompatible:
-    """F-0005: On Windows host the shared folder must use the FAT drive method."""
+    """On a Windows host the shared folder must use the FAT drive method."""
 
     def test_windows_guest_uses_fat_drive_not_smb(self, tmp_path: Path) -> None:
         """Windows-guest shared folder is a read-only FAT drive, not SMB or 9p.
 
         The volume is ``fat:`` rather than ``fat:rw:`` because vvfat's
-        write-back path aborts the virtual machine (S17-D69); the guest writes
+        write-back path aborts the virtual machine; the guest writes
         to its own disk instead.
 
         Args:
@@ -965,13 +931,8 @@ class TestF0005SharedFolderWindowsCompatible:
         assert "9p" not in cmd_str, "9p is not supported on Windows host QEMU"
 
 
-# ---------------------------------------------------------------------------
-# F-0009: Agent script must not use $using:; uses -MessageData or explicit var
-# ---------------------------------------------------------------------------
-
-
 class TestF0009AgentScriptNoPsUsing:
-    """F-0009: QEMU agent script must not use $using: scope specifier.
+    """QEMU agent script must not use $using: scope specifier.
 
     $using: is only valid in Invoke-Command / ForEach-Object -Parallel.
     In a Register-ObjectEvent -Action block it is a syntax error and the
@@ -986,9 +947,9 @@ class TestF0009AgentScriptNoPsUsing:
     def test_windows_agent_script_binds_and_reads_log_path_via_messagedata(self) -> None:
         """The log path must be bound via ``-MessageData`` and read via ``$Event.MessageData``.
 
-        The earlier form accepted either ``-MessageData`` or ``$Global:``
-        appearing anywhere, which does not prove the log path is actually
-        carried into the ``-Action`` block. PowerShell's
+        Accepting either ``-MessageData`` or ``$Global:`` anywhere would not
+        prove the log path is actually carried into the ``-Action`` block.
+        PowerShell's
         ``Register-ObjectEvent ... -MessageData <value> -Action { ... }`` exposes
         the bound value only as ``$Event.MessageData`` inside the action block;
         if the registration binds the path but the action never reads
@@ -1009,19 +970,14 @@ class TestF0009AgentScriptNoPsUsing:
         )
 
 
-# ---------------------------------------------------------------------------
-# F-0016: _detect_accelerator must NOT report WHPX when Hyper-V is disabled
-# ---------------------------------------------------------------------------
-
-
 class TestF0016WhpxRequiresHyperV:
-    """F-0016: _detect_accelerator must skip WHPX when Hyper-V prerequisites fail."""
+    """_detect_accelerator must skip WHPX when Hyper-V prerequisites fail."""
 
     def test_whpx_skipped_when_hyperv_prerequisites_fail(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """WHPX is not selected when _probe_whpx_host_prerequisites returns False.
 
-        The old bug reported WHPX available whenever the QEMU binary was
-        compiled with WHPX support, ignoring whether Hyper-V was enabled.
+        A QEMU binary compiled with WHPX support is not enough; Hyper-V must
+        also be enabled.
 
         Args:
             monkeypatch: Pytest fixture isolating the host Hyper-V probe and
@@ -1085,22 +1041,16 @@ class TestF0016WhpxRequiresHyperV:
         assert result is False, "WHPX prerequisites must be False on non-Windows"
 
 
-# ---------------------------------------------------------------------------
-# F-0022: apply_anti_evasion must NOT use reg.exe if blocked by allowlist
-# F-0029: apply_anti_evasion(profile=...) must actually use the profile
-# ---------------------------------------------------------------------------
-
-
 class TestF0022F0029AntiEvasion:
-    """F-0022 / F-0029: apply_anti_evasion uses profile param and agent allowlist-safe commands."""
+    """apply_anti_evasion uses profile param and agent allowlist-safe commands."""
 
     def test_anti_evasion_profile_drives_real_smbios_argv(self, tmp_path: Path) -> None:
         """The launch profile drives the actual ``-smbios`` manufacturer in the QEMU argv.
 
-        The earlier weak form only checked that ``apply_anti_evasion`` echoed
-        its own ``profile`` argument back into the result dict. This gate
-        instead drives the real ``_build_qemu_command`` with a ``workstation``
-        launch config and verifies the observable side effect: the SMBIOS
+        Echoing the ``profile`` argument back from ``apply_anti_evasion`` would
+        prove nothing, so this gate drives the real ``_build_qemu_command``
+        with a ``workstation`` launch config and verifies the observable side
+        effect: the SMBIOS
         ``-smbios`` arguments carry the workstation vendor identity
         (``Dell Inc.``), and never the default vendor (``HP``). The expected
         vendor strings are the documented identity values
@@ -1145,8 +1095,8 @@ class TestF0022F0029AntiEvasion:
 
         sb.state.status = "running"
         # A connected agent whose guest-side commands succeed: apply_anti_evasion
-        # now refuses to report a clean success when the guest-side hardening it
-        # attempted did not run (S17-D77), so a disconnected agent would raise.
+        # refuses to report a clean success when the guest-side hardening it
+        # attempted did not run, so a disconnected agent would raise.
         sb.set_agent(_ConnectableAgent(connected=True))
 
         async def _run() -> dict[str, Any]:
@@ -1187,7 +1137,7 @@ class TestF0022F0029AntiEvasion:
         board product ``21AHS00000`` and the type-3 ``asset=21AHS00000``. The
         default type-3 asset ``8767`` and HP vendor must be absent. (SMBIOS
         type-3 exposes no ``chassis-type`` parameter in QEMU - passing one is
-        rejected outright, S17-D19 - so the laptop chassis is distinguished by
+        rejected outright - so the laptop chassis is distinguished by
         its asset tag instead.) These literals are the documented laptop
         identity (independent oracle), so confusing laptop with
         default/workstation trips the gate.
@@ -1238,8 +1188,8 @@ class TestF0022F0029AntiEvasion:
 
         sb.state.status = "running"
         # A connected agent whose guest-side commands succeed: apply_anti_evasion
-        # now refuses to report a clean success when the guest-side hardening it
-        # attempted did not run (S17-D77), so a disconnected agent would raise.
+        # refuses to report a clean success when the guest-side hardening it
+        # attempted did not run, so a disconnected agent would raise.
         sb.set_agent(_ConnectableAgent(connected=True))
 
         async def _run() -> dict[str, Any]:
@@ -1252,11 +1202,6 @@ class TestF0022F0029AntiEvasion:
         assert len(smbios_techniques) == 3, (
             f"apply_anti_evasion must report one technique per laptop SMBIOS entry; got {result['techniques']!r}"
         )
-
-
-# ---------------------------------------------------------------------------
-# F-0023 / S17-D59: list_snapshots reads the block layer, not a monitor table
-# ---------------------------------------------------------------------------
 
 
 def _snapshot_record(name: str) -> dict[str, object]:
@@ -1337,13 +1282,12 @@ class _RecordedQueryBlock:
 
 
 class TestListSnapshotsReadsTheBlockLayer:
-    """S17-D59: the snapshot list must come from structured block-layer data.
+    """The snapshot list must come from structured block-layer data.
 
-    The previous implementation parsed the ``info snapshots`` monitor table by
-    column and kept only rows whose first field was numeric. QEMU 10.1 prints
-    ``--`` in that column, so every row was discarded and the list came back
-    empty for a disk that plainly held snapshots - which is what produced the
-    live ``count: 0`` immediately after a snapshot was created.
+    Parsing the ``info snapshots`` monitor table by column and keeping only rows
+    whose first field is numeric fails on QEMU 10.1, which prints ``--`` in that
+    column: every row would be discarded and the list would come back empty for
+    a disk that plainly holds snapshots.
     """
 
     def test_names_come_back_from_a_real_query_block_reply(self) -> None:
@@ -1395,8 +1339,7 @@ class TestListSnapshotsReadsTheBlockLayer:
     def test_a_refused_query_is_not_reported_as_an_empty_list(self) -> None:
         """A monitor that refuses the query must not look like "no snapshots".
 
-        This is the same false-negative shape as the defect itself: "there are
-        none" and "I could not find out" must not be the same answer.
+        "There are none" and "I could not find out" must not be the same answer.
         """
         sb = _make_sandbox()
         sb.set_qmp(_RecordedQueryBlock([], success=False))
@@ -1408,13 +1351,8 @@ class TestListSnapshotsReadsTheBlockLayer:
             asyncio.run(_run())
 
 
-# ---------------------------------------------------------------------------
-# F-0025: stop() cleans active captures
-# ---------------------------------------------------------------------------
-
-
 class TestF0025StopClearsCaptures:
-    """F-0025: stop() must clear _active_captures (resource leak fix)."""
+    """stop() must clear _active_captures."""
 
     def test_stop_clears_active_captures_dict(self, tmp_path: Path) -> None:
         """_active_captures is empty after stop() returns.
@@ -1450,18 +1388,13 @@ class TestF0025StopClearsCaptures:
         assert len(cleanup_calls) == 1, f"stop() must run _cleanup exactly once; ran it {len(cleanup_calls)} times"
 
 
-# ---------------------------------------------------------------------------
-# F-0028: yara_scan must NOT scan user input on fallback
-# ---------------------------------------------------------------------------
-
-
 class TestF0028YaraScanFallback:
-    """F-0028: yara_scan fallback must scan dropped-file zips, not the input folder."""
+    """yara_scan fallback must scan dropped-file zips, not the input folder."""
 
     def test_yara_scan_uses_output_dir_not_input_on_no_zip(self, tmp_path: Path) -> None:
         """With no dropped-file zip the scan reads collected output, never the input dir.
 
-        The old bug fell back to scanning shared/input/, which holds whatever
+        The scan must not fall back to shared/input/, which holds whatever
         the user originally submitted rather than anything the guest produced.
         Both files here carry content the built-in rules match, so a scan that
         strayed into the input directory would say so in its own results: the
@@ -1557,13 +1490,8 @@ class TestF0028YaraScanFallback:
             assert input_dir_resolved not in p.resolve().parents, f"yara_scan must not scan anything under shared/input; found '{p}'"
 
 
-# ---------------------------------------------------------------------------
-# F-0031: run_binary must not have a hard-coded asyncio.sleep(2)
-# ---------------------------------------------------------------------------
-
-
 class TestF0031RunBinaryNoFixedSleep:
-    """F-0031: run_binary must not unconditionally sleep 2 seconds after execution."""
+    """run_binary must not unconditionally sleep 2 seconds after execution."""
 
     def test_run_binary_completes_fast_without_monitoring(self, tmp_path: Path) -> None:
         """run_binary without monitoring should not have a fixed 2s sleep.
@@ -1597,13 +1525,8 @@ class TestF0031RunBinaryNoFixedSleep:
         assert elapsed < 1.5, f"run_binary without monitoring took {elapsed:.2f}s — a hard-coded asyncio.sleep(2) would make this >= 2s"
 
 
-# ---------------------------------------------------------------------------
-# F-0035: run_binary success flag must match exit_code
-# ---------------------------------------------------------------------------
-
-
 class TestF0035RunBinarySuccessMatchesExitCode:
-    """F-0035: run_binary result must be 'success' iff exit_code == 0."""
+    """run_binary result must be 'success' iff exit_code == 0."""
 
     def _run_with_exit(self, exit_code: int, tmp_path: Path) -> str:
         """Run sandbox run_binary with a controlled exit code.
@@ -1647,8 +1570,6 @@ class TestF0035RunBinarySuccessMatchesExitCode:
     def test_exit_code_nonzero_does_not_produce_success(self, tmp_path: Path) -> None:
         """Nonzero exit_code must NOT yield result == 'success'.
 
-        The original bug always returned 'success' regardless of exit code.
-
         Args:
             tmp_path: Pytest temp directory.
         """
@@ -1665,19 +1586,13 @@ class TestF0035RunBinarySuccessMatchesExitCode:
         assert result in {"error", "failure", "crashed"}, f"exit_code 2 must map to error/failure; got '{result}'"
 
 
-# ---------------------------------------------------------------------------
-# F-0006: Guest agent script must have a startup entry point wired in
-# ---------------------------------------------------------------------------
-
-
 class TestF0006AgentScriptStartupWired:
-    """F-0006: The guest agent startup script must be present and reference the agent."""
+    """The guest agent startup script must be present and reference the agent."""
 
     def test_windows_startup_script_wires_agent(self, tmp_path: Path) -> None:
         """``start_agent.cmd`` must exist and actually launch the Windows agent script.
 
-        F-0006 is "startup entry point wired in", so existence of *some* file is
-        not enough: the startup wrapper itself must be present and must reference
+        Existence of *some* file is not enough: the startup wrapper itself must be present and must reference
         and launch the agent it is meant to start. This gate requires the
         specific ``start_agent.cmd`` file and asserts (a) it invokes
         ``powershell.exe`` and (b) it targets the guest agent script
@@ -1714,7 +1629,7 @@ class TestF0006AgentScriptStartupWired:
         created and must invoke the Python agent it starts
         (``python3 .../agent.py``), and the ``agent.py`` itself must also be
         written. Existence of an ``agent.*`` file alone is insufficient because
-        the F-0006 fix is the startup wiring.
+        the startup wiring is what is under test.
 
         Args:
             tmp_path: Pytest temp directory.
@@ -1740,13 +1655,8 @@ class TestF0006AgentScriptStartupWired:
         assert "agent.py" in startup_text, f"start_agent.sh must reference the agent script agent.py; got {startup_text!r}"
 
 
-# ---------------------------------------------------------------------------
-# F-0015: start() must not redo accelerator detection if already cached
-# ---------------------------------------------------------------------------
-
-
 class TestF0015AcceleratorNotRedoneOnStart:
-    """F-0015: start() must reuse cached accelerator, not re-detect."""
+    """start() must reuse cached accelerator, not re-detect."""
 
     def test_is_available_uses_cached_accelerator(self) -> None:
         """is_available() skips _detect_accelerator when cache is valid."""
@@ -1787,21 +1697,16 @@ class TestF0015AcceleratorNotRedoneOnStart:
         assert detect_call_count == 0, f"_detect_accelerator was called {detect_call_count} times but must be 0 when cache is already valid"
 
 
-# ---------------------------------------------------------------------------
-# F-0007: extract_dropped_files must work without agent and produce a zip
-# ---------------------------------------------------------------------------
-
-
 class TestF0007ExtractDroppedFiles:
-    """F-0007: extract_dropped_files must produce a valid zip when files are present."""
+    """extract_dropped_files must produce a valid zip when files are present."""
 
     def test_extract_produces_zip_without_agent(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """extract_dropped_files uses the host-side dropped mirror when no agent.
 
-        The fixed implementation (audit7 U07) requires the guest's monitor to
+        The implementation requires the guest's monitor to
         mirror dropped files to ``<shared>/output/dropped/`` so the host-side
         fallback can collect them when the agent is disconnected. That mirror
-        only exists on the virtio-9p transport: since S17-D69 the FAT transport
+        only exists on the virtio-9p transport: the FAT transport
         exposes the share read-only, because vvfat's write-back path aborts the
         machine, so the host constant is redirected here to select the
         transport whose contract this is.

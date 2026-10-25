@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Second-pass coverage for the remaining reachable lines of the x64dbg, Ghidra, Frida, Cutter and win32 embed panels.
+"""Tests for the x64dbg, Ghidra, Frida, Cutter and win32 embed panels.
 
 Every test drives a real panel or real Win32 windows that the test creates in its own process. The lazy binding caches of
 ``x64dbg_panel`` and ``win32_embed`` are raced by a second thread that is held at the cache lock until the test fills the cache itself.

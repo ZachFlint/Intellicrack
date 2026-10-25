@@ -6,10 +6,10 @@
 """Falsifiable gates for the Ghidra JDK discovery version check.
 
 Ghidra 11.4.x declares ``application.java.min=21`` and its JVM refuses to
-launch against an older runtime. Before the version gate,
-:meth:`GhidraBridge._discover_jdk` returned any ``JAVA_HOME`` that merely
-contained a ``bin`` directory, so a host whose ``JAVA_HOME`` pointed at a JRE 8
-was handed straight to PyGhidra, which then failed deep inside the JVM launch.
+launch against an older runtime. :meth:`GhidraBridge._discover_jdk` rejects a
+``JAVA_HOME`` whose major version is below the minimum. A ``JAVA_HOME`` that merely
+contains a ``bin`` directory is not enough, because a JRE 8 handed to PyGhidra fails
+deep inside the JVM launch.
 
 These tests build a real on-disk Ghidra installation layout and JDK ``release``
 files in a temporary directory and assert that discovery skips the too-old

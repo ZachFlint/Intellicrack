@@ -3,22 +3,17 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit-1 regression tests for HexDocumentState concurrency hardening.
+"""Concurrency tests for HexDocumentState in ``src/intellicrack/bridges/hex_state.py``.
 
-Each test in this module is associated with a specific F-#### finding
-from ``audit1.md`` for ``src/intellicrack/bridges/hex_state.py``:
+The tests check these invariants:
 
-* F-0036 - ``_notify`` guard silently drops downstream events.
-* F-0037 - ``set_document`` reads document length outside the lock.
-* F-0038 - asymmetric locking on ``get_display_mode`` / ``set_display_mode_state``.
-* F-0039 - property getters read shared state without the lock.
-* F-0058 - ``clear_all`` clears highlights but only emits ``DOCUMENT_CLOSED``.
+* ``_notify`` must not silently drop downstream events.
+* ``set_document`` must read the document length under the lock.
+* ``get_display_mode`` must take the same lock as its setter.
+* Property getters must read shared state under the lock.
+* ``clear_all`` must emit a removed event for each dropped highlight rule.
 
-The tests use real ``threading.Thread`` interleavings, real subclassing
-of inspection points (no mocks), and assert state-machine invariants
-that fail on the unfixed code path and pass after remediation.  All
-state interactions go through the public API surface; no test reaches
-into the state holder's private members.
+The tests use real ``threading.Thread`` interleavings and real subclassing of inspection points (no mocks), and assert state-machine invariants. All state interactions go through the public API surface; no test reaches into the state holder's private members.
 """
 
 from __future__ import annotations
@@ -182,13 +177,9 @@ class _BlockingLengthDoc(_DummyDoc):
 
 
 class TestF0036NotifyDropsDownstreamEvents:
-    """F-0036 - ``_notify`` must not silently drop downstream events.
+    """``_notify`` must not silently drop downstream events.
 
-    The original code set a single boolean ``_notify_guard`` under the
-    lock and dropped every concurrent or re-entrant ``_notify`` call.
-    That means a callback that triggers a real downstream mutation never
-    sees the resulting event delivered to other observers.  After the
-    fix the downstream event is queued and dispatched in causal order.
+    A single boolean ``_notify_guard`` under the lock would drop every concurrent or re-entrant ``_notify`` call. A callback that triggers a real downstream mutation would then never see the resulting event delivered to other observers. The downstream event must be queued and dispatched in causal order instead.
     """
 
     def test_reentrant_event_is_delivered_to_other_observers(self) -> None:
@@ -196,8 +187,7 @@ class TestF0036NotifyDropsDownstreamEvents:
 
         Observer A reacts to ``CURSOR_MOVED`` by setting a selection
         (which itself emits ``SELECTION_CHANGED``).  Observer B should
-        receive both events.  On the unfixed code Observer B only saw
-        ``CURSOR_MOVED`` because the inner notify was silently dropped.
+        receive both events.  A dropped inner notify would leave Observer B with only ``CURSOR_MOVED``.
         """
         state = HexDocumentState()
         observer_b_events: list[HexDocumentEvent] = []
@@ -221,11 +211,7 @@ class TestF0036NotifyDropsDownstreamEvents:
         """Cross-thread emissions arriving during dispatch are not dropped.
 
         While Observer A is blocking inside its callback for
-        ``CURSOR_MOVED``, a second thread emits ``DATA_MODIFIED``.  The
-        unfixed code dropped the second emission because the notify
-        guard was held across the entire dispatch.  After the fix the
-        cross-thread event uses its own per-thread dispatch state and
-        reaches Observer A.
+        ``CURSOR_MOVED``, a second thread emits ``DATA_MODIFIED``.  The cross-thread event uses its own per-thread dispatch state and reaches Observer A, rather than being dropped by a notify guard held across the entire dispatch.
         """
         state = HexDocumentState()
         observer_a_in_callback = threading.Event()
@@ -294,9 +280,7 @@ class TestF0036NotifyDropsDownstreamEvents:
     def test_runaway_dispatch_terminates_at_depth_cap(self) -> None:
         """A genuinely runaway callback chain stops at the documented depth cap.
 
-        With unbounded queueing this would loop forever, so the fix
-        bounds total per-outer dispatch invocations at
-        ``NOTIFY_MAX_DEPTH``.  This proves that legitimate downstream
+        Total per-outer dispatch invocations are bounded at ``NOTIFY_MAX_DEPTH``, so unbounded queueing cannot loop forever.  This proves that legitimate downstream
         events are delivered (count grows beyond 1) while infinite loops
         are still terminated cleanly.
         """
@@ -315,12 +299,9 @@ class TestF0036NotifyDropsDownstreamEvents:
 
 
 class TestF0037SetDocumentLengthOutsideLock:
-    """F-0037 - ``set_document`` must read document length under the lock.
+    """``set_document`` must read document length under the lock.
 
-    Originally the length was queried before the lock was acquired,
-    which means a competing ``set_document`` swap on another thread
-    could install a different document between the length read and the
-    state mutation.  The recorded ``DOCUMENT_OPENED`` payload would then
+    Querying the length before the lock is acquired lets a competing ``set_document`` swap on another thread install a different document between the length read and the state mutation.  The recorded ``DOCUMENT_OPENED`` payload would then
     advertise a length that did not belong to the published document.
     """
 
@@ -329,7 +310,7 @@ class TestF0037SetDocumentLengthOutsideLock:
 
         A racing thread runs ``set_document`` repeatedly while another
         thread queries ``state.document.length()`` and the latest
-        observed event size.  The two must always agree under the fix.
+        observed event size.  The two must always agree.
         """
         state = HexDocumentState()
         events: list[tuple[HexDocumentEvent, dict[str, Any]]] = []
@@ -391,9 +372,7 @@ class TestF0037SetDocumentLengthOutsideLock:
         length call were performed before the lock is taken, a competing
         ``set_document`` from another thread could publish a different
         document while the spin is ongoing, causing the recorded size
-        to belong to a stale document.  The fix performs the length
-        read while the lock is held, so a competing ``set_document`` is
-        forced to wait until the slow length call returns.
+        to belong to a stale document.  The length read is performed while the lock is held, so a competing ``set_document`` is forced to wait until the slow length call returns.
         """
         state = HexDocumentState()
         events: list[tuple[HexDocumentEvent, dict[str, Any]]] = []
@@ -462,7 +441,7 @@ class TestF0037SetDocumentLengthOutsideLock:
 
 
 class TestF0038DisplayModeAsymmetricLocking:
-    """F-0038 - ``get_display_mode`` must take the lock that the setter takes.
+    """``get_display_mode`` must take the lock that the setter takes.
 
     Without symmetric locking, a reader can observe a non-atomic publish
     of the new mode string.  The locked setter and locked getter must
@@ -581,15 +560,13 @@ class TestF0038DisplayModeAsymmetricLocking:
 
 
 class TestF0039PropertyGettersUnlocked:
-    """F-0039 - property getters must lock for symmetric publication.
+    """Property getters must lock for symmetric publication.
 
     The getters for ``document``, ``file_path``, ``cursor_offset`` and
     ``selection`` are read by the GUI thread and mutated by the bridge
     or background threads.  Without the lock, a reader can return a
     reference observed from a thread that has not synchronized through
-    the state holder's lock at all.  After the fix, every property
-    getter waits behind the same lock that ``set_document`` and the
-    other writers take.
+    the state holder's lock at all.  Every property getter waits behind the same lock that ``set_document`` and the other writers take.
     """
 
     def test_property_getters_block_while_set_document_holds_lock(self) -> None:
@@ -682,14 +659,9 @@ class TestF0039PropertyGettersUnlocked:
 
 
 class TestF0058ClearAllEmitsOnlyDocumentClosed:
-    """F-0058 - ``clear_all`` must emit a removed event per dropped highlight rule.
+    """``clear_all`` must emit a removed event per dropped highlight rule.
 
-    Originally ``clear_all`` deleted every entry in ``_highlight_rules``
-    and only emitted ``DOCUMENT_CLOSED``.  Observers tracking highlight
-    rules (e.g. a sidebar list) would keep stale entries because they
-    were never told the rules were dropped.  The fix emits one
-    ``HIGHLIGHT_RULE_REMOVED`` event per cleared rule before the
-    terminal ``DOCUMENT_CLOSED``.
+    ``clear_all`` deletes every entry in ``_highlight_rules`` and emits one ``HIGHLIGHT_RULE_REMOVED`` event per cleared rule before the terminal ``DOCUMENT_CLOSED``. Observers tracking highlight rules (e.g. a sidebar list) must be told that each rule was dropped, or they keep stale entries.
     """
 
     def test_clear_all_emits_highlight_rule_removed_for_every_rule(self) -> None:
@@ -734,9 +706,7 @@ class TestF0058ClearAllEmitsOnlyDocumentClosed:
     def test_clear_all_with_rules_but_no_document_emits_only_rule_removals(self) -> None:
         """No document attached: only rule-removed events fire, no ``DOCUMENT_CLOSED``.
 
-        The documented contract preserves the existing "no spurious
-        DOCUMENT_CLOSED on already-empty state" behaviour while still
-        announcing every dropped rule.
+        The documented contract emits no spurious DOCUMENT_CLOSED on an already-empty state, while still announcing every dropped rule.
         """
         state = HexDocumentState()
         state.set_highlight_rule("orphan", {"id": "orphan", "color": "#101010"})
@@ -767,7 +737,7 @@ class TestF0058ClearAllEmitsOnlyDocumentClosed:
 
 
 class TestF0036QueueClearedOnUnhandledException:
-    """F-0036 queue leak — ``_notify`` must clear the re-entrant queue on any exit.
+    """``_notify`` must clear the re-entrant queue on any exit.
 
     When a callback raises an exception type NOT in the narrow transport
     tuple (e.g. ``KeyError``), control jumps from the ``try`` body to
@@ -775,9 +745,7 @@ class TestF0036QueueClearedOnUnhandledException:
     unrelated ``_notify`` on the same thread would then drain stale
     events from the failed dispatch.
 
-    The fix moves ``queue.clear()`` into the ``finally`` block so every
-    exit path — normal, truncated, or exceptional — leaves the queue
-    empty.
+    ``queue.clear()`` belongs in the ``finally`` block so every exit path (normal, truncated, or exceptional) leaves the queue empty.
     """
 
     def test_f0036_queue_cleared_when_callback_raises_unhandled_exception(self) -> None:

@@ -2,11 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit5 u1 regression tests for ``CutterBridge``.
+"""Regression tests for ``CutterBridge``.
 
-Each test exercises one finding from audit5.md (bridges-cutter-frida) and
-fails on the unfixed implementation, succeeding only after the audit
-remediation lands. Tests use a plain in-memory r2pipe stand-in
+Each test exercises one defect and fails on the unfixed implementation. Tests use a plain in-memory r2pipe stand-in
 (``_RecordingR2``) and drive the bridge through manual asyncio loops so
 no real rizin process is required.
 """
@@ -154,9 +152,7 @@ def _attach_and_analyze(
     recorder.commands.clear()
 
 
-# ---------------------------------------------------------------------------
-# F-0001 - save_binary uses wcf, not wtf
-# ---------------------------------------------------------------------------
+# save_binary uses wcf, not wtf
 
 
 class TestF0001SaveBinaryUsesWcf:
@@ -202,9 +198,7 @@ class TestF0001SaveBinaryUsesWcf:
             loop.run_until_complete(bridge.save_binary("C:/tmp/out.bin"))
 
 
-# ---------------------------------------------------------------------------
-# F-0002 - assemble_at must not double-write
-# ---------------------------------------------------------------------------
+# assemble_at must not double-write
 
 
 class TestF0002AssembleAtSingleWrite:
@@ -232,9 +226,7 @@ class TestF0002AssembleAtSingleWrite:
         assert write_commands[0].startswith("wx ")
 
 
-# ---------------------------------------------------------------------------
-# F-0003 - get_imports/get_exports/get_sections without _analyzed
-# ---------------------------------------------------------------------------
+# get_imports/get_exports/get_sections without _analyzed
 
 
 class TestF0003LoaderEndpointsNoAnalysisGate:
@@ -305,9 +297,7 @@ class TestF0003LoaderEndpointsNoAnalysisGate:
         assert sections[0].name == ".text"
 
 
-# ---------------------------------------------------------------------------
-# F-0004 - get_resources must not swallow ToolError
-# ---------------------------------------------------------------------------
+# get_resources must not swallow ToolError
 
 
 class TestF0004ResourcesPropagateErrors:
@@ -330,9 +320,7 @@ class TestF0004ResourcesPropagateErrors:
             loop.run_until_complete(bridge.get_resources())
 
 
-# ---------------------------------------------------------------------------
-# F-0016 - search_string_live / search_assembly_pattern command injection
-# ---------------------------------------------------------------------------
+# search_string_live / search_assembly_pattern command injection
 
 
 class TestF0016NoCommandInjection:
@@ -560,9 +548,7 @@ class TestValidateR2ArgumentAcceptsSafeStrings:
         assert result == "4096"
 
 
-# ---------------------------------------------------------------------------
-# F-0017 - _cmd_json must raise on JSON parse failure
-# ---------------------------------------------------------------------------
+# _cmd_json must raise on JSON parse failure
 
 
 class TestF0017CmdJsonRaisesOnParseError:
@@ -605,9 +591,7 @@ class TestF0017CmdJsonRaisesOnParseError:
         assert result == []
 
 
-# ---------------------------------------------------------------------------
-# F-0019 - get_function_address must not enumerate all functions
-# ---------------------------------------------------------------------------
+# get_function_address must not enumerate all functions
 
 
 class TestF0019GetFunctionAddressDirect:
@@ -667,9 +651,7 @@ class TestF0019GetFunctionAddressDirect:
             loop.run_until_complete(bridge.get_function_address("foo;quit"))
 
 
-# ---------------------------------------------------------------------------
-# F-0020 - search_strings does not require analysis
-# ---------------------------------------------------------------------------
+# search_strings does not require analysis
 
 
 class TestF0020SearchStringsNoAnalysisGate:
@@ -695,9 +677,7 @@ class TestF0020SearchStringsNoAnalysisGate:
         assert results[0].value == "hello"
 
 
-# ---------------------------------------------------------------------------
-# F-0024 - shutdown order
-# ---------------------------------------------------------------------------
+# shutdown order
 
 
 def _force_register_pid(bridge: CutterBridge, pid: int) -> None:
@@ -768,9 +748,7 @@ class TestF0024ShutdownAlwaysRunsSuper:
         assert not bridge.state.binary_loaded
 
 
-# ---------------------------------------------------------------------------
-# F-0025 - r2 setter is the canonical write path
-# ---------------------------------------------------------------------------
+# r2 setter is the canonical write path
 
 
 class TestF0025R2SetterIsActive:
@@ -813,9 +791,7 @@ class TestF0025R2SetterIsActive:
         assert False in observed, observed
 
 
-# ---------------------------------------------------------------------------
-# F-0026 - supports_dynamic_analysis aligned with ESIL emulation tools
-# ---------------------------------------------------------------------------
+# supports_dynamic_analysis aligned with ESIL emulation tools
 
 
 class TestF0026DynamicAnalysisFlag:
@@ -861,9 +837,7 @@ class TestF0026DynamicAnalysisFlag:
         assert expected.issubset(names)
 
 
-# ---------------------------------------------------------------------------
-# F-0028 - assemble_at description disambiguates bytes vs hex string
-# ---------------------------------------------------------------------------
+# assemble_at description disambiguates bytes vs hex string
 
 
 class TestF0028AssembleAtToolDocstring:
@@ -893,9 +867,7 @@ class TestF0028AssembleAtToolDocstring:
         assert len(result) == 1
 
 
-# ---------------------------------------------------------------------------
-# F-0029 - is_64bit heuristic
-# ---------------------------------------------------------------------------
+# is_64bit heuristic
 
 
 class TestF0029Is64BitHeuristic:
@@ -921,9 +893,7 @@ class TestF0029Is64BitHeuristic:
         assert is_rizin_64bit(32, "x86", "PE") is False
 
 
-# ---------------------------------------------------------------------------
-# F-0031 - get_function size and location no longer hardcoded
-# ---------------------------------------------------------------------------
+# get_function size and location no longer hardcoded
 
 
 class TestF0031GetFunctionSizeAndLocation:
@@ -963,9 +933,7 @@ class TestF0031GetFunctionSizeAndLocation:
         assert info.local_variables[0].size == 8
 
 
-# ---------------------------------------------------------------------------
-# F-0032 - get_classes parses methods and fields uniformly
-# ---------------------------------------------------------------------------
+# get_classes parses methods and fields uniformly
 
 
 class TestF0032GetClassesNormalisedDicts:

@@ -12,9 +12,7 @@ Silent" controls on the BP Config sub-tab in ``x64dbg_advanced_tab.py``. This
 module gates the full click-to-RPC round trip for both flags: the exact
 bare-integer (``0``/``1``, never a quoted string or ``true``/``false``)
 argument encoding, and the type-branched command dispatch for a breakpoint
-this bridge has already recorded as hardware - the exact class of defect the
-Stream-A audit flags for sibling breakpoint-property setters that hardcode
-the software-only command family instead of branching via
+this bridge has already recorded as hardware - the defect class where a setter hardcodes the software-only command family instead of branching via
 ``_bp_command_for_type``.
 """
 

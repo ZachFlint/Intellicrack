@@ -599,7 +599,13 @@ class StatisticsMixin:
             return
         if not result.classification:
             return
-        class_names: dict[int, str] = {0: "null", 1: "text", 2: "structured", 3: "encrypted", 4: "code"}
+        class_names: dict[int, str] = {
+            0: "null",
+            1: "text",
+            2: "structured",
+            3: "high entropy (>7.0)",
+            4: "mixed entropy (4.5-7.0)",
+        }
         counts: dict[str, int] = {}
         for c_val in result.classification:
             label: str = class_names.get(int(c_val), "unknown")

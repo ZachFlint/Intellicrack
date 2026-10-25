@@ -5,20 +5,39 @@
 
 use crate::mmap_io::MmapDocument;
 
+/// One reversible edit, recorded with everything needed to undo and redo it.
 #[derive(Debug, Clone)]
 pub enum Operation {
+    /// `data` was inserted at `offset`.
     Insert {
+        /// Insertion point.
         offset: usize,
+        /// Inserted bytes.
         data: Vec<u8>,
     },
+    /// `old_data` at `offset` was replaced by the same-length `new_data`.
     Overwrite {
+        /// First overwritten byte.
         offset: usize,
+        /// Bytes before the edit.
         old_data: Vec<u8>,
+        /// Bytes after the edit.
         new_data: Vec<u8>,
     },
+    /// `deleted_data` was removed from `offset`.
     Delete {
+        /// First removed byte.
         offset: usize,
+        /// Removed bytes.
         deleted_data: Vec<u8>,
+    },
+    /// An IPS/IPS32 import: every record's write plus an optional truncation,
+    /// recorded as one entry so a single `undo()` reverts the whole import.
+    PatchImport {
+        /// `(offset, old, new)` for each disjoint run, in offset order.
+        writes: Vec<(usize, Vec<u8>, Vec<u8>)>,
+        /// `(new_length, removed_tail)` when the patch truncated the document.
+        truncated: Option<(usize, Vec<u8>)>,
     },
     /// Move of `moved_data.len()` bytes from `src_offset` to `dst_offset`.
     ///
@@ -26,11 +45,15 @@ pub enum Operation {
     /// original source bytes (which the move zeroed) *and* the original
     /// destination bytes (which the move overwrote). A single
     /// [`Operation::Overwrite`] record could only undo one of the two,
-    /// leaving the document inconsistent — see audit1.md F-0001.
+    /// leaving the document inconsistent.
     MoveBlock {
+        /// Source block start (zeroed by the move).
         src_offset: usize,
+        /// Destination block start.
         dst_offset: usize,
+        /// Source bytes before the move, now at the destination.
         moved_data: Vec<u8>,
+        /// Destination bytes before the move.
         old_dst_data: Vec<u8>,
     },
     /// Atomic swap of `data_a.len()` bytes between `offset_a` and `offset_b`.
@@ -40,9 +63,13 @@ pub enum Operation {
     /// [`Operation::Overwrite`] entries let a single undo revert only the
     /// second half, leaving the same bytes duplicated at both offsets.
     SwapBlocks {
+        /// First block start.
         offset_a: usize,
+        /// Second block start.
         offset_b: usize,
+        /// First block's bytes before the swap.
         data_a: Vec<u8>,
+        /// Second block's bytes before the swap.
         data_b: Vec<u8>,
     },
     /// Whole-document replacement recorded by `replace_bytes`.
@@ -53,11 +80,55 @@ pub enum Operation {
     /// offset 0 would leave the post-replace length in place and strand bytes
     /// the replacement added or dropped, so undo would not restore the exact
     /// original bytes and length. Recording both whole buffers lets undo/redo
-    /// rebuild the document by replacing every byte — see audit F-0080.
+    /// rebuild the document by replacing every byte.
     Replace {
+        /// The whole document before the replacement.
         old_data: Vec<u8>,
+        /// The whole document after the replacement.
         new_data: Vec<u8>,
     },
+}
+
+impl Operation {
+    /// Returns `true` when applying the operation changes at least one byte.
+    ///
+    /// Callers use this to drop no-op edits (an empty write, rewriting a byte
+    /// with its own value, repairing an already-valid checksum) so they leave
+    /// no undo entry, do not mark the document modified, and do not advance
+    /// the content generation.
+    #[must_use]
+    pub fn changes_bytes(&self) -> bool {
+        match self {
+            Self::Insert { data, .. } => !data.is_empty(),
+            Self::Delete { deleted_data, .. } => !deleted_data.is_empty(),
+            Self::Overwrite {
+                old_data, new_data, ..
+            }
+            | Self::Replace { old_data, new_data } => old_data != new_data,
+            Self::MoveBlock {
+                moved_data,
+                old_dst_data,
+                ..
+            } => moved_data.iter().any(|&b| b != 0) || old_dst_data != moved_data,
+            Self::SwapBlocks { data_a, data_b, .. } => data_a != data_b,
+            Self::PatchImport { writes, truncated } => {
+                writes.iter().any(|(_, old, new)| old != new)
+                    || truncated.as_ref().is_some_and(|(_, tail)| !tail.is_empty())
+            }
+        }
+    }
+
+    /// Returns `true` when the operation keeps every byte at its offset, so it
+    /// can be expressed as overwrites against the original file.
+    #[must_use]
+    pub fn preserves_offsets(&self) -> bool {
+        match self {
+            Self::Overwrite { .. } | Self::MoveBlock { .. } | Self::SwapBlocks { .. } => true,
+            Self::Replace { old_data, new_data } => old_data.len() == new_data.len(),
+            Self::PatchImport { truncated, .. } => truncated.is_none(),
+            Self::Insert { .. } | Self::Delete { .. } => false,
+        }
+    }
 }
 
 /// Marks the undo-stack state that was last persisted to disk.
@@ -78,6 +149,7 @@ enum SaveMarker {
     Op(u64),
 }
 
+/// Linear undo/redo history with save-point tracking.
 pub struct UndoManager {
     undo_stack: Vec<Operation>,
     redo_stack: Vec<Operation>,
@@ -88,6 +160,7 @@ pub struct UndoManager {
 }
 
 impl UndoManager {
+    /// Creates an empty history whose save point is the empty stack.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -100,6 +173,7 @@ impl UndoManager {
         }
     }
 
+    /// Pushes `op` as the newest edit and discards the redo stack.
     pub fn record(&mut self, op: Operation) {
         let id = self.next_op_id;
         self.next_op_id += 1;
@@ -166,6 +240,14 @@ impl UndoManager {
                 doc.apply_delete(0, len);
                 doc.apply_insert(0, old_data);
             }
+            Operation::PatchImport { writes, truncated } => {
+                if let Some((new_len, tail)) = truncated {
+                    doc.apply_insert(*new_len, tail);
+                }
+                for (offset, old, _) in writes.iter().rev() {
+                    doc.apply_overwrite(*offset, old);
+                }
+            }
         }
 
         self.redo_stack.push(op);
@@ -231,6 +313,14 @@ impl UndoManager {
                 doc.apply_delete(0, len);
                 doc.apply_insert(0, new_data);
             }
+            Operation::PatchImport { writes, truncated } => {
+                for (offset, _, new) in writes {
+                    doc.apply_overwrite(*offset, new);
+                }
+                if let Some((new_len, tail)) = truncated {
+                    doc.apply_delete(*new_len, tail.len());
+                }
+            }
         }
 
         self.undo_stack.push(op);
@@ -238,16 +328,19 @@ impl UndoManager {
         true
     }
 
+    /// Returns `true` when there is an edit to undo.
     #[must_use]
     pub fn can_undo(&self) -> bool {
         !self.undo_stack.is_empty()
     }
 
+    /// Returns `true` when there is an undone edit to redo.
     #[must_use]
     pub fn can_redo(&self) -> bool {
         !self.redo_stack.is_empty()
     }
 
+    /// Records the current top of the undo stack as the saved state.
     pub fn mark_saved(&mut self) {
         self.saved_marker = self
             .undo_ids
@@ -256,10 +349,12 @@ impl UndoManager {
             .map_or(SaveMarker::Empty, SaveMarker::Op);
     }
 
+    /// Forces [`UndoManager::is_modified`] to report `true` until the next save.
     pub fn mark_unsaved(&mut self) {
         self.saved_marker = SaveMarker::Unset;
     }
 
+    /// Returns `true` when the document differs from the last saved state.
     #[must_use]
     pub fn is_modified(&self) -> bool {
         match self.saved_marker {
@@ -269,6 +364,7 @@ impl UndoManager {
         }
     }
 
+    /// Drops all history and treats the current state as saved.
     pub fn clear(&mut self) {
         self.undo_stack.clear();
         self.redo_stack.clear();
@@ -277,6 +373,9 @@ impl UndoManager {
         self.saved_marker = SaveMarker::Empty;
     }
 
+    /// Flattens the history into `(offset, new_bytes)` writes in chronological
+    /// order. Inserts and deletes are skipped; use
+    /// [`UndoManager::is_overwrite_only`] to tell whether the result is exact.
     #[must_use]
     pub fn get_overwrite_patches(&self) -> Vec<(usize, Vec<u8>)> {
         let mut patches: Vec<(usize, Vec<u8>)> = Vec::new();
@@ -309,10 +408,23 @@ impl UndoManager {
                 Operation::Replace { new_data, .. } => {
                     patches.push((0, new_data.clone()));
                 }
+                Operation::PatchImport { writes, .. } => {
+                    patches.extend(writes.iter().map(|(offset, _, new)| (*offset, new.clone())));
+                }
                 Operation::Insert { .. } | Operation::Delete { .. } => {}
             }
         }
         patches
+    }
+
+    /// Returns `true` when every recorded operation keeps bytes at their
+    /// offsets, i.e. the history can be exported as overwrites against the
+    /// original file. Inserts, deletes, truncations and length-changing
+    /// replacements shift offsets, so an overwrite-only patch format cannot
+    /// reproduce them.
+    #[must_use]
+    pub fn is_overwrite_only(&self) -> bool {
+        self.undo_stack.iter().all(Operation::preserves_offsets)
     }
 }
 
@@ -421,6 +533,48 @@ mod tests {
         assert!(!um.can_redo());
     }
 
+    /// Redo of an Overwrite must re-apply the new bytes, not the old ones.
+    /// The redo path reads `new_data`; a mutant that redoes `old_data` would
+    /// restore "Hello" instead of "Jello", which only a read-back catches.
+    #[test]
+    fn test_redo_overwrite_reapplies_the_new_bytes() {
+        let mut doc = MmapDocument::from_bytes(b"Hello");
+        let mut um = UndoManager::new();
+        let old_data = doc.read(0, 1);
+        doc.apply_overwrite(0, b"J");
+        um.record(Operation::Overwrite {
+            offset: 0,
+            old_data,
+            new_data: vec![b'J'],
+        });
+
+        assert!(um.undo(&mut doc));
+        assert_eq!(doc.read(0, 5), b"Hello".to_vec());
+        assert!(um.redo(&mut doc));
+        assert_eq!(doc.read(0, 5), b"Jello".to_vec());
+    }
+
+    /// Redo of a Delete must remove exactly the recorded length. A mutant that
+    /// redoes a one-byte delete would leave "HelloWorld"; reading the bytes and
+    /// the size back catches it.
+    #[test]
+    fn test_redo_delete_removes_the_recorded_length() {
+        let mut doc = MmapDocument::from_bytes(b"Hello World");
+        let mut um = UndoManager::new();
+        let deleted = doc.read(5, 6);
+        doc.apply_delete(5, 6);
+        um.record(Operation::Delete {
+            offset: 5,
+            deleted_data: deleted,
+        });
+
+        assert!(um.undo(&mut doc));
+        assert_eq!(doc.read(0, 11), b"Hello World".to_vec());
+        assert!(um.redo(&mut doc));
+        assert_eq!(doc.document_size(), 5);
+        assert_eq!(doc.read(0, 5), b"Hello".to_vec());
+    }
+
     #[test]
     fn test_new_op_clears_redo() {
         let mut um = UndoManager::new();
@@ -514,10 +668,10 @@ mod tests {
         assert_eq!(doc.read_all(), b"ABC".to_vec());
     }
 
-    /// Audit-1 F-0001 regression: undoing a `MoveBlock` must restore both
+    /// Undoing a `MoveBlock` must restore both
     /// the source bytes (zeroed by the move) and the destination bytes
-    /// (overwritten by the move). The original `move_block` recorded only
-    /// the destination overwrite, so undo left the source clear in place.
+    /// (overwritten by the move). Recording only the destination overwrite
+    /// would leave the source clear in place.
     #[test]
     fn test_undo_move_block_restores_source_and_destination() {
         let mut doc = MmapDocument::from_bytes(b"AAAABBBB____");
@@ -543,7 +697,7 @@ mod tests {
         );
     }
 
-    /// Audit-1 F-0001 regression: redo of a previously-undone `MoveBlock`
+    /// Redo of a previously-undone `MoveBlock`
     /// must reapply the destination overwrite *and* re-zero the source.
     #[test]
     fn test_redo_move_block_zeroes_source_and_writes_destination() {
@@ -638,11 +792,9 @@ mod tests {
         assert_eq!(patches[0], (4usize, vec![0xEE]));
     }
 
-    /// F-0017 regression: a single `undo()` after `swap_blocks` must restore
-    /// both swapped regions, not just the most recently recorded half. When
-    /// `swap_blocks` recorded two independent `Overwrite` entries, one undo
-    /// only reverted the second region, leaving the first region's data
-    /// duplicated at both offsets.
+    /// A single `undo()` after `swap_blocks` restores both swapped regions in
+    /// one step, because the swap is recorded as one `SwapBlocks` entry rather
+    /// than two independent overwrites.
     #[test]
     fn test_undo_swap_blocks_restores_both_regions_in_one_call() {
         let mut doc = MmapDocument::from_bytes(b"AAAABBBB");
@@ -690,18 +842,12 @@ mod tests {
         assert_eq!(doc.read_all(), b"BBBBAAAA".to_vec());
     }
 
-    /// F-0080 regression: `replace_bytes` records a whole-document
+    /// `replace_bytes` records a whole-document
     /// [`Operation::Replace`] because it rebuilds the document and the
     /// before/after buffers can differ in length. Undoing it must delete the
     /// entire current content and reinstate `old_data` exactly (bytes *and*
-    /// length), and redo must reinstate `new_data` exactly. The previous
-    /// length-preserving `Operation::Overwrite` undo could not do this.
-    ///
-    /// Mutation caught: replacing the `undo` arm's
-    /// `apply_delete(0, len); apply_insert(0, old_data)` with a clamping
-    /// `apply_overwrite(0, old_data)` leaves the grow-case document at
-    /// `b"foobarXXXX"` (length 10) instead of `b"foobar"` (length 6), failing
-    /// the first assertion.
+    /// length), and redo must reinstate `new_data` exactly. A length-preserving
+    /// `Operation::Overwrite` undo could not do this.
     #[test]
     fn test_undo_redo_replace_restores_length_changing_content() {
         // new_data LONGER than old_data. Mirror `replace_bytes`: the document
@@ -745,14 +891,10 @@ mod tests {
         assert_eq!(doc2.document_size(), 6);
     }
 
-    /// F-0080 companion: `get_overwrite_patches` must flatten a `Replace` into a
+    /// `get_overwrite_patches` must flatten a `Replace` into a
     /// single whole-document overwrite at offset 0 carrying `new_data`, so the
-    /// patch-export surface sees the same byte set the old `Overwrite`-based
-    /// recording produced.
-    ///
-    /// Mutation caught: dropping the `Replace` arm from `get_overwrite_patches`
-    /// (falling into the `Insert | Delete` no-op) yields an empty patch list,
-    /// failing the length assertion.
+    /// patch-export surface sees the same byte set as an `Overwrite`-based
+    /// recording.
     #[test]
     fn test_get_overwrite_patches_includes_replace_new_data() {
         let mut um = UndoManager::new();
@@ -780,11 +922,11 @@ mod tests {
         assert_eq!(patches[1], (16usize, vec![0x11, 0x22]));
     }
 
-    /// F-0028 regression: comparing undo-stack *depth* instead of operation
-    /// *identity* lets `is_modified()` go false even though the live document
-    /// diverged from what was saved. Record A, B; save at depth 2; undo back
-    /// to depth 1; record a different C (clearing the redo branch containing
-    /// B) which returns the stack to depth 2 with different content.
+    /// `is_modified()` tracks the saved operation's *identity*, not the undo
+    /// stack's *depth*, so it stays true when the live document differs from the
+    /// saved state at the same depth. Record A, B; save at depth 2; undo back
+    /// to depth 1; record a different C (clearing the redo branch containing B),
+    /// which returns the stack to depth 2 with different content.
     #[test]
     fn test_is_modified_detects_redo_branch_truncation_at_same_depth() {
         let mut doc = MmapDocument::from_bytes(b"A");

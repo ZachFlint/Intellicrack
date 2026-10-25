@@ -2,24 +2,21 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S14-D01: externally registered PIDs must surface as tracked.
+"""Regression gate: externally registered PIDs must surface as tracked.
 
-Prior to this fix, ``ProcessManager.get_all_tracked()`` read only the
-subprocess-backed ``_processes`` store, silently omitting every PID
-registered through ``register_external_pid`` (the store used for
-daemonized / attached / inspected processes). The Process panel's Tracked
-tab is populated from that store via ``TrackedRefreshWorker``, so a user who
-attached to or inspected a process saw "0 tracked" no matter what they did --
-there was no code path that could ever surface an externally registered PID.
+``ProcessManager.get_all_tracked()`` reads only the subprocess-backed
+``_processes`` store, so it silently omits every PID registered through
+``register_external_pid`` (the store used for daemonized / attached / inspected
+processes). The Process panel's Tracked tab is populated from that store via
+``TrackedRefreshWorker``, so an attached or inspected process shows "0 tracked".
 
-``ProcessManager.get_all_tracked_entries`` is the fix: it merges both stores
+``ProcessManager.get_all_tracked_entries`` merges both stores
 into a single list of ``TrackedEntry`` objects. These tests spawn real child
 processes, register one via each store, and assert both appear with correct
 identity and live running state -- and that killing the external PID's
 backing process flips its reported running state to False. Each assertion is
-falsifiable against the pre-fix ``get_all_tracked()`` behaviour, which would
-either omit the external entry entirely or raise ``AttributeError`` because
-``TrackedEntry`` did not exist.
+falsifiable against ``get_all_tracked()``, which would either omit the
+external entry or fail to provide ``TrackedEntry``.
 """
 
 from __future__ import annotations
@@ -100,8 +97,7 @@ class TestGetAllTrackedEntriesIncludesExternalPids:
         This exercises the same call -- ``register_external_pid(pid, name)`` --
         that ``ProcessTab._on_track_process`` invokes when a user right-clicks a
         row in the System Processes table and selects "Track This Process".
-        Pre-fix, this PID would never appear in ``get_all_tracked()`` (nor did
-        ``get_all_tracked_entries`` exist at all), which is exactly the "0
+        ``get_all_tracked()`` never returns this PID, which is the "0
         tracked" defect.
 
         Args:
@@ -127,7 +123,7 @@ class TestGetAllTrackedEntriesIncludesExternalPids:
     ) -> None:
         """Both a register()'d subprocess and a register_external_pid()'d PID must be present.
 
-        A regression to the pre-fix behaviour (only reading ``_processes``)
+        Reading only ``_processes``
         would make this test fail by omitting the external entry while the
         subprocess entry is still visible.
 

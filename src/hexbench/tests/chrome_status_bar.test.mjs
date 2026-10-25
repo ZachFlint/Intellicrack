@@ -3,14 +3,14 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates UX-3: the status bar reads in three tiers, and an item with nothing to
+ * Gates the status bar's three tiers: an item with nothing to
  * say is absent rather than printed as an em dash. Ten items of equal weight,
  * three of them dashes most of the time, is a bar nobody reads.
  *
  * `statusReadout` is the whole decision and is pure and exported, so every state
  * below is a real call: null means "hide this item", and the caret-only session
  * is counted rather than described. The markup half is read out of index.html,
- * because the placeholders this task removes were written there.
+ * which must start every item hidden.
  *
  * Run by gate.ps1 (or directly with node). Exits non-zero on failure.
  */

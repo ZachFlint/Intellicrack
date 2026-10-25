@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""S18-D13: every collector that reports a lifecycle must be read for outages.
+"""Every collector that reports a lifecycle must be read for outages.
 
-S17-D50(b) built the outage channel so an empty tab could be told apart from a
+The outage channel exists so an empty tab can be told apart from a
 collector that never watched, but only ``api_trace`` and ``injection_monitor``
 were ever read through it. ``dll_monitor`` and ``kernel_object_monitor`` write
 the same ``timestamp|collector|state|detail`` lifecycle log and were not.

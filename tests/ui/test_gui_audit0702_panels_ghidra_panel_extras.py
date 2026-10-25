@@ -3,15 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GUI audit regression gates for ``intellicrack.ui.panels.ghidra_panel_extras``.
+"""Gates for ``intellicrack.ui.panels.ghidra_panel_extras`` table header stretch modes.
 
-Covers the 2026-07-02 audit findings for ``ghidra_panel_extras.py``:
+Covers the header resize modes in ``ghidra_panel_extras.py``:
 
-* M48 -- the external references table's header must use
+* The external references table's header must use
   ``QHeaderView.ResizeMode.Stretch`` so the ``External Name`` / ``Library``
   columns fill the available width instead of clipping at Qt's narrow
   default ``Interactive`` section width.
-* M49 -- the properties table's header must use the same ``Stretch`` resize
+* The properties table's header must use the same ``Stretch`` resize
   mode so long, free-form property values are not clipped either.
 """
 
@@ -57,7 +57,7 @@ def _assert_columns_fill_viewport(table: QTableWidget) -> None:
     """Assert the header's total section length fills the table viewport width.
 
     With ``Stretch`` in effect the header always expands its sections to
-    consume the full viewport width; with the pre-fix default
+    consume the full viewport width; with the default
     ``Interactive`` mode the sections stay pinned near Qt's narrow default
     section width regardless of how wide the table is resized.
 
@@ -75,13 +75,13 @@ def _assert_columns_fill_viewport(table: QTableWidget) -> None:
 
 
 class TestM48ExtRefsTableStretchResize:
-    """M48: the external references table's columns must stretch to fill available width."""
+    """The external references table's columns must stretch to fill available width."""
 
     @staticmethod
     def test_m48_ext_refs_header_uses_stretch_resize_mode(qapp: QApplication) -> None:
         """Every column of ``_ext_refs_table`` must use Stretch resize mode.
 
-        Regression: pre-fix, the table was built with only
+        The table must not be built with only
         ``setSelectionBehavior``/``setEditTriggers``/``setFixedHeight`` and
         no ``setSectionResizeMode`` call, so the header defaulted to
         ``Interactive`` with narrow fixed-width sections.
@@ -99,7 +99,7 @@ class TestM48ExtRefsTableStretchResize:
     def test_m48_ext_refs_columns_fill_full_table_width_after_resize(qapp: QApplication) -> None:
         """Widening the table must widen its columns to fill the new width.
 
-        Regression: with no resize mode set, the pre-fix header stayed
+        With no resize mode set, the header stays
         pinned near Qt's narrow ``Interactive`` default column width even
         after the table itself grew, so long ``External Name`` / ``Library``
         values would still render inside a visually clipped column.
@@ -164,13 +164,13 @@ class TestM48ExtRefsTableStretchResize:
 
 
 class TestM49PropertiesTableStretchResize:
-    """M49: the properties table's columns must stretch to fill available width."""
+    """The properties table's columns must stretch to fill available width."""
 
     @staticmethod
     def test_m49_properties_header_uses_stretch_resize_mode(qapp: QApplication) -> None:
         """Every column of ``_properties_table`` must use Stretch resize mode.
 
-        Regression: pre-fix, the table was built the same way as
+        The table must not be built the same way as
         ``_ext_refs_table`` -- only ``setSelectionBehavior``/
         ``setEditTriggers``/``setFixedHeight`` -- with no
         ``setSectionResizeMode`` call, so the header defaulted to
@@ -189,7 +189,7 @@ class TestM49PropertiesTableStretchResize:
     def test_m49_properties_columns_fill_full_table_width_after_resize(qapp: QApplication) -> None:
         """Widening the table must widen its columns to fill the new width.
 
-        Regression: with no resize mode set, the pre-fix header stayed
+        With no resize mode set, the header stays
         pinned near Qt's narrow ``Interactive`` default column width even
         after the table itself grew, so a long user-defined property value
         would still render inside a visually clipped ``Value`` column.

@@ -9,7 +9,7 @@ Each test asserts a specific issubclass relationship, an exact attribute value,
 or an exact isinstance/catching behaviour documented by the types module contract.
 Every gate goes RED when the corresponding production class definition is mutated
 to break the checked property.  Gates cover ModelNotFoundError, ToolNotFoundError,
-and InitializationError which have no coverage in existing test files, plus deeper
+and InitializationError, plus deeper
 attribute and cross-family isolation contracts for the full hierarchy.
 """
 

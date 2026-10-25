@@ -3,14 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for the ESIL PC-address formatting in ``cutter_tabs``.
+"""Gate for the ESIL PC-address formatting in ``cutter_tabs``.
 
-Covers the 2026-09-20 Qodana ``PyStringFormatInspection`` finding on
-``ESILConsoleTab._on_set_pc``: the parsed ``address`` (``int | None``) is
+Covers ``ESILConsoleTab._on_set_pc``: the parsed ``address`` (``int | None``) is
 read again inside an ``on_success`` closure handed to
 ``run_bridge_coroutine_logged``; the guard above the closure narrows it in
 the enclosing scope but static analysis cannot prove that survives into the
-closure. The handler now rebinds the narrowed value to an explicitly
+closure. The handler rebinds the narrowed value to an explicitly
 ``int``-typed local (``resolved_address``) before the console echo, the
 bridge call, and the closure.
 
@@ -44,7 +43,7 @@ class _RecordingCutterBridge:
     """Stand-in bridge recording exactly which address ``esil_set_pc`` forwarded."""
 
     def __init__(self) -> None:
-        """Initialise an empty call log."""
+        """Initialize an empty call log."""
         self.calls: list[int] = []
 
     async def esil_set_pc(self, address: int) -> bool:

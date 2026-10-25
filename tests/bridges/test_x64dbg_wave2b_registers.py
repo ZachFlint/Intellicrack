@@ -3,40 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave-2b test gates: X64DbgBridge register / process-structure read family.
+"""Register and process-structure read gates for ``X64DbgBridge``.
 
-Directly remediates:
-  FG-1 — ``read_peb`` asserted only a docstring substring in the tool
-    definition's ``returns`` field; no data-flow was tested.  Replaced
-    with a full round-trip through a fake pipe client that asserts exact
-    field values against independent oracle constants.
-  FG-3 — ``get_registers`` only tested the no-plugin ``ToolError`` path.
-    The value-population branches (hex string parsing, integer passthrough,
-    legacy 32-bit alias fallback) were never exercised.  Replaced with
-    gates that assert exact parsed ``RegisterState`` field values.
+Each read is driven through a fake pipe client that returns canned replies, and asserts exact parsed field values against independent oracle constants.
 
-New real gates added (previously NO COVERAGE):
-  set_register         — verifies exact RPC framing (param key is
-                         ``"register"``, not ``"name"``) and that ``True``
-                         is returned on success.
-  read_teb             — verifies ``teb_read`` is sent with ``None`` params
-                         when no tid is given, and with ``{"tid": …}`` when
-                         one is supplied; asserts exact returned fields.
-  get_seh_chain        — verifies entry-list parsing and that recoverable
-                         ``unknown command`` errors return ``[]``.
-  get_pe_directories   — verifies the ``"module"`` key is forwarded and
-                         that the returned list carries exact index/rva/size
-                         values from the canned response.
-  get_tls_callbacks    — drives a full PE64 TLS directory scan through
-                         monkeypatched ``_resolve_module_base``,
-                         ``_read_pe_header``, and ``read_memory``; asserts
-                         callback addresses against known oracle constants.
-  get_handles          — verifies ``ToolError`` when not attached; verifies
-                         ``_parse_handle_buffer`` PID-filter via a
-                         ctypes-built synthetic buffer.
-  get_privileges       — verifies list shape (name / enabled /
-                         enabled_by_default keys) and that names begin with
-                         ``Se``, on Windows live token.
+Covers ``get_registers`` (hex-string coercion, integer passthrough, 32-bit alias fallback), ``set_register`` (exact ``reg_set`` framing with the ``"register"`` param key), ``read_peb``, ``read_teb`` (``teb_read`` params with and without a tid), ``get_seh_chain``, ``get_pe_directories`` (``"module"`` key forwarding and exact index, rva and size values), ``get_tls_callbacks`` (a PE64 TLS directory scan through monkeypatched module resolution and header reads), ``get_handles`` (not-attached guard and the ``_parse_handle_buffer`` PID filter over a ctypes-built buffer), and ``get_privileges`` (list shape and ``Se`` prefixes on a live Windows token).
 """
 
 from __future__ import annotations
@@ -63,9 +34,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-# ---------------------------------------------------------------------------
 # Independent oracle constants
-# ---------------------------------------------------------------------------
 
 _RAX_VALUE: Final[int] = 0xDEAD_BEEF
 _RBX_VALUE: Final[int] = 1
@@ -120,13 +89,11 @@ _HANDLE_OTHER_PID: Final[int] = 9999
 _PARSE_HANDLE_BUFFER_ATTR: Final[str] = "_parse_handle_buffer"
 
 
-# ---------------------------------------------------------------------------
 # Fake pipe-client (self-contained, no unittest.mock)
-# ---------------------------------------------------------------------------
 
 
 class _FakePipe2B:
-    """In-process ``NamedPipeClient`` replacement for wave-2b tests.
+    """In-process ``NamedPipeClient`` replacement for these tests.
 
     Records every ``(command, params)`` pair in ``sent`` and returns
     responses produced by a scripted ``_responder`` callable.
@@ -205,9 +172,7 @@ def _install_fake_2b(
     return fake
 
 
-# ---------------------------------------------------------------------------
 # Shared fixture
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -220,19 +185,14 @@ def bridge() -> X64DbgBridge:
     return X64DbgBridge()
 
 
-# ---------------------------------------------------------------------------
-# TestGetRegisters — FG-3: replace error-path-only gate with value assertions
-# ---------------------------------------------------------------------------
+# TestGetRegisters
 
 
 @pytest.mark.asyncio
 class TestGetRegisters:
-    """FG-3 fix: ``get_registers`` round-trip asserts exact parsed register values.
+    """``get_registers`` round-trip asserts exact parsed register values.
 
-    All previous coverage consisted of confirming that an undeployed
-    plugin raises ``ToolError``.  These gates drive the real parsing
-    branches (hex-string coercion, integer passthrough, 32-bit alias
-    fallback) using a fake pipe that returns a known canned register dict.
+    These gates drive the real parsing branches (hex-string coercion, integer passthrough, 32-bit alias fallback) using a fake pipe that returns a known canned register dict.
     """
 
     async def test_parses_hex_string_and_int_values(
@@ -347,14 +307,12 @@ class TestGetRegisters:
             await bridge.get_registers()
 
 
-# ---------------------------------------------------------------------------
-# TestSetRegister — new real gate: exact RPC framing
-# ---------------------------------------------------------------------------
+# TestSetRegister
 
 
 @pytest.mark.asyncio
 class TestSetRegister:
-    """Real gates for ``set_register``: command framing and return value."""
+    """Gates for ``set_register``: command framing and return value."""
 
     async def test_emits_reg_set_with_register_key_not_name(
         self,
@@ -363,8 +321,7 @@ class TestSetRegister:
         """Bridge sends ``reg_set`` with ``"register"`` param key (not ``"name"``).
 
         Mutation caught: renaming the param key from ``"register"`` to
-        ``"name"`` would break the RPC contract while the old ToolError-only
-        gate still passed.
+        ``"name"`` would break the RPC contract.
 
         Args:
             bridge: Fresh bridge fixture.
@@ -402,19 +359,14 @@ class TestSetRegister:
             await bridge.set_register("rax", 0)
 
 
-# ---------------------------------------------------------------------------
-# TestReadPeb — FG-1 fix: replace docstring-substring gate with round-trip
-# ---------------------------------------------------------------------------
+# TestReadPeb
 
 
 @pytest.mark.asyncio
 class TestReadPeb:
-    """FG-1 fix: ``read_peb`` round-trip asserts exact field values.
+    """``read_peb`` round-trip asserts exact field values.
 
-    The previous gate only confirmed that the string ``"address"`` appeared
-    in the tool-definition ``returns`` field — completely independent of
-    the method's runtime behaviour.  Deleting the implementation body
-    would have left that gate green.
+    A check that only looks for the string ``"address"`` in the tool definition's ``returns`` field would pass without exercising the method at all. This gate drives the runtime behaviour and asserts the parsed fields.
     """
 
     async def test_returns_exact_peb_fields(
@@ -504,14 +456,12 @@ class TestReadPeb:
         assert result == {}
 
 
-# ---------------------------------------------------------------------------
-# TestReadTeb — new real gate (NO COVERAGE)
-# ---------------------------------------------------------------------------
+# TestReadTeb
 
 
 @pytest.mark.asyncio
 class TestReadTeb:
-    """Real gates for ``read_teb``: command framing and field assertions."""
+    """Gates for ``read_teb``: command framing and field assertions."""
 
     async def test_no_tid_sends_null_params(
         self,
@@ -584,14 +534,12 @@ class TestReadTeb:
         assert await bridge.read_teb() == {}
 
 
-# ---------------------------------------------------------------------------
-# TestGetSehChain — new real gate (NO COVERAGE)
-# ---------------------------------------------------------------------------
+# TestGetSehChain
 
 
 @pytest.mark.asyncio
 class TestGetSehChain:
-    """Real gates for ``get_seh_chain``: entry parsing and recoverable fallback."""
+    """Gates for ``get_seh_chain``: entry parsing and recoverable fallback."""
 
     async def test_returns_parsed_entry_dicts(
         self,
@@ -658,14 +606,12 @@ class TestGetSehChain:
         assert await bridge.get_seh_chain() == []
 
 
-# ---------------------------------------------------------------------------
-# TestGetPeDirectories — new real gate (NO COVERAGE)
-# ---------------------------------------------------------------------------
+# TestGetPeDirectories
 
 
 @pytest.mark.asyncio
 class TestGetPeDirectories:
-    """Real gates for ``get_pe_directories``: module param forwarding and parsing."""
+    """Gates for ``get_pe_directories``: module param forwarding and parsing."""
 
     async def test_forwards_module_name_and_returns_entries(
         self,
@@ -729,9 +675,7 @@ class TestGetPeDirectories:
         assert await bridge.get_pe_directories("any.dll") == []
 
 
-# ---------------------------------------------------------------------------
-# TestGetTlsCallbacks — new real gate (NO COVERAGE)
-# ---------------------------------------------------------------------------
+# TestGetTlsCallbacks
 
 
 def _build_tls_pe64_header() -> bytes:
@@ -770,7 +714,7 @@ def _build_tls_directory_pe64() -> bytes:
 
 @pytest.mark.asyncio
 class TestGetTlsCallbacks:
-    """Real gates for ``get_tls_callbacks``: PE64 TLS enumeration end-to-end."""
+    """Gates for ``get_tls_callbacks``: PE64 TLS enumeration end to end."""
 
     async def test_enumerates_two_callbacks_until_null_terminator(
         self,
@@ -868,9 +812,7 @@ class TestGetTlsCallbacks:
         assert result == []
 
 
-# ---------------------------------------------------------------------------
-# TestGetHandles — new real gate (NO COVERAGE)
-# ---------------------------------------------------------------------------
+# TestGetHandles
 
 
 def _build_synthetic_handle_buffer(
@@ -933,7 +875,7 @@ def _build_synthetic_handle_buffer(
 
 
 class TestGetHandles:
-    """Real gates for ``get_handles``: not-attached guard and buffer parsing."""
+    """Gates for ``get_handles``: not-attached guard and buffer parsing."""
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(
@@ -1003,14 +945,12 @@ class TestGetHandles:
         assert result == [], f"no entry must match pid {_HANDLE_OTHER_PID + 1}, got {result!r}"
 
 
-# ---------------------------------------------------------------------------
-# TestGetPrivileges — new real gate (NO COVERAGE)
-# ---------------------------------------------------------------------------
+# TestGetPrivileges
 
 
 @pytest.mark.asyncio
 class TestGetPrivileges:
-    """Real gates for ``get_privileges``: returned dict shape on a live Windows token."""
+    """Gates for ``get_privileges``: returned dict shape on a live Windows token."""
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
     async def test_returns_nonempty_list_with_required_keys(self) -> None:

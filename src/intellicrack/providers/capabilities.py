@@ -4,13 +4,13 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Per-model capability records and their three-layer merge.
 
-Intellicrack used to guess what a model supported from its id: a context
-window fell back to a hardcoded constant, ``supports_tools`` was hardcoded
-``True`` and the reasoning family was decided by a string prefix. None of that
-survives contact with an arbitrary endpoint, where the same dialect can serve
-any model at all.
+Capabilities are never guessed from a model's id. A context window does not
+fall back to a hardcoded constant, ``supports_tools`` is not hardcoded to
+``True``, and the reasoning family is not decided by a string prefix. None of
+that survives contact with an arbitrary endpoint, where the same dialect can
+serve any model at all.
 
-A :class:`ModelCapabilities` record replaces every one of those guesses.
+A :class:`ModelCapabilities` record is the only source of these facts.
 Records resolve in three layers, following Cherry Studio's preset model:
 
 1. the dialect's (or preset's) default record,
@@ -48,8 +48,8 @@ class ApiDialect(enum.Enum):
     """The wire format a model endpoint speaks.
 
     Provider identity is open -- any string instance id is valid -- so the
-    exhaustiveness guarantee basedpyright used to derive from the closed
-    provider enum lives here instead. Every dispatch over a dialect
+    exhaustiveness guarantee that a closed provider enum would give lives
+    here instead. Every dispatch over a dialect
     ends in ``_assert_never``, so adding a member without handling it is a type
     error rather than a runtime surprise.
 

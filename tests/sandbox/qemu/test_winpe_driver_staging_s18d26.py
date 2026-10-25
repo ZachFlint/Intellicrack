@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S18-D26: the answer file named more driver paths than Setup takes.
+r"""The answer file named more driver paths than Setup takes.
 
 Measured with real installations of the same Windows 11 26100 media, differing
 only in the ``DriverPaths`` block:

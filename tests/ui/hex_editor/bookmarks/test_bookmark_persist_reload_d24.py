@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for S19-D24: bookmarks survive closing and reopening a file.
+"""Bookmarks survive closing and reopening a file.
 
 ``HexEditorPanel._load_file_impl`` (``ui/panels/hex_editor/panel.py:826-827``)
 calls ``BookmarksMixin._load_bookmarks_sidecar`` right after opening the
@@ -20,11 +20,10 @@ sidecar is written alongside the target file): add a bookmark, persist it,
 close the panel, open a second, independent panel on the SAME path, and
 assert the restored document reports the bookmark.
 
-Reverting either half of the D24 fix turns this RED: with no
-``_persist_bookmarks_sidecar`` call the ``.icbm.json`` sidecar is never
-written, and with no ``_load_bookmarks_sidecar`` call in
-``_load_file_impl`` the reopened document's ``get_bookmarks()`` comes back
-empty even though the sidecar exists on disk.
+Both halves are required: the ``.icbm.json`` sidecar must be written on persist,
+and ``_load_file_impl`` must read it on open. Without the read, the reopened
+document's ``get_bookmarks()`` comes back empty even though the sidecar exists
+on disk.
 """
 
 from __future__ import annotations

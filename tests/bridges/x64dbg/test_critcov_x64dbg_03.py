@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Coverage-gap tests for the x64dbg bridge trace, scripting, anti-debug and handle surfaces.
+"""Coverage tests for the x64dbg bridge trace, scripting, anti-debug and handle surfaces.
 
 x64dbg is not installed in the test container, so every expectation here is derived
 independently of the bridge and drives only what is reachable without a debugger:

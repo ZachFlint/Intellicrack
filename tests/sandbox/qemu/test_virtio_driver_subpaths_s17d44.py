@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S17-D44: WinPE was sent to driver paths the medium does not have.
+r"""WinPE was sent to driver paths the medium does not have.
 
 The answer file's ``Microsoft-Windows-PnpCustomizationsWinPE`` component is the
 only thing that gets ``viostor`` into WinPE, and WinPE searches exactly the
 directories it names, before any in-guest script exists to correct it. The
-provisioner used to name one hardwired family and architecture per driver -
+provisioner must not name one hardwired family and architecture per driver -
 ``viostor\w11\amd64`` and three siblings - while a virtio-win medium lays its
 packages out as ``<driver>\<family>\<arch>`` with a genuinely different set of
 architectures per family: on 0.1.285 ``viostor`` carries fifteen families,
@@ -31,7 +31,7 @@ is five levels below the drive root and the breadth-limited scanner never
 descends that far, so it has to be passed as a priority root.
 
 What the answer file does with that enumeration is a separate matter, and the
-first real installation to exercise it falsified the original answer: naming
+first real installation to exercise it showed that naming
 every enumerated package made Setup abort. Measured on Windows 11 26100, three
 real installs of the same media differing only in this block:
 
@@ -421,8 +421,8 @@ class TestTheEnumerationFollowsTheMedium:
 class TestTheAnswerFileStaysWithinWhatSetupAccepts:
     """The rendered ``autounattend.xml`` names one staged folder per letter.
 
-    Naming every enumerated package is what this file used to assert, and a
-    real installation measured it wrong: see the module docstring.
+    Naming every enumerated package is what a naive check asserts, and a
+    a real installation shows it is wrong: see the module docstring.
     """
 
     def test_it_emits_one_path_per_letter_and_no_more(self) -> None:

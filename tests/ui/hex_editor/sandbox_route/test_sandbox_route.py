@@ -2,28 +2,25 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Regression tests for audit4 C12 (F-0006/F-0018/F-0019).
+r"""Hex sandbox routing.
 
 These tests guard against three regressions in
 :mod:`intellicrack.ui.panels.hex_editor.sandbox`:
 
-* F-0006 (Bridge Bypass): the ``Save to Sandbox`` button used to shell
-  out to ``docker cp`` / ``scp`` / ``shutil.copy2`` directly instead of
-  routing through the hex-editor bridge. The current path MUST call
+* Bridge bypass: the ``Save to Sandbox`` button must not shell out to
+  ``docker cp`` / ``scp`` / ``shutil.copy2`` directly. It MUST call
   ``HexEditorBridge.save_to_sandbox(dest_path, sandbox_type=...)`` (which
   itself auto-provisions the sandbox instance and performs the copy) and
   MUST NOT invoke any subprocess transfer.
-* F-0018 (WDAG semantics): the ``windows_sandbox`` save branch used to
-  ``shutil.copy2`` directly to the host path
-  ``C:\\Users\\WDAGUtilityAccount\\Desktop`` which only exists inside
-  the live VM. The current path MUST route through
-  ``bridge.save_to_sandbox`` so the bridge's shared-folder mapping
-  handles the WDAG translation instead of touching the host filesystem.
-* F-0019 (Concurrency): every save/test invocation used to spin a fresh
-  ``asyncio.new_event_loop()`` on a worker thread, defeating the
-  persistent bridge loop. The current path MUST schedule coroutines on
-  the bridge's persistent loop and MUST NOT create a new event loop per
-  call.
+* WDAG semantics: the ``windows_sandbox`` save branch must not copy to the
+  host path ``C:\\Users\\WDAGUtilityAccount\\Desktop``, which exists only
+  inside the live VM. It MUST route through ``bridge.save_to_sandbox`` so the
+  bridge's shared-folder mapping handles the WDAG translation instead of
+  touching the host filesystem.
+* Concurrency: saves and tests must not spin a fresh ``asyncio.new_event_loop()``
+  on a worker thread, which would defeat the persistent bridge loop. Coroutines
+  MUST be scheduled on the bridge's persistent loop, and no new event loop may
+  be created per call.
 """
 
 from __future__ import annotations
@@ -271,13 +268,12 @@ def test_save_routes_through_bridge_save_to_sandbox(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-0006: Save dispatches ``bridge.save_to_sandbox`` and not ``subprocess.run``.
+    """Save dispatches ``bridge.save_to_sandbox`` and not ``subprocess.run``.
 
-    Failure mode this test guards against: the legacy implementation
-    issued ``subprocess.Popen(["docker", "cp", ...])`` / ``scp`` /
-    ``shutil.copy2`` directly. After the fix, the only side effect of
-    pressing Save is a ``bridge.save_to_sandbox(dest_path, sandbox_type=...)``
-    invocation; no subprocess transfer is launched.
+    Failure mode this test guards against: issuing ``subprocess.Popen(["docker", "cp", ...])``,
+    ``scp``, or ``shutil.copy2`` directly. The only side effect of pressing Save must be a
+    ``bridge.save_to_sandbox(dest_path, sandbox_type=...)`` invocation; no subprocess
+    transfer is launched.
 
     Args:
         tmp_path: Pytest temp directory fixture.
@@ -315,16 +311,14 @@ def test_windows_sandbox_uses_wdag_copy(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    r"""F-0018: ``windows`` save dispatches ``bridge.save_to_sandbox``, not host write.
+    r"""``windows`` save dispatches ``bridge.save_to_sandbox``, not a host write.
 
-    Failure mode this test guards against: the legacy implementation
-    invoked ``shutil.copy2`` against
-    ``C:\\Users\\WDAGUtilityAccount\\Desktop`` on the host (a path that
-    only exists inside the running Windows Sandbox VM). After the fix,
-    the panel routes ``windows`` saves through ``bridge.save_to_sandbox``
-    so the bridge's shared-folder mapping translates the destination into
-    the guest filesystem instead of the panel ever touching the host
-    filesystem.
+    Failure mode this test guards against: ``shutil.copy2`` against
+    ``C:\\Users\\WDAGUtilityAccount\\Desktop`` on the host, a path that only
+    exists inside the running Windows Sandbox VM. The panel routes ``windows``
+    saves through ``bridge.save_to_sandbox`` so the bridge's shared-folder mapping
+    translates the destination into the guest filesystem, and the panel never
+    touches the host filesystem.
 
     Args:
         tmp_path: Pytest temp directory fixture.
@@ -367,13 +361,12 @@ def test_no_new_event_loop_per_call(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-0019: dispatching ops does not call ``asyncio.new_event_loop``.
+    """Dispatching ops does not call ``asyncio.new_event_loop``.
 
-    Failure mode this test guards against: the legacy implementation
-    called ``asyncio.new_event_loop()`` inside every worker invocation,
-    forking a one-shot loop that the persistent bridge loop knew nothing
-    about. After the fix, the mixin schedules coroutines via
-    ``run_bridge_coroutine_async`` and never creates a new loop itself.
+    Failure mode this test guards against: calling ``asyncio.new_event_loop()``
+    inside each worker invocation, which forks a one-shot loop that the persistent
+    bridge loop knows nothing about. The mixin must schedule coroutines via
+    ``run_bridge_coroutine_async`` and never create a new loop itself.
 
     Args:
         tmp_path: Pytest temp directory fixture.

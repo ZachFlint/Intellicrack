@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Fourth-pass critical-coverage tests for the process bridge: an empty process snapshot and a 32-bit target's unreadable TEB pointer.
+r"""coverage tests for the process bridge: an empty process snapshot and a 32-bit target's unreadable TEB pointer.
 
 The expectations rest on measurements in the test container, each confirmed again inside the test by the test's own Win32 call:
 

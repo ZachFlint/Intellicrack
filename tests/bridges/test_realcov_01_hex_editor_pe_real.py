@@ -5,7 +5,7 @@
 
 """Real-binary validation for ``HexEditorBridge`` PE introspection.
 
-The pre-existing ``test_hex_editor_pe_methods.py`` suite attaches an
+The ``test_hex_editor_pe_methods.py`` suite attaches an
 in-memory surrogate document built from a hand-assembled two-section PE
 buffer with empty data directories. That proves the bridge's dispatch
 and section-walk arithmetic but never exercises real import tables,

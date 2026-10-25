@@ -2,13 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 30: the built-in Anthropic stream builds its tool calls through the shared ``parse_tool_call``.
+"""The built-in Anthropic stream builds its tool calls through the shared ``parse_tool_call``.
 
-Round 1 replaced the stream finaliser's hand-built ``ToolCall`` with the shared parser the other paths use, so a change to how wire
-names or arguments are read reaches the stream too. The refactor kept behaviour identical, which is why no behavioural gate could tell it
-apart from the hand-built code. This gate streams a real turn through the real ``anthropic`` SDK from a loopback endpoint into a provider
-whose shared parser notes each call before delegating to it, and checks both that the stream's calls went through that parser and that
-they come out right, a hash-fallback wire name included.
+The stream finaliser uses the shared parser the other paths use, so a change to how wire
+names or arguments are read reaches the stream too. Results match a hand-built call, so
+this gate checks the call path directly, not only the results. It streams a real turn
+through the real ``anthropic`` SDK from a loopback endpoint into a provider whose shared
+parser notes each call before delegating to it, and checks both that the stream's calls
+went through that parser and that they come out right, a hash-fallback wire name included.
 """
 
 from __future__ import annotations

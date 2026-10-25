@@ -2,14 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave-5 real-gate tests for UI shell and panel findings.
+"""Real-gate tests for UI shell and panel findings.
 
-Closes group-08 section-14 findings 54-60 and group-02 section-15 findings
-47 and 49 (StackViewer rendered rows and async_bridge
-cancel_pending_main_loop_tasks). Finding 48 (SandboxMixin bridge routing) is
-already gated by tests/test_audit4/c12_hex_sandbox_route/test_sandbox_route.py,
-which asserts the exact ``copy_to(instance_id, source, dest)`` triple, so it is
-not duplicated here.
+Covers the StackViewer rendered rows and the async_bridge cancel_pending_main_loop_tasks. SandboxMixin
+bridge routing is already gated by tests/test_audit4/c12_hex_sandbox_route/test_sandbox_route.py, which
+asserts the exact ``copy_to(instance_id, source, dest)`` triple, so it is not duplicated here.
 """
 
 from __future__ import annotations
@@ -104,9 +101,7 @@ def _drain_bridge_workers() -> Iterator[None]:
     _async_bridge_mod.shutdown_bridge_loop()
 
 
-# ---------------------------------------------------------------------------
 # Shared helpers
-# ---------------------------------------------------------------------------
 
 
 def _configure_logging(log_dir: Path) -> Path:
@@ -157,13 +152,11 @@ def _read_log_records(log_file: Path) -> list[dict[str, object]]:
     return records
 
 
-# ---------------------------------------------------------------------------
-# Finding 54: show_info() structured log (dialogs_helpers.py:28)
-# ---------------------------------------------------------------------------
+# show_info() structured log (dialogs_helpers.py:28)
 
 
 class TestShowInfoStructuredLog:
-    """Gate for the missing show_info log assertion (finding 54).
+    """Gate for the show_info log assertion.
 
     The existing test_realcov_15_dialog_helpers_logging.py covers show_error
     and show_warning only. Deleting ``_logger.info(...)`` inside show_info
@@ -198,13 +191,11 @@ class TestShowInfoStructuredLog:
         assert record.get("title") == "Deploy Complete", f"title mismatch: {record.get('title')!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding 55: AppearanceSettingsWidget.get_settings() (preferences.py:278)
-# ---------------------------------------------------------------------------
+# AppearanceSettingsWidget.get_settings() (preferences.py:278)
 
 
 class TestAppearanceSettingsGetSettings:
-    """Gate for AppearanceSettingsWidget.get_settings (finding 55).
+    """Gate for AppearanceSettingsWidget.get_settings.
 
     Deleting the method or returning ``{}`` breaks nothing in the existing
     suite; returning the wrong font_size or theme goes undetected.
@@ -239,13 +230,11 @@ class TestAppearanceSettingsGetSettings:
         assert ui_cfg.theme == "light", f"theme: expected 'light', got {ui_cfg.theme!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding 56: SessionSettingsWidget.get_settings() (preferences.py:349)
-# ---------------------------------------------------------------------------
+# SessionSettingsWidget.get_settings() (preferences.py:349)
 
 
 class TestSessionSettingsGetSettings:
-    """Gate for SessionSettingsWidget.get_settings (finding 56).
+    """Gate for SessionSettingsWidget.get_settings.
 
     Neither method deletion nor wrong field values are caught by the
     existing suite.
@@ -279,13 +268,11 @@ class TestSessionSettingsGetSettings:
         assert sess_cfg.retention_days == 7, f"retention: expected 7, got {sess_cfg.retention_days}"
 
 
-# ---------------------------------------------------------------------------
-# Finding 57: _FlowLayout tag-chip flow wrapping (session_manager.py:64)
-# ---------------------------------------------------------------------------
+# _FlowLayout tag-chip flow wrapping (session_manager.py:64)
 
 
 class TestFlowLayoutWrapping:
-    """Gate for _FlowLayout.heightForWidth wrapping behavior (finding 57).
+    """Gate for _FlowLayout.heightForWidth wrapping behavior.
 
     With no test covering _FlowLayout, removing the wrap-on-overflow branch
     in _do_layout would leave all buttons on a single row regardless of
@@ -327,13 +314,11 @@ class TestFlowLayoutWrapping:
         assert flow.hasHeightForWidth() is True
 
 
-# ---------------------------------------------------------------------------
-# Finding 58: XPUStatusDialog label text after _refresh_device_info()
-# ---------------------------------------------------------------------------
+# XPUStatusDialog label text after _refresh_device_info()
 
 
 class TestXPUStatusDialogRefreshDeviceInfo:
-    """Gate for XPUStatusDialog._refresh_device_info label text (finding 58).
+    """Gate for XPUStatusDialog._refresh_device_info label text.
 
     The nine existing tests only check widget existence and types; they pass
     even if _refresh_device_info silently sets wrong text or is deleted.
@@ -428,18 +413,15 @@ class TestXPUStatusDialogRefreshDeviceInfo:
         dialog.close()
 
 
-# ---------------------------------------------------------------------------
-# Finding 59: main.py arg parsing (no --log-dir; test what exists)
-# ---------------------------------------------------------------------------
+# main.py arg parsing (no --log-dir; test what exists)
 
 
 class TestMainArgParsing:
-    """Gate for _parse_args in main.py (finding 59).
+    """Gate for _parse_args in main.py.
 
-    No test_main.py existed. The audit spec mentioned ``--log-dir`` which
-    does NOT exist in the parser; that flag is an audit artifact.  Tests
-    below cover the flags that ARE present: --log-level, --verbose, --quiet,
-    --config. Each assertion is falsified by returning the wrong field value.
+    No test_main.py existed. ``--log-dir`` is not a flag of the parser, so the tests cover the flags
+    the parser defines: --log-level, --verbose, --quiet, --config. Each assertion is falsified by
+    returning the wrong field value.
     """
 
     @staticmethod
@@ -502,15 +484,13 @@ class TestMainArgParsing:
         assert opts.config_path == cfg_path.expanduser(), f"config_path: expected {cfg_path.expanduser()!r}, got {opts.config_path!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding 60: __main__.py entry point
-# ---------------------------------------------------------------------------
+# __main__.py entry point
 
 
 class TestMainEntryPoint:
-    """Gate for the __main__.py entry point (finding 60).
+    """Gate for the __main__.py entry point.
 
-    No test existed. The module must export ``run`` as a callable, and
+    The module must export ``run`` as a callable, and
     invoking ``python -m intellicrack --version`` must exit with code 0
     and emit version text. ``--version`` triggers sys.exit(0) inside
     argparse before Qt is initialised, so no display is needed.
@@ -545,16 +525,13 @@ class TestMainEntryPoint:
         assert "Intellicrack" in combined, f"version output should contain 'Intellicrack'; got: {combined[:200]!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding 47 (group-02): stack_viewer.py — StackFrameTable.set_frames
-# ---------------------------------------------------------------------------
+# StackFrameTable rendered rows in the stack viewer
 
 
 class TestStackFrameTableSetFrames:
-    """Gate for StackFrameTable.set_frames rendered rows (group-02 finding 47).
+    """Gate for StackFrameTable.set_frames rendered rows.
 
-    No test file for stack_viewer existed. Deleting set_frames or returning
-    wrong text in any cell is undetected.
+    Deleting set_frames or returning wrong text in any cell must fail this gate.
     """
 
     @staticmethod
@@ -650,13 +627,11 @@ class TestStackFrameTableSetFrames:
         assert idx_item.text() == "0", f"index column: expected '0', got {idx_item.text()!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding 49 (group-02): async_bridge.cancel_pending_main_loop_tasks
-# ---------------------------------------------------------------------------
+# async_bridge.cancel_pending_main_loop_tasks
 
 
 class TestCancelPendingMainLoopTasks:
-    """Gate for cancel_pending_main_loop_tasks (group-02 finding 49).
+    """Gate for cancel_pending_main_loop_tasks.
 
     The existing idempotency test never schedules a real task, so calling
     cancel_pending_main_loop_tasks on an empty registry always returns 0.

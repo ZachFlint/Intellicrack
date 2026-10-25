@@ -8,12 +8,10 @@
 The tutorial notebook is an assertion-verified walkthrough of every public
 method of the Rust-backed :mod:`intellicrack_hexcore` extension: each code
 cell exercises the real compiled module against real byte payloads and asserts
-the observed behavior. Nothing in the suite executed it, so it silently
-drifted from the implementation (the built-in template count grew 48 -> 57 and
-the data inspector switched to RFC 5952 compressed IPv6 output) while still
-claiming to be verified.
+the observed behavior. Without a test that runs it, it can drift from the implementation while
+still claiming to be verified.
 
-This module closes that gap. It parses the notebook, runs every code cell in
+This module parses the notebook, runs every code cell in
 order in a single shared namespace exactly as a Jupyter kernel would, and
 fails the moment any embedded assertion breaks -- the compiled cell filename
 names the offending cell in the traceback. That makes it a genuine falsifiable

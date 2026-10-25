@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D60: a YARA scan that scanned nothing must not report "clean".
+"""A YARA scan that scanned nothing must not report "clean".
 
 ``QEMUSandbox.yara_scan`` returned an empty list in three different situations
 that a caller cannot tell apart:
@@ -148,7 +148,7 @@ class TestAScanReadsTheArtifactsTheGuestReallyLeft:
         """A guest artifact sitting in the output directory must produce its match.
 
         This is the false-green at its sharpest: the file is right there, the
-        rules match its bytes, and the scan used to report nothing because no
+        rules match its bytes, and an empty scan must not report clean because no
         zip archive happened to exist beside it.
 
         Args:

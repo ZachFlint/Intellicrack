@@ -3,12 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the pytest targets each sandbox run mode selects.
+"""Gates for the pytest targets each sandbox run mode selects.
 
 A run mode whose target directory does not exist is not a loud failure: pytest
 collects nothing, reports success, and the operator reads a green run as
-coverage that never happened. ``TestType.E2E`` regressed exactly that way,
-pointing at a ``tests/test_hexcore_e2e`` directory that does not exist.
+coverage that never happened. A mode pointing at a directory that does not
+exist, such as ``tests/test_hexcore_e2e``, fails exactly that way.
 
 These tests resolve the target of every mode that carries one against the real
 repository tree and require it to be a directory holding collectable test

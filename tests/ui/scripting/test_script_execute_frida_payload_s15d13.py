@@ -236,7 +236,7 @@ class TestFridaSendPayloadReachesTheResultPane:
         qapp: QApplication,
         attached_frida_panels: tuple[ToolOutputPanel, ScriptManagerPanel],
     ) -> None:
-        """``send({...})`` must keep flattening into the result, unchanged by the string fix.
+        """``send({...})`` must keep flattening into the result, whatever the string handling.
 
         Args:
             qapp: Session ``QApplication`` fixture used to pump events.

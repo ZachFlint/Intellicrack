@@ -8,10 +8,9 @@ r"""Opera's real per-user layout, and a rejected ``--browser`` override.
 Opera's consumer installer places the browser under a version-numbered
 subdirectory of ``%LocalAppData%\Programs\Opera``, fronted by a
 version-independent ``launcher.exe`` -- a layout none of the other browsers
-this module looks for share. The old ``_BROWSERS``/``install_roots`` pairing
-could never reach it: it named only ``Opera\opera.exe``, joined onto roots
-that never included the extra ``Programs`` path segment, so on a machine where
-Opera was the only non-Edge browser installed it was never found.
+this module looks for share. ``install_roots`` must offer the per-user ``Programs`` directory as a root, and
+``_BROWSERS`` must name ``Opera\opera.exe`` beneath it. Without both, a machine
+where Opera is the only non-Edge browser installed never finds it.
 
 Separately, an explicit ``--browser`` path that cannot be opened must not read
 like ordinary ``--shell none`` output -- the caller asked for something

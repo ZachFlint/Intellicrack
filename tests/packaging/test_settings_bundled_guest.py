@@ -5,8 +5,8 @@
 """Falsifiable gates for bundled QEMU guest-image discovery.
 
 The installer stages an ~800 MB ready-to-run guest at
-``<install_root>/qemu-guest``, but the sandbox settings left ``qemu_image_path``
-unset, so the QEMU backend reported "no image configured" and could not start
+``<install_root>/qemu-guest``, but the sandbox settings leave ``qemu_image_path``
+unset, so the QEMU backend reports "no image configured" and cannot start
 from a fresh install. ``default_qemu_image()`` closes that gap by discovering a
 bundled ``*.qcow2`` under the deployment root (and, for a dev checkout, under
 ``tools/qemu/images``); ``build_qemu_config`` falls back to it when the user has
@@ -159,8 +159,8 @@ def test_default_image_resolves_install_root_from_bundled_runtime(tmp_path: Path
     resolves somewhere entirely unrelated (a wheel / ``site-packages`` install).
     The bundled guest at ``<install_root>/qemu-guest`` must still be discovered
     via the runtime-derived install root, even though neither the package-relative
-    root nor its parent contains a guest. Falsifiable: the pre-fix code, which
-    only probed ``get_project_root()`` and its parent, returns ``None`` here.
+    root nor its parent contains a guest. Falsifiable: a discovery that
+    only probes ``get_project_root()`` and its parent returns ``None`` here.
 
     Args:
         tmp_path: Pytest temporary directory used to build the layout.

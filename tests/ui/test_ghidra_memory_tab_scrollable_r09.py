@@ -3,29 +3,27 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for S19 finding R09 -- Ghidra Memory tab section overlap.
+"""Tests that the Ghidra Memory tab sections do not overlap.
 
 ``GhidraPanel._create_memory_tab`` (src/intellicrack/ui/panels/ghidra_panel.py)
 stacks, in a single ``QVBoxLayout``, the memory-map ``QTableWidget`` (with a
 minimum visible-row height), a ``Read Bytes`` form, a min-height hex-dump
 ``QPlainTextEdit``, a ``Write Bytes`` form, a ``Create Memory Block`` form, the
 Remove/Split/Join block-operation rows, and a ``Create Overlay Space`` form.
-Their combined minimum height exceeds the docked pane, so before the fix the
-tab returned that container directly: at the real pane height Qt could not
-satisfy every minimum and the sections overdrew one another, leaving the
+Their combined minimum height exceeds the docked pane, so the tab must not return that container directly: at the
+real pane height Qt could not satisfy every minimum, and the sections would overdraw one another, leaving the
 Read/Write Bytes forms unreadable and unclickable.
 
-The fix hosts the container in a vertically scrolling ``QScrollArea``
+The tab hosts the container in a vertically scrolling ``QScrollArea``
 (``setWidgetResizable(True)``) so overflow scrolls instead of compressing the
 stacked sections into each other.
 
 Every assertion reads live Qt geometry off a real, fully constructed
 ``GhidraPanel`` under an offscreen ``QApplication`` -- no mocked widgets. The
 tab is driven at a viewport deliberately shorter than the content's natural
-height (the docked-pane condition that triggered the overlap), and the checks
-falsify on a revert: with the plain-``QWidget`` container the Memory tab is not
-a ``QScrollArea`` (structural check) and, forced to that short height, its
-sections' vertical bands overlap (behavioural check).
+height (the docked-pane condition that triggered the overlap). With a plain-``QWidget``
+container the Memory tab would not be a ``QScrollArea`` (structural check), and at that
+short height its sections' vertical bands would overlap (behavioural check).
 """
 
 from __future__ import annotations
@@ -111,8 +109,8 @@ class TestMemoryTabIsScrollable:
         stacked section just fits without overlap. Under ``widgetResizable``
         the scroll area holds the content at ``max(viewport, that floor)``, so
         with a viewport below the floor the content stays at the floor and the
-        vertical scrollbar becomes active. Regression: without the scroll area
-        the container's ``QVBoxLayout`` would instead absorb the deficit by
+        vertical scrollbar becomes active. Without the scroll area, the container's
+        ``QVBoxLayout`` would instead absorb the deficit by
         compressing the sections below their minimums (overlap) and the
         scrollbar would never appear.
 
@@ -144,7 +142,7 @@ class TestMemoryTabIsScrollable:
     def test_sections_do_not_overlap_at_short_viewport(panel: GhidraPanel) -> None:
         """At a short viewport, the stacked section widgets must occupy disjoint, ordered vertical bands.
 
-        This is the user-facing property R09 broke: with the plain container
+        This is the user-facing property: with the plain container
         forced to the docked height, later forms overdrew earlier ones. Mapped
         into content coordinates the ordered anchors must be strictly stacked
         top-to-bottom with no band overlapping the next.

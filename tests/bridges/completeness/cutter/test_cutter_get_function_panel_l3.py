@@ -2,19 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Bridge-completeness gate tests for finding T2-8c (Cutter ``get_function`` GUI reachability).
+"""Bridge-completeness gate tests for Cutter ``get_function`` GUI reachability).
 
 ``CutterBridge.get_function`` (single-function detail: real parameter,
 local-variable, and calling-convention extraction via rizin's ``afij``/
-``afvj``) was fully implemented and registered as ``cutter.get_function``,
-but no control anywhere in ``cutter_panel.py``/``cutter_tabs.py``/
-``cutter_static_extra_tab.py`` ever invoked it. The fix adds
-``FunctionDetailsTab`` (``cutter_static_extra_tab.py``) -- an address-driven
-sub-tab of ``StaticAnalysisExtrasTab`` that calls ``get_function`` directly,
-and is also reached automatically through ``StaticAnalysisExtrasTab.show_function``
-(the same hook the pre-existing ``BasicBlocksTab``/``FunctionDisasmTab`` use),
-which ``CutterPanel._on_function_clicked`` already calls for every function
-selected in the functions sidebar.
+``afvj``) is registered as ``cutter.get_function``. ``FunctionDetailsTab``
+(``cutter_static_extra_tab.py``) is an address-driven sub-tab of ``StaticAnalysisExtrasTab`` that
+calls ``get_function`` directly. It is also reached through
+``StaticAnalysisExtrasTab.show_function``, the hook the ``BasicBlocksTab`` and ``FunctionDisasmTab``
+sub-tabs use, which ``CutterPanel._on_function_clicked`` calls for every function selected in the
+functions sidebar.
 
 Every test drives a real ``CutterBridge`` (backed by a recording r2pipe
 double, the genuine external boundary a live rizin child process would
@@ -323,8 +320,8 @@ class TestLateCallbackSurvivesDestroyedTab:
     ``FunctionDetailsTab._apply_data``/``_on_fetch_error`` run as the
     ``on_success``/``on_error`` callbacks of a ``run_bridge_coroutine_logged``
     dispatch. Destroying the tab's underlying C++ object while that call is
-    still in flight reproduces the crash observed when ``StaticAnalysisExtrasTab``
-    went out of scope with several sub-tab bridge calls still pending: a late
+    still in flight reproduces the crash that occurs when ``StaticAnalysisExtrasTab`` goes out of
+    scope with several sub-tab bridge calls still pending: a late
     callback touched a deleted ``QPushButton``/``QTreeWidget``/``QTableWidget``
     and raised ``RuntimeError: wrapped C/C++ object ... has been deleted``
     into the Qt event loop (surfacing as "CALL ERROR: Exceptions caught in
@@ -339,8 +336,7 @@ class TestLateCallbackSurvivesDestroyedTab:
     with ``QThread: Destroyed while thread is still running`` instead of
     reproducing the callback race under test. Once the worker has already
     finished, its queued result/exception is waiting to be dispatched but
-    has not been yet -- exactly the window in which the tab was destroyed
-    in production.
+    has not been yet -- exactly the window in which production destroys the tab.
     """
 
     @staticmethod

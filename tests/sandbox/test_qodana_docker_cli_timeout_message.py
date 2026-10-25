@@ -5,8 +5,8 @@
 
 """Regression gate for ``_run_docker``'s timeout-message formatting.
 
-Covers the 2026-09-20 Qodana ``PyStringFormatInspection`` finding: on a
-``subprocess.TimeoutExpired``, the timeout message previously formatted the
+Covers the Qodana ``PyStringFormatInspection`` finding: on a
+``subprocess.TimeoutExpired``, the timeout message formatted the
 call's own ``timeout: float | None`` parameter (``f"...after {timeout:g}s"``)
 -- a value the type checker cannot prove is non-``None`` at that point, even
 though a ``TimeoutExpired`` can only be raised when a real numeric timeout

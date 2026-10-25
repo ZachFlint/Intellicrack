@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D35: the in-guest agent must listen where the host can reach it.
+r"""The in-guest agent must listen where the host can reach it.
 
 The Intellicrack agent inside a QEMU guest is reached through a SLIRP port
 forward built by :meth:`QEMUSandbox._build_qemu_command`
@@ -16,7 +16,7 @@ generated Linux agent binds ``0.0.0.0``, which is why every live proof in this
 program was obtained on a Linux guest.
 
 The defect survived the earlier agent gates because the listener is the one
-statement they do not use. S17-D26's peer lifts the generated agent's
+statement they do not use. The command-protocol peer lifts the generated agent's
 declarations, its allowlist, its framing and both dispatch branches, but writes
 its own listener so it can be given a free port. The generated listener line was
 therefore never executed by anything.

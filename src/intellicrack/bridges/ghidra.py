@@ -76,17 +76,17 @@ _BOOKMARK_READBACK_PAIR_LEN = 2
 
 # ``ghidra.app.util.parser.DataTypeParser`` pulls in Swing (it backs the GUI
 # "type chooser" dialog) and cannot be imported by a headless PyGhidra/jpype
-# process. Every remote-exec payload that used to construct
-# ``DataTypeParser(dtm)`` defines this helper instead: it resolves a type
+# process. Every remote-exec payload defines this helper in place of
+# ``DataTypeParser(dtm)``: it resolves a type
 # name against the program's ``DataTypeManager`` and the shared
 # ``BuiltInDataTypeManager`` first (covering plain names such as ``dword`` or
 # a struct/enum already registered in the program), then falls back to
 # ``ghidra.app.util.cparser.C.CParser``, which imports fine headless, for
 # compound C declarations such as ``int *`` or ``char[16]``. It never calls
 # ``DataTypeManager.resolve``/``addDataType`` itself, so it stays safe to call
-# outside an open Ghidra transaction, matching how ``DataTypeParser.parse``
-# was used at every one of these call sites. Every embedding site shares the
-# same 16-space base indentation, so this is pre-indented to match.
+# outside an open Ghidra transaction, as ``DataTypeParser.parse`` is. Every
+# embedding site shares the same 16-space base indentation, so this is
+# pre-indented to match.
 _DT_RESOLVE_HELPER_SRC = (
     "                def _ic_resolve_data_type(dtm, type_str):\n"
     "                    type_str = (type_str or '').strip()\n"
@@ -3397,7 +3397,7 @@ metadata
         ``bridges/pe_format`` (which itself uses
         :func:`pe_machine_to_arch` for the canonical
         ``IMAGE_FILE_MACHINE_*`` table) and discards the format component
-        to preserve the historical ``(arch, is_64bit)`` shape.
+        to keep the ``(arch, is_64bit)`` return shape.
 
         Args:
             data: Binary data.
@@ -4282,8 +4282,8 @@ metadata
 
         After ``Function.setName`` returns, the bridge re-queries the
         function at ``address`` via ``remote_eval`` and verifies that
-        ``getName()`` matches ``new_name``. This catches the previous
-        failure mode where ``setName`` rejected an invalid name (empty
+        ``getName()`` matches ``new_name``. This catches the case
+        where ``setName`` rejected an invalid name (empty
         string, namespace conflict, identifier clash) but the bridge
         still reported success.
 
@@ -4360,8 +4360,8 @@ metadata
 
         After issuing ``CodeUnit.setComment`` the bridge re-queries the
         same comment slot via ``remote_eval`` and verifies the stored
-        value matches ``comment``. This catches the previous failure
-        mode where the address resolved to a code unit boundary that
+        value matches ``comment``. This catches the case
+        where the address resolved to a code unit boundary that
         Ghidra silently dropped the comment on, or where no code unit
         existed at all.
 
@@ -4789,7 +4789,7 @@ metadata
         After issuing ``createLabel`` the bridge re-queries
         ``SymbolTable.getSymbols(addr)`` via ``remote_eval`` and verifies
         that the requested name appears among the labels actually
-        attached to ``address``. This catches the previous failure mode
+        attached to ``address``. This catches the case
         where ``createLabel`` rejected an invalid name (empty string,
         duplicate primary label, etc.) but the bridge still reported
         ``success: True``.
@@ -7017,7 +7017,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         After ``ReferenceManager.addMemoryReference`` returns, the
         bridge re-queries ``getReferencesFrom(from_addr)`` via
         ``remote_eval`` and verifies a reference targeting ``to_addr``
-        is present. This catches the previous failure mode where the
+        is present. This catches the case where the
         write call succeeded but Ghidra silently rejected the
         ``RefType``/``SourceType`` combination.
 

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 12: the MCP settings dialog never replaces a server by renaming, never lets one draft block a save, and never loses edits.
+"""The MCP settings dialog never replaces a server by renaming, never lets one draft block a save, and never loses edits.
 
 The gates drive the real settings dialog over a real configuration file. Renaming a server onto another's id is refused and both stay as
 they were; a newly added server with no command yet does not stop everything else from being saved; an imported server whose id is taken

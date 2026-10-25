@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D56: QEMU's host ports must be allocated, and verified bindable.
+"""QEMU's host ports must be allocated, and verified bindable.
 
 ``QEMUConfig`` used to fix ``ssh_port=2222``, ``monitor_port=4444`` and
 ``agent_port=4445``, with the guest-agent channel derived one above the last.

@@ -219,7 +219,7 @@ def _load_lock_pypi_packages(lock_path: Path) -> dict[str, tuple[str, str]]:
     selected_urls = _platform_pypi_urls(root, platform_key)
     if not selected_urls:
         # No per-platform package list (e.g. an older lockfile schema): fall back to
-        # the flat package list, matching this function's pre-multi-platform behavior.
+        # the flat package list.
         return by_name
 
     packages: dict[str, tuple[str, str]] = {}

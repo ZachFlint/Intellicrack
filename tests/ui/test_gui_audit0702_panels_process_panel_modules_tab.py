@@ -2,25 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""GUI-audit regression gates for :mod:`intellicrack.ui.panels.process_panel.modules_tab`.
+"""Gates for :mod:`intellicrack.ui.panels.process_panel.modules_tab` column sizing and tooltips.
 
-Finding H37: the module tree's ``Path`` column had no header resize
-configuration and no per-item tooltip, so full on-disk module paths were
-clipped to the default interactive width with no way to widen or hover to
-read them. The fix sizes every column to its content (with no stretched last
-section, so an overflowing path widens the view and the table's own
-horizontal scrollbar reaches it) and sets a per-item tooltip carrying the
-full path.
+The module tree's ``Path`` column must size to its content and carry a per-item tooltip. Otherwise full on-disk module paths are
+clipped to the default interactive width with no way to widen or hover to read them. Every column sizes to its content, with no
+stretched last section, so an overflowing path widens the view and the table's own horizontal scrollbar reaches it, and each
+path cell carries a tooltip with the full path.
 
-Finding M57: the COM server table's ``Loaded Path`` column (the last
-column) was left at the ``QHeaderView`` default ``Interactive`` mode with no
-tooltip. The fix sizes both path columns to their content, scrollable
-horizontally, and gives every path cell a full-value tooltip.
+The COM server table's ``Loaded Path`` column (the last column) must not be left at the ``QHeaderView`` default ``Interactive`` mode
+with no tooltip. Both path columns size to their content, scrollable horizontally, and every path cell carries a full-value tooltip.
 
-Finding M58: the DLL-injection log's ``Details`` column received raw
-exception text on injection failure with no resize mode or tooltip. The fix
-sizes the ``Details`` column to its content and reuses the ``DLL Path``/``Details``
-cells' tooltip so long error text stays readable on hover.
+The DLL-injection log's ``Details`` column receives raw exception text on injection failure, so it must have a resize mode and
+tooltip. The column sizes to its content, and the ``DLL Path``/``Details`` cells reuse the tooltip so long error text stays readable on hover.
 
 Each test drives the real :class:`ModulesTab` widget and its production
 callback closures with real result data (a real ``ModuleInfo`` dataclass, a
@@ -168,13 +161,13 @@ def _auto_confirm_message_box(monkeypatch: pytest.MonkeyPatch) -> list[tuple[obj
 
 
 class TestH37ModulePathColumn:
-    """H37: the module tree's Path column fits its content and paths get tooltips."""
+    """The module tree's Path column fits its content and paths get tooltips."""
 
     def test_h37_header_resize_modes(self, tab: ModulesTab) -> None:
         """Every column, including ``Path``, resizes to its content.
 
-        Pre-fix there was no ``header().setSectionResizeMode`` call at all,
-        so every column (including index 3, ``Path``) sat at the
+        ``header().setSectionResizeMode`` must be called, otherwise
+        every column (including index 3, ``Path``) would sit at the
         ``QHeaderView`` default ``Interactive`` mode.
 
         Args:
@@ -189,9 +182,8 @@ class TestH37ModulePathColumn:
     ) -> None:
         """Refreshing modules writes the full path and a matching tooltip.
 
-        Pre-fix ``_refresh_modules`` built the ``QTreeWidgetItem`` with no
-        ``setToolTip`` call, so a real long on-disk DLL path had no hover
-        recovery once the interactive-width column clipped it.
+        ``_refresh_modules`` must call ``setToolTip`` on the ``QTreeWidgetItem`` it builds, or a real long on-disk DLL path has no hover
+        recovery once the interactive-width column clips it.
 
         Args:
             tab: The ``ModulesTab`` under test.
@@ -221,14 +213,13 @@ class TestH37ModulePathColumn:
 
 
 class TestM57ComTableLoadedPath:
-    """M57: the COM table's DLL Path and Loaded Path columns fit their content and get tooltips."""
+    """The COM table's DLL Path and Loaded Path columns fit their content and get tooltips."""
 
     def test_m57_header_resize_modes(self, tab: ModulesTab) -> None:
         """CLSID and both path columns resize to their content.
 
-        Pre-fix only column 1 (``DLL Path``) had a resize mode; column 2
-        (``Loaded Path``, the last column) was left at the ``Interactive``
-        default because ``QTableWidget.stretchLastSection`` defaults to
+        Column 2 (``Loaded Path``, the last column) must have a resize mode too. Only column 1 (``DLL Path``) had one, otherwise
+        column 2 would sit at the ``Interactive`` default, because ``QTableWidget.stretchLastSection`` defaults to
         ``False``.
 
         Args:
@@ -243,8 +234,8 @@ class TestM57ComTableLoadedPath:
     ) -> None:
         """Inspecting COM servers writes full-value tooltips on both path cells.
 
-        Pre-fix ``_refresh_com`` populated ``DLL Path`` and ``Loaded Path``
-        with plain ``QTableWidgetItem`` instances carrying no tooltip.
+        ``_refresh_com`` must populate ``DLL Path`` and ``Loaded Path``
+        with ``QTableWidgetItem`` instances that carry a tooltip.
 
         Args:
             tab: The ``ModulesTab`` under test.
@@ -276,13 +267,13 @@ class TestM57ComTableLoadedPath:
 
 
 class TestM58InjectLogDetails:
-    """M58: the DLL-injection log's Details column fits its content and gets tooltips."""
+    """The DLL-injection log's Details column fits its content and gets tooltips."""
 
     def test_m58_header_resize_modes(self, tab: ModulesTab) -> None:
         """``DLL Path``, ``Status`` and ``Details`` resize to their content.
 
-        Pre-fix only column 0 (``DLL Path``) had a resize mode; column 2
-        (``Details``) was left at the ``Interactive`` default.
+        Column 2 (``Details``) must have a resize mode too. Only column 0 (``DLL Path``) had one, otherwise column 2
+        would sit at the ``Interactive`` default.
 
         Args:
             tab: The ``ModulesTab`` under test.
@@ -296,9 +287,9 @@ class TestM58InjectLogDetails:
     ) -> None:
         """A failed injection writes the raw exception text with a matching tooltip.
 
-        Pre-fix the failure handler wrote ``QTableWidgetItem(str(exc))``
-        directly into the ``Details`` column with no ``setToolTip`` call, so
-        a long raw exception message had no hover recovery once clipped.
+        The failure handler must not write ``QTableWidgetItem(str(exc))``
+        directly into the ``Details`` column without a ``setToolTip`` call, or
+        a long raw exception message would have no hover recovery once clipped.
 
         Args:
             tab: The ``ModulesTab`` under test.
@@ -329,9 +320,9 @@ class TestM58InjectLogDetails:
     ) -> None:
         """A successful injection also tooltips the DLL Path cell via the shared helper.
 
-        Both the success and failure handlers were changed to route their
+        Both the success and failure handlers must route their
         ``DLL Path`` cell through the same ``_tooltip_item`` helper that
-        fixes the ``Details`` column, so the shared mechanism is exercised
+        serves the ``Details`` column, so the shared mechanism is exercised
         on the success path too.
 
         Args:

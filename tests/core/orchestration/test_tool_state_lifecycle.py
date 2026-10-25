@@ -2,12 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for F-0007 bridge tool_state lifecycle.
+"""Regression tests for the bridge tool_state lifecycle.
 
 Exercises a full connect/attach/error/detach cycle against the real
 ``ToolBridgeBase`` machinery and asserts every transition reaches the
-attached ``Session.tool_states`` registry. These tests fail on ``main``
-because bridges never publish lifecycle changes to the session.
+attached ``Session.tool_states`` registry.
 """
 
 from __future__ import annotations

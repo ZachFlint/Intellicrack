@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for GhidraPanel audit3 F-0005 remediation.
+"""Tests for GhidraPanel.
 
 Verifies that the labels refresh action requires a valid user-supplied address
 and never silently substitutes 0 when the input is empty or unparsable.
@@ -164,7 +164,7 @@ def _click_refresh_labels(panel: GhidraPanel) -> None:
 
 @pytest.mark.usefixtures("qapp")
 class TestGhidraPanelRefreshLabels:
-    """Audit3 F-0005: empty/invalid address must not invoke the bridge."""
+    """An empty or invalid address must not invoke the bridge."""
 
     @staticmethod
     def test_empty_address_does_not_call_bridge(monkeypatch: pytest.MonkeyPatch) -> None:

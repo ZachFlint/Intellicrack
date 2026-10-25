@@ -3,17 +3,17 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for D40: a width constant driving a height property.
+"""Gate against a width constant driving a height property.
 
-``ScriptMessagingControls`` built its ``QPlainTextEdit`` message box with
+``ScriptMessagingControls`` must not build its ``QPlainTextEdit`` message box with
 ``setMaximumHeight(_ADDR_INPUT_MAX_WIDTH // 2)`` -- a *width* constant halved
-to stand in for a height value. The numeric result happened to be a
-reasonable height, but the coupling was accidental: any change intended for
+to stand in for a height value. The numeric result happens to be a
+reasonable height, but the coupling is accidental: any change intended for
 the address-input column width would silently reshape the message box too,
 and the name at the call site actively lied about what quantity it fed.
 
-The fix introduces a correctly named ``_POST_MESSAGE_INPUT_MAX_HEIGHT``
-constant and wires ``setMaximumHeight`` to it directly, leaving every width
+The constant ``_POST_MESSAGE_INPUT_MAX_HEIGHT`` is correctly named, and ``setMaximumHeight`` is wired to it
+directly, leaving every width usage of ``_ADDR_INPUT_MAX_WIDTH`` untouched. These tests drive the real
 usage of ``_ADDR_INPUT_MAX_WIDTH`` untouched. These tests drive the real
 ``ScriptMessagingControls`` widget under an offscreen ``QApplication`` and
 also inspect the module source directly, so they fail both if the rendered
@@ -40,7 +40,7 @@ pytestmark = pytest.mark.usefixtures("qapp")
 
 
 class TestD40PostMessageHeightConstant:
-    """Falsifiable gates for D40: the message box height must use its own named constant."""
+    """Falsifiable gates: the message box height must use its own named constant."""
 
     @staticmethod
     def test_height_constant_has_intended_value() -> None:
@@ -57,12 +57,9 @@ class TestD40PostMessageHeightConstant:
     def test_widget_maximum_height_matches_intended_value() -> None:
         """A real ``ScriptMessagingControls`` widget must render the intended max height.
 
-        Falsifiable: reverting the call site to
-        ``setMaximumHeight(_ADDR_INPUT_MAX_WIDTH // 2)`` still passes this
-        specific numeric assertion by coincidence (80 == 160 // 2), so this
-        test only proves the rendered value is correct; the source-coupling
-        test below is what actually falsifies a revert to the width
-        constant.
+        The rendered value matches the intended constant. A call site using
+        ``setMaximumHeight(_ADDR_INPUT_MAX_WIDTH // 2)`` would pass this numeric check by
+        coincidence (80 == 160 // 2), so the source-coupling test below covers it.
         """
         controls = ScriptMessagingControls()
         try:
@@ -79,9 +76,8 @@ class TestD40PostMessageHeightConstant:
         then asserts the argument expression is a bare reference to
         ``_POST_MESSAGE_INPUT_MAX_HEIGHT`` and contains no reference to
         ``_ADDR_INPUT_MAX_WIDTH`` anywhere in its expression tree.
-        Falsifiable: reverting the call site to
-        ``setMaximumHeight(_ADDR_INPUT_MAX_WIDTH // 2)`` makes the "no
-        ``_ADDR_INPUT_MAX_WIDTH`` reference" assertion fail even though the
+        Falsifiable: a call site using ``setMaximumHeight(_ADDR_INPUT_MAX_WIDTH // 2)``
+        fails the "no ``_ADDR_INPUT_MAX_WIDTH`` reference" assertion even though the
         numeric result is unchanged.
         """
         source = inspect.getsource(frida_instrumentation_tab)

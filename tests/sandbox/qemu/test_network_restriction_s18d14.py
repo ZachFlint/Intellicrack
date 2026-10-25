@@ -2,18 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S18-D14: "Enable networking in sandbox" has to reach the virtual machine.
+r"""Gate: "Enable networking in sandbox" has to reach the virtual machine.
 
 The dialog ships the box **unchecked** and warns that ticking it "allows sandbox to access
-external resources", the bridge builds that answer into ``SandboxConfig.network_enabled``,
-and the QEMU backend then never mentioned the field: ``_build_qemu_command`` emitted one
-fully routed ``-netdev user`` plus ``virtio-net-pci`` for every run. Measured on a real
-Windows guest booted with networking configured off, the guest fetched
-``msftconnecttest.com`` over HTTP, resolved ``v10.events.data.microsoft.com`` and completed
-a TCP connection to it on 443, and reached ``8.8.8.8:53``.
+external resources". The bridge builds that answer into ``SandboxConfig.network_enabled``, and
+``_build_qemu_command`` must honor it instead of emitting a fully routed ``-netdev user`` plus
+``virtio-net-pci`` for every run, which lets a guest configured with networking off reach the
+internet.
 
-The fix is ``restrict=on`` rather than dropping the NIC, and that distinction is what this
-gate is really protecting: both control channels reach the guest over ``hostfwd`` rules on
+Isolation uses ``restrict=on`` rather than dropping the NIC, and that distinction is what this
+gate protects: both control channels reach the guest over ``hostfwd`` rules on
 that same netdev, so a fix that isolated the guest by removing its network would take the
 guest agent with it and no sandbox would ever start. Every assertion below is made on the
 argv the production builder emits, and the hostfwd clauses are asserted in the restricted

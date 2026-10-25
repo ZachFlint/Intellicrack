@@ -9,17 +9,11 @@ fails, and every caller relies on that: the model-refresh worker, the
 connection test and the orchestrator all catch ``ProviderError`` and turn it
 into a message. A transport error that escapes unwrapped reaches none of them.
 
-In the provider-settings dialog that meant the model-refresh ``QThread`` died
-without emitting ``refresh_finished``, so the model list stayed in its loading
-state with no error shown -- for exactly the case a user most needs told
-about, a base URL that does not answer.
-
 The OpenAI SDK reports a refused connection as ``openai.APIConnectionError``,
 which derives from ``openai.APIError`` and from none of the builtin
-``ConnectionError``, ``TimeoutError`` or ``OSError``. ``OpenAIProvider``
-caught ``openai.APIError``; ``GrokProvider``, built on the same SDK, did not.
-Parametrizing over every provider that honours ``api_base`` keeps one of them
-from drifting again.
+``ConnectionError``, ``TimeoutError`` or ``OSError``. Parametrizing over every
+provider that honours ``api_base`` checks each provider's exception mapping
+separately.
 
 Each case points the real client at a loopback port with no listener, so the
 failure is a genuine refused connection rather than a stubbed exception.

@@ -3,11 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for sandbox panel fixes (Fixes 1 partial, 4).
+"""Tests for sandbox panel bridge calls and sandbox type combo wiring.
 
 Validates:
-- Fix 1: Non-blocking bridge call infrastructure in sandbox panel
-- Fix 4: Sandbox type combo wiring and Docker removal
+- Non-blocking bridge call infrastructure in the sandbox panel
+- Sandbox type combo wiring, with Docker removed
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from intellicrack.ui.panels.sandbox_panel import SandboxPanel
 
 @pytest.mark.usefixtures("qapp")
 class TestSandboxComboWiring:
-    """Fix 4: Sandbox type combo box wiring tests."""
+    """Sandbox type combo box wiring tests."""
 
     @staticmethod
     def test_combo_has_two_items() -> None:
@@ -80,7 +80,7 @@ class TestSandboxComboWiring:
 
 @pytest.mark.usefixtures("qapp")
 class TestSandboxManagerWiring:
-    """Fix 4: SandboxManager integration tests."""
+    """SandboxManager integration tests."""
 
     @staticmethod
     def test_set_sandbox_manager_stores_reference() -> None:
@@ -108,7 +108,7 @@ class TestSandboxManagerWiring:
 
 @pytest.mark.usefixtures("qapp")
 class TestSandboxControlState:
-    """Fix 1: Button state management tests."""
+    """Button state management tests."""
 
     @staticmethod
     def test_initial_button_states() -> None:
@@ -127,7 +127,7 @@ class TestSandboxControlState:
         """Verify _set_sandbox_controls_active(active=True) enables sandbox buttons.
 
         The snapshot controls are asserted against the QEMU backend because the
-        Windows backend does not implement snapshots at all (S17-D10), so they
+        Windows backend does not implement snapshots at all, so they
         stay gated out there.
         """
         panel = SandboxPanel()
@@ -143,7 +143,7 @@ class TestSandboxControlState:
 
     @staticmethod
     def test_set_controls_active_keeps_snapshots_gated_on_windows() -> None:
-        """Verify the Windows backend leaves the snapshot controls disabled (S17-D10)."""
+        """Verify the Windows backend leaves the snapshot controls disabled."""
         panel = SandboxPanel()
         panel.sandbox_type_combo.setCurrentText("Windows Sandbox")
         panel._set_sandbox_controls_active(active=True)

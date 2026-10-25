@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D74: a failed snapshot must not cost the caller the guest.
+r"""A failed snapshot must not cost the caller the guest.
 
 QEMU stops the machine to load a snapshot and does not start it again when the
 job fails. Measured against QEMU 10.1.0, ``query-status`` after a
@@ -12,7 +12,7 @@ job fails. Measured against QEMU 10.1.0, ``query-status`` after a
 
 and it stays there for the life of the VM. Nothing in ``restore_snapshot``
 asked, so a refused restore silently ended the guest: measured live on
-2026-08-09 through the GUI's own bridge, the ``execute("hostname")`` that had
+through the GUI's own bridge, the ``execute("hostname")`` that had
 answered four times in **0.1 s** timed out after **120.7 s** on the next call,
 ``anti_evasion`` burned 151.5 s of pure timeout and still reported success, and
 ``status`` went on reporting ``running``. The QEMU process consumed **0.000

@@ -2499,12 +2499,9 @@ class CutterAnalysisMixin(_CutterBridgeBase):
         """Get function at a specific address.
 
         Variable size and storage location are computed from the
-        rizin ``afvj`` payload rather than hard-coded. The previous
-        implementation reported every parameter as ``size=0`` and
-        ``location="stack"`` regardless of what rizin actually
-        produced, which mis-classified register-resident arguments
-        (``afvj.reg``) and stripped any size information rizin had
-        already inferred.
+        rizin ``afvj`` payload rather than hard-coded, so
+        register-resident arguments (``afvj.reg``) are classified
+        correctly and any size information rizin inferred is kept.
 
         Args:
             address: Function address.
@@ -3084,9 +3081,7 @@ class CutterSymbolsMixin(CutterXRefSearchMixin):
 
         Rizin's ``iij`` (import) listing is populated by the binary
         loader, not by analysis, so the result does not depend on
-        :attr:`_analyzed`. The previous behaviour of silently returning
-        ``[]`` when analysis hadn't been run hid real imports from
-        callers that reasonably skip ``aaa``.
+        :attr:`_analyzed`; callers may skip ``aaa``.
 
         Returns:
             list[ImportInfo]: List of import information.
@@ -3106,9 +3101,7 @@ class CutterSymbolsMixin(CutterXRefSearchMixin):
 
         Rizin's ``iEj`` listing comes from the binary loader and is
         available immediately after ``load_binary``; analysis is not
-        required. The previous behaviour of silently returning ``[]``
-        before analysis made exports invisible to callers that did not
-        run ``aaa`` first.
+        required; callers may skip ``aaa``.
 
         Returns:
             list[ExportInfo]: List of export information.
@@ -3128,9 +3121,7 @@ class CutterSymbolsMixin(CutterXRefSearchMixin):
 
         Rizin's ``iSj`` (sections) listing reflects the parsed binary
         layout produced by the loader, so it does not require an
-        analysis pass. The previous behaviour of silently returning
-        ``[]`` until ``analyze()`` ran hid section metadata from
-        legitimate callers.
+        analysis pass.
 
         Returns:
             list[SectionInfo]: List of section info.
@@ -3237,12 +3228,10 @@ class CutterEditingMixin(CutterSymbolsMixin):
         Validates the assembly first via rizin's ``pa`` (dry-run
         encoding) so the returned ``bytes`` are guaranteed to match
         what gets written, then commits a single ``wx <hex>`` write at
-        ``address``. The previous implementation issued both ``wa`` and
-        ``wx``, which produced two writes for the same instruction;
-        ``wx`` is preferred over ``wa`` because it accepts the
-        already-validated hex output without re-running the assembler
-        and avoids any drift between the dry-run encoding and the
-        committed bytes.
+        ``address``. ``wx`` is used rather than ``wa`` because it
+        accepts the already-validated hex output without re-running the
+        assembler and avoids any drift between the dry-run encoding and
+        the committed bytes.
 
         Args:
             address: Target address.
@@ -3357,7 +3346,7 @@ class CutterCommandMixin(CutterEditingMixin):
         Builds block-level graph data from rizin's ``afbj`` (basic-block
         JSON) command rather than ``agj``/``agfj``, both of which return no
         data against a rizin 0.9.1 backend. ``afbj`` does not embed
-        per-instruction disassembly the way ``agj`` historically did, so
+        per-instruction disassembly the way ``agj`` does, so
         each block's instructions are fetched separately through ``pdj``
         (disassemble N instructions as JSON), using the block's own
         ``ninstr`` count so the fetched range covers exactly one block.
@@ -3410,10 +3399,8 @@ class CutterCommandMixin(CutterEditingMixin):
 
         Resolves ``name`` directly through rizin's ``afij <name>``
         command, which returns the function info entry for the named
-        symbol when one exists. The previous implementation enumerated
-        every analysed function through ``get_functions`` and filtered
-        the result in Python, paying a full ``aflj`` round-trip on
-        every call.
+        symbol when one exists, avoiding a full ``aflj`` round-trip
+        through ``get_functions`` on every call.
 
         Args:
             name: Function name. Empty names are rejected; names
@@ -3586,11 +3573,9 @@ class CutterMetadataMixin(CutterCommandMixin):
         Methods and fields rizin reports under ``icj`` are normalised
         into uniformly-shaped dictionaries -- every method gets
         ``name``, ``address``, ``flags``, ``type``; every field gets
-        ``name``, ``offset``, ``size``, ``type``. The previous
-        implementation forwarded rizin's raw entries, leaving callers
-        to deal with rizin's varying key spellings (``addr`` vs
-        ``vaddr``, ``offset`` vs ``paddr``) and inconsistently-typed
-        values.
+        ``name``, ``offset``, ``size``, ``type``. This spares callers
+        rizin's varying key spellings (``addr`` vs ``vaddr``,
+        ``offset`` vs ``paddr``) and inconsistently-typed values.
 
         Returns:
             list[ClassInfo]: List of class information.
@@ -3928,10 +3913,9 @@ class CutterRopMixin(CutterMetadataMixin):
 
         Uses rizin's ``wcf <file>`` (write cache to file) command so the
         full IO image -- original bytes plus every cached patch produced
-        by ``io.cache=true`` -- is written to ``path``. The previously
-        used ``wtf`` command emits only the current block (default
-        256 bytes) and is therefore unsuitable for saving a patched
-        binary in its entirety.
+        by ``io.cache=true`` -- is written to ``path``. ``wtf`` is not
+        used because it emits only the current block (default 256
+        bytes) and cannot save a patched binary in its entirety.
 
         Args:
             path: Output file path. If ``None``, overwrites the
@@ -5037,9 +5021,8 @@ class CutterSearchOpsMixin(CutterWriteOpsMixin):
         Encodes ``text`` to UTF-8 hex and dispatches a ``/xj`` byte
         search instead of forwarding the raw text through ``/j``. This
         eliminates rizin command-injection vectors (``;``, ``@``,
-        ``|``, ``~``, backticks, etc.) that the previous implementation
-        carried by interpolating user input directly into the command
-        string.
+        ``|``, ``~``, backticks, etc.) that interpolating user input
+        directly into the command string would carry.
 
         Args:
             text: String text to search for. Empty strings are

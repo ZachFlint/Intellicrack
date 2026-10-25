@@ -5,9 +5,7 @@
 
 """Real-data coverage for :mod:`intellicrack.core.analysis_aggregator`.
 
-These tests replace the previous all-mock aggregator suite (audit shard 05,
-``CRITICAL REFACTOR``). They drive the genuine aggregation pipeline against
-REAL binaries:
+These tests drive the genuine aggregation pipeline against REAL binaries:
 
 * The pre-loaded :class:`BinaryInfo` is produced by parsing a real Windows
   System32 PE (``kernel32.dll``/``ntdll.dll``) or the committed real ELF corpus

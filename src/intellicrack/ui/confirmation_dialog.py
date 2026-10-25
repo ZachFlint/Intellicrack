@@ -12,7 +12,7 @@ The generation is what makes the answer honest for an externally-sourced tool:
 a third-party server can change what a tool does between one turn and the
 next, so an answer given about the old definition must not silently carry over
 to the new one. Bridge tools ship with the application and carry no
-generation, so their answers are keyed on the pair alone exactly as before.
+generation, so their answers are keyed on the pair alone.
 
 Only an answer that carries a generation may be kept ``always``. A persisted
 answer without one could never be invalidated, so for a bridge tool the

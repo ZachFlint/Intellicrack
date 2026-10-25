@@ -5,7 +5,7 @@
 """Visual demo launcher for the Intellicrack splash screen.
 
 Run directly to see the animated splash screen with all effects:
-    pixi run python tests/test_ui/launch_splash_demo.py
+    pixi run python tests/ui/launch_splash_demo.py
 
 The splash displays for ~8 seconds, advancing through all pipeline
 stages with the same progress values used by main(). Glitch effects

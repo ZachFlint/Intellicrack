@@ -72,7 +72,7 @@ def test_real_package_paths_project_to_their_top_level_name() -> None:
 def test_top_level_names_excludes_escaping_paths_keeps_real_ones() -> None:
     """The set projection drops escaping data paths and keeps real entries.
 
-    This is the exact mix that crashed ``stage.ps1``: a set of ``sympy`` RECORD
+    This is the mix that would crash ``stage.ps1``: a set of ``sympy`` RECORD
     paths where the man page escapes ``site-packages`` with backslashes.
     """
     record_paths = [

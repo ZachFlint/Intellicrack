@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Shared fixtures for audit4 C8 hex signatures offload tests.
+"""Shared fixtures for hex signatures offload tests.
 
 Provides a session-scoped QApplication required for Qt widget testing under
 the offscreen Qt platform plugin.

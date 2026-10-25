@@ -4,19 +4,15 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge-completeness gate tests for the Cutter/Rizin dynamic & navigation slice.
 
-Covers ``audit/bridge-completeness/agent-04-cutter-rizin-dynamic-navigation.md``
-and its verifier. This slice's 37 NO-CONTROL rows were all L1/L2-complete
-already (real bridge methods, real tool-defs); the remediation gap was
-entirely Layer 3 (GUI). This file gates the three new panel modules that
-close it:
+The bridge methods and tool definitions for these rows are real at L1 and L2, so these gates check
+the GUI layer (L3). The three panel modules covered are:
 
-* ``cutter_debugger_tab.py`` -- ``DebuggerTab`` (rows 1-15, 18, 20: attach,
+* ``cutter_debugger_tab.py`` -- ``DebuggerTab`` (attach,
   detach, breakpoints, stepping, continue, registers, memory read/write,
   memory regions, threads, modules).
-* ``cutter_project_tab.py`` -- ``ProjectTab`` (rows 43-45: save/open/list
-  project).
-* ``cutter_search_tab.py`` -- ``SearchTab`` (rows 27-35: byte/wildcard/
-  string/assembly/crypto/magic/value search plus byte/disassembly compare).
+* ``cutter_project_tab.py`` -- ``ProjectTab`` (save/open/list project).
+* ``cutter_search_tab.py`` -- ``SearchTab`` (byte/wildcard/ string/assembly/crypto/magic/value
+  search plus byte/disassembly compare).
 
 Every test drives the real Qt widget's button-click handler (not a
 re-implementation of it) against a real ``CutterBridge`` backed by a
@@ -278,7 +274,7 @@ class TestListAttachableProcesses:
 
 @pytest.mark.usefixtures("qapp")
 class TestDebuggerTabAttachDetach:
-    """L3 gate: rows 1-2 -- Attach/Detach buttons must invoke the real bridge methods."""
+    """L3 gate: Attach/Detach buttons must invoke the real bridge methods."""
 
     @staticmethod
     def test_attach_button_issues_dp_command_and_updates_status(qapp: QApplication) -> None:
@@ -349,7 +345,7 @@ class TestDebuggerTabAttachDetach:
 
 @pytest.mark.usefixtures("qapp")
 class TestDebuggerTabBreakpoints:
-    """L3 gate: rows 3-5 -- breakpoint Add/Remove controls and the breakpoints table."""
+    """L3 gate: breakpoint Add/Remove controls and the breakpoints table."""
 
     @staticmethod
     def test_add_breakpoint_issues_db_command_and_refreshes_table(qapp: QApplication) -> None:
@@ -414,7 +410,7 @@ class TestDebuggerTabBreakpoints:
 
 @pytest.mark.usefixtures("qapp")
 class TestDebuggerTabSteppingAndContinue:
-    """L3 gate: rows 6-8 -- Step Into/Step Over/Continue buttons."""
+    """L3 gate: Step Into/Step Over/Continue buttons."""
 
     @staticmethod
     def test_step_into_issues_ds_and_updates_pc_status(qapp: QApplication) -> None:
@@ -550,7 +546,7 @@ class TestSendSignal:
 
 @pytest.mark.usefixtures("qapp")
 class TestDebuggerTabRegisters:
-    """L3 gate: rows 9-10 -- register table refresh and in-place register editing."""
+    """L3 gate: register table refresh and in-place register editing."""
 
     @staticmethod
     def test_refresh_registers_calls_drj_and_populates_table(qapp: QApplication) -> None:
@@ -615,7 +611,7 @@ class TestDebuggerTabRegisters:
 
 @pytest.mark.usefixtures("qapp")
 class TestDebuggerTabMemory:
-    """L3 gate: rows 11-12 -- memory Read/Write controls."""
+    """L3 gate: memory Read/Write controls."""
 
     @staticmethod
     def test_read_memory_issues_p8_and_renders_hex_dump(qapp: QApplication) -> None:
@@ -682,7 +678,7 @@ class TestDebuggerTabMemory:
 
 @pytest.mark.usefixtures("qapp")
 class TestDebuggerTabRegionsThreadsModules:
-    """L3 gate: rows 13-15 -- memory regions, threads, and loaded-modules tables."""
+    """L3 gate: memory regions, threads, and loaded-modules tables."""
 
     @staticmethod
     def test_refresh_regions_calls_dmj_and_populates_table(qapp: QApplication) -> None:
@@ -791,7 +787,7 @@ class _SideEffectingSaveRecorder(CommandRecorder):
 
 @pytest.mark.usefixtures("qapp")
 class TestProjectTabSaveOpenList:
-    """L3 gate: rows 43-45 -- Save/Open/Refresh project controls."""
+    """L3 gate: Save/Open/Refresh project controls."""
 
     @staticmethod
     def test_save_button_issues_ps_command_and_refreshes_list(qapp: QApplication, tmp_path: Path) -> None:
@@ -800,8 +796,9 @@ class TestProjectTabSaveOpenList:
         Falsifiable: if ``_on_save`` never called ``self._bridge.save_project``, the fully-qualified ``Ps`` command below would never be
         recorded. Broken production line: the ``run_bridge_coroutine_logged(self._bridge.save_project(name), ...)`` call in
         ``ProjectTab._on_save`` (``cutter_project_tab.py``). This also falsifies ``CutterBridge.save_project`` itself (``cutter.py``): it
-        resolves ``dir.projects`` to a real directory and builds an explicit ``<dir>/<name>.rzdb`` path rather than the bare ``Ps <name>``
-        rizin no longer accepts, then verifies that exact file exists on disk before reporting success --
+        resolves ``dir.projects`` to a real directory and builds an explicit ``<dir>/<name>.rzdb``
+        path rather than the bare ``Ps <name>`` form that rizin rejects, then verifies that exact
+        file exists on disk before reporting success --
         :class:`_SideEffectingSaveRecorder` mimics that real disk write so the verification step is genuinely exercised rather than
         trivially satisfied by a double that never touches the filesystem.
 
@@ -860,9 +857,11 @@ class TestProjectTabSaveOpenList:
     def test_refresh_lists_real_multiple_projects(qapp: QApplication, tmp_path: Path) -> None:
         """Refresh must scan the real ``dir.projects`` directory and list every real ``.rzdb`` file found there.
 
-        Falsifiable: if ``CutterBridge.list_projects`` mis-scanned or mis-parsed the directory (it no longer issues rizin's withdrawn
-        ``Pl`` command at all -- only ``_list_rzdb_project_names``'s ``*.rzdb`` glob over the ``_resolve_projects_dir``-resolved directory,
-        both in ``cutter.py``), or ``ProjectTab._on_refresh`` failed to dispatch ``list_projects`` at all, the list widget would not end up
+        Falsifiable: if ``CutterBridge.list_projects`` mis-scanned or mis-parsed the directory (it
+        does not issue rizin's ``Pl`` command. It globs ``*.rzdb`` files with
+        ``_list_rzdb_project_names`` over the ``_resolve_projects_dir``-resolved directory, both in
+        ``cutter.py``), or ``ProjectTab._on_refresh`` failed to dispatch ``list_projects`` at all,
+        the list widget would not end up
         containing both real project names pre-created on disk below.
 
         Args:
@@ -889,7 +888,7 @@ class TestProjectTabSaveOpenList:
 
         Falsifiable: if ``_on_item_double_clicked`` never invoked ``_open_project``, 'Po beta_target' would never be recorded. The listed
         entry itself comes from a real ``beta_target.rzdb`` file pre-created on disk below and discovered by the same directory-scan
-        ``CutterBridge.list_projects`` uses in production, not from the withdrawn ``Pl`` command the old version of this test asserted.
+        ``CutterBridge.list_projects`` uses in production, not from a ``Pl`` command.
 
         Args:
             qapp: Qt application fixture used to pump the event loop.
@@ -917,7 +916,7 @@ class TestProjectTabSaveOpenList:
 
 @pytest.mark.usefixtures("qapp")
 class TestSearchTabByteModes:
-    """L3 gate: rows 27-28 -- byte pattern and wildcard byte pattern search modes."""
+    """L3 gate: byte pattern and wildcard byte pattern search modes."""
 
     @staticmethod
     def test_bytes_mode_issues_xj_with_clean_hex(qapp: QApplication) -> None:
@@ -988,7 +987,7 @@ class TestSearchTabByteModes:
 
 @pytest.mark.usefixtures("qapp")
 class TestSearchTabStringAssemblyModes:
-    """L3 gate: rows 29-30 -- literal string search and assembly-pattern search modes."""
+    """L3 gate: literal string search and assembly-pattern search modes."""
 
     @staticmethod
     def test_string_mode_encodes_text_as_utf8_hex(qapp: QApplication) -> None:
@@ -1054,7 +1053,7 @@ class TestSearchTabStringAssemblyModes:
 
 @pytest.mark.usefixtures("qapp")
 class TestSearchTabCryptoMagicValueModes:
-    """L3 gate: rows 31-33 -- crypto-constant, magic-signature, and numeric-value search modes."""
+    """L3 gate: crypto-constant, magic-signature, and numeric-value search modes."""
 
     @staticmethod
     def test_crypto_mode_issues_cj_with_no_pattern_required(qapp: QApplication) -> None:
@@ -1148,7 +1147,7 @@ class TestSearchTabCryptoMagicValueModes:
 
 @pytest.mark.usefixtures("qapp")
 class TestSearchTabCompare:
-    """L3 gate: rows 34-35 -- byte comparison and disassembly comparison controls."""
+    """L3 gate: byte comparison and disassembly comparison controls."""
 
     @staticmethod
     def test_compare_bytes_issues_c_command_and_renders_output(qapp: QApplication) -> None:

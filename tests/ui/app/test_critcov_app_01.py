@@ -941,8 +941,7 @@ def test_stack_view_activates_the_stack_tab(build_window: _WindowBuilder) -> Non
 def test_scripts_view_reports_the_selected_script_when_none_is_being_edited(build_window: _WindowBuilder) -> None:
     """With a script highlighted in the list but no draft open, the status names the selected script.
 
-    ``ToolOutputPanel.get_script_panel_state`` asks the script panel for ``get_selected_id``, which only the panel's inner list defines, so
-    the panel never reports a selection and this contract (``app.py`` lines 902-903) is unreachable: this test is red until that is fixed.
+    the panel never reports a selection and this contract (``app.py`` lines 902-903) is unreachable.
 
     Args:
         build_window: Factory for real main windows.

@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 
-"""Integration tests for Audit-1 hexcore-rust findings (F-0001..F-0005).
+"""Integration tests for hexcore-rust behaviour.
 
-Each test class targets a single audit finding and exercises the code
+Each test class targets a single behaviour and exercises the code
 through the Python bridge or the ``intellicrack_hexcore`` native module
-to confirm the Rust fix is observable end-to-end. The tests focus on
+to confirm the Rust behaviour is observable end-to-end. The tests focus on
 behavioural outcomes rather than implementation details so that future
 refactors of the Rust core are free to evolve internals.
 """
@@ -56,13 +56,13 @@ _ANCHOR_THRESHOLD = 1_048_576
 
 
 class TestF0001MoveBlockUndo:
-    """F-0001: ``move_block`` must restore both source and destination on undo."""
+    """``move_block`` must restore both source and destination on undo."""
 
     def test_undo_after_move_restores_source_zeroes_and_destination(self) -> None:
         """Verify that undoing a move repaints the source bytes and old destination.
 
-        The original implementation recorded only the destination overwrite,
-        so undo left a hole of zeros where the source used to live.
+        An implementation that records only the destination overwrite would leave
+        undo with a hole of zeros where the source used to live.
         """
         doc = hexcore_mod.HexDocument.open_bytes(b"AAAABBBBCCCCDDDD")
         doc.move_block(0, 4, 12)
@@ -149,7 +149,7 @@ class TestF0001MoveBlockUndo:
 
 
 class TestF0002SwapBlocksRequiresEqualLengths:
-    """F-0002: ``swap_blocks`` must reject unequal-length operands."""
+    """``swap_blocks`` must reject unequal-length operands."""
 
     def test_unequal_lengths_raise_value_error_on_native(self) -> None:
         """Verify the Rust core raises a ValueError when len_a != len_b."""
@@ -186,14 +186,14 @@ class TestF0002SwapBlocksRequiresEqualLengths:
 
 
 class TestF0003DiffDataBlockRemoval:
-    """F-0003: large-buffer diff dispatch must use the anchored algorithm."""
+    """Large-buffer diff dispatch must use the anchored algorithm."""
 
     def test_large_buffer_diff_uses_byte_precise_offsets(self) -> None:
         """Verify ``diff_bytes`` over a >1 MiB buffer reports byte-precise regions.
 
-        The deleted ``diff_data_block`` fallback emitted block-aligned
-        regions (multiples of 64 bytes); the anchored algorithm should
-        pinpoint a single-byte change without rounding it up.
+        A block-aligned fallback (``diff_data_block``) would emit regions in
+        multiples of 64 bytes; the anchored algorithm must pinpoint a single-byte
+        change without rounding it up.
         """
         size = _ANCHOR_THRESHOLD + 4096
         data_a = bytearray(size)
@@ -260,14 +260,13 @@ _TEMPLATE_BAD_TARGET = json.dumps({
 
 
 class TestF0004PointerErrorPropagation:
-    """F-0004: ``eval_pointer`` must propagate inner template errors."""
+    """``eval_pointer`` must propagate inner template errors."""
 
     def test_pointer_target_error_propagates(self) -> None:
         """Verify a Pointer field surfaces InvalidFieldReference upward.
 
-        The audit removed the ``unwrap_or_default()`` that previously
-        absorbed the inner error, so applying the outer template now
-        raises ``ValueError`` carrying the original message.
+        The inner error must not be absorbed by ``unwrap_or_default()``, so applying
+        the outer template raises ``ValueError`` carrying the original message.
         """
         doc = hexcore_mod.HexDocument.open_bytes(b"\x08\x00\x00\x00" + b"\x00" * 28)
         doc.register_json_template(_TEMPLATE_BAD_TARGET)
@@ -327,7 +326,7 @@ _TEMPLATE_SIZEOF_OK = json.dumps({
 
 
 class TestF0005SizeofUnknownType:
-    """F-0005: ``sizeof()`` of an unknown name must raise ``UnknownType``."""
+    """``sizeof()`` of an unknown name must raise ``UnknownType``."""
 
     def test_sizeof_unknown_type_raises_value_error(self) -> None:
         """Verify ``sizeof(<unknown>)`` errors instead of silently producing 0."""

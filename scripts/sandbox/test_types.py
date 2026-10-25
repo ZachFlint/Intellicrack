@@ -620,9 +620,8 @@ def spec_to_dict(spec: TestRunSpec) -> dict[str, object]:
 def spec_from_dict(data: dict[str, object]) -> TestRunSpec:
     """Deserialize a spec produced by :func:`spec_to_dict`.
 
-    A payload written before per-run identities existed carries no ``run_id``;
-    a fresh one is generated so the reconstructed spec still resolves to
-    collision-free artifact names.
+    A payload that carries no ``run_id`` gets a fresh one, so the reconstructed
+    spec still resolves to collision-free artifact names.
 
     Args:
         data: Dictionary previously produced by :func:`spec_to_dict`.

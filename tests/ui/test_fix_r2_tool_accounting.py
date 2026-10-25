@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 19: the settings dialog prices tools through the tool source, confirmations answer at once, and stopping MCP leaves the GUI's store alone.
+"""The settings dialog prices tools through the tool source, confirmations answer at once, and stopping MCP leaves the GUI's store alone.
 
 The settings dialog lists a real server's tools at the prices the real tool source gives. The main window's confirmation hands the
 operator's answer to the waiting call from the dialog's ``decision_made`` signal, while the dialog is still finishing. Stopping the MCP

@@ -2,24 +2,21 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for S20-D16 (Analysis Output share): results-table column truncation.
+"""Tests for the analysis results-table column truncation.
 
-At the fresh-launch tool-pane width the strings table's "Value" column was
-observed cut to "Va..." even though ``_create_table`` sets
-``QHeaderView.ResizeMode.ResizeToContents`` on every column. The root cause
-was the *additional* ``Stretch`` override applied to selected "variable
-length" columns: a ``Stretch`` section is defined to always fill exactly the
-remaining viewport width, so it can never overflow and can never trigger the
-table's own horizontal scrollbar -- when its ResizeToContents siblings
-already consumed most of a narrow tool pane, the Stretch column was forced
-down to Qt's bare default minimum section size.
+At the fresh-launch tool-pane width a Stretch section on the strings table's
+"Value" column is forced down to Qt's default minimum section size, even though
+``_create_table`` sets ``QHeaderView.ResizeMode.ResizeToContents`` on every column.
+A Stretch section always fills exactly the remaining viewport width, so it can
+never overflow and never triggers the table's own horizontal scrollbar. When its
+ResizeToContents siblings consume most of a narrow pane, the Stretch column is
+squeezed to the bare default minimum and the text is cut to "Va...".
 
-The fix removes the ``Stretch`` override entirely (every column stays
-``ResizeToContents``), adds a font-derived ``setMinimumSectionSize`` floor so
-a short or still-empty column can never shrink below legible text, and lets
-the table's own horizontal scrollbar (already ``ScrollBarAsNeeded`` by
-default on a ``QAbstractScrollArea``) reach columns whose real content
-outgrows the viewport instead of truncating them.
+The table keeps every column ResizeToContents, sets a font-derived
+``setMinimumSectionSize`` floor so a short or still-empty column never shrinks
+below legible text, and lets the table's own horizontal scrollbar (already
+``ScrollBarAsNeeded`` by default on a ``QAbstractScrollArea``) reach columns whose
+real content outgrows the viewport.
 """
 
 from __future__ import annotations
@@ -68,13 +65,13 @@ def test_empty_table_columns_still_respect_a_readable_floor(qapp: QApplication) 
 def test_long_value_content_scrolls_horizontally_instead_of_truncating(qapp: QApplication) -> None:
     """A long 'Value' cell must keep its natural width and scroll, not get crushed to the viewport.
 
-    Reproduces the S20-D16 repro directly: a narrow panel (well under the
+    Reproduces the truncated-Value-column case directly: a narrow panel (well under the
     ~530px fresh-launch tool pane) with one string row whose value is long
     enough that the "Value" column cannot fit inside the viewport alongside
-    its siblings. Post-fix the column keeps its real content width and the
-    table's horizontal scrollbar becomes usable; pre-fix (``Stretch`` on the
-    "Value" column) the column would instead be force-fit to the leftover
-    viewport width and the scrollbar would never engage.
+    its siblings. The column keeps its real content width and the table's
+    horizontal scrollbar stays usable. A Stretch section on the "Value" column
+    would instead be force-fit to the leftover viewport width and the scrollbar
+    would never engage.
 
     Args:
         qapp: QApplication fixture required by Qt widgets.

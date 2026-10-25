@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the GUI audit finding in ``process_memory``.
+"""Gate for the process-memory regions table column sizing.
 
-``TestRegionsTableColumnSizing`` (M53): the process-memory regions table must
+``TestRegionsTableColumnSizing``: the process-memory regions table must
 size its ``Base Address`` / ``Size`` / ``Protection`` / ``State`` columns to
 their content instead of keeping Qt's default ~100px interactive width, so
 long addresses and sizes are not clipped.
@@ -38,13 +38,13 @@ def _make_dialog(qapp: QApplication) -> ProcessMemoryDialog:
 
 
 class TestRegionsTableColumnSizing:
-    """M53: regions table columns resize to content and are not clipped."""
+    """Regions table columns resize to content and are not clipped."""
 
     def test_m53_header_resize_mode_is_resize_to_contents(self, qapp: QApplication) -> None:
         """Every column's resize mode must be ``ResizeToContents``.
 
-        Pre-fix the header was left at Qt's default ``Interactive`` mode for
-        every section, since no ``setSectionResizeMode`` call existed
+        The header must not be left at Qt's default ``Interactive`` mode for
+        every section, as would happen with no ``setSectionResizeMode`` call
         anywhere in the file.
 
         Args:
@@ -64,8 +64,8 @@ class TestRegionsTableColumnSizing:
     def test_m53_stretch_last_section_enabled(self, qapp: QApplication) -> None:
         """The last (State) column must stretch to fill remaining width.
 
-        Pre-fix ``setStretchLastSection`` was never called, so the header
-        default of ``False`` left trailing dialog width unused by any column.
+        ``setStretchLastSection`` must be called, since otherwise the header
+        default of ``False`` would leave trailing dialog width unused by any column.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -81,7 +81,7 @@ class TestRegionsTableColumnSizing:
     def test_m53_base_address_column_not_clipped_after_populate(self, qapp: QApplication) -> None:
         """A full-width 16-digit base address must fit inside its column.
 
-        Pre-fix the Base Address column kept the header's default ~100px
+        The Base Address column must not keep the header's default ~100px
         interactive width; ``0x{base:016X}`` (18 characters) is wider than
         that default at any normal dialog font, so the rendered column would
         be narrower than the text it must display.
@@ -111,7 +111,7 @@ class TestRegionsTableColumnSizing:
     def test_m53_size_column_not_clipped_after_populate_with_large_value(self, qapp: QApplication) -> None:
         """A large ``0xHEX (decimal)`` size string must fit inside its column.
 
-        Pre-fix the Size column kept the header's default ~100px interactive
+        The Size column must not keep the header's default ~100px interactive
         width. ``f"0x{size:X} ({size})"`` for a large process-memory region
         (e.g. ``0x7FFFFFFFFFFF (140737488355327)``, 33 characters) is far
         wider than that default, so the text would be clipped/elided.

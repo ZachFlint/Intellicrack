@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S18-D05: one slow command must not poison the channel forever.
+"""One slow command must not poison the channel forever.
 
 qemu-guest-agent carries no request id. A reply is attributed to a command by
 position alone, so a command the client stops waiting for is not merely lost:
@@ -13,7 +13,7 @@ also five seconds. The first command consumed the whole budget, the fallback
 was never sent, and the offset survived.
 
 Measured on a cold ``windows11-intellicrack-v4`` boot driven through the real
-``SandboxBridge`` on 2026-08-14. The channel synchronised over seven seconds
+``SandboxBridge``. The channel synchronised over seven seconds
 and answered ``guest-ping`` at 16:50:44. The first ``guest-exec`` was still
 unanswered when its ten-second deadline expired at 16:50:54; the resync behind
 it gave up at 16:50:59 having tried both sync commands and landed neither. What

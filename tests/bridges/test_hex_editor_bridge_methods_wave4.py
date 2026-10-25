@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""P3-HEX-BRIDGE wave-4 gates.
+"""Gates for HexEditorBridge inspection, byte statistics, content classification, byte insert and delete, and sandbox routing.
 
 Covers inspect_data_at, get_byte_statistics, get_content_classification,
 insert_bytes, delete_bytes, and test_in_sandbox.

@@ -2,20 +2,19 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for GUI audit findings in ToolSettingsWidget.
+"""Regression tests for ToolSettingsWidget.
 
-Covers two fixes:
+Covers two behaviours:
 
-* M11 - empty install-path guard. ``Path(self._path_input.text().strip())``
+* Empty install-path guard. ``Path(self._path_input.text().strip())``
   yields ``WindowsPath('.')`` for an empty field, which is always truthy, so
   the ``if not install_path`` guard never fired and a cleared field would
   extract the download into the current working directory instead of the
-  default ``tools/<tool_id>`` location. The fix tests the stripped string
+  default ``tools/<tool_id>`` location. The guard tests the stripped string
   before wrapping it in ``Path``.
-* Worker guard. The manual install and status-check triggers reassigned their
-  worker attribute without first checking whether the previous worker was
-  still running, orphaning a live ``QThread``. The fix returns early while a
-  worker is running.
+* Worker guard. The manual install and status-check triggers must not reassign their
+  worker attribute while the previous worker is still running, which would orphan a
+  live ``QThread``. Both return early while a worker is running.
 """
 
 from __future__ import annotations
@@ -161,7 +160,7 @@ def widget(qapp: QApplication, tmp_path: Path) -> Iterator[ToolSettingsWidget]:
 
 
 class TestM11EmptyInstallPathGuard:
-    """M11: a cleared install-path field must fall back to tools/<tool_id>."""
+    """A cleared install-path field must fall back to tools/<tool_id>."""
 
     def test_empty_field_resolves_to_default_tools_path(
         self,
@@ -171,10 +170,10 @@ class TestM11EmptyInstallPathGuard:
     ) -> None:
         """An empty path field is replaced with the default tools/<tool_id> path.
 
-        The pre-fix bug wrapped ``""`` in ``Path`` first, producing
-        ``WindowsPath('.')`` which is truthy, so the field stayed empty and the
-        install target became the current working directory. Post-fix, the
-        empty field is detected and rewritten to the default location.
+        Wrapping ``""`` in ``Path`` first would produce ``WindowsPath('.')``, which is
+        truthy, so the field would stay empty and the install target would become the
+        current working directory. The empty field must be detected and rewritten to the
+        default location.
 
         Args:
             widget: ToolSettingsWidget fixture.

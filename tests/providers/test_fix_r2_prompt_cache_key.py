@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 29: ``prompt_cache_key`` names the conversation, not the model.
+"""``prompt_cache_key`` names the conversation, not the model.
 
 With the model id as the key, every conversation with a model shared one cache route, so a busy session crowded the cached prefix of
 every other out. The gates drive the real built-in :class:`OpenAIProvider` over the Responses API and a Chat Completions instance

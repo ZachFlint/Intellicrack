@@ -2,17 +2,17 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-gate tests for ScriptManager, TemplateManager, and AnalysisAggregator (Group 06 Wave 5).
+"""Real-gate tests for ScriptManager, TemplateManager, and AnalysisAggregator.
 
 Covers:
-  S8-20 — ``ScriptManager.build_execute_command`` for ``ScriptLanguage.R2_COMMANDS``
+  ``ScriptManager.build_execute_command`` for ``ScriptLanguage.R2_COMMANDS``
            returns ``["r2", "-q", "-i", <path ending in .r2>]`` exactly.
-  S8-21 — ``TemplateBootstrapError`` is raised when ``export_template_json``
+  ``TemplateBootstrapError`` is raised when ``export_template_json``
            raises ``RuntimeError``; ``failed_templates`` is non-empty.
-  S7-11 — ``AnalysisAggregator`` with only a Cutter bridge contributing data
+  ``AnalysisAggregator`` with only a Cutter bridge contributing data
            yields ``"cutter"`` in ``summary.source_bridges`` and
            ``summary.complete is True``.
-  S7-12 — ``AnalysisAggregator`` with both Ghidra and Cutter bridges contributing
+  ``AnalysisAggregator`` with both Ghidra and Cutter bridges contributing
            yields both names in ``summary.source_bridges``.
 """
 
@@ -314,7 +314,7 @@ def _make_binary_info(tmp_path: Path) -> BinaryInfo:
 
 
 class TestScriptManagerR2Command:
-    """Gate for S8-20: ScriptManager.build_execute_command for R2_COMMANDS."""
+    """Gate for ScriptManager.build_execute_command for R2_COMMANDS."""
 
     def test_r2_commands_returns_r2_argv(self, tmp_path: Path) -> None:
         """build_execute_command(R2_COMMANDS script) returns ['r2', '-q', '-i', <path.r2>].
@@ -398,7 +398,7 @@ class TestScriptManagerR2Command:
 
 
 class TestTemplateBootstrapError:
-    """Gate for S8-21: TemplateBootstrapError raised when export_template_json fails."""
+    """Gate for TemplateBootstrapError raised when export_template_json fails."""
 
     def test_bootstrap_raises_on_failing_export(self, tmp_path: Path) -> None:
         """bootstrap_builtins raises TemplateBootstrapError when export raises RuntimeError.
@@ -477,7 +477,7 @@ class TestTemplateBootstrapError:
 
 
 class TestAnalysisAggregatorCutterOnly:
-    """Gate for S7-11: AnalysisAggregator with Cutter bridge contributes 'cutter' to summary."""
+    """Gate for AnalysisAggregator with Cutter bridge contributes 'cutter' to summary."""
 
     def test_cutter_stub_appears_in_source_bridges(self, tmp_path: Path) -> None:
         """Aggregation with a CutterBridge stub yields 'cutter' in source_bridges.
@@ -540,7 +540,7 @@ class TestAnalysisAggregatorCutterOnly:
 
 
 class TestAnalysisAggregatorBothBridges:
-    """Gate for S7-12: AnalysisAggregator with both Ghidra and Cutter yields both in source_bridges."""
+    """Gate for AnalysisAggregator with both Ghidra and Cutter yields both in source_bridges."""
 
     def test_both_bridge_names_appear_when_both_registered(self, tmp_path: Path) -> None:
         """Aggregation with both stubs yields both 'ghidra' and 'cutter' in source_bridges.

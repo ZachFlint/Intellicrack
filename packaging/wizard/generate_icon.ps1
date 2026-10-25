@@ -1,10 +1,9 @@
 #Requires -Version 7
 # Rebuilds src/intellicrack/assets/icon.ico with a complete frame set.
 #
-# The committed icon carried only 24/32/48/64/256 frames, so Windows had no
-# 16px or 20px frame for title bars, small taskbar buttons, and 125% display
-# scaling and fell back to downscaling a larger frame. This regenerates the
-# icon with 16/20/24/32/40/48/64/128/256 frames from the crisp 256px source.
+# Windows needs 16px and 20px frames for title bars, small taskbar buttons, and
+# 125% display scaling; without them it downscales a larger frame. This writes
+# the icon with 16/20/24/32/40/48/64/128/256 frames from the crisp 256px source.
 #
 # The minimum supported OS is Windows 10, which reads PNG-compressed frames at
 # every size, so all frames are stored as PNG. Re-run after changing the 256px

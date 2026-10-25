@@ -52,7 +52,7 @@ def _parse(source: str) -> list[object]:
 
 
 class TestAnnotationParsing:
-    """Cover ``_parse_annotations``/``_try_parse_annotations`` (F002)."""
+    """Cover ``_parse_annotations``/``_try_parse_annotations``."""
 
     def test_bare_annotation_attaches_to_struct(self) -> None:
         """A single bare ``[[ name ]]`` annotation produces a (name, None) pair."""
@@ -88,7 +88,7 @@ class TestAnnotationParsing:
 
 
 class TestTemplateParamParsing:
-    """Cover ``_parse_template_params``/``_parse_template_param`` (F003)."""
+    """Cover ``_parse_template_params``/``_parse_template_param``."""
 
     def test_single_type_parameter(self) -> None:
         """``struct Foo<T>`` records one non-auto, un-hinted template param."""
@@ -130,7 +130,7 @@ class TestTemplateParamParsing:
 
 
 class TestArrayParsing:
-    """Cover the while-condition array path in ``_parse_type`` (F004)."""
+    """Cover the while-condition array path in ``_parse_type``."""
 
     def test_field_with_while_condition_array(self) -> None:
         """``u8 items[while(...)]`` yields a field whose while_condition is set."""
@@ -166,7 +166,7 @@ class TestArrayParsing:
 
 
 class TestNestedNamespaceParsing:
-    """Cover nested namespace bodies in ``_parse_namespace`` (F005)."""
+    """Cover nested namespace bodies in ``_parse_namespace``."""
 
     def test_nested_namespace_contains_inner_struct(self) -> None:
         """A namespace nested inside another exposes its own struct body.
@@ -198,7 +198,7 @@ class TestNestedNamespaceParsing:
 
 
 class TestExpressionPrecedence:
-    """Cover Pratt precedence nesting in ``_parse_expression`` (F007)."""
+    """Cover Pratt precedence nesting in ``_parse_expression``."""
 
     def test_addition_binds_looser_than_multiplication(self) -> None:
         """``1 + 2 * 3`` nests the multiplication under the addition's right."""
@@ -228,7 +228,7 @@ class TestExpressionPrecedence:
 
 
 class TestBitfieldEntryParsing:
-    """Cover typed and padding bitfield entries in ``_parse_bitfield_entry`` (F008)."""
+    """Cover typed and padding bitfield entries in ``_parse_bitfield_entry``."""
 
     def test_signed_unsigned_type_hints(self) -> None:
         """Primitive type hints on bitfield entries are recorded verbatim."""

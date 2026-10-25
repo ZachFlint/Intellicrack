@@ -2,25 +2,25 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for S19 D10: inclusive-selection off-by-one in hex transforms.
+"""Tests that hex transforms apply to the full inclusive selection, including its last byte.
 
 ``HexEditorWidget._selection_end`` is the *inclusive* index of the last
 selected byte (see ``select_range``/Ctrl+A in ``hex_editor_widget.py``, which
 sets ``_selection_end = doc_len - 1``), and the hexcore bridge's own
 ``apply_arithmetic_to_selection`` agrees: it computes
 ``length = end - start + 1``. Three call sites in
-:mod:`intellicrack.ui.panels.hex_editor.transforms` previously treated
-``_selection_end`` as *exclusive* instead, silently dropping the last
-selected byte from every arithmetic/transform/pipeline operation:
+:mod:`intellicrack.ui.panels.hex_editor.transforms` must treat
+``_selection_end`` as inclusive. Treating it as *exclusive* silently drops the last
+selected byte from every arithmetic/transform/pipeline operation. The three affected paths are:
 
-1. Quick Arithmetic (:meth:`TransformsMixin._on_apply_arithmetic`) shifted the
+1. Quick Arithmetic (:meth:`TransformsMixin._on_apply_arithmetic`) must not shift the
    bridge selection down by one (``bridge_end = sel_end - 1``) before calling
    ``bridge.select_range``.
-2. Top Transform Apply (:meth:`TransformsMixin._on_transform_apply`) computed
-   ``apply_len = sel_end - sel_start`` (one byte short).
+2. Top Transform Apply (:meth:`TransformsMixin._on_transform_apply`) must not compute
+   ``apply_len = sel_end - sel_start``, one byte short of the inclusive range.
 3. Pipeline Execute (:meth:`TransformsMixin._on_pipeline_execute`, via
-   :meth:`TransformsMixin._resolve_pipeline_region`) made the same
-   ``sel_end - sel_start`` mistake.
+:meth:`TransformsMixin._resolve_pipeline_region`) must not use the same
+``sel_end - sel_start`` expression.
 
 Each test below selects exactly ``_SEL_COUNT`` bytes at a known offset in a
 *real* ``intellicrack_hexcore.HexDocument``, drives one of the three
@@ -30,7 +30,7 @@ byte immediately following the selection was left untouched. All three tests
 apply a bitwise NOT (hexcore's parameterless ``bit_invert`` transform),
 which is bit-for-bit identical to XOR with key ``0xFF`` (``!b == b ^ 0xFF``
 for an 8-bit value) but needs no key parameter, so the assertions isolate the
-selection-range regression from unrelated parameter-encoding differences
+selection-range handling from unrelated parameter-encoding differences
 between the three call sites.
 """
 
@@ -179,15 +179,15 @@ def _pump_until(qapp: QApplication, predicate: Callable[[], bool], *, timeout_s:
 
 @pytest.mark.usefixtures("qapp")
 class TestQuickArithmeticInclusiveSelection:
-    """D10 path 1: Quick Arithmetic must invert the full inclusive selection."""
+    """Quick Arithmetic must invert the full inclusive selection."""
 
     @staticmethod
     def test_not_operation_inverts_last_selected_byte(qapp: QApplication) -> None:
         """``_on_apply_arithmetic`` (NOT) must invert every byte through ``_SEL_END``.
 
-        Pre-fix, ``bridge_end = sel_end - 1`` meant the bridge selection (and
+        ``bridge_end = sel_end - 1`` would make the bridge selection (and
         therefore ``apply_arithmetic_to_selection``'s ``length = end - start +
-        1``) covered only ``_SEL_COUNT - 1`` bytes, leaving the byte at
+        ``1``) cover only ``_SEL_COUNT - 1`` bytes, leaving the byte at
         ``_SEL_END`` unmodified.
 
         Args:
@@ -224,13 +224,13 @@ class TestQuickArithmeticInclusiveSelection:
 
 @pytest.mark.usefixtures("qapp")
 class TestTransformApplyInclusiveSelection:
-    """D10 path 2: top Transform Apply must invert the full inclusive selection."""
+    """Top Transform Apply must invert the full inclusive selection."""
 
     @staticmethod
     def test_apply_inverts_last_selected_byte() -> None:
         """``_on_transform_apply`` must write ``_SEL_COUNT`` bytes, not ``_SEL_COUNT - 1``.
 
-        Pre-fix, ``apply_len = sel_end - sel_start`` read and wrote one byte
+        ``apply_len = sel_end - sel_start`` would read and write one byte
         short of the actual selection, leaving the byte at ``_SEL_END``
         unmodified. Uses hexcore's parameterless ``bit_invert`` transform so
         no parameter-form plumbing is needed.
@@ -252,13 +252,13 @@ class TestTransformApplyInclusiveSelection:
 
 @pytest.mark.usefixtures("qapp")
 class TestPipelineExecuteInclusiveSelection:
-    """D10 path 3: Pipeline Execute must invert the full inclusive selection."""
+    """Pipeline Execute must invert the full inclusive selection."""
 
     @staticmethod
     def test_execute_inverts_last_selected_byte() -> None:
         """``_on_pipeline_execute`` must read/write ``_SEL_COUNT`` bytes, not ``_SEL_COUNT - 1``.
 
-        Pre-fix, ``_resolve_pipeline_region`` computed
+        ``_resolve_pipeline_region`` must not compute
         ``apply_len = sel_end - sel_start``, one byte short of the actual
         selection, leaving the byte at ``_SEL_END`` unmodified. Uses a real
         ``TransformPipeline`` with a single ``RustTransformNode("bit_invert")``

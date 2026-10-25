@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Bridge-completeness gate tests for finding T2-8d (``ProcessBridge.enumerate_heaps`` orphan fix).
+"""Bridge-completeness gate tests for ``ProcessBridge.enumerate_heaps``.
 
 ``ProcessBridge.enumerate_heaps`` (a real, budget/cap-bounded per-block heap
 walker distinct from the shallower ``get_heaps`` heap-list-only sibling) had
-no ``ToolFunction`` registration and no caller anywhere in the codebase. The
-fix registers it as ``process.enumerate_heaps`` in ``_PROCESS_FUNCTIONS`` so
+no ``ToolFunction`` registration and no caller anywhere in the codebase. It is registered as
+``process.enumerate_heaps`` in ``_PROCESS_FUNCTIONS`` so
 ``ToolRegistry.execute_tool_call`` can dispatch to it (L2), and adds a
 reachable "Walk Heap Blocks" GUI control in ``ModulesTab`` (covered
 separately by the L3 wiring gate in
@@ -71,7 +71,7 @@ async def attached_bridge(process_bridge: ProcessBridge) -> AsyncGenerator[Proce
 
 
 class TestEnumerateHeapsDistinctFromGetHeapsL1:
-    """P-T2-8d: enumerate_heaps walks real per-block data that get_heaps never surfaces."""
+    """enumerate_heaps walks real per-block data that get_heaps never surfaces."""
 
     async def test_enumerate_heaps_returns_real_per_block_data(self, attached_bridge: ProcessBridge) -> None:
         """enumerate_heaps must return the same heap set as get_heaps, plus real per-block address/size/flags.
@@ -136,7 +136,7 @@ class TestEnumerateHeapsToolDefRegistrationL2:
     def test_tool_function_registered_with_matching_schema(self, process_bridge: ProcessBridge) -> None:
         """process.enumerate_heaps must appear in the tool definition with a pid-only parameter set.
 
-        Falsifiable: before the fix, ``process.enumerate_heaps`` was absent
+        Falsifiable: if ``process.enumerate_heaps`` were absent
         from ``_PROCESS_FUNCTIONS`` entirely, so ``functions_by_name``
         would not contain the key and the membership assertion would fail.
         Broken production line: the missing ``ToolFunction(name="process.enumerate_heaps", ...)``
@@ -176,9 +176,8 @@ class TestEnumerateHeapsDispatchL2:
     async def test_execute_tool_call_dispatches_enumerate_heaps(self, tmp_path: Path) -> None:
         """execute_tool_call reaches the real enumerate_heaps implementation for the current process.
 
-        Falsifiable: before the fix, dispatching ``process.enumerate_heaps``
-        raised ``ToolError`` (unknown function) because no ``ToolFunction``
-        named it; this call would raise instead of returning real heap data.
+        Falsifiable: without a ToolFunction named ``process.enumerate_heaps``, dispatch raises
+        ``ToolError`` (unknown function) instead of returning real heap data.
 
         Args:
             tmp_path: Pytest temporary directory used as the tools install root.

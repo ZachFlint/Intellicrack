@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""FIX UNIT 14a real-data coverage for ``process_panel.threads_tab``.
+"""Real-data coverage for ``process_panel.threads_tab``.
 
-Audit shard 14 flagged the existing threads-tab tests for feeding the tab
-hand-built ``ThreadInfo`` lists and never exercising the real
-``ProcessBridge.get_threads`` enumeration. These tests instead attach a real
+The thread table is checked against the real ``ProcessBridge.get_threads`` enumeration
+rather than hand-built ``ThreadInfo`` lists. These tests attach a real
 :class:`ProcessBridge` to the running interpreter process and drive
 ``ThreadsTab._refresh_threads`` so the thread table and per-tab thread combos
 are populated from genuine Win32 thread enumeration. Every assertion checks

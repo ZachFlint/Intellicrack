@@ -2,42 +2,35 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for defect R04 -- theme-toggle UI freeze.
+"""Gate for the theme toggle not freezing the UI.
 
-``ThemeManager._repolish_chrome`` used to call ``QApplication.allWidgets()``
-and unpolish/repolish every live ``QMenuBar``/``QToolBar``/
-``QAbstractScrollArea``/role-propertied ``QFrame`` in the entire process --
-including every scroll area and role-frame sitting in every inactive tab of
-every docked tool panel -- on top of the full-tree restyle
-``QApplication.setStyleSheet`` already performs. On a fully populated main
-window (multiple embedded tool panels, each with dozens of scroll areas and
-tables), that redundant second sweep blocked the event loop for seconds,
-surfacing to the user as "Not Responding".
+``ThemeManager._repolish_chrome`` must not call ``QApplication.allWidgets()`` and unpolish/repolish
+every live ``QMenuBar``/``QToolBar``/``QAbstractScrollArea``/role-propertied ``QFrame`` in the entire
+process, including every scroll area and role-frame sitting in every inactive tab of every docked
+tool panel. That sweep repeats the full-tree restyle ``QApplication.setStyleSheet`` already performs.
+On a fully populated main window (multiple embedded tool panels, each with dozens of scroll areas
+and tables), the redundant second sweep blocks the event loop for seconds, which the user sees as
+"Not Responding".
 
-The fix scopes the explicit repolish to chrome that is actually visible right
-now (the main window's menu bar/toolbars and the current tab's own content),
-deferring anything hidden to a one-shot repolish the moment it is next shown.
+The explicit repolish is scoped to chrome that is visible right now (the main window's menu
+bar/toolbars and the current tab's own content). Anything hidden is deferred to a one-shot
+repolish the moment it is next shown.
 
-This module builds a real, populated ``MainWindow`` -- five real embedded
-tool panels (Hex Editor, Frida, Ghidra, Process, Cutter) added to the real
-``ToolOutputPanel`` tab widget, exactly as ``MainWindow``'s own menu actions
-do -- and drives a real runtime theme toggle through it, observing the actual
-``QStyle.unpolish``/``polish`` traffic via a duck-typed recording stand-in
-installed as ``QApplication.style()`` (the same technique already established
-in ``tests/ui/test_theme_manager.py``), rather than timing the call: a
-wall-clock assertion would be flaky under the sandbox's shared load, while
-counting exactly which widgets the style was consulted for is deterministic
-and pinpoints the actual mechanism.
+This module builds a real, populated ``MainWindow`` -- five real embedded tool panels (Hex
+Editor, Frida, Ghidra, Process, Cutter) added to the real ``ToolOutputPanel`` tab widget, exactly
+as ``MainWindow``'s own menu actions do -- and drives a real runtime theme toggle through it,
+observing the actual ``QStyle.unpolish``/``polish`` traffic via a duck-typed recording stand-in
+installed as ``QApplication.style()`` (the same technique already established in
+``tests/ui/test_theme_manager.py``), rather than timing the call: a wall-clock assertion would be
+flaky under the sandbox's shared load, while counting exactly which widgets the style was
+consulted for is deterministic and pinpoints the actual mechanism.
 
-Falsifiable: reverting ``ThemeManager._repolish_chrome`` to sweep
-``QApplication.allWidgets()`` (dropping the visible-top-level scoping and the
-lazy show-time deferral) makes every assertion below fail at once -- the
-distinct-widget polish count jumps from ~23 to the hundreds (every scroll
-area/role-frame across every hidden tab, confirmed locally at 474 chrome
-candidates against 4302 total live widgets for this fixture), and the hidden
-Frida-tab scroll area used as the negative probe appears in the *first*
-toggle's polished set instead of only after its own tab is switched to
-(confirmed by reverting the fix locally and rerunning this module).
+Falsifiable: reverting ``ThemeManager._repolish_chrome`` to sweep ``QApplication.allWidgets()``
+(dropping the visible-top-level scoping and the lazy show-time deferral) makes every assertion
+below fail at once. The distinct-widget polish count jumps from ~23 to the hundreds, because every
+scroll area and role-frame across every hidden tab is polished (474 chrome candidates against
+4302 total live widgets for this fixture). The hidden Frida-tab scroll area used as the negative
+probe appears in the *first* toggle's polished set instead of only after its own tab is switched to.
 """
 
 from __future__ import annotations
@@ -70,7 +63,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 # A fully populated MainWindow (five embedded tool panels) carries thousands
-# of live widgets; the old allWidgets() sweep touched every scroll area and
+# of live widgets; a sweep over allWidgets() would touch every scroll area and
 # role-frame among them (474 chrome candidates were observed locally).
 _TOTAL_WIDGET_SANITY_FLOOR: int = 500
 _VISIBLE_CHROME_REPOLISH_CAP: int = 100
@@ -236,7 +229,7 @@ def _find_tab_index(window: MainWindow, title: str) -> int:
 
 @pytest.mark.usefixtures("qapp")
 class TestVisibleChromeScopedRepolish:
-    """Regression gate: a live theme toggle repolishes only currently-visible chrome."""
+    """A live theme toggle repolishes only currently-visible chrome."""
 
     @staticmethod
     def test_toggle_repolish_is_bounded_to_visible_chrome_not_all_widgets(

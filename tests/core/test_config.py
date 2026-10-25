@@ -416,7 +416,7 @@ def test_config_is_provider_enabled() -> None:
 def test_config_huggingface_default_model_is_curated() -> None:
     """Verify HuggingFace ships a non-empty curated default_model.
 
-    Regression guard for the "broken HuggingFace default model" bug: the
+    The curated default model matters because the
     provider's HfApi catalog is sorted by download count, which surfaces
     small non-conversational models unrelated to what the router can
     actually serve for chat. Without a curated default_model, callers have
@@ -435,7 +435,7 @@ def test_config_preferred_model_index_prefers_curated_default() -> None:
     Simulates a downloads-sorted discovery catalog (as HuggingFace's
     ``list_models`` returns) where the curated default_model is not the
     most-downloaded entry. Selection must land on the configured default's
-    position, not index 0 - the pre-fix behavior that caused the bug.
+    position, not index 0.
     """
     config = Config(
         providers={

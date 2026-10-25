@@ -2,9 +2,8 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave-5 falsifiable test gates for HuggingFaceProvider and LocalTransformersProvider.
+"""Falsifiable test gates for HuggingFaceProvider and LocalTransformersProvider.
 
-Closes group-08-report findings 1-9 (huggingface.py) and 10-19 (local_transformers.py).
 Every gate uses an independently-known oracle and is falsifiable by a nameable one-line
 production mutation. External boundaries (torch GPU APIs, model/tokenizer loaders, httpx
 transport, XPU cache) are monkeypatched; the SUT's own logic is never mocked.
@@ -52,9 +51,7 @@ if TYPE_CHECKING:
     from transformers.modeling_outputs import CausalLMOutputWithPast
 
 
-# ---------------------------------------------------------------------------
 # Module-level helpers
-# ---------------------------------------------------------------------------
 
 
 class _MinimalStub:
@@ -173,9 +170,7 @@ def _make_sentinel_loaded_model(model_id: str) -> LoadedModel:
     )
 
 
-# ---------------------------------------------------------------------------
-# Finding 1 — _hf_status_code extracts HTTP status code
-# ---------------------------------------------------------------------------
+# _hf_status_code extracts HTTP status code
 
 
 class TestHfStatusCode:
@@ -213,9 +208,7 @@ class TestHfStatusCode:
         assert _hf_status_code_fn(_StrStatusError()) == 0
 
 
-# ---------------------------------------------------------------------------
-# Finding 2 — _close_client sets client to None
-# ---------------------------------------------------------------------------
+# _close_client sets client to None
 
 
 class TestCloseClient:
@@ -244,9 +237,7 @@ class TestCloseClient:
         assert provider.client is None
 
 
-# ---------------------------------------------------------------------------
-# Finding 3 — disconnect resets _cancel_requested and releases client
-# ---------------------------------------------------------------------------
+# disconnect resets _cancel_requested and releases client
 
 
 class TestDisconnect:
@@ -280,9 +271,7 @@ class TestDisconnect:
         assert not provider.connected
 
 
-# ---------------------------------------------------------------------------
-# Finding 4 — _prepare_request_payload converts messages and tools
-# ---------------------------------------------------------------------------
+# _prepare_request_payload converts messages and tools
 
 
 class TestPrepareRequestPayload:
@@ -333,9 +322,7 @@ class TestPrepareRequestPayload:
         assert func["name"] == to_wire_name("binary.get_file_size")
 
 
-# ---------------------------------------------------------------------------
-# Finding 5 — _consume_stream_chunks yields content and handles cancellation
-# ---------------------------------------------------------------------------
+# _consume_stream_chunks yields content and handles cancellation
 
 
 class TestConsumeStreamChunks:
@@ -395,9 +382,7 @@ class TestConsumeStreamChunks:
         assert not chunks
 
 
-# ---------------------------------------------------------------------------
-# Finding 6 — chat_stream yields chunks via the httpx/SDK boundary
-# ---------------------------------------------------------------------------
+# chat_stream yields chunks via the httpx/SDK boundary
 
 
 class TestChatStream:
@@ -434,9 +419,7 @@ class TestChatStream:
         assert chunks == ["ready"]
 
 
-# ---------------------------------------------------------------------------
-# Finding 7 — cancel_request sets _cancel_requested to True
-# ---------------------------------------------------------------------------
+# cancel_request sets _cancel_requested to True
 
 
 class TestCancelRequest:
@@ -459,9 +442,7 @@ class TestCancelRequest:
         assert getattr(provider, "_cancel_requested") is True
 
 
-# ---------------------------------------------------------------------------
-# Finding 8 — _convert_messages_to_provider_format (HuggingFace)
-# ---------------------------------------------------------------------------
+# _convert_messages_to_provider_format (HuggingFace)
 
 
 class TestConvertMessagesHF:
@@ -501,9 +482,7 @@ class TestConvertMessagesHF:
         assert result[2] == {"role": "assistant", "content": "Decompiled."}
 
 
-# ---------------------------------------------------------------------------
-# Finding 9 — _convert_tools_to_provider_format (HuggingFace)
-# ---------------------------------------------------------------------------
+# _convert_tools_to_provider_format (HuggingFace)
 
 
 class TestConvertToolsHF:
@@ -537,9 +516,7 @@ class TestConvertToolsHF:
         assert "path" in required
 
 
-# ---------------------------------------------------------------------------
-# Finding 10 — _fetch_model_config (local_transformers.py)
-# ---------------------------------------------------------------------------
+# _fetch_model_config (local_transformers.py)
 
 
 class TestFetchModelConfig:
@@ -647,9 +624,7 @@ class TestFetchModelConfig:
         assert result == {}
 
 
-# ---------------------------------------------------------------------------
-# Finding 11 — _release_device_caches calls gc.collect and clear_xpu_cache
-# ---------------------------------------------------------------------------
+# _release_device_caches calls gc.collect and clear_xpu_cache
 
 
 class TestReleaseDeviceCaches:
@@ -710,9 +685,7 @@ class TestReleaseDeviceCaches:
         assert gc_calls
 
 
-# ---------------------------------------------------------------------------
-# Finding 12 — list_models returns all seven recommended model IDs
-# ---------------------------------------------------------------------------
+# list_models returns all seven recommended model IDs
 
 
 class TestListModels:
@@ -790,9 +763,7 @@ class TestListModels:
         assert tiny_model.context_window == 4096
 
 
-# ---------------------------------------------------------------------------
-# Finding 13 — _run_local_chat returns (text, usage) with correct structure
-# ---------------------------------------------------------------------------
+# _run_local_chat returns (text, usage) with correct structure
 
 
 class TestRunLocalChat:
@@ -844,9 +815,7 @@ class TestRunLocalChat:
         assert pending_usage.total_tokens == 57
 
 
-# ---------------------------------------------------------------------------
-# Finding 14 — _iter_local_stream yields accumulated chunks
-# ---------------------------------------------------------------------------
+# _iter_local_stream yields accumulated chunks
 
 
 class TestIterLocalStream:
@@ -895,9 +864,7 @@ class TestIterLocalStream:
         assert collected == ["hello", " world"]
 
 
-# ---------------------------------------------------------------------------
-# Finding 15 — _config_device_for translates device strings
-# ---------------------------------------------------------------------------
+# _config_device_for translates device strings
 
 
 class TestConfigDeviceFor:
@@ -925,9 +892,7 @@ class TestConfigDeviceFor:
         assert getattr(LocalTransformersProvider, "_config_device_for")("cpu") == "cpu"
 
 
-# ---------------------------------------------------------------------------
-# Finding 16 — _load_for_device dispatches to the correct loader
-# ---------------------------------------------------------------------------
+# _load_for_device dispatches to the correct loader
 
 
 class TestLoadForDevice:
@@ -1044,9 +1009,7 @@ class TestLoadForDevice:
         assert not xpu_called
 
 
-# ---------------------------------------------------------------------------
-# Finding 17 — _load_model_for_cuda raises on no-CUDA machine
-# ---------------------------------------------------------------------------
+# _load_model_for_cuda raises on no-CUDA machine
 
 
 class TestLoadModelForCuda:
@@ -1071,9 +1034,7 @@ class TestLoadModelForCuda:
             getattr(provider, "_load_model_for_cuda")(config)
 
 
-# ---------------------------------------------------------------------------
-# Finding 18 — _iter_local_generation_loop temperature branch
-# ---------------------------------------------------------------------------
+# _iter_local_generation_loop temperature branch
 
 
 class _FakeOutput:
@@ -1228,9 +1189,7 @@ class TestIterLocalGenerationLoop:
         assert multinomial_calls == [True]
 
 
-# ---------------------------------------------------------------------------
-# Finding 19 — _convert_tools_to_provider_format (LocalTransformers)
-# ---------------------------------------------------------------------------
+# _convert_tools_to_provider_format (LocalTransformers)
 
 
 class TestConvertToolsLT:

@@ -5,16 +5,27 @@
 
 use rayon::prelude::*;
 
+/// Inputs at least this long are split across the rayon pool.
+const PARALLEL_THRESHOLD: usize = 1024 * 1024;
+
+/// Shannon entropy of `data` in bits per byte, in `0.0..=8.0`.
+///
+/// Empty input yields `0.0`; a buffer of one repeated byte yields exactly
+/// `0.0` and a buffer holding every byte value equally often exactly `8.0`.
 #[must_use]
 pub fn compute_entropy(data: &[u8]) -> f64 {
-    if data.is_empty() {
+    entropy_from_counts(&byte_distribution(data), data.len())
+}
+
+/// Shannon entropy of a byte histogram over `len` bytes.
+fn entropy_from_counts(counts: &[u64; 256], len: usize) -> f64 {
+    if len == 0 {
         return 0.0;
     }
-    let counts = byte_distribution(data);
-    let len_u64: u64 = data.len().try_into().unwrap_or(u64::MAX);
+    let len_u64: u64 = len.try_into().unwrap_or(u64::MAX);
     let total = u64_to_f64(len_u64);
     let mut entropy = 0.0;
-    for &count in &counts {
+    for &count in counts {
         if count > 0 {
             let p = u64_to_f64(count) / total;
             entropy -= p * p.log2();
@@ -30,23 +41,19 @@ fn u64_to_f64(val: u64) -> f64 {
     f64::from(upper) * 4_294_967_296.0 + f64::from(lower)
 }
 
+/// Entropy of each consecutive `block_size`-byte block, the last block
+/// possibly shorter. Empty input or a zero `block_size` yields no blocks.
 #[must_use]
 pub fn entropy_map(data: &[u8], block_size: usize) -> Vec<f64> {
     if data.is_empty() || block_size == 0 {
         return Vec::new();
     }
-
-    let blocks: Vec<&[u8]> = data.chunks(block_size).collect();
-    blocks
-        .par_iter()
-        .map(|block| compute_entropy(block))
-        .collect()
+    data.par_chunks(block_size).map(compute_entropy).collect()
 }
 
+/// Occurrences of each byte value, indexed by value.
 #[must_use]
 pub fn byte_distribution(data: &[u8]) -> [u64; 256] {
-    const PARALLEL_THRESHOLD: usize = 1024 * 1024;
-
     if data.len() < PARALLEL_THRESHOLD {
         let mut counts = [0u64; 256];
         for &b in data {
@@ -68,14 +75,16 @@ pub fn byte_distribution(data: &[u8]) -> [u64; 256] {
 
         let mut merged = [0u64; 256];
         for counts in chunk_counts {
-            for i in 0..256 {
-                merged[i] += counts[i];
+            for (total, count) in merged.iter_mut().zip(counts) {
+                *total += count;
             }
         }
         merged
     }
 }
 
+/// Counts of `(null, printable, control, high)` bytes, in [`byte_class`]
+/// tag order.
 #[must_use]
 pub fn byte_type_distribution(data: &[u8]) -> (u64, u64, u64, u64) {
     let mut counts = [0u64; BYTE_CLASS_COUNT];
@@ -118,67 +127,63 @@ pub fn classify_bytes(data: &[u8]) -> Vec<u8> {
     data.iter().copied().map(byte_class).collect()
 }
 
+/// Counts of every adjacent byte pair, as a 256x256 row-major grid.
+///
+/// Entry `a * 256 + b` counts positions `i` with `data[i] == a` and
+/// `data[i + 1] == b`. Large inputs are split into chunks that overlap by one
+/// byte, so each pair spanning a chunk seam is counted exactly once.
 #[must_use]
 pub fn digram_matrix(data: &[u8]) -> Vec<u64> {
-    const PARALLEL_THRESHOLD: usize = 1024 * 1024;
-
-    if data.len() < 2 {
-        return vec![0u64; 65536];
+    fn count_pairs(chunk: &[u8]) -> Vec<u64> {
+        let mut matrix = vec![0u64; 65536];
+        for window in chunk.windows(2) {
+            matrix[usize::from(window[0]) * 256 + usize::from(window[1])] += 1;
+        }
+        matrix
     }
 
     if data.len() < PARALLEL_THRESHOLD {
-        let mut matrix = vec![0u64; 65536];
-        for window in data.windows(2) {
-            let idx = usize::from(window[0]) * 256 + usize::from(window[1]);
-            matrix[idx] += 1;
-        }
-        matrix
-    } else {
-        let chunk_size = (data.len() / rayon::current_num_threads()).max(65536);
-        let chunks: Vec<(usize, &[u8])> = {
-            let mut result = Vec::new();
-            let mut start = 0;
-            while start < data.len() {
-                let end = (start + chunk_size + 1).min(data.len());
-                result.push((start, &data[start..end]));
-                start += chunk_size;
-            }
-            result
-        };
-
-        let chunk_matrices: Vec<Vec<u64>> = chunks
-            .par_iter()
-            .map(|(_, chunk)| {
-                let mut local = vec![0u64; 65536];
-                for window in chunk.windows(2) {
-                    let idx = usize::from(window[0]) * 256 + usize::from(window[1]);
-                    local[idx] += 1;
-                }
-                local
-            })
-            .collect();
-
-        let mut merged = vec![0u64; 65536];
-        for matrix in chunk_matrices {
-            for i in 0..65536 {
-                merged[i] += matrix[i];
-            }
-        }
-        merged
+        return count_pairs(data);
     }
+
+    let chunk_size = (data.len() / rayon::current_num_threads()).max(65536);
+    let chunks: Vec<&[u8]> = (0..data.len())
+        .step_by(chunk_size)
+        .map(|start| &data[start..(start + chunk_size + 1).min(data.len())])
+        .collect();
+
+    let mut merged = vec![0u64; 65536];
+    for matrix in chunks
+        .par_iter()
+        .map(|chunk| count_pairs(chunk))
+        .collect::<Vec<_>>()
+    {
+        for (total, count) in merged.iter_mut().zip(matrix) {
+            *total += count;
+        }
+    }
+    merged
 }
 
+/// Coarse content category of each `block_size`-byte block.
+///
+/// The codes are:
+///
+/// * `0` — null-heavy: entropy below 0.5 and more than 90% zero bytes;
+/// * `1` — text: entropy below 4.5 and more than 70% printable ASCII;
+/// * `2` — structured/other: anything not matched by another rule;
+/// * `3` — high entropy: above 7.0 bits per byte (compressed or encrypted);
+/// * `4` — mixed entropy: 4.5 to 7.0 bits per byte inclusive.
+///
+/// A block of `n` bytes can reach at most `log2(min(n, 256))` bits, so blocks
+/// of 128 bytes or fewer never classify as `3`, and blocks shorter than 23
+/// bytes never as `4`; use blocks of at least 256 bytes for entropy work.
 #[must_use]
 pub fn content_classification(data: &[u8], block_size: usize) -> Vec<u8> {
     if data.is_empty() || block_size == 0 {
         return Vec::new();
     }
-
-    let blocks: Vec<&[u8]> = data.chunks(block_size).collect();
-    blocks
-        .par_iter()
-        .map(|block| classify_block(block))
-        .collect()
+    data.par_chunks(block_size).map(classify_block).collect()
 }
 
 fn classify_block(block: &[u8]) -> u8 {
@@ -186,13 +191,15 @@ fn classify_block(block: &[u8]) -> u8 {
         return 0;
     }
 
-    let (null_count, printable_count, _control_count, _high_count) = byte_type_distribution(block);
+    let counts = byte_distribution(block);
+    let null_count = counts[0];
+    let printable_count: u64 = counts[0x20..=0x7E].iter().sum();
     let block_len_u64: u64 = block.len().try_into().unwrap_or(u64::MAX);
     let total = u64_to_f64(block_len_u64);
     let null_ratio = u64_to_f64(null_count) / total;
     let printable_ratio = u64_to_f64(printable_count) / total;
 
-    let entropy = compute_entropy(block);
+    let entropy = entropy_from_counts(&counts, block.len());
 
     if entropy < 0.5 && null_ratio > 0.9 {
         return 0;
@@ -230,9 +237,10 @@ mod tests {
             *b = i.to_le_bytes()[0];
         }
         let ent = compute_entropy(&data);
+        // Each of the 256 values has p = 1/256 exactly, so the sum is exactly 8.0.
         assert!(
-            ent > 7.99,
-            "uniform distribution should have entropy ~8.0, got {ent}"
+            (ent - 8.0).abs() < f64::EPSILON,
+            "uniform distribution must have entropy exactly 8.0, got {ent}"
         );
     }
 
@@ -249,13 +257,51 @@ mod tests {
         }
         let map = entropy_map(&data, 1024);
         assert_eq!(map.len(), 2);
-        assert!(map[0] < 0.01);
-        assert!(map[1] < 0.01);
+        assert!(map[0].abs() < f64::EPSILON);
+        assert!(map[1].abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_entropy_map_last_partial_block_exact() {
+        let mut data = vec![0u8; 2048];
+        data.extend_from_slice(&[0x41, 0x42]);
+        let map = entropy_map(&data, 1024);
+        assert_eq!(map.len(), 3);
+        assert!(map[0].abs() < f64::EPSILON);
+        assert!(
+            (map[2] - 1.0).abs() < f64::EPSILON,
+            "tail entropy {}",
+            map[2]
+        );
+        assert_eq!(content_classification(&data, 1024), vec![0, 0, 1]);
+    }
+
+    #[test]
+    fn test_classify_block_band_edges_are_exact() {
+        // 128 symbols x 32 each: entropy exactly 7.0, which is in band 4, not 3.
+        let seven: Vec<u8> = (0..128u8).cycle().take(4096).collect();
+        assert_eq!(classify_block(&seven), 4);
+        // 64 symbols at p = 1/128 plus two at p = 1/4: entropy exactly 4.5,
+        // printable ratio 1.0, so arm 1 (`< 4.5`) must not claim it.
+        let mut four_and_half: Vec<u8> = (0x20..=0x5Fu8).cycle().take(256).collect();
+        four_and_half.extend(std::iter::repeat_n(b'a', 128));
+        four_and_half.extend(std::iter::repeat_n(b'b', 128));
+        assert_eq!(classify_block(&four_and_half), 4);
+    }
+
+    #[test]
+    fn test_digram_matrix_parallel_alternating_pairs_exact() {
+        let data: Vec<u8> = (0..2 * 1024 * 1024)
+            .map(|i| if i % 2 == 0 { 1 } else { 2 })
+            .collect();
+        let matrix = digram_matrix(&data);
+        assert_eq!(matrix[256 + 2], 1_048_576);
+        assert_eq!(matrix[2 * 256 + 1], 1_048_575);
     }
 
     #[test]
     fn test_entropy_map_empty() {
-        assert!(entropy_map(&[], 256).is_empty());
+        assert_eq!(entropy_map(&[], 256).len(), 0);
     }
 
     #[test]
@@ -339,7 +385,7 @@ mod tests {
 
     #[test]
     fn test_classification_empty() {
-        assert!(content_classification(&[], 256).is_empty());
+        assert_eq!(content_classification(&[], 256).len(), 0);
     }
 
     #[test]
@@ -395,12 +441,12 @@ mod tests {
     #[test]
     fn test_entropy_map_block_size_zero_guard() {
         // Non-empty data isolates the block_size == 0 sub-condition.
-        assert!(entropy_map(b"abc", 0).is_empty());
+        assert_eq!(entropy_map(b"abc", 0).len(), 0);
     }
 
     #[test]
     fn test_content_classification_block_size_zero_guard() {
-        assert!(content_classification(b"abc", 0).is_empty());
+        assert_eq!(content_classification(b"abc", 0).len(), 0);
     }
 
     #[test]

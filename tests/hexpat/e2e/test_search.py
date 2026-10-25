@@ -582,10 +582,10 @@ class TestReplaceBytes:
     def test_undo_restores_length_growing_replacement(self, hexcore: types.ModuleType) -> None:
         """Verify undo after a length-growing replace restores the exact original bytes.
 
-        F-0080: ``replace_bytes`` rebuilds the whole document, so a replacement
+        ``replace_bytes`` rebuilds the whole document, so a replacement
         longer or shorter than the matched pattern changes the document length.
-        The undo record used to be a length-preserving clamping overwrite, which
-        left the extra tail bytes behind (grow) or dropped them (shrink). Undo
+        A length-preserving clamping overwrite as the undo record would leave the
+        extra tail bytes behind (grow) or drop them (shrink). Undo
         must restore the byte-exact original document, length included.
 
         Args:

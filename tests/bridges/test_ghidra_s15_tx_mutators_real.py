@@ -3,46 +3,25 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the S15 Ghidra panel mutator missing-transaction defects.
+"""Falsifiable gates for the transaction handling of five user-facing ``GhidraBridge`` mutators.
 
-Five user-facing ``GhidraBridge`` mutators built their remote Jython script
-without wrapping the actual program write in ``currentProgram.startTransaction``
-/``endTransaction``, so each raised ``NoTransactionException('Transaction has
-not been started')`` the instant a real (non-headless-analysis-only) Ghidra
-program object enforced its transaction invariant:
+Each of these mutators must wrap its program write in ``currentProgram.startTransaction`` and ``endTransaction``. Without that wrapper, a real Ghidra program raises ``NoTransactionException('Transaction has not been started')`` on the write:
 
-* S15-D09 -- :meth:`GhidraBridge.add_comment`
-* S15-D10 -- :meth:`GhidraBridge.set_label`
-* S15-D11 -- :meth:`GhidraBridge.create_bookmark`
-* S15-D14 -- :meth:`GhidraBridge.define_structure`
-* S15-D15 -- :meth:`GhidraBridge.apply_structure_at`
+* :meth:`GhidraBridge.add_comment`
+* :meth:`GhidraBridge.set_label`
+* :meth:`GhidraBridge.create_bookmark`
+* :meth:`GhidraBridge.define_structure`
+* :meth:`GhidraBridge.apply_structure_at`
 
-Their siblings elsewhere in the bridge (``remove_label``, ``add_thunk``,
-``add_bookmark``, ...) already wrap their mutating call in
-``tx_id = currentProgram.startTransaction(...)`` / ``finally:
-currentProgram.endTransaction(tx_id, ...)`` and work correctly; the fix mirrors
-that exact pattern for the five methods above.
+Sibling mutators elsewhere in the bridge (``remove_label``, ``add_thunk``, ``add_bookmark``, ...) wrap their mutating call in ``tx_id = currentProgram.startTransaction(...)`` and ``finally: currentProgram.endTransaction(tx_id, ...)``. The five methods above use that same pattern.
 
-These gates drive a real headless Ghidra 12.x instance through PyGhidra
-against a real PE (the running interpreter's own ``python.exe``/``pythonw.exe``)
--- no ``ghidra_bridge`` RPC client is mocked and no Ghidra API call is
-stubbed. Each test performs the mutation through the public bridge method and
-then independently reads the result back through the corresponding public
-``get_*`` accessor, so the gate is falsifiable purely by reverting the
-transaction wrapper in ``src/intellicrack/bridges/ghidra.py``: without it the
-mutating call raises ``ToolError`` (wrapping ``NoTransactionException``)
-before any readback happens.
+These gates drive a real headless Ghidra 12.x instance through PyGhidra against a real PE (the running interpreter's own ``python.exe``/``pythonw.exe``) -- no ``ghidra_bridge`` RPC client is mocked and no Ghidra API call is stubbed. Each test performs the mutation through the public bridge method and then independently reads the result back through the corresponding public ``get_*`` accessor, so each gate fails if the transaction wrapper is removed from ``src/intellicrack/bridges/ghidra.py``: without it the mutating call raises ``ToolError`` (wrapping ``NoTransactionException``) before any readback happens.
 
-Host-native only: the Docker sandbox has no JVM/Ghidra install, so this
-module skips itself (via ``pytestmark``) unless ``ghidra_bridge``, ``jpype``
-and ``pyghidra`` are importable *and* a real Ghidra installation is named by
-``GHIDRA_INSTALL_DIR`` or ``GHIDRA_HOME``. Run explicitly on a host with
-Ghidra installed via::
+Host-native only: the Docker sandbox has no JVM/Ghidra install, so this module skips itself (via ``pytestmark``) unless ``ghidra_bridge``, ``jpype`` and ``pyghidra`` are importable *and* a real Ghidra installation is named by ``GHIDRA_INSTALL_DIR`` or ``GHIDRA_HOME``. Run explicitly on a host with Ghidra installed via::
 
     pixi run pytest tests/bridges/test_ghidra_s15_tx_mutators_real.py -m host_native -v
 
-or as part of the orchestrated host-native pass via
-``python scripts/host_native_tests.py``.
+or as part of the orchestrated host-native pass via ``python scripts/host_native_tests.py``.
 """
 
 from __future__ import annotations
@@ -203,24 +182,11 @@ async def test_add_comment_persists_under_transaction(
     real_bridge: GhidraBridge,
     entry_point: int,
 ) -> None:
-    """S15-D09: add_comment must commit its ``setComment`` under a transaction.
+    """add_comment must commit its ``setComment`` under a transaction.
 
-    Before the fix, ``cu.setComment(...)`` ran with no active transaction and
-    Ghidra raised ``NoTransactionException``, which ``add_comment`` wraps as a
-    ``ToolError`` -- so this call itself already falsifies a reverted fix.
-    The follow-up readback re-fetches the code unit at ``entry_point``
-    through a fresh ``execute_script`` call (a channel independent of
-    ``add_comment``'s own internal verification) and confirms the comment is
-    genuinely durable in the program.
+    Without an active transaction, ``cu.setComment(...)`` raises ``NoTransactionException``, which ``add_comment`` wraps as a ``ToolError``, so this call alone fails if the transaction wrapper is removed. The follow-up readback re-fetches the code unit at ``entry_point`` through a fresh ``execute_script`` call (a channel independent of ``add_comment``'s own internal verification) and confirms the comment is durable in the program.
 
-    Note: the readback deliberately does not use the public
-    ``get_comments`` accessor. That method builds its remote script around
-    ``Listing.getCodeUnits(Address, Address, boolean)``, an overload that
-    does not exist on the real Ghidra ``ListingDB`` (confirmed against this
-    host's Ghidra install; only the ``(Address, boolean)``,
-    ``(AddressSetView, boolean)`` and ``(boolean)`` overloads exist) and so
-    always raises a ``ToolError`` wrapping a Java ``TypeError`` -- a
-    separate, pre-existing defect outside this fix's scope.
+    The readback deliberately does not use the public ``get_comments`` accessor. That method builds its remote script around ``Listing.getCodeUnits(Address, Address, boolean)``, an overload that does not exist on the real Ghidra ``ListingDB``. Only the ``(Address, boolean)``, ``(AddressSetView, boolean)`` and ``(boolean)`` overloads exist on the Ghidra install this host uses. The accessor therefore always raises a ``ToolError`` wrapping a Java ``TypeError``, a separate defect that this gate does not cover.
 
     Args:
         real_bridge: Module-scoped bridge fixture with a real program loaded.
@@ -240,10 +206,9 @@ async def test_set_label_persists_under_transaction(
     real_bridge: GhidraBridge,
     entry_point: int,
 ) -> None:
-    """S15-D10: set_label must commit its ``createLabel`` under a transaction.
+    """set_label must commit its ``createLabel`` under a transaction.
 
-    Before the fix, ``st.createLabel(...)`` ran with no active transaction
-    and raised ``NoTransactionException``, surfaced as ``ToolError``.
+    Without an active transaction, ``st.createLabel(...)`` raises ``NoTransactionException``, which surfaces as ``ToolError``.
 
     Args:
         real_bridge: Module-scoped bridge fixture with a real program loaded.
@@ -262,10 +227,9 @@ async def test_create_bookmark_persists_under_transaction(
     real_bridge: GhidraBridge,
     entry_point: int,
 ) -> None:
-    """S15-D11: create_bookmark must commit its ``setBookmark`` under a transaction.
+    """create_bookmark must commit its ``setBookmark`` under a transaction.
 
-    Before the fix, ``bm.setBookmark(...)`` ran with no active transaction
-    and raised ``NoTransactionException``, surfaced as ``ToolError``.
+    Without an active transaction, ``bm.setBookmark(...)`` raises ``NoTransactionException``, which surfaces as ``ToolError``.
 
     Args:
         real_bridge: Module-scoped bridge fixture with a real program loaded.
@@ -281,11 +245,9 @@ async def test_create_bookmark_persists_under_transaction(
 
 
 async def test_define_structure_persists_under_transaction(real_bridge: GhidraBridge) -> None:
-    """S15-D14: define_structure must commit its ``addDataType`` under a transaction.
+    """define_structure must commit its ``addDataType`` under a transaction.
 
-    Before the fix, ``dtm.addDataType(struct, None)`` ran with no active
-    transaction and raised ``NoTransactionException``, surfaced as
-    ``ToolError``.
+    Without an active transaction, ``dtm.addDataType(struct, None)`` raises ``NoTransactionException``, which surfaces as ``ToolError``.
 
     Args:
         real_bridge: Module-scoped bridge fixture with a real program loaded.
@@ -302,13 +264,9 @@ async def test_apply_structure_at_persists_under_transaction(
     real_bridge: GhidraBridge,
     entry_point: int,
 ) -> None:
-    """S15-D15: apply_structure_at must commit its clear+createData under a transaction.
+    """apply_structure_at must commit its clear and createData calls under a transaction.
 
-    Before the fix, ``listing.clearCodeUnits(...)``/``listing.createData(...)``
-    ran with no active transaction and raised ``NoTransactionException``,
-    surfaced as ``ToolError``. Defines its own structure (independent of the
-    D14 gate) and applies it at an address distinct from every other test in
-    this module.
+    Without an active transaction, ``listing.clearCodeUnits(...)`` and ``listing.createData(...)`` raise ``NoTransactionException``, which surfaces as ``ToolError``. The gate defines its own structure and applies it at an address distinct from every other test in this module.
 
     Args:
         real_bridge: Module-scoped bridge fixture with a real program loaded.

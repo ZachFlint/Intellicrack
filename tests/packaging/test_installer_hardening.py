@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 r"""Falsifiable gates for the Inno Setup hardening pass on ``intellicrack.iss``.
 
-The installer audit produced a set of changes that are invisible to the existing
+The installer hardening changes are invisible to the existing
 stage/``.iss`` agreement gates because none of them touches a ``[Files]`` entry:
 a compiler-version floor, opt-in code signing, two message boxes that must not
 stall or destroy anything under ``/SILENT``, a Windows build-number guard that
@@ -15,7 +15,7 @@ enforces.
 Each gate below reads the real ``packaging/intellicrack.iss`` (and, where the
 change is a documented contract, ``packaging/README.md``) and asserts the exact
 shape of the construct rather than the presence of a substring, so a regression
-to the pre-hardening form is what turns it red:
+to a weaker form is what turns it red:
 
 * a plain ``MsgBox`` in place of ``SuppressibleMsgBox`` fails, because the call
   is located by its kind and its argument list is split and inspected;
@@ -269,7 +269,7 @@ def directive_lines_outside_conditionals(iss_text: str, directive: str) -> list[
     return found
 
 
-# --- Parser falsifiability proofs --------------------------------------------
+# Parser falsifiability proofs
 
 
 def test_call_argument_splitter_respects_strings_and_nesting() -> None:
@@ -299,7 +299,7 @@ def test_pascal_code_section_extraction_stops_at_the_next_section() -> None:
     assert "Source: x" not in pascal_code(text)
 
 
-# --- Item 8: the ISPP compiler-version floor ---------------------------------
+# the ISPP compiler-version floor
 
 
 def test_iss_refuses_to_compile_on_an_older_inno_setup() -> None:
@@ -353,7 +353,7 @@ def test_readme_documents_the_compiler_floor() -> None:
     assert "6.6.0" in readme.split("## Build-machine prerequisites", 1)[-1], "the 6.6.0 floor is not in the prerequisites section"
 
 
-# --- Item 1: opt-in code signing ---------------------------------------------
+# opt-in code signing
 
 
 def test_signing_directives_live_inside_the_signtoolname_ifdef() -> None:
@@ -399,7 +399,7 @@ def test_readme_documents_both_halves_of_the_signing_opt_in() -> None:
     assert re.search(r"/S\w+=", readme) is not None, "the README does not show the /S<name>=<command> half of the signing invocation"
 
 
-# --- Items 3 and 4: nothing stalls or destroys under /SILENT -----------------
+# nothing stalls or destroys under /SILENT
 
 
 def test_uninstall_tool_cache_prompt_defaults_to_keeping_the_cache() -> None:
@@ -485,14 +485,14 @@ def test_wizardsilent_is_never_reached_from_the_uninstall_path() -> None:
         assert "end;" not in preceding[opening:], "the `if Verb = 'Add'` branch closes before the WizardSilent call it should contain"
 
 
-# --- Items 4, 16, 18, 19: the platform guards agree with each other ----------
+# the platform guards agree with each other
 
 
 def test_windows_floor_is_declared_in_setup_and_enforced_in_code() -> None:
     """Real gate: ``MinVersion`` and the ``[Code]`` build guard describe one floor.
 
-    The comment always claimed build 10240 while the code only tested
-    ``Major < 10``, so a Windows 10 build below RTM passed. The build test must
+    The guard comment claims build 10240, so the code must test the build number, not only
+    ``Major < 10``. A Windows 10 build below RTM has to be refused. The build test must
     exist, and the ``[Setup]`` refusal must agree with it.
     """
     iss_text = read_iss()
@@ -514,7 +514,7 @@ def test_architecture_refusal_is_declared_once_in_setup_not_twice_in_code() -> N
     """Real gate: the 64-bit refusal lives in ``[Setup]``, and ``[Code]`` does not repeat it.
 
     ``ArchitecturesAllowed=x64os`` rejects a 32-bit host before ``InitializeSetup``
-    ever runs, so the old ``Is64BitInstallMode`` branch was unreachable. Removing
+    ever runs, so an ``Is64BitInstallMode`` branch in [Code] would be unreachable. Removing
     the ``[Setup]`` directive without restoring a code guard turns this red, so
     the platform can never end up with no arch refusal at all.
     """
@@ -529,7 +529,7 @@ def test_architecture_refusal_is_declared_once_in_setup_not_twice_in_code() -> N
     assert not has_code_guard, "[Code] repeats the architecture refusal ArchitecturesAllowed=x64os already enforces; it is unreachable"
 
 
-# --- Item 15: SetupMutex ------------------------------------------------------
+# SetupMutex
 
 
 def test_setup_declares_both_an_app_mutex_and_a_setup_mutex() -> None:
@@ -550,14 +550,14 @@ def test_setup_declares_both_an_app_mutex_and_a_setup_mutex() -> None:
     assert any(name.startswith("Global\\") for name in names), f"SetupMutex {names} declares no Global\\ form, so it does not span sessions"
 
 
-# --- Items 17 and 20: the DISM progress callback ------------------------------
+# the DISM progress callback
 
 
 def test_dism_output_is_routed_through_the_logging_callback() -> None:
     """Real gate: DISM output drives the gauge instead of being discarded to ``nil``.
 
-    Reverting the last ``ExecAndLogOutput`` argument to ``nil`` -- the state that
-    left the bar at 0% for the whole enable -- turns this red.
+    Passing ``nil`` as the last ``ExecAndLogOutput`` argument -- which
+    leaves the bar at 0% for the whole enable -- turns this red.
     """
     code = pascal_code(read_iss())
     match = re.search(r"\bExecAndLogOutput\s*\(", code)
@@ -629,12 +629,10 @@ def test_dism_progress_page_is_released_on_every_path() -> None:
 
 
 def test_no_source_claims_execandlogoutput_is_what_keeps_the_wizard_responsive() -> None:
-    """The corrected rationale replaced the false one in both the script and the README.
+    """The script and the README must not credit ``ExecAndLogOutput`` with keeping the wizard responsive.
 
-    ``ExecAndLogOutput`` was documented as the reason the wizard stays responsive;
-    plain ``Exec`` pumps the message queue just as well, so the claim was wrong
-    and would have justified reverting the callback. Restoring the old wording
-    turns this red.
+    Plain ``Exec`` pumps the message queue just as well, so that claim is wrong.
+    It would justify reverting the callback, so restoring that wording turns this red.
     """
     iss_text = read_iss()
     readme = read_readme()
@@ -645,7 +643,7 @@ def test_no_source_claims_execandlogoutput_is_what_keeps_the_wizard_responsive()
     assert "line by line" in readme, "the README no longer records the real reason ExecAndLogOutput is used"
 
 
-# --- The DISM invocation cannot escape as an unhandled exception -------------
+# The DISM invocation cannot escape as an unhandled exception
 
 
 def enable_hyperv_procedure(code: str) -> str:
@@ -741,14 +739,14 @@ def test_try_except_detection_distinguishes_except_from_finally() -> None:
     assert except_at is None or (finally_at is not None and finally_at.start() < except_at.start())
 
 
-# --- Item 5: the provenance stamp is installed, not merely staged ------------
+# the provenance stamp is installed, not merely staged
 
 
 def test_build_info_stamp_is_packaged_into_the_app_directory() -> None:
     """Real gate: ``build-info.json`` is an installed file, not a stage-only artifact.
 
     The stamp is what lets a support request name the exact commit an installed
-    tree came from. Staging it without a ``[Files]`` entry -- its original state
+    tree came from. Staging it without a ``[Files]`` entry -- the state to avoid
     -- leaves every installation anonymous.
     """
     iss_text = read_iss()

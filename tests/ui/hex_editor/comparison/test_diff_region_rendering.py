@@ -4,12 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates for the Diff panel rendering the keys the engine actually emits.
 
-The defect: ``_on_diff_complete`` read ``offset``, ``type``, ``size_a`` and
-``size_b`` off each region. The engine emits ``offset_a``/``offset_b``,
-``diff_type``, ``length_a``/``length_b`` and reported no sizes at all, so
-every row rendered ``0x00000000`` / ``unknown`` and the caption always read
-``0 vs 0 bytes``. The engine also reports the byte-identical ``match`` runs it
-walked, which the tree listed as though they were differences.
+The engine emits ``offset_a``/``offset_b``, ``diff_type`` and
+``length_a``/``length_b`` on each region and reports no ``offset``, ``type``,
+``size_a`` or ``size_b``; reading those keys would render every row as
+``0x00000000`` / ``unknown`` under a caption that always read ``0 vs 0
+bytes``. The engine also reports the byte-identical ``match`` runs it walked,
+which must not be listed as differences.
 
 Every expectation here is derived from a live ``diff_bytes`` call rather than
 from a hand-written region dict, so the gate fails if either side of the
@@ -29,6 +29,7 @@ from intellicrack.ui.panels.hex_editor.comparison import (
     MATCH_DIFF_TYPE,
     ComparisonMixin,
     diff_region_rows,
+    diff_summary,
 )
 
 
@@ -43,6 +44,10 @@ hexcore = pytest.importorskip(
 
 _RUN: Final[int] = 16
 _EDIT: Final[int] = 8
+_PERIOD: Final[int] = 64
+_TOP_BIT: Final[int] = 0x80
+_EDIT_STRIDE: Final[int] = 7
+_FIRST_EDIT: Final[int] = 3
 
 
 @pytest.fixture(scope="module")
@@ -354,3 +359,118 @@ def test_row_offset_is_stored_as_data_not_reparsed_from_text(qapp: QApplication)
 
     harness.activate_row(index)
     assert harness.navigated_to == [int(region["offset_a"])]
+
+
+def _many_edits(count: int) -> tuple[bytes, bytes]:
+    """Build a pair differing by ``count`` isolated one-byte substitutions.
+
+    The first buffer repeats the values ``0..63`` and the second sets the top
+    bit of every seventh byte from offset 3, so a changed byte equals nothing
+    in the first and each edit is the only minimal alignment: ``2 * count + 1``
+    regions, ``count`` of them differences.
+
+    Args:
+        count: Number of edits.
+
+    Returns:
+        tuple[bytes, bytes]: The two buffers to compare.
+    """
+    source = bytes(index % _PERIOD for index in range(_FIRST_EDIT + _EDIT_STRIDE * count + 4))
+    edited = bytearray(source)
+    for edit in range(count):
+        edited[_FIRST_EDIT + _EDIT_STRIDE * edit] |= _TOP_BIT
+    return source, bytes(edited)
+
+
+def test_summary_says_how_many_of_the_regions_are_shown_when_the_list_was_cut_short(qapp: QApplication) -> None:
+    """A capped result must read ``showing N of M regions``, with M from the engine.
+
+    Twenty edits are twenty differing regions. Capping the list at four leaves
+    two of them in the tree, and the caption must say two of twenty rather than
+    claim the two it can see are all there are.
+
+    Args:
+        qapp: Qt application fixture.
+    """
+    _ = qapp
+    data_a, data_b = _many_edits(20)
+    result: dict[str, Any] = hexcore.diff_bytes(data_a, data_b, max_regions=4)
+    assert result["truncated"] is True
+    assert result["change_count"] == 20
+
+    harness = _DiffHarness()
+    harness.render_result(result)
+
+    assert harness.row_count() == 2
+    text = harness.summary_text()
+    assert text.startswith("showing 2 of 20 regions, 20 byte(s) differ")
+    assert f"[{len(data_a)} vs {len(data_b)} bytes]" in text
+
+
+def test_summary_is_unchanged_when_every_difference_is_listed(qapp: QApplication) -> None:
+    """An uncapped result keeps the plain count, with no ``showing`` notice.
+
+    Args:
+        qapp: Qt application fixture.
+    """
+    _ = qapp
+    data_a, data_b = _many_edits(20)
+    result = _diff(data_a, data_b)
+    assert result["truncated"] is False
+
+    harness = _DiffHarness()
+    harness.render_result(result)
+
+    assert harness.row_count() == 20
+    text = harness.summary_text()
+    assert text.startswith("20 region(s), 20 byte(s) differ")
+    assert "showing" not in text
+
+
+def test_summary_stays_plain_when_only_matching_regions_were_left_out(qapp: QApplication) -> None:
+    """A cap that drops only the trailing ``match`` must not claim differences are missing.
+
+    The result is truncated, but the one difference is in the tree, so there is
+    nothing the user could be missing.
+
+    Args:
+        qapp: Qt application fixture.
+    """
+    _ = qapp
+    result: dict[str, Any] = hexcore.diff_bytes(b"xAy", b"xBy", max_regions=2)
+    assert result["truncated"] is True
+    assert (result["region_count"], result["change_count"]) == (3, 1)
+
+    harness = _DiffHarness()
+    harness.render_result(result)
+
+    assert harness.row_count() == 1
+    text = harness.summary_text()
+    assert text.startswith("1 region(s), 1 byte(s) differ")
+    assert "showing" not in text
+
+
+def test_a_cap_of_zero_does_not_read_as_identical(qapp: QApplication) -> None:
+    """A result with nothing listed but differences counted is not ``Files are identical``.
+
+    Args:
+        qapp: Qt application fixture.
+    """
+    _ = qapp
+    data_a, data_b = _many_edits(3)
+    result: dict[str, Any] = hexcore.diff_bytes(data_a, data_b, max_regions=0)
+
+    harness = _DiffHarness()
+    harness.render_result(result)
+
+    assert harness.row_count() == 0
+    assert harness.summary_text().startswith("showing 0 of 3 regions, 3 byte(s) differ")
+
+
+def test_summary_line_for_each_kind_of_result() -> None:
+    """``diff_summary`` words identical, complete and cut-short results differently."""
+    assert diff_summary({"files_identical": True}, 0) == "Files are identical"
+    complete = {"total_differences": 5, "size_a": 10, "size_b": 12, "change_count": 2}
+    assert diff_summary(complete, 2) == "2 region(s), 5 byte(s) differ  [10 vs 12 bytes]"
+    assert diff_summary({**complete, "change_count": 9}, 2) == "showing 2 of 9 regions, 5 byte(s) differ  [10 vs 12 bytes]"
+    assert diff_summary({"total_differences": 1, "size_a": 4, "size_b": 4}, 1) == "1 region(s), 1 byte(s) differ  [4 vs 4 bytes]"

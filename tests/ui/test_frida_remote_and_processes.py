@@ -3,43 +3,40 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for four Frida panel/bridge remote-device and process defects.
+"""Gates for four Frida panel/bridge remote-device and process defects.
 
-* D22 -- Selecting an already-*enumerated* remote device (for example the
-  Local Socket provider Frida always reports, id ``"socket"``) routed through
+* Enumerated devices -- Selecting an already-*enumerated* remote device (for example the
+  Local Socket provider Frida always reports, id ``"socket"``) must not route through
   ``FridaPanel._resolve_device_selection`` -> ``FridaBridge.connect_device``
-  -> ``FridaBridge._resolve_frida_device`` as device type ``"remote"`` with
-  the enumerated id treated as a *hostname*, so
-  ``DeviceManager.add_remote_device("socket")`` tried to DNS-resolve the
+  -> ``FridaBridge._resolve_frida_device`` as device type ``"remote"``, which treats the
+  enumerated id as a *hostname*, so
+  ``DeviceManager.add_remote_device("socket")`` would DNS-resolve the
   literal string ``"socket"`` instead of looking the already-known device up
-  by identity. The fix routes any combo entry carrying an enumerated ``id``
-  through a new ``"enumerated"`` device type that resolves via
-  ``frida.get_device(id)``, and adds a genuine "Add Remote Device" dialog
-  (``FridaPanel._on_add_remote_device``) as the only path that still calls
+  by identity. Any combo entry carrying an enumerated ``id`` is routed
+  through an ``"enumerated"`` device type that resolves via
+  ``frida.get_device(id)``, and a genuine "Add Remote Device" dialog
+  (``FridaPanel._on_add_remote_device``) is the only path that calls
   ``connect_device("remote", host_port)`` to add a *brand-new* endpoint.
 
-* D23 -- A Processes-refresh failure against a remote device with no running
+* Process refresh -- A Processes-refresh failure against a remote device with no running
   ``frida-server`` (``frida.ServerNotRunningError`` / ``frida.TransportError``)
-  propagated out of ``FridaBridge.enumerate_processes`` uncaught, escaping the
+  must not propagate out of ``FridaBridge.enumerate_processes`` uncaught, escaping the
   background ``BridgeCallWorker`` ``QThread`` and reaching the application's
   ``sys.excepthook`` (installed as ``intellicrack.ui.app._unhandled_exception_hook``)
-  instead of the panel's own error handling. The fix wraps the Frida call in
+  instead of the panel's own error handling. The Frida call is wrapped in
   ``enumerate_processes`` and re-raises a ``ToolError``, which the existing
   ``BridgeCallWorker`` exception tuple already know how to route to
   ``on_error`` -- ``FridaPanel._on_refresh_processes_error`` -- without ever
   reaching the worker thread's own uncaught-exception path.
 
-* D20 -- The process table's Name column was effectively unreadable: even
-  though ``ResizeToContents``/``Stretch`` were already assigned, nothing
-  bounded the PID column, so it could absorb most of the table's width and
-  leave Name a sliver. The fix gives PID a small fixed/interactive width and
-  keeps Name on ``Stretch``, so Name always dominates.
+* Process table -- The process table's Name column must stay readable. Even though ``ResizeToContents``/``Stretch`` are assigned,
+  nothing may let the PID column absorb most of the table's width and leave Name a sliver. The PID column gets a small
+  fixed/interactive width and Name stays on ``Stretch``, so Name always dominates.
 
-* D21 -- After a persistent script load, ``run_btn`` was disabled with no
-  explanation and Stop was buried inside a "Scripts" dropdown menu rather
-  than being a directly visible toolbar control. The fix sets an explanatory
-  tooltip on the disabled Run button and promotes Stop to its own always-
-  visible toolbar ``QPushButton``.
+* Script controls -- After a persistent script load, ``run_btn`` must not be disabled with no
+  explanation, and Stop must not be buried inside a "Scripts" dropdown menu rather
+  than being a directly visible toolbar control. The disabled Run button carries an explanatory tooltip,
+  and Stop is its own always-visible toolbar ``QPushButton``.
 
 Every test drives the real ``FridaPanel`` widget and (where a defect is
 bridge-shaped) a real ``FridaBridge`` against the local machine's real Frida
@@ -47,9 +44,9 @@ runtime -- the local device's process list, and the real Local Socket /
 loopback-TCP remote device objects Frida itself resolves. Nothing here fakes
 Frida device or process results; the only substitution is swapping the
 *QThread scheduling* of ``run_bridge_coroutine_async`` for a synchronous,
-same-thread drain in the D22 tests (an established pattern in this suite,
+same-thread drain in the device-routing tests (an established pattern in this suite,
 see ``synchronous_dispatch`` below) so routing assertions are deterministic.
-D23 deliberately keeps the real background ``QThread`` dispatch, because that
+The process-refresh gate keeps the real background ``QThread`` dispatch, because that
 is exactly the escape path the defect describes.
 """
 
@@ -212,16 +209,16 @@ def _pump_until(app: QApplication, predicate: Callable[[], bool], *, timeout_s: 
 
 
 class TestD22ResolveDeviceSelection:
-    """D22 gates for the combo-to-bridge device type mapping."""
+    """Gates for the combo-to-bridge device type mapping."""
 
     @staticmethod
     def test_enumerated_local_socket_entry_maps_to_enumerated_device_type() -> None:
         """An enumerated combo entry must resolve to ``"enumerated"``, never ``"remote"``.
 
-        Falsifiable: before the fix, ``_resolve_device_selection`` returned
+        Falsifiable: if ``_resolve_device_selection`` returned
         ``("remote", "socket")`` for this exact user data (Frida reports the
         Local Socket provider's own ``type`` as ``"remote"``), which is the
-        root cause of D22 -- this assertion fails against that behavior.
+        root cause of the mis-resolution -- this assertion fails against that behavior.
         """
         device_type, host = FridaPanel._resolve_device_selection(
             dict(_ENUMERATED_SOCKET_USER_DATA),
@@ -245,7 +242,7 @@ class TestD22ResolveDeviceSelection:
 
 @pytest.mark.usefixtures("require_frida")
 class TestD22EnumeratedDeviceConnectsThroughDeviceHandle:
-    """D22 gates driving the real panel and a real ``FridaBridge``/Frida runtime."""
+    """Gates driving the real panel and a real ``FridaBridge``/Frida runtime."""
 
     @staticmethod
     def test_selecting_enumerated_local_socket_device_uses_get_device_not_add_remote_device(
@@ -263,9 +260,8 @@ class TestD22EnumeratedDeviceConnectsThroughDeviceHandle:
         different Frida devices -- the former resolves to
         ``id="socket", name="Local Socket"``, the latter (DNS-resolving the
         literal string ``"socket"`` as a new remote endpoint) resolves to
-        ``id="socket@socket", name="socket"``. Before the fix this test's
-        bridge-identity assertions fail because the old code took the
-        ``add_remote_device`` path.
+        ``id="socket@socket", name="socket"``. This test's bridge-identity assertions
+        fail if the old code takes the ``add_remote_device`` path.
         """
         panel = FridaPanel()
         bridge = FridaBridge()
@@ -304,9 +300,9 @@ class TestD22EnumeratedDeviceConnectsThroughDeviceHandle:
         established dialog-stubbing pattern in this suite), letting the real
         ``connect_device("remote", host_port)`` coroutine run.
 
-        Falsifiable: before this handler existed there was no way to reach
+        Falsifiable: without this handler there is no way to reach
         ``connect_device`` with a type of ``"remote"`` and a freshly typed
-        host at all -- ``FridaPanel`` had no ``_on_add_remote_device``
+        host at all -- ``FridaPanel`` lacks ``_on_add_remote_device`` as an
         attribute and this call raises ``AttributeError``.
         """
         panel = FridaPanel()
@@ -334,7 +330,7 @@ class TestD22EnumeratedDeviceConnectsThroughDeviceHandle:
 
 @pytest.mark.usefixtures("require_frida")
 class TestD23ProcessesRefreshFailureStaysInPanel:
-    """D23 gates: a remote enumerate failure must never reach the app's crash hook."""
+    """A remote enumerate failure must never reach the app's crash hook."""
 
     @staticmethod
     def test_refresh_against_unreachable_remote_device_routes_to_panel_not_excepthook(
@@ -352,7 +348,7 @@ class TestD23ProcessesRefreshFailureStaysInPanel:
         is monkeypatched to a recorder so nothing else in the process can
         answer for it.
 
-        Falsifiable: before the fix, ``enumerate_processes`` let
+        Falsifiable: if ``enumerate_processes`` lets
         ``frida.ServerNotRunningError``/``frida.TransportError`` propagate
         out of the coroutine uncaught. That exception is not a member of
         ``BridgeCallWorker``'s caught exception tuple, so it escapes
@@ -400,7 +396,7 @@ class TestD23ProcessesRefreshFailureStaysInPanel:
 
 
 class TestD20ProcessTableNameColumnReadable:
-    """D20 gates: the Name column must dominate the table's width, never the PID column."""
+    """The Name column must dominate the table's width, never the PID column."""
 
     @staticmethod
     def test_name_column_wider_than_pid_after_populate(qapp: QApplication) -> None:
@@ -411,7 +407,7 @@ class TestD20ProcessTableNameColumnReadable:
         ``FridaProcessEntry`` rows carrying ordinary process names, then reads
         the real header's post-layout column widths.
 
-        Falsifiable: before the fix, PID used ``ResizeToContents`` with no
+        Falsifiable: if PID used ``ResizeToContents`` with no
         floor and Name used ``Stretch`` with nothing constraining PID, so a
         table this narrow could leave Name a sliver comparable to (or
         narrower than) PID -- the reported "clipped to ~2 chars" symptom.
@@ -461,7 +457,7 @@ class TestD20ProcessTableNameColumnReadable:
 
 
 class TestD21RunButtonDisabledCarriesHint:
-    """D21 gates: a disabled Run button after a persistent load must explain and offer recovery."""
+    """A disabled Run button after a persistent load must explain and offer recovery."""
 
     @staticmethod
     def test_run_button_tooltip_explains_disabled_state_after_persistent_load(qapp: QApplication) -> None:
@@ -470,7 +466,7 @@ class TestD21RunButtonDisabledCarriesHint:
         Drives the real ``_on_run_script_success`` success callback exactly
         as a completed ``execute_persistent_script`` dispatch would.
 
-        Falsifiable: before the fix, Run was disabled with no tooltip set
+        Falsifiable: if Run was disabled with no tooltip set
         (``toolTip()`` stays empty), so this assertion on non-empty,
         recovery-explaining text fails against that behavior.
 
@@ -496,7 +492,7 @@ class TestD21RunButtonDisabledCarriesHint:
     def test_stop_is_a_directly_visible_toolbar_button_not_a_hidden_menu_action(qapp: QApplication) -> None:
         """Stop must be its own toolbar ``QPushButton``, not an action buried in a dropdown menu.
 
-        Falsifiable: before the fix, ``panel._stop_btn`` was a ``QAction``
+        Falsifiable: if ``panel._stop_btn`` were a ``QAction``
         exposed only through the "Scripts" dropdown button's popup menu, so
         this ``isinstance`` check against a real, directly-clickable
         ``QPushButton`` fails against that shape, and the button must also be

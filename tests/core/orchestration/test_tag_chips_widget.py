@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""pytest-qt tests for the F-0008 ``TagChipsWidget`` UI.
+"""pytest-qt tests for the ``TagChipsWidget`` UI.
 
 Verifies that adding a tag through the inline editor mutates the wired
 session's tags list, that clicking a chip removes the tag, and that the

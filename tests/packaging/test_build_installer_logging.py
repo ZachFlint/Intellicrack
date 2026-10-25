@@ -5,10 +5,9 @@
 
 r"""Falsifiable tests that the installer build captures a reviewable log.
 
-``just build-installer`` used to run its steps as separate recipe lines whose
-output went only to the console. Once the terminal was cleared the build was
-unreconstructable: no log file existed anywhere, so a warning noticed mid-build
-could not be read back.
+``just build-installer`` must leave a reviewable record. Its steps write to a
+log file as well as the console, because once the terminal is cleared the build
+cannot be reconstructed, and a warning noticed mid-build cannot be read back.
 
 ``scripts/build-installer.ps1`` now drives the whole pipeline -- stage the
 payload, then compile it with ``iscc`` -- and streams every step's combined
@@ -294,9 +293,9 @@ def test_build_script_logs_to_the_repository_logs_directory() -> None:
 def test_build_script_runs_no_tests() -> None:
     """The build pipeline must stage and compile only -- it must never run tests.
 
-    An earlier revision of the recipe ran the staged-tree gate through the Docker
-    test sandbox between staging and ``iscc``. That made a build depend on the
-    container being up, turned an unrelated test failure into a failed build, and
+    Running the staged-tree gate through the Docker
+    test sandbox between staging and ``iscc`` would make a build depend on the
+    container being up, turn an unrelated test failure into a failed build, and
     cost minutes on every compile. Building and verifying are deliberately
     separate operations here: run the gates yourself via the normal test runner.
 

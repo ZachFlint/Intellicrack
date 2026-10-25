@@ -5,29 +5,25 @@
 
 """L1/L2 gate tests for the Frida lifecycle & scripting bridge-completeness slice.
 
-Covers ``audit/bridge-completeness/agent-07-frida-lifecycle-scripting.md`` and its
-verifier. Every test drives a real, attached ``FridaBridge`` against the current
+Every test drives a real, attached ``FridaBridge`` against the current
 test process (self-attach) and/or dispatches through a real ``ToolRegistry`` so
 the exact production code path -- not a re-implementation of it -- is what makes
 each assertion pass or fail.
 
-Regression coverage for the confirmed defects:
+Regression coverage for these bridge gaps:
 
-* G1 -- ``frida.attach``'s tool-def declared a ``target`` parameter but the bound
-  method only accepted ``pid: int``, so every AI-driven call TypeErrored
-  unconditionally. The fix widened ``attach()`` to accept ``int | str`` and
-  renamed the tool-def parameter to ``pid``. These tests dispatch through
+* ``frida.attach``'s tool-def declares a ``pid`` parameter, matching the bound method ``attach()``,
+  which accepts ``int | str``. These tests dispatch through
   ``ToolRegistry.execute_tool_call`` (the real AI-facing entry point) with both a
   numeric and a name-shaped ``pid`` argument and assert the process really
   becomes attached.
-* G2 -- ``attach_by_name``, ``unload_script``, ``unload_all_scripts``, and
-  ``execute_persistent_script`` were real, GUI-wired bridge methods with no
-  ``ToolFunction`` entry, making them unreachable by AI/orchestration callers.
+* ``attach_by_name``, ``unload_script``, ``unload_all_scripts``, and ``execute_persistent_script``
+  need a ``ToolFunction`` entry to be reachable by AI/orchestration callers.
   These tests assert each name is present in ``FridaBridge.tool_definition`` and
   dispatchable via ``ToolRegistry.execute_tool_call``.
-* Feature 11 -- the bridge never registered Frida's async
-  ``session.on("detached", ...)`` signal, so an externally terminated session
-  left ``state.process_attached`` stale. This is regression-tested by detaching
+* The bridge registers Frida's async
+  ``session.on("detached", ...)`` signal, so an externally terminated session clears
+  ``state.process_attached``. This is tested by detaching
   the underlying Frida session directly (bypassing the bridge's own ``detach()``)
   and asserting the bridge's state updates anyway.
 """
@@ -229,7 +225,7 @@ def registry(tmp_path: Path, bridge: _TestableFridaBridge) -> ToolRegistry:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestAttachDispatchG1:
-    """Regression tests for Gap G1 (frida.attach tool-def/dispatch mismatch)."""
+    """Regression tests for the ``frida.attach`` tool-def/dispatch mismatch."""
 
     @staticmethod
     def test_execute_tool_call_attach_with_numeric_pid_string(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
@@ -285,8 +281,7 @@ class TestAttachDispatchG1:
     def test_attach_tool_def_parameter_is_named_pid_not_target(bridge: _TestableFridaBridge) -> None:
         """The registered ``frida.attach`` tool-def must declare a ``pid`` parameter, never ``target``.
 
-        Falsifiable: reverting the tool-def rename (G1 fix) would restore a
-        ``target`` parameter and drop ``pid``, failing both assertions here.
+        Falsifiable: restoring a ``target`` parameter in place of ``pid`` fails both assertions here.
         Broken production line: the ``ToolParameter`` list of the
         ``frida.attach`` ``ToolFunction`` entry in ``_FRIDA_FUNCTIONS``.
         """
@@ -299,7 +294,7 @@ class TestAttachDispatchG1:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestNotRegisteredMethodsG2:
-    """Regression tests for Gap G2 (four bridge methods with no tool-def)."""
+    """Regression tests for four bridge methods that need a tool-def."""
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -312,7 +307,7 @@ class TestNotRegisteredMethodsG2:
         ],
     )
     def test_tool_def_registered(bridge: _TestableFridaBridge, expected_name: str) -> None:
-        """Each previously NOT-REGISTERED method must have a real ToolFunction entry.
+        """Each of these methods must have a real ToolFunction entry.
 
         Falsifiable: removing any of these four ``ToolFunction`` entries from
         ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes the containment
@@ -333,8 +328,7 @@ class TestNotRegisteredMethodsG2:
     ) -> None:
         """``frida.attach_by_name`` must dispatch through ToolRegistry and really attach.
 
-        Falsifiable: if the ``ToolFunction`` entry were missing (pre-fix
-        state), ``execute_tool_call`` would raise ``ToolError`` for an
+        Falsifiable: if the ``ToolFunction`` entry were missing ``execute_tool_call`` would raise ``ToolError`` for an
         unknown function name before ever reaching ``attach_by_name``.
         Broken production line: the ``frida.attach_by_name`` ``ToolFunction``
         registration in ``_FRIDA_FUNCTIONS``.
@@ -411,7 +405,7 @@ class TestNotRegisteredMethodsG2:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestSessionDetachedListener:
-    """Regression tests for the previously-MISSING session-detached signal (feature 11)."""
+    """Regression tests for the session-detached signal."""
 
     @staticmethod
     def test_external_session_detach_updates_bridge_state(bridge: _TestableFridaBridge) -> None:
@@ -421,9 +415,8 @@ class TestSessionDetachedListener:
         by calling ``session.detach()`` directly on the underlying Frida
         session object, bypassing the bridge's own ``detach()`` entirely.
 
-        Falsifiable: before the fix, the bridge only learned about detachment
-        through its own explicit ``detach()`` call; an external detach left
-        ``state.process_attached`` stuck at ``True`` forever. Broken
+        Falsifiable: if the bridge only learned about detachment through its own ``detach()`` call,
+        an external detach would leave ``state.process_attached`` stuck at ``True``. Broken
         production line: ``session.on("detached", on_detached)`` registration
         inside ``_register_session_detached_handler`` (called from
         ``_perform_attach``) in ``frida_bridge.py``.
@@ -609,7 +602,7 @@ _REMOVE_REMOTE_HOST: Final[str] = "127.0.0.1:59993"
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestRemoveRemoteDeviceA4:
-    """Regression tests for work order 07-A4 (frida.remove_remote_device)."""
+    """Regression tests for ``frida.remove_remote_device``."""
 
     @staticmethod
     def test_tool_def_registered(bridge: _TestableFridaBridge) -> None:
@@ -660,7 +653,7 @@ class TestRemoveRemoteDeviceA4:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestDeviceChangeNotificationsA5:
-    """Regression tests for work order 07-A5 (live device-list-changed notifications)."""
+    """Regression tests for live device-list-changed notifications."""
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -768,7 +761,7 @@ class _SignalRecordingDevice:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestDeviceLostNotificationsA6:
-    """Regression tests for work order 07-A6 (device-lost notifications)."""
+    """Regression tests for device-lost notifications."""
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -797,8 +790,7 @@ class TestDeviceLostNotificationsA6:
         hardware) that records real ``on``/``off`` calls, so every line of
         the bridge's own registration and callback logic executes for real.
 
-        Falsifiable: if the registration used the wrong signal name (exactly
-        the class of defect this audit already found once for
+        Falsifiable: if the registration used the wrong signal name (the same class of defect as
         ``"child-added"`` vs ``"spawn-added"``), ``lost_registrations`` would
         be empty and the first ``assert len(...) == 1`` fails; firing
         ``"lost"`` would then also no-op, failing the state-reset and
@@ -830,7 +822,7 @@ class TestDeviceLostNotificationsA6:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestGetFrontmostApplicationA9:
-    """Regression tests for work order 07-A9 (frida.get_frontmost_application)."""
+    """Regression tests for ``frida.get_frontmost_application``."""
 
     @staticmethod
     def test_tool_def_registered(bridge: _TestableFridaBridge) -> None:
@@ -856,13 +848,11 @@ class TestGetFrontmostApplicationA9:
         differently-shaped error) - this is what proves the *real* Frida
         call executed, not a mock or an early return.
 
-        ``ToolRegistry.execute_tool_call`` (``core/tools.py``, off-limits for
-        this stream to edit) re-raises any ``ToolError`` it catches as a
+        ``ToolRegistry.execute_tool_call`` (``core/tools.py``) re-raises any ``ToolError`` it catches as a
         *new* ``ToolError`` with empty ``details`` - chained via
         ``raise ToolError(msg) from e`` - so the bridge's own structured
         ``details`` survive only on ``__cause__``, not on the outer
-        exception directly. Confirmed empirically against this exact
-        dispatch path before writing this assertion. The assertion below
+        exception directly.  The assertion below
         follows that real chain rather than the bridge-internal
         ``.details`` shortcut, which this shared dispatcher does not
         preserve.
@@ -876,14 +866,14 @@ class TestGetFrontmostApplicationA9:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestSpawnEnvCwdB2:
-    """Regression tests for work order 07-B2 (frida.spawn env/cwd overrides)."""
+    """Regression tests for ``frida.spawn`` env/cwd overrides."""
 
     @staticmethod
     def test_spawn_env_and_cwd_overrides_take_effect(bridge: _TestableFridaBridge, tmp_path: Path) -> None:
         """``frida.spawn``'s ``env``/``cwd`` kwargs must reach the real spawned process.
 
-        Falsifiable: if ``env``/``cwd`` were silently dropped (pre-fix state,
-        only ``argv`` forwarded), the batch script's ``%IC_GATE_MARKER%``
+        Falsifiable: if ``env``/``cwd`` were silently dropped (only ``argv`` forwarded), the batch
+        script's ``%IC_GATE_MARKER%``
         would expand to empty and ``%CD%`` would be the test runner's own
         working directory instead of ``tmp_path`` - both assertions below
         would fail. Broken production lines: the ``env=env, cwd=cwd``
@@ -929,14 +919,14 @@ class TestSpawnEnvCwdB2:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestSpawnStdioCaptureB3:
-    """Regression tests for work order 07-B3 (frida.spawn stdio='pipe' capture)."""
+    """Regression tests for ``frida.spawn`` stdio='pipe' capture."""
 
     @staticmethod
     def test_pipe_stdio_delivers_output_via_dispatch(bridge: _TestableFridaBridge) -> None:
         """``frida.spawn(stdio='pipe')`` must really capture the child's stdout via ``Device.on('output')``.
 
         Falsifiable: if ``stdio`` were never forwarded to ``device.spawn``
-        (pre-fix state), or the ``"output"`` handler were never registered,
+        or the ``"output"`` handler were never registered,
         the process still runs (``echo`` always succeeds) but no
         ``process_output`` message ever arrives - the polling loop times out
         and the containment assertion fails. Broken production lines: the
@@ -991,7 +981,7 @@ class TestSpawnStdioCaptureB3:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestKillArbitraryProcessB8:
-    """Regression tests for work order 07-B8 (frida.kill an arbitrary process)."""
+    """Regression tests for ``frida.kill`` on an arbitrary process."""
 
     @staticmethod
     def test_kill_dispatchable_and_terminates_the_real_process(
@@ -1011,7 +1001,7 @@ class TestKillArbitraryProcessB8:
 
         This bridge only calls ``initialize()`` (device resolved), never
         attaching to ``notepad_process`` - proving ``kill`` works
-        "independent of any attach/spawn", exactly the gap this item closes.
+        "independent of any attach/spawn".
 
         Args:
             registry: ToolRegistry with a real, initialized (not attached) bridge.
@@ -1040,7 +1030,7 @@ class TestKillArbitraryProcessB8:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestSessionChildGatingC1:
-    """Regression tests for work order 07-C1 (session-scoped true child-process gating)."""
+    """Regression tests for session-scoped true child-process gating."""
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -1133,7 +1123,7 @@ class TestSessionChildGatingC1:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestPrecompiledScriptD6:
-    """Regression tests for work order 07-D6 (precompile a script to bytecode / load from precompiled bytes)."""
+    """Regression tests for precompiling a script to bytecode and loading it from precompiled bytes."""
 
     @staticmethod
     def test_compile_then_load_from_bytecode_round_trip(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
@@ -1205,7 +1195,7 @@ class TestPrecompiledScriptD6:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestScriptSnapshotD7:
-    """Regression tests for work order 07-D7 (snapshot a warmed-up script VM)."""
+    """Regression tests for snapshotting a warmed-up script VM."""
 
     @staticmethod
     def test_snapshot_then_load_preserves_warmed_state(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
@@ -1288,7 +1278,7 @@ class TestScriptSnapshotD7:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestScriptDebuggerD8:
-    """Regression tests for work order 07-D8 (attach a debugger/inspector to a running script)."""
+    """Regression tests for attaching a debugger/inspector to a running script."""
 
     @staticmethod
     def test_enable_debugger_opens_a_real_listening_port(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
@@ -1351,7 +1341,7 @@ class TestScriptDebuggerD8:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestTerminateHungScriptD9:
-    """Regression tests for work order 07-D9 (forcibly terminate a hung script)."""
+    """Regression tests for forcibly terminating a hung script."""
 
     @staticmethod
     def test_terminate_stops_a_genuinely_hung_script_promptly(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
@@ -1453,7 +1443,7 @@ class TestTerminateHungScriptD9:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestListRpcExportsE2:
-    """Regression tests for work order 07-E2 (discover a script's RPC exports)."""
+    """Regression tests for discovering a script's RPC exports."""
 
     @staticmethod
     def test_list_rpc_exports_names_are_directly_usable_by_rpc_call(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:

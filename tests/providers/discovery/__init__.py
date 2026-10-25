@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit7 regression tests for providers metadata (discovery, registry)."""
+"""Regression tests for providers metadata (discovery, registry)."""

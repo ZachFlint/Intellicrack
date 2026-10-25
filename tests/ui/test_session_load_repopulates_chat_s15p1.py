@@ -2,24 +2,22 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the S15 P1 audit defect in ``MainWindow``'s session load.
+"""Gate for chat rendering after a session load in ``MainWindow``.
 
-Pre-fix, ``MainWindow._on_session_load_requested`` cleared the chat panel and
-the tool panel *before* dispatching the load, and attached no success handler
-to the coroutine -- so the loaded session's messages were never rendered. The
-defect was self-inflicted twice over: ``SessionManagerDialog`` already restores
-the history through ``_restore_session_to_ui`` and only then emits
-``session_loaded``, which is wired to this very slot, so the window wiped the
-bubbles the dialog had just drawn. A failed load blanked the panel too.
+``MainWindow._on_session_load_requested`` must not clear the chat panel and the tool panel
+before dispatching the load, and must attach a success handler to the coroutine, so the
+loaded session's messages get rendered. ``SessionManagerDialog`` already restores the history
+through ``_restore_session_to_ui`` and only then emits ``session_loaded``, which is wired to
+this same slot, so clearing here would wipe the bubbles the dialog has just drawn. A failed
+load must not blank the conversation either.
 
-Unlike the sibling gate ``test_session_load_restores_state_s16d12``, which
-drives the dialog against a ``_FakeMainWindow``, this one drives the **real**
-``MainWindow`` slot both entry points reach, which is the only place the defect
-lives. Everything here is real: a real SQLite-backed ``SessionStore``, a real
-``SessionManager``, a real ``Orchestrator``, a real ``MainWindow`` and its real
-``ChatPanel`` widgets. The assertions read the bubbles actually laid out in the
-panel, in layout order, so a bookkeeping list that disagrees with the rendered
-widgets cannot pass.
+Unlike the sibling gate ``test_session_load_restores_state_s16d12``, which drives the dialog
+against a ``_FakeMainWindow``, this one drives the **real** ``MainWindow`` slot both entry
+points reach, which is the only place the behaviour lives. Everything here is real: a real
+SQLite-backed ``SessionStore``, a real ``SessionManager``, a real ``Orchestrator``, a real
+``MainWindow`` and its real ``ChatPanel`` widgets. The assertions read the bubbles actually laid
+out in the panel, in layout order, so a bookkeeping list that disagrees with the rendered widgets
+cannot pass.
 """
 
 from __future__ import annotations

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S18-D15: the folder chosen in Sandbox Settings has to reach a QEMU guest.
+r"""The folder chosen in Sandbox Settings has to reach a QEMU guest.
 
 Sandbox Settings offers a "Shared folder" and a "Read only" box beside it, the bridge
 builds both into the sandbox configuration, and the QEMU backend then never mentioned

@@ -2,15 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for GUI audit findings M4 and M5 in ``data_inspector``.
+"""Gates for the ``data_inspector`` bit-toggle and encode button dispatch.
 
-* ``TestM4BitToggleAsyncDispatch`` (M4): clicking a bit-editor toggle
+* ``TestM4BitToggleAsyncDispatch``: clicking a bit-editor toggle
   button must dispatch ``HexEditorBridge.toggle_bit`` through the
   non-blocking ``run_bridge_coroutine_logged`` machinery instead of the
   blocking ``run_bridge_coroutine`` call, so the Qt GUI thread stays
   responsive while the bridge round trip completes on the background
   event-loop thread.
-* ``TestM5EncodeTextAsyncDispatch`` (M5): clicking "Encode" must
+* ``TestM5EncodeTextAsyncDispatch``: clicking "Encode" must
   dispatch ``HexEditorBridge.encode_text`` the same non-blocking way
   instead of blocking the GUI thread for the codec round trip.
 
@@ -157,18 +157,18 @@ class _DelayedHexEditorBridge(HexEditorBridge):
 
 
 class TestM4BitToggleAsyncDispatch:
-    """M4: bit-editor toggle clicks must not block the GUI thread on the bridge round trip."""
+    """Bit-editor toggle clicks must not block the GUI thread on the bridge round trip."""
 
     @staticmethod
     def test_m4_bit_toggle_returns_promptly_and_syncs_after_bridge_completes(qtbot: QtBot) -> None:
         """A bit-toggle click returns near-instantly and only mutates state once the bridge finishes.
 
-        Pre-fix, ``_toggle_bit_via_bridge`` called the blocking
+        ``_toggle_bit_via_bridge`` must not call the blocking
         ``run_bridge_coroutine(bridge.toggle_bit(offset, bit_index))``
         directly on the Qt main thread, so ``_on_bit_toggled`` would not
         return until the full ``_BRIDGE_DELAY_S`` round trip finished on
         the calling thread and the state mutations would already be
-        visible the instant the handler call returned. Post-fix,
+        visible the instant the handler call returned. Instead,
         ``run_bridge_coroutine_logged`` dispatches to a background
         ``QThread`` worker, so the handler returns immediately, the
         button/document stay at their pre-click state until the
@@ -217,7 +217,7 @@ class TestM4BitToggleAsyncDispatch:
     def test_m4_bit_toggle_bridge_failure_falls_back_without_blocking(qtbot: QtBot) -> None:
         """A failing bridge dispatch still returns promptly and falls back to a direct document write.
 
-        Exercises the ``on_error`` branch added by the M4 fix: when the
+        Exercises the ``on_error`` branch: when the
         background bridge call raises, ``_write_bit_directly`` performs
         the write locally so the click still takes effect, and the
         handler call itself never blocks waiting for that failure to
@@ -274,18 +274,18 @@ class TestM4BitToggleAsyncDispatch:
 
 
 class TestM5EncodeTextAsyncDispatch:
-    """M5: the Encode button must not block the GUI thread on the bridge round trip."""
+    """The Encode button must not block the GUI thread on the bridge round trip."""
 
     @staticmethod
     def test_m5_encode_text_returns_promptly_and_updates_after_bridge_completes(qtbot: QtBot) -> None:
         """Clicking Encode returns near-instantly and only fills the output once the bridge finishes.
 
-        Pre-fix, ``_on_encode_text`` called the blocking
+        ``_on_encode_text`` must not call the blocking
         ``run_bridge_coroutine(bridge.encode_text(text, encoding))``
         directly on the Qt main thread, so the handler would not return
         until the full ``_BRIDGE_DELAY_S`` round trip finished and the
         output label would already hold the encoded hex the instant the
-        handler call returned. Post-fix, ``run_bridge_coroutine_logged``
+        handler call returned. Instead, ``run_bridge_coroutine_logged``
         dispatches to a background ``QThread`` worker, so the handler
         returns immediately, the output label stays empty until the
         background thread signals completion, and ``encode_text`` itself
@@ -331,7 +331,7 @@ class TestM5EncodeTextAsyncDispatch:
     def test_m5_encode_text_bridge_failure_reports_error_without_blocking(qtbot: QtBot) -> None:
         """A failing encode dispatch still returns promptly and surfaces the error asynchronously.
 
-        Exercises the ``on_error`` branch added by the M5 fix: the
+        Exercises the ``on_error`` branch: the
         output label is set to an error message once the background
         worker's failure signal is delivered, and the handler call
         itself never blocks waiting for that failure to surface.

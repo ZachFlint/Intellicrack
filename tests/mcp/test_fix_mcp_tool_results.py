@@ -560,7 +560,7 @@ class TestToolErrorsReachTheModel:
     def test_malformed_wire_name_becomes_a_failed_result(self, tmp_path: Path) -> None:
         """A wire name with no tool component fails the call without crashing.
 
-        This is item 29: ``mcp-mp__`` reverses to ``mcp-mp.``, which
+        This is the case where ``mcp-mp__`` reverses to ``mcp-mp.``, which
         :func:`from_canonical_name` rejects with ``McpConfigError``.
 
         Args:
@@ -639,7 +639,7 @@ class TestToolErrorsReachTheModel:
 
 
 class TestUntrustedTextIsFenced:
-    """Item 28: server text reaches the model fenced and stripped of controls."""
+    """Server text reaches the model fenced and stripped of controls."""
 
     def test_result_text_is_fenced_and_stripped(self, tmp_path: Path) -> None:
         """A result carrying escapes arrives fenced with the controls removed.
@@ -712,7 +712,7 @@ class TestUntrustedTextIsFenced:
 
 
 class TestMalformedNamesDoNotCrashClassification:
-    """Item 29: a malformed MCP name is classified, never raised."""
+    """A malformed MCP name is classified, never raised."""
 
     def test_classification_and_lookups_survive_a_bare_namespace(self, tmp_path: Path) -> None:
         """Classifying ``mcp-mp.`` answers destructive; lookups answer nothing.
@@ -746,7 +746,7 @@ class TestMalformedNamesDoNotCrashClassification:
 
 
 class TestSchemaArgumentsAreAdvertised:
-    """Item 33: an MCP tool's arguments appear in its signature and the prompt."""
+    """An MCP tool's arguments appear in its signature and the prompt."""
 
     def test_signature_and_prompt_render_schema_arguments(self, tmp_path: Path) -> None:
         """``strict`` is advertised as taking ``n: integer``, not nothing.
@@ -805,7 +805,7 @@ class TestMcpHistoryPersists:
 
 
 class TestLargeResultsAreBounded:
-    """Item 35: multi-part content is bounded before it reaches the model."""
+    """Multi-part content is bounded before it reaches the model."""
 
     def test_long_text_part_is_cut_in_the_request(self, tmp_path: Path) -> None:
         """A 50,000-character result reaches the endpoint cut to the bound.
@@ -824,7 +824,7 @@ class TestLargeResultsAreBounded:
 
 
 class TestBareLeafNamesResolve:
-    """Item 46: a model answering with a loaded tool's bare leaf name is served."""
+    """A model answering with a loaded tool's bare leaf name is served."""
 
     def test_bare_leaf_dispatches_to_the_loaded_tool(self, tmp_path: Path) -> None:
         """``snapshot`` resolves to the loaded ``mcp-mp.snapshot``.

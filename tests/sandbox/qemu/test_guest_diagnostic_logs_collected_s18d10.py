@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""S18-D10: every diagnostic file the guest writes must be fetched off the guest.
+"""Every diagnostic file the guest writes must be fetched off the guest.
 
 The Windows collectors each write a ``.lifecycle.``/``.diag.``/``.errors.`` file
 beside their data log. Those files are the only record of *why* a collector that

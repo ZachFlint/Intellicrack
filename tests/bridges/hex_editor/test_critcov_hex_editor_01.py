@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Critical-coverage tests for the first slice of ``intellicrack.bridges.hex_editor``.
+"""Coverage tests for ``intellicrack.bridges.hex_editor``.
 
 Every test builds its input byte by byte from the relevant format definition (IPS and
 IPS32 records, PE, ELF and Mach-O headers, UTF-16LE text) under ``tmp_path`` or in an
@@ -829,6 +829,30 @@ def test_apply_ips_patches_handles_the_ips32_variant(hex_bridge: HexEditorBridge
 
     assert applied == 2
     assert document.read(0, 32) == bytes(expected)
+
+
+def test_apply_ips_patches_cuts_a_record_at_the_end_of_the_document(hex_bridge: HexEditorBridge) -> None:
+    """A literal or RLE record that runs past the end writes only the bytes that exist.
+
+    An overwrite never grows the document, so the overflow is dropped rather
+    than failing the whole patch partway, and the length is unchanged.
+
+    Args:
+        hex_bridge: Bridge under test.
+    """
+    document = _open_bytes(hex_bridge, bytes(16))
+    rle_record = (10).to_bytes(3, "big") + (0).to_bytes(2, "big") + (10).to_bytes(2, "big") + b"\x55"
+    raw = b"PATCH" + _ips_record(0, b"HEAD") + rle_record + _ips_record(14, b"ABCDEF") + b"EOF"
+    expected = bytearray(16)
+    expected[0:4] = b"HEAD"
+    expected[10:14] = b"\x55" * 4
+    expected[14:16] = b"AB"
+
+    applied = _method(hex_bridge, "_apply_ips_patches")(raw)
+
+    assert applied == 3
+    assert document.length() == 16
+    assert document.read(0, 16) == bytes(expected)
 
 
 def test_apply_ips_patches_counts_records_without_a_document(hex_bridge: HexEditorBridge) -> None:

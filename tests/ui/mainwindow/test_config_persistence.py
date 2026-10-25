@@ -7,9 +7,9 @@
 ``main.py`` loads configuration from ``get_config_dir() / "config.toml"`` at
 startup. The Preferences dialog therefore has to be pointed at that exact file;
 if it saves anywhere else, the user's saved preferences land in a file nothing
-ever reads. ``MainWindow._on_preferences`` historically pointed the dialog at
-``config.json`` (a file the loader ignores), so these gates fail if that path
-regresses to any filename other than ``config.toml``.
+ever reads. ``MainWindow._on_preferences`` must point the dialog at ``config.toml``;
+the loader ignores ``config.json``, so these gates fail for any filename other than
+``config.toml``.
 
 Each test drives the real :class:`MainWindow` slot with only the blocking modal
 ``exec`` isolated, and redirects the config directory under ``tmp_path`` so the
@@ -96,7 +96,7 @@ class TestPreferencesConfigPathMatchesLoadPath:
         project config is never touched, then ``_on_preferences`` is driven with
         only the blocking modal ``exec`` isolated. The path handed to the dialog
         must equal the load path ``get_config_file("config.toml")``; the
-        ``config.json`` bug makes these differ and fails the assertion.
+        ``config.json`` target makes these differ and fails the assertion.
 
         Args:
             window: Real MainWindow fixture.

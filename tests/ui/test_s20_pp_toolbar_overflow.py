@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for S20-D17 (Process share): panel action rows use OverflowToolBar.
+"""Tests for the Process panel action rows using OverflowToolBar.
 
 Verifies that ``ProcessTab``'s System Processes sub-tab builds its action row
 on :class:`intellicrack.ui.overflow_toolbar.OverflowToolBar` rather than a

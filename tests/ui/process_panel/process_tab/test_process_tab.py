@@ -2,11 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Production-grade tests for audit4 B2: ProcessTab findings F-0013 through F-0018.
+"""Tests for ProcessTab inject, filter, attach, suspend/resume and terminate handling.
 
-Each test class addresses one audit finding and is structured so that
-the test would have failed against the original defective code and passes
-on the fixed implementation.
+Each test class covers one behaviour and would fail against the defective code it guards.
 """
 
 from __future__ import annotations
@@ -28,9 +26,7 @@ if TYPE_CHECKING:
     from PyQt6.QtCore import QTimer
 
 
-# ---------------------------------------------------------------------------
 # Test-only subclass that exposes controlled state access
-# ---------------------------------------------------------------------------
 
 
 def _fire_slot(_ms: int, slot: Callable[[], None]) -> None:
@@ -164,9 +160,7 @@ class _TestProcessTab(ProcessTab):
         self._on_terminate()
 
 
-# ---------------------------------------------------------------------------
 # Shared fixtures
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -197,13 +191,11 @@ def tab(qapp: QApplication, bridge: ProcessBridge) -> Generator[_TestProcessTab]
     t.deleteLater()
 
 
-# ---------------------------------------------------------------------------
-# F-0013: inject button requires attachment before dispatching bridge call
-# ---------------------------------------------------------------------------
+# inject button requires attachment before dispatching bridge call
 
 
 class TestF0013InjectRequiresAttachment:
-    """F-0013: _on_inject_dll must guard on _attached_pid and warn when unattached."""
+    """_on_inject_dll must guard on _attached_pid and warn when unattached."""
 
     def test_inject_warns_when_no_process_attached(self, tab: _TestProcessTab, monkeypatch: pytest.MonkeyPatch) -> None:
         """Calling inject without attachment must show a "Not Attached" warning dialog and never dispatch the bridge.
@@ -290,19 +282,17 @@ class TestF0013InjectRequiresAttachment:
                 assert "not attached" not in title.lower(), "_on_inject_dll must not show 'Not Attached' warning when already attached"
 
 
-# ---------------------------------------------------------------------------
-# F-0014: filter uses trailing-edge debounce, not immediate bridge round-trip
-# ---------------------------------------------------------------------------
+# filter uses trailing-edge debounce, not immediate bridge round-trip
 
 
 class TestF0014FilterDebounce:
-    """F-0014: _on_filter_changed must use a trailing-edge debounce timer."""
+    """_on_filter_changed must use a trailing-edge debounce timer."""
 
     def test_filter_change_arms_debounce_timer(self, tab: _TestProcessTab) -> None:
         """Typing a character must arm the debounce timer, not fire immediately.
 
-        The old bug called _on_refresh (which calls the bridge) on every
-        keystroke. The fix arms a QTimer with _FILTER_DEBOUNCE_MS delay.
+        The handler must not call _on_refresh (which calls the bridge) on every keystroke;
+        it arms a QTimer with _FILTER_DEBOUNCE_MS delay.
 
         Args:
             tab: _TestProcessTab fixture.
@@ -351,13 +341,11 @@ class TestF0014FilterDebounce:
         assert timer.isActive(), "debounce timer must still be active after rapid successive filter changes"
 
 
-# ---------------------------------------------------------------------------
-# F-0015: _on_attach surfaces failure via error callback
-# ---------------------------------------------------------------------------
+# _on_attach surfaces failure via error callback
 
 
 class TestF0015AttachSurfacesFailure:
-    """F-0015: _on_attach must route bridge failures to a user-visible warning dialog."""
+    """_on_attach must route bridge failures to a user-visible warning dialog."""
 
     def test_attach_error_callback_shows_warning_dialog(
         self,
@@ -366,8 +354,8 @@ class TestF0015AttachSurfacesFailure:
     ) -> None:
         """When the bridge raises during attach, a QMessageBox warning must appear.
 
-        The old defect had no error callback — failures were silently dropped.
-        The fix wires an _on_error handler that calls QMessageBox.warning.
+        Bridge failures must not be silently dropped: the _on_error handler must
+        call QMessageBox.warning.
 
         Args:
             tab: _TestProcessTab fixture.
@@ -424,13 +412,11 @@ class TestF0015AttachSurfacesFailure:
         assert tab.get_attached_pid_state() == target_pid, "_on_attach success callback must set _attached_pid to the attached PID"
 
 
-# ---------------------------------------------------------------------------
-# F-0016: suspend/resume have error callbacks
-# ---------------------------------------------------------------------------
+# suspend/resume have error callbacks
 
 
 class TestF0016SuspendResumeHaveErrorCallbacks:
-    """F-0016: suspend and resume must surface bridge errors via warning dialogs."""
+    """Suspend and resume must surface bridge errors via warning dialogs."""
 
     def test_suspend_error_callback_shows_warning(self, tab: _TestProcessTab, monkeypatch: pytest.MonkeyPatch) -> None:
         """_on_suspend must pass an error callback that shows a warning dialog.
@@ -491,13 +477,11 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
         assert warning_shown, "_on_resume must show a warning dialog when the bridge raises"
 
 
-# ---------------------------------------------------------------------------
-# F-0017: _on_terminate refreshes both system list and Tracked sub-tab
-# ---------------------------------------------------------------------------
+# _on_terminate refreshes both system list and Tracked sub-tab
 
 
 class TestF0017TerminateRefreshesBothTabs:
-    """F-0017: _on_terminate success must refresh both system list and Tracked sub-tab."""
+    """_on_terminate success must refresh both system list and Tracked sub-tab."""
 
     def test_terminate_success_triggers_tracked_refresh(
         self,
@@ -506,8 +490,8 @@ class TestF0017TerminateRefreshesBothTabs:
     ) -> None:
         """After termination succeeds, _refresh_tracked must be called.
 
-        The old defect only refreshed the system process list. The fix
-        schedules both _on_refresh and _refresh_tracked via QTimer.singleShot.
+        Refreshing only the system process list is not enough: _on_terminate schedules
+        both _on_refresh and _refresh_tracked via QTimer.singleShot.
 
         The _TestProcessTab subclass overrides both methods to count calls,
         so this test verifies both are invoked after a successful termination.
@@ -542,13 +526,11 @@ class TestF0017TerminateRefreshesBothTabs:
         assert tab.on_refresh_calls > before_on_refresh, "_on_terminate success must call _on_refresh"
 
 
-# ---------------------------------------------------------------------------
-# F-0018: _on_terminate detaches panel state when terminated PID is attached
-# ---------------------------------------------------------------------------
+# _on_terminate detaches panel state when terminated PID is attached
 
 
 class TestF0018TerminateDetachesIfAttached:
-    """F-0018: _on_terminate must clear _attached_pid and emit process_detached signal."""
+    """_on_terminate must clear _attached_pid and emit process_detached signal."""
 
     def test_terminate_attached_pid_clears_attached_state(
         self,
@@ -557,9 +539,8 @@ class TestF0018TerminateDetachesIfAttached:
     ) -> None:
         """When the terminated PID is the currently attached PID, clear attachment.
 
-        The old defect did not clear _attached_pid after terminating it,
-        leaving stale state. The fix checks if the terminated PID equals
-        _attached_pid and emits process_detached.
+        Terminating the attached PID must not leave stale state: _on_terminate checks
+        whether the terminated PID equals _attached_pid and emits process_detached.
 
         Args:
             tab: _TestProcessTab fixture.

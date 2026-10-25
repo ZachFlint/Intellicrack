@@ -6,8 +6,7 @@
 
 These tests cover both the happy path and every silent-return branch of
 ``safe_int_from_str`` and ``safe_call``. Failure paths additionally
-verify that a structured log record is emitted at debug level so the
-audit constraint ``every except must log at least at debug`` is upheld.
+verify that a structured log record is emitted at debug level so the project rule that every except block logs at least at debug is upheld.
 """
 
 from __future__ import annotations

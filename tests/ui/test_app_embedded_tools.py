@@ -504,7 +504,7 @@ class TestCurrentBinaryHandlers:
     ) -> None:
         """Verify _show_tool_error is called with exact args when open_in_x64dbg fails.
 
-        The production code at line 3082-3083 calls
+        The production code calls
         ``_show_tool_error("x64dbg", "Failed to open binary in x64dbg")``
         when ``open_in_x64dbg`` returns ``False``.
 

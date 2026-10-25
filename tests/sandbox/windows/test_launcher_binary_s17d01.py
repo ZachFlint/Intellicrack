@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D01..D04: Windows Sandbox launcher selection and startup health.
+"""Gates for Windows Sandbox launcher selection and startup health.
 
 Intellicrack launched ``WindowsSandboxClient.exe``, which on current Windows
 builds is only the *connection client*: started on its own it cannot create a
@@ -21,12 +21,12 @@ sandbox-related running):
 
 That behaviour drives four regressions gated here:
 
-* **S17-D01** the launcher must be the session-creating binary.
-* **S17-D02** the launcher exits ``0`` by design, so a clean exit must not be
+* the launcher must be the session-creating binary.
+* the launcher exits ``0`` by design, so a clean exit must not be
   reported as a crashed client.
-* **S17-D03** the ``0x800706d9`` guidance must name the real causes rather than
+* the ``0x800706d9`` guidance must name the real causes rather than
   sending users to reboot the host, which is what stalled two audit waves.
-* **S17-D04** from a clean state the failure arrives as an *exit code*, not a
+* from a clean state the failure arrives as an *exit code*, not a
   dialog, so the exit code must map to the same actionable message.
 """
 
@@ -171,7 +171,7 @@ def _health_sandbox(poll_result: int | None, *, session_pid: int | None = None) 
 
 
 class TestLauncherSelection:
-    """S17-D01: the session-creating launcher must win."""
+    """The session-creating launcher must win."""
 
     def test_prefers_session_creating_launcher_when_both_present(self) -> None:
         """WindowsSandbox.exe is chosen when both binaries are on PATH.
@@ -223,15 +223,12 @@ class TestExeOnPathIsReal:
     ) -> None:
         """A ``where.exe`` sitting in the working directory must not decide what is on ``PATH``.
 
-        The probe used to start ``where`` by name. Windows looks in the working
+        The probe starts ``where`` by name. Windows looks in the working
         directory before the system directory when it starts a program by name,
         so the lookup was answered by whatever ``where.exe`` happened to be
         there, and on a loaded machine the real one could take longer to start
         than the probe was willing to wait. The stand-in here is a real system
         program that rejects the argument it is given and exits non-zero.
-
-        Falsifiable: a probe that launches ``where`` runs the stand-in instead
-        and reports that cmd.exe is not on ``PATH``.
 
         Args:
             tmp_path: Directory made the working directory for the lookup.
@@ -252,7 +249,7 @@ class TestExeOnPathIsReal:
 
 
 class TestStartupHealth:
-    """S17-D02/D04: launcher exit handling."""
+    """Launcher exit handling."""
 
     def test_clean_launcher_exit_is_not_a_failure(self) -> None:
         """A launcher exiting 0 with a bound session must not raise.
@@ -290,7 +287,7 @@ class TestStartupHealth:
 
 
 class TestRpcGuidance:
-    """S17-D03: the guidance must point at the real cause."""
+    """The guidance must point at the real cause."""
 
     def test_guidance_names_single_instance_and_launcher_causes(self) -> None:
         """The message names the two real causes before any host-state advice.

@@ -3,12 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for audit4 C1 - hex editor search wiring (F-0001, F-0014).
+"""Tests for hex editor search wiring.
 
 Validates that:
 
 * ``SearchMixin._on_search`` dispatches workers against ``self.document``
-  (not the dead ``self._document`` class annotation), so no ``AttributeError``
+  (not ``self._document``, which is never set), so no ``AttributeError``
   is raised and the correct document object is passed to the background worker.
 
 * ``SearchMixin._on_search_mode_changed`` clears search results, highlights,
@@ -302,17 +302,15 @@ def qapp() -> QApplication:
 
 
 class TestSearchUsesDocument:
-    """F-0001: search must use ``self.document``, not dead ``self._document``."""
+    """Search must use ``self.document``, not ``self._document``."""
 
     @staticmethod
     def test_search_dispatches_worker_with_correct_document(qapp: QApplication) -> None:
         """Calling ``_on_search`` creates a worker bound to ``self.document``.
 
-        Before the fix, ``_on_search`` checked ``self._document`` (the dead
-        class annotation — always absent at runtime) so the guard
-        ``if self._document is None`` returned early and no worker was created.
-        After the fix it reads ``self.document`` via ``getattr`` and passes
-        it to ``GenericCallableWorker``.
+        ``_on_search`` reads ``self.document`` via ``getattr`` and passes it to
+        ``GenericCallableWorker``.  A guard on ``self._document`` would see no
+        document and return early, so no worker would be created.
 
         Args:
             qapp: QApplication fixture (ensures Qt is available).
@@ -339,9 +337,9 @@ class TestSearchUsesDocument:
 
         Verifies that calling ``_on_search`` with a hex pattern when
         ``self.document`` is set creates a ``GenericCallableWorker`` and binds
-        it to the correct document object.  The dead ``self._document``
-        annotation (root cause of F-0001) caused a silent early return without
-        creating any worker; this test catches that regression independently.
+        it to the correct document object.  A guard on ``self._document`` would
+        return early without creating any worker, so this test catches that
+        regression independently.
 
         Args:
             qapp: QApplication fixture.
@@ -383,9 +381,9 @@ class TestSearchUsesDocument:
     def test_dead_class_annotation_removed(qapp: QApplication) -> None:
         """``SearchMixin`` must not declare ``_document`` as a class attribute.
 
-        The dead ``_document: Any | None`` annotation was the root cause of
-        F-0001. Its removal is verified by checking it is absent from
-        ``SearchMixin.__annotations__``.
+        A ``_document: Any | None`` annotation would be a dead declaration, since
+        the mixin reads ``self.document``. The check asserts the name is absent
+        from ``SearchMixin.__annotations__``.
 
         Args:
             qapp: QApplication fixture.
@@ -398,7 +396,7 @@ class TestSearchUsesDocument:
 
 
 class TestSearchResultsClearedOnModeChange:
-    """F-0014: switching search modes must clear stale results and highlights."""
+    """Switching search modes must clear stale results and highlights."""
 
     @staticmethod
     def test_results_cleared_after_mode_change(qapp: QApplication) -> None:

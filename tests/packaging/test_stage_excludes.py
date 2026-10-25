@@ -13,8 +13,8 @@ never reach the shipped installer:
 * ``src/hexbench`` keeps its own ``tests`` suite, ``gate.ps1``,
   ``update-deps.ps1`` and ``.qodo`` dev tooling inside the package tree.
 
-A plain ``robocopy /E`` shipped all of it into ``Setup.exe`` (~100 MB of dead
-runtime binaries plus the entire hexbench test suite). The stager now passes
+A plain ``robocopy /E`` would ship all of it into ``Setup.exe`` (~100 MB of dead
+runtime binaries plus the entire hexbench test suite). The stager passes
 ``/XD``/``/XF`` exclusions on both calls. These gates hold that behavior honest
 end to end: they parse the *actual* exclude arguments out of ``stage.ps1`` -- so
 the exclude set is derived from production rather than restated -- and then drive

@@ -2,27 +2,19 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for GUI audit findings M12 and M13 in ``hex_editor.va_mapping``.
+"""Gates for ``hex_editor.va_mapping`` non-blocking VA conversion and performance settings.
 
-M12 -- ``_on_goto_va`` and ``_on_cursor_offset_to_va`` called the **blocking**
-``run_bridge_coroutine`` variant directly from synchronous Qt slots
-(``goto_btn.clicked`` / ``offset_lookup_btn.clicked``), instead of the
-non-blocking ``run_bridge_coroutine_logged`` used everywhere else in this
-file. ``run_bridge_coroutine`` calls ``future.result()`` on the calling
-thread, so a slow bridge round trip froze the whole GUI. The fix routes both
-handlers through ``run_bridge_coroutine_logged``, delivering the result via
-``_on_va_to_file_offset_resolved``/``_on_file_offset_to_va_resolved`` and
-failures via ``_on_va_conversion_error``/``_on_cursor_offset_conversion_error``
-on a queued Qt signal.
+``_on_goto_va`` and ``_on_cursor_offset_to_va`` must not call the **blocking** ``run_bridge_coroutine`` variant directly from
+synchronous Qt slots (``goto_btn.clicked`` / ``offset_lookup_btn.clicked``), as the rest of this file avoids. ``run_bridge_coroutine``
+calls ``future.result()`` on the calling thread, so a slow bridge round trip would freeze the whole GUI. Both handlers route through
+``run_bridge_coroutine_logged``, delivering the result via ``_on_va_to_file_offset_resolved`` / ``_on_file_offset_to_va_resolved``
+and failures via ``_on_va_conversion_error`` / ``_on_cursor_offset_conversion_error`` on a queued Qt signal.
 
-M13 -- ``_on_open_performance_settings`` used the same blocking
-``run_bridge_coroutine`` for ``get_memory_usage()`` and, after the dialog was
-accepted, for ``set_chunk_size()``/``set_memory_budget()``, stalling the GUI
-thread on every one of the three RPCs. The fix splits the method into
-``_on_memory_usage_ready`` (dispatched via ``run_bridge_coroutine_logged``
-after ``get_memory_usage`` resolves) and a chained
-``_on_chunk_size_applied`` -> ``_on_memory_budget_applied`` sequence, each
-hop dispatched via ``run_bridge_coroutine_logged``.
+``_on_open_performance_settings`` must not use the same blocking ``run_bridge_coroutine`` for ``get_memory_usage()`` and, after
+the dialog is accepted, for ``set_chunk_size()`` / ``set_memory_budget()``, stalling the GUI thread on every one of the three RPCs.
+The method is split into ``_on_memory_usage_ready`` (dispatched via ``run_bridge_coroutine_logged`` after ``get_memory_usage``
+resolves) and a chained ``_on_chunk_size_applied`` -> ``_on_memory_budget_applied`` sequence, each hop dispatched via
+``run_bridge_coroutine_logged``.
 
 Every test below drives the real ``VaMappingMixin`` handlers on a minimal
 host against a real (subclassed) ``HexEditorBridge``, injecting an
@@ -446,11 +438,11 @@ def test_m12_on_goto_va_dispatches_non_blocking_and_resolves_via_queued_signal(
 ) -> None:
     """``_on_goto_va`` must return before the delayed ``va_to_file_offset`` RPC finishes.
 
-    Pre-fix, the handler called the blocking
+    The handler must not call the blocking
     ``run_bridge_coroutine(bridge.va_to_file_offset(va))``, which invokes
     ``future.result()`` on the calling (GUI) thread and would not return --
     nor navigate the hex view -- until the full artificial delay had
-    elapsed. Post-fix, the RPC is dispatched via ``run_bridge_coroutine_logged``
+    elapsed. The RPC is dispatched via ``run_bridge_coroutine_logged``
     onto a background ``BridgeCallWorker`` thread, so the handler returns in
     a small fraction of the delay and navigation only happens once the Qt
     event loop delivers the queued result signal.
@@ -498,11 +490,11 @@ def test_m12_on_cursor_offset_to_va_dispatches_non_blocking_and_resolves_via_que
 ) -> None:
     """``_on_cursor_offset_to_va`` must return before the delayed ``file_offset_to_va`` RPC finishes.
 
-    Pre-fix, the handler called the blocking
+    The handler must not call the blocking
     ``run_bridge_coroutine(bridge.file_offset_to_va(cursor_offset))`` directly
     on the GUI thread, so the status label would not update -- and the call
     would not return -- until the full artificial delay had elapsed.
-    Post-fix, the RPC is dispatched via ``run_bridge_coroutine_logged``, so
+    The RPC is dispatched via ``run_bridge_coroutine_logged``, so
     the handler returns in a small fraction of the delay and the status
     label only updates once the queued result signal fires.
 
@@ -544,10 +536,10 @@ def test_m12_on_goto_va_failure_surfaced_asynchronously_not_inline(
 ) -> None:
     """A failing ``va_to_file_offset`` must warn only after the delayed RPC actually fails.
 
-    Pre-fix, the blocking dispatch's ``try/except`` around
-    ``run_bridge_coroutine(...)`` meant ``show_warning`` was already invoked,
+    A blocking dispatch's ``try/except`` around
+    ``run_bridge_coroutine(...)`` would mean ``show_warning`` was already invoked,
     on the calling thread, by the time ``_on_goto_va`` returned -- after
-    blocking for the full artificial delay. Post-fix,
+    blocking for the full artificial delay. Instead,
     ``run_bridge_coroutine_logged`` delivers the exception via the queued
     ``call_error`` signal to ``_on_va_conversion_error``, so the handler
     returns immediately and no warning has been recorded until the Qt event
@@ -594,10 +586,10 @@ def test_m13_on_open_performance_settings_returns_before_get_memory_usage_comple
 ) -> None:
     """``_on_open_performance_settings`` must return before the delayed ``get_memory_usage`` RPC finishes.
 
-    Pre-fix, the handler called the blocking
+    The handler must not call the blocking
     ``run_bridge_coroutine(bridge.get_memory_usage())`` directly, so it
     would not return -- and the settings dialog would not even be
-    constructed -- until the full artificial delay had elapsed. Post-fix,
+    constructed -- until the full artificial delay had elapsed. Instead,
     the RPC is dispatched via ``run_bridge_coroutine_logged`` onto a
     background ``BridgeCallWorker`` thread, so the handler returns in a
     small fraction of the delay and the dialog is only constructed once the
@@ -652,11 +644,11 @@ def test_m13_apply_chain_dispatches_chunk_then_budget_without_blocking(
 ) -> None:
     """Applying settings must dispatch ``set_chunk_size``/``set_memory_budget`` as async round trips.
 
-    Pre-fix, after the dialog was accepted, ``_on_open_performance_settings``
-    issued two blocking ``run_bridge_coroutine`` calls back-to-back inside a
+    After the dialog is accepted, ``_on_open_performance_settings``
+    must not issue two blocking ``run_bridge_coroutine`` calls back-to-back inside a
     single synchronous call frame, so both ``set_chunk_size`` and
     ``set_memory_budget`` -- and the resulting success dialog -- would
-    already have happened by the time the enclosing call returned. Post-fix,
+    already have happened by the time the enclosing call returned. Instead,
     each RPC is dispatched via ``run_bridge_coroutine_logged``, with
     ``set_memory_budget`` only dispatched from ``_on_chunk_size_applied``
     once ``set_chunk_size``'s own queued result signal has fired, so neither

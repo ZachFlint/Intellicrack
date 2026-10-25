@@ -5,7 +5,7 @@
 """Project/session management tab for the Cutter/Rizin analysis panel.
 
 Provides a self-contained Qt widget exposing rizin's native project persistence commands (``Ps``/``Po``/``Pl``) via the ``CutterBridge``
-project surface (``cutter.py:3412-3468``), allowing the user to save the current analysis session as a named project, reopen a previously
+project surface, allowing the user to save the current analysis session as a named project, reopen a previously
 saved project, and browse the list of projects available to the currently loaded binary.
 """
 

@@ -3,38 +3,27 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave-5 real gates for the ADDRESS+DATATYPES group (Group 02, §2).
+"""Tests for the GhidraBridge and CutterBridge data type operations.
 
-Covers the nine still-open findings from group-02-report.md §2:
+GhidraBridge paths are all exercised through ``create_data_type``, which owns the union, enum and
+typedef branches. The standalone ``define_union``, ``define_enum``, ``add_enum_value`` and
+``create_typedef`` methods do not exist in ``src/intellicrack/bridges/ghidra.py``, so each maps to a
+branch of ``create_data_type``::
 
-  GhidraBridge paths (all via create_data_type — standalone define_union,
-  define_enum, add_enum_value, create_typedef methods do not exist in
-  src/intellicrack/bridges/ghidra.py; the report findings map to the
-  untested union/enum/typedef type_kind branches of create_data_type):
+    define_union     -> create_data_type(..., "union", fields)
+    define_enum      -> create_data_type(..., "enum", fields)
+    add_enum_value   -> the per-field add() call in the enum branch
+    create_typedef   -> create_data_type(..., "typedef", [{"type": base}])
 
-    define_union     → create_data_type(…, "union",  fields)
-    define_enum      → create_data_type(…, "enum",   fields)
-    add_enum_value   → the per-field add() framing in the enum branch
-    create_typedef   → create_data_type(…, "typedef", [{type: base}])
+CutterBridge methods exist only in cutter.py::
 
-  CutterBridge (methods only in cutter.py, never in ghidra.py):
+    get_types        -> CutterBridge.get_types()
+    import_c_header  -> CutterBridge.import_c_header()
 
-    get_types        → CutterBridge.get_types()  [no prior gate]
-    import_c_header  → CutterBridge.import_c_header() [no prior gate]
-
-  UNTESTABLE (production code absent from all bridges):
-
-    get_function_address (GhidraBridge) — exists in CutterBridge only;
-        CutterBridge already gated at tests/test_audit5/.
-    get_typedef         — no method in any bridge.
-    delete_data_type    — no method in any bridge.
-
-Each GhidraBridge test uses the _FakeGhidraBridge transport shim copied
-from test_ghidra_wave2a_datatypes.py and asserts BOTH the exact Jython
-API call embedded in the emitted script AND the exact parsed return value.
-Each CutterBridge test uses the _CommandRecorder shim copied from
-test_cutter_wave2a_project.py and asserts BOTH the exact rizin command
-issued AND the exact parsed return value.
+Each GhidraBridge test uses the ``_FakeGhidraBridge`` transport shim and asserts both the exact
+Jython API call embedded in the emitted script and the exact parsed return value. Each CutterBridge
+test uses the ``_CommandRecorder`` shim and asserts both the exact rizin command issued and the
+exact parsed return value.
 """
 
 from __future__ import annotations
@@ -58,9 +47,7 @@ _GHIDRA_ADDR: int = 0x401000
 _CATEGORY: str = "/IntellicrackTest"
 
 
-# ---------------------------------------------------------------------------
 # Shared helpers
-# ---------------------------------------------------------------------------
 
 
 class _FakeGhidraBridge:
@@ -185,18 +172,13 @@ def _as_r2pipe(recorder: _CommandRecorder) -> r2pipe.open:
     return cast(r2pipe.open, recorder)
 
 
-# ---------------------------------------------------------------------------
 # define_union semantics — GhidraBridge union branch of create_data_type
-# Mutation caught per test: stated in docstring.
-# ---------------------------------------------------------------------------
 
 
 class TestDefineUnion:
     """Gates for the union type_kind branch of GhidraBridge.create_data_type.
 
-    Maps to group-02 finding #41 (define_union): "Missing: assert UnionDataType
-    construction in script."  The standalone define_union method does not exist
-    in ghidra.py; the union branch of create_data_type is the production path.
+    The standalone define_union method does not exist in ghidra.py; the union branch of create_data_type is the production path.
     """
 
     def test_union_emits_union_data_type_api_call(self) -> None:
@@ -207,11 +189,6 @@ class TestDefineUnion:
         Mutation caught: changing type_kind == "union" to type_kind == "Union"
             in the production if/elif chain breaks the branch so UnionDataType
             is never constructed, and the assertion fails.
-
-        Red-by-design (PD-003): create_data_type's remote snippet ends in a
-        trailing if/else, so prepare_remote_script captures no sentinel and the
-        success dict is never returned; this gate stays red until PD-003 is
-        fixed.
         """
         bridge, fake = _make_ghidra_bridge()
         fake.eval_response = {"name": "MyUnion", "kind": "union", "size": 8, "success": True}
@@ -274,10 +251,6 @@ class TestDefineUnion:
         Mutation caught: if the bridge returns an empty fallback dict instead
             of forwarding eval_response, result["success"] is False and
             result["kind"] is absent, failing the assertion.
-
-        Red-by-design (PD-003): the production snippet's trailing if/else means
-        no result is captured, so this gate is currently red until PD-003 is
-        fixed.
         """
         bridge, fake = _make_ghidra_bridge()
         fake.eval_response = {"name": "RegUnion", "kind": "union", "size": 4, "success": True}
@@ -301,20 +274,12 @@ class TestDefineUnion:
             _run(bridge.create_data_type(_CATEGORY, "X", "union", []))
 
 
-# ---------------------------------------------------------------------------
 # define_enum + add_enum_value semantics — GhidraBridge enum branch
-# The "add_enum_value" finding maps to the per-field enum_dt.add() call;
-# the specific field name and numeric value must appear in the emitted script.
-# ---------------------------------------------------------------------------
+# The per-field enum_dt.add() call must emit the field name and numeric value.
 
 
 class TestDefineEnum:
-    """Gates for the enum type_kind branch and per-field add() framing.
-
-    Maps to group-02 findings #42 (define_enum) and #43 (add_enum_value):
-      #42: "Missing: assert EnumDataType construction in script."
-      #43: "Missing: assert add(value_name, value) call in script."
-    """
+    """Gates for the enum type_kind branch and per-field add() framing."""
 
     def test_enum_emits_enum_data_type_api_call(self) -> None:
         """create_data_type("enum") script must contain EnumDataType.
@@ -399,17 +364,11 @@ class TestDefineEnum:
             _run(bridge.create_data_type(_CATEGORY, "E", "enum", []))
 
 
-# ---------------------------------------------------------------------------
 # create_typedef semantics — GhidraBridge typedef branch of create_data_type
-# ---------------------------------------------------------------------------
 
 
 class TestCreateTypedef:
-    """Gates for the typedef type_kind branch of GhidraBridge.create_data_type.
-
-    Maps to group-02 finding #45 (create_typedef): "Missing: assert
-    TypedefDataType construction in script."
-    """
+    """Gates for the typedef type_kind branch of GhidraBridge.create_data_type."""
 
     def test_typedef_emits_typedef_data_type_api_call(self) -> None:
         """create_data_type("typedef") script must contain TypedefDataType.
@@ -468,9 +427,6 @@ class TestCreateTypedef:
         Mutation caught: returning the fallback {"success": False} dict instead
             of forwarding eval_response makes result["success"] False and
             result["size"] == 0, failing both assertions.
-
-        Red-by-design (PD-003): create_data_type's trailing if/else prevents
-        result capture, so this gate is currently red until PD-003 is fixed.
         """
         bridge, fake = _make_ghidra_bridge()
         fake.eval_response = {"name": "HANDLE", "kind": "typedef", "size": 8, "success": True}
@@ -494,22 +450,12 @@ class TestCreateTypedef:
             _run(bridge.create_data_type(_CATEGORY, "T", "typedef", [{"type": "dword"}]))
 
 
-# ---------------------------------------------------------------------------
 # CutterBridge get_types
-# Method at cutter.py:3071 — issues "tj" and returns parsed list of type dicts.
-# No prior test gate exists for this method.
-# ---------------------------------------------------------------------------
+# CutterBridge.get_types issues the "tj" command and returns the parsed list of type dicts.
 
 
 class TestGetTypes:
-    """Gates for CutterBridge.get_types().
-
-    Maps to group-02 finding #21 (get_types): "No wave-2a test found.
-    Missing: eval_response with type list → assert result[0].name."
-
-    NOTE: get_types exists only in CutterBridge (cutter.py:3071), not in
-    GhidraBridge. The group-02 report misattributed it to GhidraBridge.
-    """
+    """Gates for CutterBridge.get_types(). The method exists only in CutterBridge, not in GhidraBridge."""
 
     @pytest.mark.asyncio
     async def test_get_types_issues_tj_command(self) -> None:
@@ -597,20 +543,13 @@ class TestGetTypes:
             await bridge.get_types()
 
 
-# ---------------------------------------------------------------------------
 # CutterBridge import_c_header
-# Method at cutter.py:3173 — writes header to temp .h file, issues "to <path>" cmd.
-# No prior test gate exists for this method.
-# ---------------------------------------------------------------------------
+# CutterBridge.import_c_header writes the header to a temp .h file and issues a "to <path>" command.
 
 
 class TestImportCHeader:
     """Gates for CutterBridge.import_c_header().
 
-    Maps to group-02 finding #40 (import_c_header): "No wave-2a test covers
-    the Ghidra-side import_c_header (distinct from CutterBridge import_c_header)."
-
-    NOTE: import_c_header exists in CutterBridge (cutter.py:3173) only.
     The production code writes header_text to a temp .h file and issues
     "to <path>" (with surrounding double-quotes per rizin's `to` command syntax)
     to load types from that file.
@@ -689,9 +628,7 @@ class TestImportCHeader:
             await bridge.import_c_header("typedef int T;")
 
 
-# ---------------------------------------------------------------------------
 # Disconnected-guard parametrised sweep — all four GhidraBridge paths
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(

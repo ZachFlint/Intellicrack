@@ -3,24 +3,22 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for the Ghidra share of S20-D14 -- Scripting tab control overlap.
+"""Gate for Ghidra Scripting tab control overlap.
 
 ``GhidraPanel._create_scripting_tab`` (src/intellicrack/ui/panels/ghidra_panel.py)
 stacks a script editor, run buttons, an output view, decompiler-options
 controls, and analysis-configuration controls directly in a plain
 ``QVBoxLayout`` with no scroll boundary. Their combined minimum height can
-exceed the docked bottom-detail pane, so before the fix the tab returned that
-container directly: at the real pane height Qt's layout engine could not
-satisfy every control's minimum and the rows overdrew one another (the
-reported symptoms were the Run button rendered on top of the Output label,
-"Simplification style" overlapping "Analysis Configuration", the "Params
-(JSON):" label overlapping its placeholder, and the "Analyzer name" row cut
-off at the bottom edge).
+exceed the docked bottom-detail pane. At the real pane height Qt's layout engine
+cannot satisfy every control's minimum, so the rows overdraw one another: the Run
+button renders on top of the Output label, "Simplification style" overlaps
+"Analysis Configuration", the "Params (JSON):" label overlaps its placeholder, and
+the "Analyzer name" row is cut off at the bottom edge.
 
-The fix hosts the container in a vertically scrolling viewport
-(:func:`intellicrack.ui.panels.base_panel.make_scrollable`) so overflow scrolls
-instead of compressing the stacked rows into each other, and gives the script
-editor a real minimum height matching the output view's.
+The container is hosted in a vertically scrolling viewport
+(:func:`intellicrack.ui.panels.base_panel.make_scrollable`) so overflow scrolls instead
+of compressing the stacked rows into each other, and the script editor gets a real
+minimum height matching the output view's.
 
 Every assertion reads live Qt geometry off a real, fully constructed
 ``GhidraPanel`` under an offscreen ``QApplication`` -- no mocked widgets.
@@ -105,9 +103,8 @@ class TestScriptingTabIsScrollable:
     def test_script_editor_has_a_real_minimum_height(panel: GhidraPanel) -> None:
         """The script editor must carry an explicit, nonzero minimum height like the output view.
 
-        Regression: the editor previously had no minimum at all, so it could
-        be squeezed to zero height while its stretch factor gave it no
-        protection under starvation.
+        Without an explicit minimum, the editor could be squeezed to zero height, and its
+        stretch factor gives it no protection under starvation.
 
         Args:
             panel: A live ``GhidraPanel`` fixture instance.
@@ -168,10 +165,9 @@ class TestScriptingTabIsScrollable:
     def test_rows_do_not_overlap_at_short_viewport(panel: GhidraPanel) -> None:
         """At a short viewport, the stacked control rows must occupy disjoint, ordered vertical bands.
 
-        This is the user-facing property S20-D14 broke for the Ghidra
-        Scripting tab: with the plain container forced to the docked height,
-        later rows overdrew earlier ones (Run over Output, Simplification
-        style over Analysis Configuration).
+        This is the user-facing property at stake for the Ghidra Scripting tab: with the
+        plain container forced to the docked height, later rows overdraw earlier ones (Run
+        over Output, Simplification style over Analysis Configuration).
 
         Args:
             panel: A live ``GhidraPanel`` fixture instance.

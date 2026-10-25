@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D69: the guest must never write to a vvfat share.
+r"""The guest must never write to a vvfat share.
 
 QEMU exposed the host shared folder to the guest as ``fat:rw:`` and the in-guest
 agent wrote everything it produced there - monitor logs appended line by line, a
@@ -12,8 +12,8 @@ directory, and its commit path does not fail a write, it calls ``abort()``:
 ``block/vvfat.c`` reaches ``abort()`` immediately after logging ``Error handling
 renames (%d)``, and reports ``cluster %d used more than once`` on the way there.
 Under MSVCRT an ``abort()`` leaves exit code 3, so the whole virtual machine
-disappeared mid-run - the S17-D39 "not dependable across a long run" symptom, and
-the reason a staged binary could run and still deliver nothing (S17-D54).
+disappeared mid-run - the "not dependable across a long run" symptom, and
+the reason a staged binary could run and still deliver nothing.
 
 The transport is now read-only. ``-drive file=fat:...,readonly=on`` means QEMU's
 commit path is never entered at all, which required moving everything the guest

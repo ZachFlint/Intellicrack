@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Second-pass coverage for the application entry point and the process manager.
+"""Coverage for the application entry point and the process manager.
 
-Everything here targets lines the first pass could not reach. Stalled shutdown
+Stalled shutdown
 stages are reproduced with a real child process whose cleanup callback never
 returns. Paths that would terminate the pytest process, strip a privilege from it
 or need the operating system to refuse access run in a child interpreter that

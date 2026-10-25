@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for :mod:`intellicrack.core.template_manager`.
 
-The audit flagged ``template_manager.py`` as having zero test coverage. These
-tests exercise the full public API against real artifacts:
+These tests exercise the full public API against real artifacts:
 
 * :meth:`TemplateManager.bootstrap_builtins` runs against a real
   ``intellicrack_hexcore.HexDocument`` and exports the genuine built-in

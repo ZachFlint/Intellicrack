@@ -375,7 +375,7 @@ class TestSessionTagChips:
 
     @staticmethod
     def test_base_theme_chip_rule_keeps_the_colours_the_chips_always_had(manager: ThemeManager) -> None:
-        """In the base themes the rule is the surface, border, text and accent the chips were drawn with before.
+        """In the base themes the rule carries the surface, border, text and accent colours of the chip.
 
         Args:
             manager: Fresh theme manager.
@@ -814,7 +814,7 @@ class TestSelectorsMatchTheWidgetsTheyName:
 
     @staticmethod
     def test_index_resolves_the_new_named_widgets(object_names: _ObjectNameIndex) -> None:
-        """The widgets this change named are found by the index, so the gate above really covers them.
+        """The widgets named in the stylesheet rules are found by the index, so the gate above really covers them.
 
         Args:
             object_names: Index of the object names the UI source assigns.

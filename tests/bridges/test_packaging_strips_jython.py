@@ -5,49 +5,17 @@
 
 r"""Falsifiable gates that installer staging never ships the Jython extension.
 
-The bridge drives Ghidra through the CPython (PyGhidra/jfx_bridge) server, not
-the legacy Jython interpreter. The S19 mitigation for this was a *manual*
-rename of the checked-out ``tools/ghidra/Ghidra/Features/Jython`` directory to
-``Jython.disabled`` on a gitignored tree -- a fix that a plain re-stage would
-silently undo, because ``packaging/stage.ps1`` mirrored ``tools/ghidra``
-verbatim and rebuilt ``build/stage`` from scratch on every run.
+The bridge drives Ghidra through the CPython (PyGhidra/jfx_bridge) server, not the legacy Jython interpreter. ``packaging/stage.ps1`` Step 8 excludes ``Ghidra/Features/Jython`` from the ``Invoke-Robocopy`` mirror into the stage, and asserts (as a hard build failure, not a warning) that no ``Ghidra/Features/Jython/lib`` jar survives in the staged tree. The stage is rebuilt from scratch on every run, so the exclusion has to live in the script rather than in a manual rename of the checked-out Jython directory.
 
-``packaging/stage.ps1`` Step 8 now (1) excludes ``Ghidra/Features/Jython``
-from the ``Invoke-Robocopy`` mirror into the stage, and (2) asserts -- as a
-hard build failure, not a warning -- that no ``Ghidra/Features/Jython/lib``
-jar survives in the staged tree. These gates hold both halves honest by
-*executing* the production statements rather than restating them, following
-the same pattern ``tests/packaging/test_stage_excludes.py`` established for
-``stage.ps1``'s runtime trim (there is no ``-DryRun`` switch on ``stage.ps1``
-itself -- it is a real multi-hour build script -- so the host-side pattern for
-exercising a piece of it without running the whole build is to lift the exact
-statements out by their real anchors and run them with ``pwsh`` against a
-synthetic tree):
+These gates hold both halves by *executing* the production statements rather than restating them. They follow the pattern in ``tests/packaging/test_stage_excludes.py`` for ``stage.ps1``'s runtime trim. ``stage.ps1`` has no ``-DryRun`` switch and is a full build script, so each test lifts the exact statements out by their real anchors and runs them with ``pwsh`` against a synthetic tree:
 
-* ``test_ghidra_copy_step_excludes_jython_from_the_staged_tree`` lifts the
-  literal copy statements (the ``$GhidraJythonSrc`` assignment, the
-  ``Invoke-Robocopy`` call with its ``-ExcludeDirs``, and the
-  ``analyzeHeadless.bat`` payload check) and runs them against a fixture
-  Ghidra source tree carrying a fake ``Ghidra/Features/Jython/lib/Jython.jar``.
-  Removing the exclusion leaves the jar in the mirrored destination and
-  reddens the absence assertion.
-* ``test_ghidra_stage_guard_raises_when_a_jython_jar_survives`` lifts the
-  literal post-copy guard statements and runs them against a *destination*
-  tree that already carries a Jython jar -- simulating exactly the scenario
-  the guard exists to catch: a re-stage (or a source tree) where the strip
-  did not happen. Removing the guard, or narrowing its match, keeps the block
-  from throwing and reddens this test.
-* ``test_ghidra_stage_guard_is_silent_on_a_clean_tree`` is the guard's
-  negative control: a destination with no Jython content must not throw, so a
-  test that only checked "it can throw" could not be satisfied by a guard
-  that always throws.
+* ``test_ghidra_copy_step_excludes_jython_from_the_staged_tree`` lifts the literal copy statements (the ``$GhidraJythonSrc`` assignment, the ``Invoke-Robocopy`` call with its ``-ExcludeDirs``, and the ``analyzeHeadless.bat`` payload check) and runs them against a fixture Ghidra source tree carrying a fake ``Ghidra/Features/Jython/lib/Jython.jar``. Removing the exclusion leaves the jar in the mirrored destination and fails the absence assertion.
+* ``test_ghidra_stage_guard_raises_when_a_jython_jar_survives`` lifts the literal post-copy guard statements and runs them against a *destination* tree that already carries a Jython jar. That is the scenario the guard exists to catch: a re-stage (or a source tree) where the strip did not happen. Removing the guard, or narrowing its match, keeps the block from throwing and fails this test.
+* ``test_ghidra_stage_guard_is_silent_on_a_clean_tree`` is the guard's negative control: a destination with no Jython content must not throw, so a test that only checked "it can throw" could not be satisfied by a guard that always throws.
 
-Extraction is anchored on the literal production text, not restated logic:
-these tests go RED if the exclusion, the guard's ``Test-Path`` check, or its
-``*.jar`` scan is weakened or removed from ``packaging/stage.ps1``.
+Extraction is anchored on the literal production text, not restated logic: these tests fail if the exclusion, the guard's ``Test-Path`` check, or its ``*.jar`` scan is weakened or removed from ``packaging/stage.ps1``.
 
-``robocopy`` and ``pwsh`` are Windows host utilities, so these run in the
-host-native pass.
+``robocopy`` and ``pwsh`` are Windows host utilities, so these run in the host-native pass.
 """
 
 from __future__ import annotations
@@ -247,8 +215,7 @@ def test_ghidra_stage_guard_raises_when_a_jython_jar_survives(tmp_path: Path) ->
     copy step, with a Jython jar already present under
     ``Ghidra/Features/Jython/lib`` -- exactly the state a re-stage that forgot
     the exclusion (or a source tree where Jython was never disabled) would
-    produce. The guard must raise a terminating error (nonzero exit), which is
-    the durable half of D11: even if the exclusion above is silently reverted,
+    produce. The guard must raise a terminating error (nonzero exit), which is the durable half of the protection: even if the exclusion above is silently reverted,
     this assertion still stops the build from shipping Jython.
 
     Args:

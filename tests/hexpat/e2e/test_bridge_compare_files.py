@@ -4,10 +4,13 @@
 """E2E tests for HexEditorBridge compare_files operation.
 
 ``HexEditorBridge.compare_files`` wraps the native ``diff_files`` engine and
-returns a dict with exactly five keys: ``files_identical`` (bool),
+returns a dict with exactly eight keys: ``files_identical`` (bool),
 ``total_differences`` (int), ``size_a`` / ``size_b`` (the byte counts actually
-compared), and ``regions`` (list of ``offset_a``/``offset_b``/
-``length``/``length_a``/``length_b``/``diff_type`` dicts). ``length_a`` and
+compared), ``regions`` (list of ``offset_a``/``offset_b``/
+``length``/``length_a``/``length_b``/``diff_type`` dicts), and the three keys
+that account for a list cut short by ``max_regions``: ``region_count``,
+``change_count`` and ``truncated``. ``min_match`` and ``max_regions`` are passed
+through to the engine. ``length_a`` and
 ``length_b`` are the true per-side spans consumed in each file; for a
 size-changing ``modified`` region these differ from one another, and
 ``length`` is ``max(length_a, length_b)``. Expected region layouts and
@@ -20,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import difflib
+import inspect
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -77,7 +81,7 @@ def _write_bin(directory: Path, name: str, data: bytes) -> Path:
 def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[str, Any]]:
     """Validate the compare_files result schema and return its regions list.
 
-    Asserts the result has exactly the five documented keys with correctly
+    Asserts the result has exactly the eight documented keys with correctly
     typed values and well-formed regions bounded by the input lengths.
     ``length_a`` and ``length_b`` are the true per-side spans -- for a
     size-changing ``modified`` region they differ from one another and from
@@ -97,6 +101,9 @@ def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[
         "files_identical",
         "total_differences",
         "regions",
+        "region_count",
+        "change_count",
+        "truncated",
         "size_a",
         "size_b",
     }
@@ -106,6 +113,12 @@ def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[
     assert result["size_b"] == len_b
     regions: list[dict[str, Any]] = result["regions"]
     assert isinstance(regions, list)
+    assert isinstance(result["region_count"], int)
+    assert isinstance(result["change_count"], int)
+    assert isinstance(result["truncated"], bool)
+    assert result["truncated"] is (result["region_count"] > len(regions))
+    assert len(regions) <= result["region_count"]
+    assert sum(1 for region in regions if region["diff_type"] != "match") <= result["change_count"] <= result["region_count"]
     for region in regions:
         assert set(region.keys()) == {"offset_a", "offset_b", "length", "length_a", "length_b", "diff_type"}
         assert region["diff_type"] in _DIFF_TYPES
@@ -459,3 +472,90 @@ class TestBridgeCompareFiles:
                 _run(bridge.compare_files(str(f_a), str(f_b)))
         finally:
             setattr(bridge, flag, original)
+
+
+class TestBridgeCompareFilesLimits:
+    """``min_match`` and ``max_regions`` reach the engine through the bridge."""
+
+    def test_limits_are_passed_through_to_the_engine(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify both limits change the result the way the engine documents.
+
+        Two one-byte changes six bytes apart are five regions by default, three
+        once ``min_match`` folds the gap, and only two are listed (of five
+        counted) when ``max_regions`` is two. ``total_differences`` is two in
+        every case.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        f_a = _write_bin(tmp_path, "a.bin", b"AAAA-B-CCCC-D-EEEE")
+        f_b = _write_bin(tmp_path, "b.bin", b"AAAA-X-CCCC-Y-EEEE")
+        default: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
+        assert (default["region_count"], default["change_count"], default["truncated"]) == (5, 2, False)
+
+        folded: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b), min_match=7))
+        assert (folded["region_count"], folded["change_count"], folded["truncated"]) == (3, 1, False)
+        assert folded["regions"][1] == {
+            "offset_a": 5,
+            "offset_b": 5,
+            "length": 8,
+            "length_a": 8,
+            "length_b": 8,
+            "diff_type": "modified",
+        }
+
+        capped: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b), max_regions=2))
+        assert len(capped["regions"]) == 2
+        assert (capped["region_count"], capped["change_count"], capped["truncated"]) == (5, 2, True)
+        for result in (default, folded, capped):
+            assert result["total_differences"] == 2
+
+    def test_negative_limits_are_refused_before_the_engine_is_called(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify a negative limit raises a clear ``ValueError``.
+
+        Without the check the engine would reject it with an unsigned-conversion
+        overflow that names neither the parameter nor the rule.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        f_a = _write_bin(tmp_path, "a.bin", b"\x00" * 8)
+        f_b = _write_bin(tmp_path, "b.bin", b"\x01" * 8)
+        with pytest.raises(ValueError, match="must not be negative"):
+            _run(bridge.compare_files(str(f_a), str(f_b), min_match=-1))
+        with pytest.raises(ValueError, match="must not be negative"):
+            _run(bridge.compare_files(str(f_a), str(f_b), max_regions=-1))
+
+    def test_defaults_are_the_engines_defaults(self, bridge: HexEditorBridge) -> None:
+        """Verify the bridge's defaults equal the ones the compiled engine declares.
+
+        Leaving a limit out through the bridge must mean the same thing as
+        leaving it out of ``diff_files``, so the two sets of defaults are read
+        from their signatures and compared rather than restated here.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+        """
+        engine = pytest.importorskip("intellicrack_hexcore")
+        bridge_parameters = inspect.signature(bridge.compare_files).parameters
+        engine_parameters = inspect.signature(engine.diff_files).parameters
+        for limit in ("min_match", "max_regions"):
+            assert bridge_parameters[limit].default == engine_parameters[limit].default
+        assert engine_parameters["max_regions"].default == 100_000
+
+    def test_tool_definition_declares_both_limits_as_optional(self, bridge: HexEditorBridge) -> None:
+        """Verify the function-calling schema lists the limits with the bridge's defaults.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+        """
+        function = next(f for f in bridge.tool_definition.functions if f.name == "hex_editor.compare_files")
+        parameters = {parameter.name: parameter for parameter in function.parameters}
+        assert list(parameters) == ["path_a", "path_b", "min_match", "max_regions"]
+        bridge_parameters = inspect.signature(bridge.compare_files).parameters
+        for limit in ("min_match", "max_regions"):
+            assert parameters[limit].required is False
+            assert parameters[limit].type == "integer"
+            assert parameters[limit].default == bridge_parameters[limit].default

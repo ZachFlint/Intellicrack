@@ -3,24 +3,20 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L3 gate tests for the x64dbg Labels/Comments tables (rows 33, 35 of the state-manipulation slice).
+"""L3 gate tests for the x64dbg Labels/Comments tables .
 
 ``get_labels`` and ``get_comments`` were fully implemented and registered
 bridge methods, and ``_lbl_table``/``_cmt_table`` widgets existed in the
-Annotations tab, but neither table was ever populated (DEAD-CONTROL): no
-code path called ``get_labels``/``get_comments`` or inserted rows. The
-remediation wires a Refresh button (and an automatic refresh after a
+Annotations tab, but no
+code path called ``get_labels``/``get_comments`` or inserted rows. The panel wires a Refresh button (and an automatic refresh after a
 successful ``set_label``/``set_comment``) that calls the bridge and
 populates the table with the real returned rows, plus a row-click handler
 that copies the selected entry back into the edit fields.
 
-Also covers the closed conditional-breakpoint DEAD-CONTROL gap (row 19 of
-the execution-control slice): the Breakpoints tab's Add-BP toolbar now
+Also covers conditional breakpoints: the Breakpoints tab's Add-BP toolbar
 exposes a ``_bp_cond_input`` field, and ``_on_add_breakpoint`` forwards its
 (stripped, empty-to-``None``) text as the ``condition`` kwarg to
-``bridge.set_breakpoint``. ``TestConditionalBreakpointGuiWiring`` is the
-positive replacement for the former residual-gap test, which asserted the
-pre-remediation broken state.
+``bridge.set_breakpoint``. ``TestConditionalBreakpointGuiWiring`` covers the GUI wiring.
 """
 
 from __future__ import annotations
@@ -136,8 +132,7 @@ class TestLabelsTableRefresh:
     ) -> None:
         """Clicking the Labels Refresh button must render the exact ``lbl_list`` entries.
 
-        Falsifiable: if ``_on_refresh_labels`` were never wired (the
-        pre-remediation DEAD-CONTROL state), the table would remain empty
+        Falsifiable: if ``_on_refresh_labels`` were never wired (the unwired state), the table would remain empty
         forever and this test would time out with zero rows. Broken
         production line: ``self._bridge.get_labels(0, end)`` in
         ``_on_refresh_labels`` and the field mapping in ``_apply_labels``
@@ -277,8 +272,7 @@ class TestCommentsTableRefresh:
     ) -> None:
         """Clicking the Comments Refresh button must render the exact ``cmt_list`` entries.
 
-        Falsifiable: if ``_on_refresh_comments`` were never wired (the
-        pre-remediation DEAD-CONTROL state), the table would remain empty
+        Falsifiable: if ``_on_refresh_comments`` were never wired (the unwired state), the table would remain empty
         forever. Broken production line: ``self._bridge.get_comments(0,
         end)`` in ``_on_refresh_comments`` and the field mapping in
         ``_apply_comments`` (``ui/panels/x64dbg_panel.py``).
@@ -363,7 +357,7 @@ class TestCommentsTableRefresh:
 
 
 class TestConditionalBreakpointGuiWiring:
-    """Positive gate for the conditional-breakpoint GUI (slice-1 row 19, now closed).
+    """Positive gate for the conditional-breakpoint GUI .
 
     The bridge (``set_breakpoint(condition=...)``) and tool-def
     (``x64dbg.set_breakpoint``'s ``condition`` parameter) layers support

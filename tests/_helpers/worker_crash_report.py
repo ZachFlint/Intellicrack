@@ -12,8 +12,7 @@ fast-fail that raises no signal and no structured exception, so
 :mod:`faulthandler` never runs, and pytest-qt's log capture has taken the
 message itself into memory that dies with the process. All the session reports
 is ``node down: Not properly terminated`` and the name of whichever test xdist
-had last handed the worker, which is how the same death appeared in one CI run
-after another under a different test's name and with no cause.
+had last handed the worker, which is how the same death shows up under a different test's name each time, with no cause.
 
 A recording handler writes every fatal message, and the Python stack of every
 thread at that moment, to a file belonging to the worker, then passes the
@@ -25,9 +24,9 @@ nested with the test phases: it is installed partway through setup and removed
 when the call phase is reported. So the recorder is put in front of it once
 setup has finished (:func:`record_fatal_messages_in_front_of_capture`) and is
 never taken down by this module: pytest-qt removes it together with its own
-handler by reinstalling whatever preceded both. Installing and restoring
-around each phase instead left one recorder behind per test, each forwarding
-to the last, until a message overflowed the stack. Teardown runs after
+handler by reinstalling whatever preceded both. Installing and restoring around each phase instead
+would leave one recorder behind per test, each forwarding to the last, until a message overflows the
+stack. Teardown runs after
 pytest-qt's handler is gone, so there the recorder is installed and restored
 around the phase (:func:`qt_fatal_messages_recorded`). A fatal message raised
 while fixtures are still being set up is the one case not recorded.

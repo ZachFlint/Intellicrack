@@ -3,16 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave 5 native-helper gates: private functions and Windows-native operations.
+"""Native-helper gates: private functions and Windows-native operations.
 
-Findings closed:
-    3   get_memory_regions — MemoryRegion fields on self-process
-    23  analyze_entropy — Shannon entropy oracle against ctypes-controlled buffers
-    24  yara_scan — pre-process guards and live pattern-match via ctypes buffer
-    25  adjust_privilege — invalid-name deterministic error path
-    26  get_resources — ntdll.dll resource directory structure via pefile oracle
-    28  _coerce_address — exact int/bool/str/None dispatch
-    29  _x64dbg_error_code — exact str/absent/non-str dispatch
+Covers ``get_memory_regions`` (MemoryRegion fields on the self-process), ``analyze_entropy`` (Shannon entropy oracle against ctypes-controlled buffers), ``yara_scan`` (pre-process guards and a live pattern match via a ctypes buffer), ``adjust_privilege`` (invalid-name error path), ``get_resources`` (ntdll.dll resource directory checked against a pefile oracle), ``_coerce_address`` (int, bool, str and None dispatch) and ``_x64dbg_error_code`` (str, absent and non-str dispatch).
 """
 
 from __future__ import annotations
@@ -392,27 +385,11 @@ class TestYaraScan:
     async def test_live_scan_finds_known_pattern_in_ctypes_buffer(self) -> None:
         """A YARA rule matching a known pattern finds it in a controlled ctypes buffer.
 
-        RED_BY_DESIGN — PD-007.
+        A 256-byte buffer is allocated with ``INTELLICRACK`` bytes at offset 0. The YARA rule targets exactly those 12 bytes (hex pattern). The bridge reads the buffer via ``ReadProcessMemory`` (self-process) and runs YARA on the result. The match dict is checked for exact rule name and matched byte content.
 
-        A 256-byte buffer is allocated with ``INTELLICRACK`` bytes at offset 0.
-        The YARA rule targets exactly those 12 bytes (hex pattern).  The bridge
-        reads the buffer via ``ReadProcessMemory`` (self-process) and runs YARA
-        on the result.  The match dict is checked for exact rule name and
-        matched byte content.
+        Broken production line: ``x64dbg.py:7977`` unpacks ``m.strings`` as 3-tuples, but modern yara-python returns ``yara.StringMatch`` objects, so ``_scan_window`` raises ``TypeError`` before any result is appended. This test fails until that line is fixed.
 
-        This test is intentionally red until PD-007 is fixed.  Production
-        ``x64dbg.py:7977`` unpacks ``m.strings`` as
-        ``for offset_val, _identifier, match_bytes in strings_list`` but modern
-        yara-python returns ``yara.StringMatch`` objects (not 3-tuples), raising
-        ``TypeError: cannot unpack non-iterable yara.StringMatch object`` inside
-        ``_scan_window`` before any result is appended.
-
-        Oracle: YARA spec — the rule hex pattern ``49 4E 54 45 4C 4C 49 43 52
-        41 43 4B`` matches ASCII ``INTELLICRACK``; ``matched_bytes`` is the
-        hex encoding of those bytes (``b"INTELLICRACK".hex()``).
-        Mutation caught: computing ``matched_bytes`` as
-        ``match_bytes.decode("latin-1")`` instead of ``.hex()`` → value differs
-        → assertion fails.
+        Oracle: YARA spec. The rule hex pattern ``49 4E 54 45 4C 4C 49 43 52 41 43 4B`` matches ASCII ``INTELLICRACK``; ``matched_bytes`` is the hex encoding of those bytes (``b"INTELLICRACK".hex()``). Mutation caught: computing ``matched_bytes`` as ``match_bytes.decode("latin-1")`` instead of ``.hex()`` gives a different value, so the assertion fails.
         """
         buf_size = 256
         buf_data = _YARA_PATTERN + b"\x00" * (buf_size - len(_YARA_PATTERN))

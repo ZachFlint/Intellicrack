@@ -5,8 +5,7 @@
 
 """Real-world coverage tests for FridaBridge module and function operations.
 
-These tests close the coverage gaps flagged in the bridges/RE-tools audit
-(shard 03) for ``enumerate_modules``, ``enumerate_exports``,
+These tests cover ``enumerate_modules``, ``enumerate_exports``,
 ``replace_function`` and ``resume_child``. Every test drives the REAL Frida
 runtime attached to a freshly spawned ``notepad.exe`` and asserts on real,
 verifiable results from live Windows system DLLs (kernel32.dll, ntdll.dll).

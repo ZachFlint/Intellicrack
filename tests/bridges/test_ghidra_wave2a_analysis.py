@@ -3,28 +3,17 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave-2A GHIDRA-A: real connected-state gates for core analysis methods.
+"""Connected-state gates for core GhidraBridge analysis methods.
 
-Covers the following GhidraBridge operations that were previously gated only
-by disconnected-state ToolError guards (the guard verifies only that the method
-exists and raises on the connection check — it does NOT gate the script
-generation, Ghidra API framing, or response-parsing logic that runs when
-connected):
+Covers the following operations, which are otherwise gated only by disconnected-state ``ToolError`` guards. Those guards verify only that the method exists and raises on the connection check. They do not gate the script generation, Ghidra API framing, or response-parsing logic that runs when connected:
 
-  load_binary, get_functions, get_function, disassemble, get_imports,
-  get_exports, get_program_info, get_function_body
-
-Operations already carrying REAL functional gates in test_ghidra_audit6.py
-(analyze, decompile) are intentionally omitted here.
+load_binary, get_functions, get_function, disassemble, get_imports, get_exports, get_program_info, get_function_body
 
 Each test asserts BOTH:
-  (1) the Ghidra Flat API call that must appear in the emitted Jython script
-  (2) the exact typed value the bridge produces by parsing the fake response
+(1) the Ghidra Flat API call that must appear in the emitted Jython script
+(2) the exact typed value the bridge produces by parsing the fake response
 
-The oracle is the independently-known dict/list we inject as the fake
-remote_eval return value. Any mutation that changes the dict key the bridge
-reads, the field the bridge maps the value to, or the type it constructs will
-break the exact-value assertion.
+The oracle is the independently-known dict/list we inject as the fake remote_eval return value. Any mutation that changes the dict key the bridge reads, the field the bridge maps the value to, or the type it constructs will break the exact-value assertion.
 """
 
 from __future__ import annotations

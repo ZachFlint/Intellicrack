@@ -11,8 +11,8 @@ made onto the new remote tip and pushes again. It must do that for the
 out-of-date rejection only: a conflict, a dirty working tree or any other push
 failure must stop with the local commit exactly as it was.
 
-``git-rebase.ps1`` used to exit on a failed rebase without aborting it when
-nothing had been stashed, leaving the repository stuck mid-rebase.
+``git-rebase.ps1`` must abort a failed rebase, even when
+nothing has been stashed, so the repository is never left stuck mid-rebase.
 
 Every gate builds a real bare ``origin``, a local clone and a second clone that
 pushes competing work, then runs the real script with ``pwsh``.
@@ -243,7 +243,7 @@ def test_dirty_working_tree_blocks_the_automatic_rebase(topology: Topology) -> N
 
 
 def test_git_rebase_recipe_aborts_a_conflicting_rebase_with_a_clean_tree(topology: Topology) -> None:
-    """``just git-rebase`` no longer leaves the repository stuck mid-rebase."""
+    """``just git-rebase`` never leaves the repository stuck mid-rebase."""
     _commit_file(topology.other, topology.env, "shared.txt", "theirs\n", "remote edit")
     _git(topology.other, topology.env, "push", "--quiet", "origin", "main")
     local_commit = _commit_file(topology.local, topology.env, "shared.txt", "mine\n", "local edit")

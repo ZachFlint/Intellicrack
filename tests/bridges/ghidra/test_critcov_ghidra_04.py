@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-object coverage for the fourth slice of ``intellicrack.bridges.ghidra``.
+"""Real-object coverage for ``intellicrack.bridges.ghidra``.
 
 The slice is the tail of the analysis surface: ``set_program_metadata``,
 ``execute_script_with_params``, the thunk, function-tag, external-reference,

@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit7 F-0042 regression tests for streaming BPS/UPS patch export.
+"""Regression tests for streaming BPS/UPS patch export.
 
 These tests verify that ``HexEditorBridge.export_patches_bps`` and
 ``HexEditorBridge.export_patches_ups`` never materialise the full
@@ -35,8 +35,7 @@ streaming implementation completes the source-handoff portion of the
 export without that allocation.
 
 The BPS / UPS algorithms' own per-byte hash-index data structures
-scale linearly with the source size and are not part of the F-0042
-remediation surface; tests that need to verify end-to-end roundtrip
+scale linearly with the source size and are outside this change; tests that need to verify end-to-end roundtrip
 correctness do so on small inputs instead.
 """
 
@@ -173,8 +172,7 @@ class _SourceCapture:
     """Records the type of source passed to a patched encoder.
 
     Used to assert the encoder receives an :class:`mmap.mmap` object
-    rather than a :class:`bytes` value, which is the load-bearing
-    F-0042 invariant for the Python fallback paths.
+    rather than a :class:`bytes` value, which is the load-bearing invariant for the Python fallback paths.
     """
 
     def __init__(self) -> None:
@@ -270,7 +268,7 @@ class TestBpsStreamingPyfallback:
         Patches :meth:`HexEditorBridge._build_bps_patch` so the test
         records the runtime type of the source argument; this is the
         precise object the encoder would consume. The expected type
-        is :class:`mmap.mmap`, because the F-0042 fix replaced the
+        is :class:`mmap.mmap`, because the streaming change replaced the
         ``bytes(self._load_source_via_mmap(...))`` call with a
         buffer-protocol pass-through.
 
@@ -306,7 +304,7 @@ class TestBpsStreamingPyfallback:
         ``_export_patches_bps_pyfallback`` body up to the encoder
         call; if that phase materialised the source as a Python
         ``bytes`` value, tracemalloc would observe a 2 GiB peak.
-        With the F-0042 fix in place the peak is bounded by the
+        With the streaming change in place the peak is bounded by the
         encoder's stub plus the open-file machinery.
 
         Args:
@@ -452,7 +450,7 @@ class TestUpsStreamingPyfallback:
         Mirrors :meth:`TestBpsStreamingPyfallback.test_pyfallback_peak_heap_below_source_size_multi_gib`
         for the UPS path: a 2 GiB sparse source is fed through the
         pure-Python UPS fallback whose encoder has been stubbed out;
-        the F-0042 fix means the source-handoff phase never crosses
+        the streaming change means the source-handoff phase never crosses
         the Python heap boundary, so tracemalloc peak stays bounded.
 
         Args:
@@ -485,7 +483,7 @@ class TestBpsStreamingBackend:
     def test_path_based_backend_binding_is_present(self) -> None:
         """The Rust ``HexDocument`` exposes the path-based exporter.
 
-        F-0042's primary remediation introduces a Rust binding that
+        The primary change adds a Rust binding that
         memory-maps the source inside Rust so the source never crosses
         the Python heap. This test pins that binding's presence; if
         the binding is removed the bridge would silently fall back to

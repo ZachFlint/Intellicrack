@@ -1120,7 +1120,7 @@ class ToolInstaller:
         """Parse a version string supporting semver and YYYY.MM.DD.
 
         Returns None when no recognisable version can be extracted so
-        callers no longer silently downgrade to ``ToolVersion(0, 0, 0)``
+        callers do not silently downgrade to ``ToolVersion(0, 0, 0)``
         for unparseable input.
 
         Args:

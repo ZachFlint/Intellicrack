@@ -3,24 +3,19 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave 2b patch/anti-debug/import gate tests for ``intellicrack.bridges.x64dbg``.
+"""Patch, anti-debug and import gate tests for ``intellicrack.bridges.x64dbg``.
 
-Covers the following operations with falsifiable assertions against
-independent oracles:
+Covers the following operations with falsifiable assertions against independent oracles:
 
-- ``patch_instruction``: exact ``assemble`` framing, ``verified=True``
-  when memory changes, ``ToolError`` when bytes are unchanged.
-- ``nop_range``: exact ``fill`` command framing, ``verified=True`` when all
-  NOP bytes, ``ToolError`` on non-NOP residual.
+- ``patch_instruction``: exact ``assemble`` framing, ``verified=True`` when memory changes, ``ToolError`` when bytes are unchanged.
+- ``nop_range``: exact ``fill`` command framing, ``verified=True`` when all bytes are NOP, ``ToolError`` on non-NOP residual.
 - ``get_patches``: ``patch_list`` command, exact parsed patch records.
 - ``restore_patch``: ``patch_restore`` framing and success structure.
 - ``export_patches``: ``savedata`` command framing via exec.
-- ``detect_anti_debug``: PEB field parsing for ``beingDebugged`` and
-  ``NtGlobalFlag``.
-- ``read_peb``: real round-trip via fake pipe (replaces FG-1 docstring gate).
-- ``get_registers``: ``reg_all`` parsing into ``RegisterState`` (replaces
-  FG-3 ToolError-only gate).
-- ``set_register``: ``reg_set`` framing (replaces FG-3 ToolError-only gate).
+- ``detect_anti_debug``: PEB field parsing for ``beingDebugged`` and ``NtGlobalFlag``.
+- ``read_peb``: real round-trip via fake pipe.
+- ``get_registers``: ``reg_all`` parsing into ``RegisterState``.
+- ``set_register``: ``reg_set`` framing.
 - ``reconstruct_imports``: ``scylla_reconstruct`` framing; script fallback.
 - ``get_module_imports``: ``mod_imports`` framing and parsed import records.
 - ``find_intermodular_calls``: ``ref_search`` ``type=intermodular`` framing.
@@ -69,7 +64,7 @@ _INT3_OPCODE: Final[int] = 0xCC
 
 
 class _FakePipeClient:
-    """In-process replacement for ``NamedPipeClient`` used by wave-2b tests.
+    """In-process replacement for ``NamedPipeClient`` used by these tests.
 
     Records every ``(command, params)`` pair sent by the bridge and
     returns scripted responses via a caller-supplied ``responder``.
@@ -204,7 +199,7 @@ class TestPatchInstructionFraming:
 
     Falsifiable mutation caught: if ``patch_instruction`` sent ``"patch"`` instead
     of ``"assemble"``, or omitted the ``instruction`` key from params, the framing
-    assertion would fail while the existing not-attached gate would still pass.
+    assertion would fail while the not-attached gate would still pass.
     """
 
     async def test_assemble_command_framing_and_unverified_result(
@@ -534,11 +529,9 @@ class TestGetPatches:
 
 @pytest.mark.asyncio
 class TestRestorePatch:
-    """Gate: ``restore_patch`` issues ``patch_restore`` with the correct address.
+    """``restore_patch`` issues ``patch_restore`` with the correct address.
 
-    Falsifiable mutation caught: if ``restore_patch`` passed ``address``
-    as a decimal string instead of ``hex(address)``, the params assertion
-    fails while the existing no-coverage baseline left no gate at all.
+    Falsifiable mutation caught: if ``restore_patch`` passed ``address`` as a decimal string instead of ``hex(address)``, the params assertion fails.
     """
 
     async def test_sends_patch_restore_with_hex_address(
@@ -606,7 +599,7 @@ class TestExportPatches:
     expected size.
 
     Falsifiable mutations caught: emitting a bare ``savedata "<path>"``
-    (the old framing, which x64dbg rejects for missing arguments),
+    (which x64dbg rejects for missing arguments),
     swapping the address and size arguments, deriving the span from the
     wrong bound, or reporting success without the file ever appearing.
     """
@@ -667,8 +660,7 @@ class TestExportPatches:
         """A ``savedata`` that writes nothing must fail verification.
 
         Falsifiable: if ``export_patches`` reported success from the RPC
-        reply alone - the behaviour before the write was verified on
-        disk - no ``ToolError`` would be raised even though nothing was
+        reply alone - a check that trusts the reply without verifying the file on disk - no ``ToolError`` would be raised even though nothing was
         ever written.
 
         Args:
@@ -727,12 +719,9 @@ class TestExportPatches:
 
 @pytest.mark.asyncio
 class TestReadPebRoundTrip:
-    """Gate: ``read_peb`` issues ``peb_read`` and returns the result dict verbatim.
+    """``read_peb`` issues ``peb_read`` and returns the result dict verbatim.
 
-    Replaces the FG-1 gate that only checked a docstring substring for
-    ``"address"`` without ever calling the method.  Falsifiable mutation
-    caught: returning an empty dict instead of the parsed result, or
-    reading from the wrong RPC name.
+    Falsifiable mutations caught: returning an empty dict instead of the parsed result, or reading from the wrong RPC name.
     """
 
     async def test_peb_read_rpc_sent_and_fields_returned(
@@ -818,11 +807,9 @@ class TestReadPebRoundTrip:
 
 @pytest.mark.asyncio
 class TestDetectAntiDebug:
-    """Gate: ``detect_anti_debug`` parses PEB fields into per-check boolean flags.
+    """``detect_anti_debug`` parses PEB fields into per-check boolean flags.
 
-    Replaces the NO-COVERAGE baseline.  Falsifiable mutations caught:
-    reading ``"being_debugged"`` instead of ``"beingDebugged"``, applying
-    the wrong mask (``0xFF`` vs ``0x70``), or inverting the bool conversion.
+    Falsifiable mutations caught: reading ``"being_debugged"`` instead of ``"beingDebugged"``, applying the wrong mask (``0xFF`` vs ``0x70``), or inverting the bool conversion.
     """
 
     async def test_being_debugged_flag_set(
@@ -949,12 +936,9 @@ class TestDetectAntiDebug:
 
 @pytest.mark.asyncio
 class TestGetRegisters:
-    """Gate: ``get_registers`` issues ``reg_all`` and parses into ``RegisterState``.
+    """``get_registers`` issues ``reg_all`` and parses into ``RegisterState``.
 
-    Replaces the FG-3 gate that only tested the no-plugin ``ToolError`` path.
-    Falsifiable mutations caught: reading from the wrong response key (e.g.
-    ``"RAX"`` vs ``"rax"``), not falling back to 32-bit aliases, or
-    collapsing all fields to ``0`` silently.
+    Falsifiable mutations caught: reading from the wrong response key (e.g. ``"RAX"`` vs ``"rax"``), not falling back to 32-bit aliases, or collapsing all fields to ``0`` silently.
     """
 
     async def test_reg_all_parsed_into_register_state(
@@ -1085,11 +1069,9 @@ class TestGetRegisters:
 
 @pytest.mark.asyncio
 class TestSetRegister:
-    """Gate: ``set_register`` issues ``reg_set`` with exact params.
+    """``set_register`` issues ``reg_set`` with exact params.
 
-    Replaces the FG-3 gate that only tested the no-plugin ``ToolError`` path.
-    Falsifiable mutations caught: sending the register name under the wrong
-    key (``"name"`` vs ``"register"``), or omitting the ``value`` field.
+    Falsifiable mutations caught: sending the register name under the wrong key (``"name"`` vs ``"register"``), or omitting the ``value`` field.
     """
 
     async def test_reg_set_framing_and_returns_true(
@@ -1144,12 +1126,9 @@ class TestSetRegister:
 
 @pytest.mark.asyncio
 class TestReconstructImports:
-    """Gate: ``reconstruct_imports`` issues ``scylla_reconstruct`` with OEP and path.
+    """``reconstruct_imports`` issues ``scylla_reconstruct`` with OEP and path.
 
-    Replaces the NO-COVERAGE baseline.  Falsifiable mutations caught: using
-    a decimal OEP string instead of ``hex(oep)``, omitting ``output_path``
-    from the RPC params, or never falling back to script commands when the
-    RPC is unavailable.
+    Falsifiable mutations caught: using a decimal OEP string instead of ``hex(oep)``, omitting ``output_path`` from the RPC params, or never falling back to script commands when the RPC is unavailable.
     """
 
     async def test_scylla_reconstruct_rpc_framing(
@@ -1244,11 +1223,9 @@ class TestReconstructImports:
 
 @pytest.mark.asyncio
 class TestGetModuleImports:
-    """Gate: ``get_module_imports`` issues ``mod_imports`` with the module name.
+    """``get_module_imports`` issues ``mod_imports`` with the module name.
 
-    Replaces the NO-COVERAGE baseline.  Falsifiable mutations caught: using
-    a different param key (``"module"`` vs ``"name"``), or not parsing each
-    import entry into a dict from the list.
+    Falsifiable mutations caught: using a different param key (``"module"`` vs ``"name"``), or not parsing each import entry into a dict from the list.
     """
 
     async def test_sends_mod_imports_with_name_and_parses_result(
@@ -1310,11 +1287,9 @@ class TestGetModuleImports:
 
 @pytest.mark.asyncio
 class TestFindIntermodularCalls:
-    """Gate: ``find_intermodular_calls`` issues ``ref_search`` with ``type=intermodular``.
+    """``find_intermodular_calls`` issues ``ref_search`` with ``type=intermodular``.
 
-    Replaces the NO-COVERAGE baseline.  Falsifiable mutations caught: using
-    ``"type": "cross_module"`` instead of ``"intermodular"``, or using the
-    wrong param key for the module name.
+    Falsifiable mutations caught: using ``"type": "cross_module"`` instead of ``"intermodular"``, or using the wrong param key for the module name.
     """
 
     async def test_ref_search_framing_and_references_returned(

@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Critical-coverage tests for ``intellicrack.bridges.installer`` (part 1).
+"""Coverage tests for ``intellicrack.bridges.installer``.
 
 The tests drive the real installer against real files and real child processes.
 Portable Executables carrying a ``VS_VERSION_INFO`` resource are assembled byte by

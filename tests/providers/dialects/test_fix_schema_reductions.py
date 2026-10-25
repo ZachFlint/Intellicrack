@@ -409,7 +409,7 @@ def test_root_accepting_arbitrary_keys_is_declared_as_json_schema() -> None:
 
 
 def test_expressible_schema_stays_in_parameters_without_empty_objects() -> None:
-    """A schema the ``Schema`` subset can carry is sent in ``parameters``, as before."""
+    """A schema the ``Schema`` subset can carry is sent in ``parameters``."""
     schema: dict[str, Any] = {
         "type": "object",
         "properties": {"point": {"type": "object", "properties": {"x": {"type": "number"}}, "required": ["x"]}},

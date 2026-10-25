@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the GUI audit finding M50 in ``hex_editor.disassembly``.
+"""Gate for the Disassembly table's Hex Bytes column sizing in ``hex_editor.disassembly``.
 
-* ``test_m50_*``: the Disassembly table's "Hex Bytes" column (index 1) must
+* The Disassembly table's "Hex Bytes" column (index 1) must
   be configured to ``ResizeToContents`` and must actually widen to fit long
   instruction byte dumps (up to 15 bytes / 44 characters, e.g. for
   AVX/EVEX-prefixed x86 instructions) instead of clipping them at Qt's
@@ -44,16 +44,14 @@ def _spaced_hex_dump(raw_hex: str) -> str:
 
 
 class TestM50HexBytesColumnNotClipped:
-    """M50: the Hex Bytes column resizes to fit long instruction byte dumps."""
+    """The Hex Bytes column resizes to fit long instruction byte dumps."""
 
     def test_m50_hex_bytes_header_section_is_resize_to_contents(self, qapp: QApplication) -> None:
         """Column index 1 ("Hex Bytes") must use the ``ResizeToContents`` resize mode.
 
-        Pre-fix, ``_create_disassembly_tab`` only called
-        ``h_header.setStretchLastSection(True)``, which per Qt semantics only
-        stretches the final section (index 3, "Operands"). Column 1 was left
-        at the header's default ``Interactive`` resize mode, so its width
-        never grew to accommodate longer hex dumps.
+        ``_create_disassembly_tab`` must set the column explicitly: ``h_header.setStretchLastSection(True)`` only stretches
+        the final section (index 3, "Operands"), and column 1 would otherwise stay at the header's default ``Interactive``
+        resize mode, so its width would never grow to accommodate longer hex dumps.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -77,9 +75,8 @@ class TestM50HexBytesColumnNotClipped:
         Feeds ``_apply_disassemble_result`` a real result dict shaped exactly
         like the payload returned by ``HexEditorBridge.disassemble`` -- a
         15-byte-encoded instruction (the legal x86 maximum), which renders as
-        a 44-character space-joined uppercase hex dump. Pre-fix, column 1
-        stayed pinned near Qt's ~100px default ``Interactive`` width
-        regardless of content length, so this dump was clipped; post-fix the
+        a 44-character space-joined uppercase hex dump. Column 1 must not stay pinned near Qt's ~100px default
+        ``Interactive`` width regardless of content length, or this dump would be clipped. The
         ``ResizeToContents`` mode measured against the table's actual
         (Consolas 9pt) font must grow the column to fit it.
 
@@ -162,10 +159,10 @@ class TestM50HexBytesColumnNotClipped:
     def test_m50_hex_bytes_cell_tooltip_exposes_full_untruncated_dump(self, qapp: QApplication) -> None:
         """Each Hex Bytes cell must carry a tooltip with the full dump as a fallback.
 
-        Pre-fix, ``QTableWidgetItem(hex_str)`` was inserted with no tooltip,
+        ``QTableWidgetItem(hex_str)`` must not be inserted with no tooltip,
         so a narrow viewport (side panel resized, splitter dragged) offered
         no way to recover the untruncated dump short of widening the column
-        by hand. Post-fix, ``hex_item.setToolTip(hex_str)`` guarantees the
+        by hand. ``hex_item.setToolTip(hex_str)`` guarantees the
         full text is always available on hover regardless of column width.
 
         Args:

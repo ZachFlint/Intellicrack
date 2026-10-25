@@ -3,51 +3,33 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave-5 introspection/memory real-gate suite for GhidraBridge.
+"""Tests for GhidraBridge introspection and memory operations.
 
-Group 02 §2 — INTROSPECTION/MEMORY gate closure.
+The tests cover these production methods: get_comments, get_namespaces, create_namespace,
+read_bytes, write_bytes, get_all_comments and get_call_graph.
 
-This file resolves thirteen NOT_RESOLVED findings from the group-02-report STILL
-OPEN table.  Six of those findings reference methods that do not exist in the
-current production source (``get_data_references``, ``get_instruction_at``,
-``get_register_values`` plural, ``emulate_function``, ``get_stack_trace``,
-``get_local_variables``); those are UNTESTABLE and are documented in the final
-status block without test functions.  The remaining seven findings correspond to
-production methods with slightly different names from the audit labels:
+Seam: ``_FakeGhidraRemote`` captures every script sent via ``remote_exec`` in ``exec_calls`` and
+every sentinel name via ``remote_eval`` in ``eval_calls``, and returns a pre-configured
+``eval_response`` from every ``remote_eval`` call. This exercises ``prepare_remote_script``
+rewriting and ``_execute_remote`` dispatch end-to-end without a live Ghidra installation.
 
-  Audit label           Production method      Status
-  get_comment           get_comments           Gate here
-  get_namespace         get_namespaces         Gate here
-  set_namespace         create_namespace       Gate here
-  get_bytes_at          read_bytes             Gate here
-  patch_bytes           write_bytes            Gate here
-  get_function_comments get_all_comments       Gate here
-  get_function_graph    get_call_graph         Gate here
+Oracle justification for each gate::
 
-Seam: ``_FakeGhidraRemote`` captures every script sent via ``remote_exec`` in
-``exec_calls`` and every sentinel-name via ``remote_eval`` in ``eval_calls``,
-and returns a pre-configured ``eval_response`` from every ``remote_eval`` call.
-This exercises ``prepare_remote_script`` rewriting and ``_execute_remote``
-dispatch end-to-end without a live Ghidra installation.
-
-Oracle justification for each gate:
-  get_comments      — canned eval_response injected with known address/type/text;
-                      bridge parses the dict unchanged, so the assertion is on
-                      the injected constant, independently chosen.
-  get_namespaces    — same pattern; ``name`` and ``path`` keys are verified against
-                      the injected dict, not re-derived.
-  create_namespace  — script content oracle: Ghidra SymbolTable API spec
-                      ``createNameSpace``; result-field oracle: injected dict.
-  read_bytes        — result oracle: ``bytes.fromhex`` of a known sequence;
-                      ``hex`` field oracle: ``' '.join(f'{b:02X}' ...)`` computed
-                      independently.
-  write_bytes       — script oracle: Python int sign-conversion formula
-                      ``(b - 256) if b > 127``, independently computed to -112
-                      for 0x90; result verified against injected readback dict.
-  get_all_comments  — canned eval_response; ``comment`` field oracle is the known
-                      injected string constant.
-  get_call_graph    — canned eval_response; callees/callers oracle is the
-                      injected structure with independently-chosen names/addresses.
+    get_comments      — canned eval_response injected with known address/type/text; the bridge
+        parses the dict unchanged, so the assertion is on the injected constant, independently
+        chosen.
+    get_namespaces    — same pattern; ``name`` and ``path`` keys are verified against the injected
+        dict, not re-derived.
+    create_namespace  — script content oracle: Ghidra SymbolTable API spec ``createNameSpace``;
+        result-field oracle: injected dict.
+    read_bytes        — result oracle: ``bytes.fromhex`` of a known sequence; ``hex`` field oracle:
+        ``' '.join(f'{b:02X}' ...)`` computed independently.
+    write_bytes       — script oracle: Python int sign-conversion formula ``(b - 256) if b > 127``,
+        independently computed to -112 for 0x90; result verified against injected readback dict.
+    get_all_comments  — canned eval_response; ``comment`` field oracle is the known injected string
+        constant.
+    get_call_graph    — canned eval_response; callees/callers oracle is the injected structure with
+        independently-chosen names/addresses.
 """
 
 from __future__ import annotations
@@ -124,12 +106,10 @@ def _make_bridge(response: object = None) -> tuple[GhidraBridge, _FakeGhidraRemo
 
 
 class TestGetComments:
-    """Real gates for ``GhidraBridge.get_comments`` (audit label: ``get_comment``).
+    """Tests for ``GhidraBridge.get_comments``.
 
-    The audit found ``get_comment`` (singular) had only a disconnected-state
-    test.  The actual production method is ``get_comments`` (plural), which
-    scans an address range and returns a list of comment dicts.  These gates
-    verify that the bridge (a) emits the correct Ghidra Listing API framing
+    The method scans an address range and returns a list of comment dicts.
+    These tests verify that the bridge (a) emits the correct Ghidra Listing API framing
     and (b) parses the remote result into the exact address/type/text structure.
 
     Oracle: the canned eval_response is an independently-constructed list whose
@@ -227,11 +207,9 @@ class TestGetComments:
 
 
 class TestGetNamespaces:
-    """Real gates for ``GhidraBridge.get_namespaces`` (audit label: ``get_namespace``).
+    """Tests for ``GhidraBridge.get_namespaces``.
 
-    The audit found ``get_namespace`` (singular) had no functional gate.
-    The production method is ``get_namespaces`` (plural).  These gates verify
-    the script emits ``SymbolType.NAMESPACE`` filtering and that the result
+    These tests verify the script emits ``SymbolType.NAMESPACE`` filtering and that the result
     contains the exact ``name`` and ``path`` fields.
 
     Oracle: injected ``name`` and ``path`` constants chosen before calling the
@@ -308,10 +286,9 @@ class TestGetNamespaces:
 
 
 class TestCreateNamespace:
-    """Real gates for ``GhidraBridge.create_namespace`` (audit label: ``set_namespace``).
+    """Tests for ``GhidraBridge.create_namespace``.
 
-    The audit found ``set_namespace`` with no gate.  The production method is
-    ``create_namespace``.  Gates verify (a) the script calls
+    The tests verify (a) the script calls
     ``createNameSpace`` with the user-supplied name, and (b) the bridge
     surfaces the ``name``, ``path``, and ``success`` fields from the remote result.
 
@@ -401,10 +378,9 @@ class TestCreateNamespace:
 
 
 class TestReadBytes:
-    """Real gates for ``GhidraBridge.read_bytes`` (audit label: ``get_bytes_at``).
+    """Tests for ``GhidraBridge.read_bytes``.
 
-    The audit found ``get_bytes_at`` with no functional gate.  The production
-    method is ``read_bytes``.  Gates verify (a) the script calls
+    The tests verify (a) the script calls
     ``getMemory().getBytes`` and embeds the requested address, and (b) the
     bridge correctly converts the remote byte list to ``hex`` and ``bytes`` fields.
 
@@ -509,10 +485,9 @@ class TestReadBytes:
 
 
 class TestWriteBytes:
-    """Real gates for ``GhidraBridge.write_bytes`` (audit label: ``patch_bytes``).
+    """Tests for ``GhidraBridge.write_bytes``.
 
-    The audit found ``patch_bytes`` (distinct from ``write_bytes``) had no gate.
-    The production method is ``write_bytes``.  These gates verify (a) the
+    These tests verify (a) the
     bridge applies the signed-byte conversion required by Jython's ``jarray``
     and embeds the correct signed representation in the script, and (b) the
     readback verification logic raises on mismatch.
@@ -636,10 +611,9 @@ class TestWriteBytes:
 
 
 class TestGetAllComments:
-    """Real gates for ``GhidraBridge.get_all_comments`` (audit label: ``get_function_comments``).
+    """Tests for ``GhidraBridge.get_all_comments``.
 
-    The audit found ``get_function_comments`` with no gate.  The production
-    method is ``get_all_comments``.  Gates verify the script iterates all code
+    The tests verify the script iterates all code
     units via ``getCodeUnits(True)`` and that the ``comment`` field is preserved.
 
     Oracle: the canned eval_response provides independently-chosen comment
@@ -715,10 +689,9 @@ class TestGetAllComments:
 
 
 class TestGetCallGraph:
-    """Real gates for ``GhidraBridge.get_call_graph`` (audit label: ``get_function_graph``).
+    """Tests for ``GhidraBridge.get_call_graph``.
 
-    The audit found ``get_function_graph`` with no gate.  The production method
-    is ``get_call_graph``.  These gates verify that the bridge correctly parses
+    These tests verify that the bridge correctly parses
     the bidirectional call-graph result from the remote Jython execution,
     asserting exact ``name``, ``address``, ``callees``, and ``callers`` values.
 
@@ -798,11 +771,10 @@ class TestGetCallGraph:
         """``get_call_graph`` script must call ``getCalledFunctions`` for callee traversal.
 
         The Ghidra ``Function.getCalledFunctions(monitor)`` API returns call
-        targets in a single RPC round-trip; earlier implementations issued one
-        call per byte of the function body.
+        targets in a single RPC round-trip, where per-reference lookups would need one round-trip each.
 
         Mutation caught: replacing ``getCalledFunctions`` with
-        ``getReferencesFrom`` (the old per-byte approach) → assertion fails and
+        ``getReferencesFrom`` (a per-reference approach) → assertion fails and
         runtime performance would degrade severely.
         """
         response: dict[str, Any] = {

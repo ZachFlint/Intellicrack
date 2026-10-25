@@ -4,19 +4,17 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates on what every bridge tool actually puts on the wire.
 
-Provider identity became an open string and schema generation moved behind
-per-dialect adapters. Both changes sit underneath all 715 bridge tool
-functions, none of which were supposed to change shape, so the risk is a
+Provider identity is an open string and schema generation runs behind
+per-dialect adapters. Both sit underneath all 715 bridge tool functions, none of which should change shape, so the risk is a
 silent narrowing: a field dropped, a property filtered away, a name rendered
 in a form the endpoint rejects.
 
 Every gate here renders the real bridge definitions -- no fixtures, no doubles
--- and asserts a property that fails if the rendering regresses. Two of them
-were written because it already had: ``_strictify`` and ``_geminify``
-recursed into the ``properties`` map as though the property names were schema
-keywords and dropped every argument, and ``build_schema_property`` emitted a
-default only when it was scalar, silently discarding the empty-list defaults
-six sandbox parameters declare.
+-- and asserts a property that fails if the rendering regresses.
+Two of them guard against defects that already occurred: ``_strictify`` and ``_geminify`` recursed into the ``properties`` map as though
+the property names were schema keywords and dropped every argument, and
+``build_schema_property`` emitted a default only when it was scalar, silently
+discarding the empty-list defaults six sandbox parameters declare.
 """
 
 from __future__ import annotations

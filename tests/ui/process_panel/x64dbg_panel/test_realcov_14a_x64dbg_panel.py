@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""FIX UNIT 14a real-data coverage for ``x64dbg_panel``.
+"""Real-data coverage for ``x64dbg_panel``.
 
-Audit shard 14 marked ``x64dbg_panel.py`` as a CRITICAL coverage gap: no
-dedicated panel test existed, so the disassembly, register, module, section,
-export, and memory-dump rendering paths were never validated against real
+The rendering paths for disassembly, registers, modules, sections, exports, and memory
+dumps are validated against real
 data. The live x64dbg debugger backend is not present in the test container,
 so these tests cannot drive the bridge end-to-end; that integration path is
 documented as a skip. Instead they feed the panel's *render* methods data
@@ -21,8 +20,7 @@ produced from REAL binaries by the SAME engines the bridge uses in production:
   section and export records parsed from a real DLL (e.g. ``LoadLibraryA``).
 * ``_on_mem_read_success`` is fed the real MZ-prefixed bytes of a real PE.
 
-This proves the panel renders genuine tool data correctly, which is the audit
-mandate, without requiring a live debugger.
+This proves the panel renders genuine tool data correctly without requiring a live debugger.
 """
 
 from __future__ import annotations

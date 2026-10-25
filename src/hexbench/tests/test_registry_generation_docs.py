@@ -11,7 +11,7 @@ mutating operation the dispatcher runs -- a bookmark edit exactly as much as a
 byte edit. The engine's own content generation counter
 (``HexDocument.generation()``, surfaced through ``read_window``) is a
 different number, advanced only when the bytes underneath actually change. The
-module used to document the two as one and the same, which is false: a client
+module must not document the two as one and the same, which is false: a client
 that trusted that claim would compare numbers that are allowed to drift apart
 the moment a bookmark, template, VA mapping or save touches the document.
 
@@ -32,7 +32,7 @@ class RegistryModuleDocstringTests(Assertions, unittest.TestCase):
     """The module docstring's description of the two generation counters."""
 
     def test_module_docstring_does_not_pair_byte_windows_with_the_slot_counter(self) -> None:
-        """The old false claim that clients cache windows against the slot's own counter must be gone."""
+        """The claim that clients cache windows against the slot's own counter must not appear."""
         doc = registry.__doc__ or ""
         self.require(doc, "hexbench.registry carries no module docstring to check")
         self.require(

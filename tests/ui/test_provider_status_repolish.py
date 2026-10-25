@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression test for the requirements-status label repolish gap (D44).
+"""Test for the requirements-status label repolish contract.
 
 ``ProviderSettingsWidget._on_check_requirements`` (``src/intellicrack/ui/
 provider_config.py``) sets the ``"status"`` dynamic property on
@@ -21,10 +21,9 @@ requirements group) and asserts, for every transition:
 1. the ``"status"`` dynamic property actually changes; and
 2. the label's own style is unpolished then repolished -- observed via a
    duck-typed recording stand-in installed as the label's ``style`` bound
-   method, mirroring the approach already established in
-   ``tests/ui/test_theme_manager_s12d10_content_viewport_repolish.py``.
+   method, mirroring the recording stand-in used by the theme manager tests.
 
-Falsifiable: removing the ``_restyle(warnings_label)`` calls from any of the
+Removing the ``_restyle(warnings_label)`` calls from any of the
 four ``_on_check_requirements`` branches (reverting to a bare
 ``setProperty("status", ...)``) leaves that branch's transition absent from
 the stand-in's ``polished`` / ``unpolished`` lists, failing the assertion for

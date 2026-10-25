@@ -3,22 +3,22 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates the stylesheet's token layer: A-7 (control borders at 3:1), A-6 (the
- * command palette's focus indicator), DS-2 (the dark palette declared twice),
- * DS-3/A-9 (the control-size scale) and A-8 (the shape channel).
+ * Gates the stylesheet's token layer: control borders at 3:1, the command
+ * palette's focus indicator, the dark palette declared once, the control-size
+ * scale and the shape channel.
  *
- * A-7 is a measured ratio rather than a colour anyone chose, so this suite
+ * Control borders are a measured ratio rather than a colour anyone chose, so this suite
  * measures it: the palette blocks are parsed out of app.css and the contrast of
  * --hb-border-strong against --hb-surface-2 is computed with the WCAG relative
- * luminance formula in both themes. The pre-A-7 value is measured too, and has
+ * luminance formula in both themes. The superseded value is measured too, and has
  * to come out below 3:1 - a formula that cannot fail the old colour would pass
  * every colour.
  *
  * The rule checks parse app.css rather than a browser, which is what a node
- * suite can do honestly: they assert that the declarations the audit names are
- * present with the token the audit names, so reverting any of them turns this
- * red. What they cannot see is layout, which is why A-9's own done-when is a
- * measurement in the running app.
+ * suite can do honestly: they assert that the required declarations are present
+ * with the required token, so reverting any of them turns this
+ * red. What they cannot see is layout, which is why the control sizes are
+ * measured in the running app.
  *
  * Run by gate.ps1 (or directly with node). Exits non-zero on failure.
  */
@@ -115,7 +115,7 @@ check(
   `media block ${darkMedia.size} tokens, attribute block ${darkAttr.size}`,
 );
 
-/* ------------------------------------------------- DS-2: one dark palette */
+/* ------------------------------------------------- one dark palette */
 
 const onlyInMedia = [...darkMedia.keys()].filter((name) => !darkAttr.has(name));
 const onlyInAttr = [...darkAttr.keys()].filter((name) => !darkMedia.has(name));
@@ -144,7 +144,7 @@ check(
   `forcing the light theme would not give the default theme: ${lightDisagreeing.join(' | ')}`,
 );
 
-/* ------------------------------------------- A-7 and A-6: measured ratios */
+/* ------------------------------------------- measured ratios */
 
 function channel(value) {
   const srgb = value / 255;
@@ -196,8 +196,8 @@ for (const [name, palette] of themes) {
   );
 }
 
-/* The measurement has to be able to fail, or the four checks above are theatre:
-   the token A-7 replaced is put through the same formula and must come out
+/* The measurement has to be able to fail, or the checks above are theatre:
+   the superseded token is put through the same formula and must come out
    short. */
 const supersededLight = contrast('#b7c0cd', lightRoot.get('--hb-surface-2'));
 const supersededDark = contrast('#3a4453', darkAttr.get('--hb-surface-2'));
@@ -209,7 +209,7 @@ check(
     + `${supersededDark.toFixed(2)}:1 dark, which is above the threshold this suite claims to enforce`,
 );
 
-/* ------------------------------------------- A-7: applied where it belongs */
+/* ------------------------------------------- applied where it belongs */
 
 const controls = [
   ['.hb-input,\n.hb-select,\n.hb-textarea', 'border: 1px solid var(--hb-border-strong)'],
@@ -238,7 +238,7 @@ check(
   'the stronger border was applied to a surface edge, not just to controls, so the chrome gets louder overall',
 );
 
-/* ------------------------------------ A-9 and DS-3: the control-size scale */
+/* ------------------------------------ the control-size scale */
 
 const sized = [
   ['.hb-tab-close', 'width: var(--hb-hit-min)'],
@@ -283,7 +283,7 @@ check(
   'the twisty box was allowed to change the indentation it overlaps',
 );
 
-/* ------------------------------------------------- A-8: the shape channel */
+/* ------------------------------------------------- the shape channel */
 
 const cellSlots = body('.hb-byte,\n.hb-ascii');
 for (const slot of ['--hb-cell-dash: 0', '--hb-cell-double: 0', '--hb-cell-strike: transparent']) {
@@ -342,7 +342,7 @@ check(
   'the selection border is declared in both themes and painted by nothing',
 );
 
-/* ------------------------------------------------ A-10: forced colours */
+/* ------------------------------------------------ forced colours */
 
 const forced = body('@media (forced-colors: active)');
 for (const fragment of [
@@ -360,7 +360,7 @@ for (const fragment of [
   );
 }
 
-/* ------------------------------------------------------- UX-7 and DS-7 */
+/* ------------------------------------------------------- tabs and swatches */
 
 const dockTabActive = body('.hb-dock-tab.is-active');
 check(

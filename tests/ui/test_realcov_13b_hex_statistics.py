@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for ``hex_editor.statistics.compute_statistics``.
 
-The audit (shard 13) flagged ``statistics.py`` as having no dedicated test
-coverage: entropy correctness, byte-distribution accuracy, and byte-type
-classification were entirely unexercised. These tests run the real
+``statistics.py`` has no dedicated test coverage: entropy correctness, byte-distribution
+accuracy, and byte-type classification. These tests run the real
 :func:`compute_statistics` pure function over genuine compiled binaries
 (a real Windows PE plus the committed ELF and Mach-O corpus fixtures), each
 loaded into the real ``intellicrack_hexcore.HexDocument`` backend, and assert

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for S19-R08: a file switch must survive a dead statistics worker.
+"""Falsifiable gate: a file switch must survive a dead statistics worker.
 
 ``HexEditorPanel._load_file_impl`` (``ui/panels/hex_editor/panel.py``) calls
 ``_update_statistics`` on every ``load_file``. That method supersedes any prior
@@ -12,12 +12,11 @@ so after the first file's statistics scan finishes and the event loop processes
 the deferred delete, the panel keeps only a dangling sip wrapper in
 ``_statistics_worker``.
 
-Before the whole-class fix the probe was a bare ``worker_attr.isRunning()``:
-on the dangling wrapper it raised ``RuntimeError`` (the C++ object is gone),
-which escaped ``_update_statistics`` and aborted ``_load_file_impl`` *before*
-the bookmark-tree reset at the tail of the method. Live, that manifested as
-S19-D24/D25: switching binaries crashed the load and left the previous file's
-bookmark rows stranded in the Bookmarks tree.
+A bare ``worker_attr.isRunning()`` probe raises ``RuntimeError`` on the dangling
+wrapper (the C++ object is gone). That exception escapes ``_update_statistics``
+and aborts ``_load_file_impl`` *before* the bookmark-tree reset at the tail of
+the method, so switching binaries crashes the load and leaves the previous
+file's bookmark rows in the Bookmarks tree.
 
 This test reproduces that state deterministically: it loads a real PE, lets the
 statistics worker finish, forces its C++ object to be destroyed while the panel

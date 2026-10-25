@@ -62,6 +62,8 @@ __all__ = [
     "BUILTIN_TEMPLATE",
     "CHUNK_SIZE_HINT",
     "CUSTOM_TEMPLATE_NAME",
+    "DIFF_MAX_REGIONS",
+    "DIFF_MIN_MATCH",
     "FILL_PATTERN",
     "FLOAT_SIZE",
     "FLOAT_VALUE",
@@ -206,6 +208,12 @@ VARIANT_OFFSET: Final = 200
 VARIANT_LENGTH: Final = 8
 """Number of bytes by which :data:`SAMPLE_VARIANT` diverges from the sample."""
 
+DIFF_MIN_MATCH: Final = 4
+"""``min_match`` the ``diff_files`` recipe passes, where ``diff_bytes`` takes the engine default."""
+
+DIFF_MAX_REGIONS: Final = 1000
+"""``max_regions`` the ``diff_files`` recipe passes, where ``diff_bytes`` takes the engine default."""
+
 IPS_TARGET_OFFSET: Final = 0x10
 """Offset the hand-built IPS patch writes to."""
 
@@ -265,6 +273,7 @@ _SAMPLE_FILE_NAME: Final = "recipe-sample.bin"
 _VARIANT_FILE_NAME: Final = "recipe-variant.bin"
 _SAVE_FILE_NAME: Final = "recipe-saved.bin"
 _SAVE_AS_FILE_NAME: Final = "recipe-saved-as.bin"
+_SAVE_COPY_FILE_NAME: Final = "recipe-saved-copy.bin"
 
 _TOLERATE_RUNTIME: Final[frozenset[str]] = frozenset({"runtime"})
 _NO_TOLERANCE: Final[frozenset[str]] = frozenset()
@@ -691,15 +700,24 @@ def _source_path_arguments(context: RecipeContext) -> dict[str, JsonValue]:
 
 
 def _diff_files_arguments(context: RecipeContext) -> dict[str, JsonValue]:
-    """Name two real files that differ across a known span.
+    """Name two real files that differ across a known span, with both limits stated.
+
+    The ``diff_bytes`` recipe leaves the limits out, so between them the table
+    exercises both the engine's defaults and explicit values.
 
     Args:
         context: Environment the recipe runs in.
 
     Returns:
-        dict[str, JsonValue]: The ``path_a`` and ``path_b`` arguments.
+        dict[str, JsonValue]: The ``path_a``, ``path_b``, ``min_match`` and
+        ``max_regions`` arguments.
     """
-    return {"path_a": context.sample_file(), "path_b": context.variant_file()}
+    return {
+        "path_a": context.sample_file(),
+        "path_b": context.variant_file(),
+        "min_match": DIFF_MIN_MATCH,
+        "max_regions": DIFF_MAX_REGIONS,
+    }
 
 
 def _save_arguments(context: RecipeContext) -> dict[str, JsonValue]:
@@ -724,6 +742,18 @@ def _save_as_arguments(context: RecipeContext) -> dict[str, JsonValue]:
         dict[str, JsonValue]: The ``path`` argument.
     """
     return {"path": context.path(_SAVE_AS_FILE_NAME)}
+
+
+def _save_copy_arguments(context: RecipeContext) -> dict[str, JsonValue]:
+    """Name a writable destination for ``save_copy``.
+
+    Args:
+        context: Environment the recipe runs in.
+
+    Returns:
+        dict[str, JsonValue]: The ``path`` argument.
+    """
+    return {"path": context.path(_SAVE_COPY_FILE_NAME)}
 
 
 def _import_bps_arguments(context: RecipeContext) -> dict[str, JsonValue]:
@@ -928,6 +958,7 @@ _RECIPES: Final[Mapping[str, Recipe]] = MappingProxyType({
     "replace_bytes": _constant(Target.SAMPLE, pattern=NEEDLE.hex(), replacement=REPLACEMENT.hex()),
     "save": _built(Target.SAMPLE, _save_arguments, "Always needs an explicit path, exactly as save_as does."),
     "save_as": _built(Target.SAMPLE, _save_as_arguments),
+    "save_copy": _built(Target.SAMPLE, _save_copy_arguments, "Writes a scratch copy; the document keeps its own path."),
     "search_bytes": _constant(Target.SAMPLE, pattern=NEEDLE.hex(), max_results=MAX_RESULTS),
     "search_hex": _constant(Target.SAMPLE, pattern=needle_hex(), max_results=MAX_RESULTS),
     "search_numeric": _constant(

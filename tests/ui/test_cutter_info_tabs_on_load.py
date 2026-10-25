@@ -2,24 +2,23 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the Cutter panel info-tab refresh defect (D17).
+"""Falsifiable gate for the Cutter panel info-tab refresh on load.
 
 The Headers tab (backed by Rizin's ``ihj``), the Sections table (``iSj``), and
 the Imports table (``iij``) all read data the Rizin loader produces when a
-binary is opened -- none of the three requires a prior analysis pass. Before
-the fix, :class:`~intellicrack.ui.panels.cutter_panel.CutterPanel` only
-refreshed these views from ``_on_analysis_complete``, so a binary loaded
-without a completed analysis run left the tab empty even though the bridge
+binary is opened -- none of the three requires a prior analysis pass.
+:class:`~intellicrack.ui.panels.cutter_panel.CutterPanel` must refresh these views on the
+binary load path, not only from ``_on_analysis_complete``. Otherwise a binary loaded
+without a completed analysis run leaves the tab empty even though the bridge
 could already answer the query correctly.
 
 This test drives a real :class:`CutterPanel` against a real, genuine
 rizin/radare2 backend and a real on-disk PE executable. It defeats the panel's
 "Analyze" auto-chain by neutralising ``_on_analyze`` on the instance before
 loading the binary, so analysis never actually dispatches -- exactly the "Load
-Binary (no Analyze)" scenario the defect describes. Pre-fix, with the Headers
-refresh reachable only from ``_on_analysis_complete``, the Headers tab stays
-permanently empty in this scenario and the test fails red. Post-fix, the panel
-refreshes Headers (along with Sections and Imports) directly from the binary
+Binary (no Analyze)" scenario the defect describes. If the Headers refresh is reachable only from
+``_on_analysis_complete``, the Headers tab stays permanently empty in this scenario and the test fails.
+The panel must refresh Headers (along with Sections and Imports) directly from the binary
 load path, so the tab populates without analysis ever running.
 
 The expected values are never hand-restated: they are read from the same
@@ -63,10 +62,10 @@ _POLL_STEP_MS: Final[int] = 50
 def _resolve_target() -> Path:
     """Resolve a real, on-disk PE executable to load through the panel.
 
-    Prefers the committed S19 live-audit target (``ida_9.4.exe``), a
+    Prefers the committed live target (``ida_9.4.exe``), a
     real-world executable large enough to make an accidental analysis
     dependency in the Headers/Sections/Imports refresh path obvious. Falls
-    back to a real System32 executable when the audit target is not present
+    back to a real System32 executable when the target is not present
     on this machine.
 
     Returns:

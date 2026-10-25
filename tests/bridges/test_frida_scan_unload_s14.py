@@ -3,24 +3,18 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for FridaBridge scan-memory and stop-all-scripts defects.
+"""Tests for FridaBridge scan-memory and stop-all-scripts behavior.
 
-Covers two real defects fixed in ``FridaBridge``:
-
-* S14-D06 -- ``scan_memory`` used a single synchronous ``Memory.scanSync``
-  RPC call that could block past Frida's transport timeout and raise an
-  unhandled ``frida.TransportError`` the worker never surfaced, leaving the
-  UI's Scan button stuck with no ``memory_scan_completed``. The fix drives
-  the scan through a chunked, async ``Memory.scan`` RPC agent so the
-  coroutine always resolves.
-* S14-D10 -- ``unload_all_scripts`` ("Stop All Scripts") could leave a
-  script's bookkeeping behind when the underlying Frida ``unload()`` call
-  raised for an already-destroyed/detached script. The fix tolerates that
-  state as a no-op and always clears the registry.
+* ``scan_memory`` runs the scan through a chunked, async ``Memory.scan`` RPC agent, so the coroutine always
+  resolves. A single synchronous ``Memory.scanSync`` call can block past Frida's transport timeout and raise an
+  unhandled ``frida.TransportError``, which would leave the UI's Scan button without a ``memory_scan_completed``
+  message.
+* ``unload_all_scripts`` ("Stop All Scripts") treats a script whose ``unload()`` raises because it is already
+  destroyed or detached as a tolerated no-op, and always clears the registry.
 
 Both tests drive a REAL Frida runtime attached to the current test process
 (no external process is spawned, so no ``spawns_process`` marker is needed --
-matching the ``self_attached_bridge`` idiom already used in
+matching the ``self_attached_bridge`` idiom also used in
 ``tests/bridges/test_frida_bridge.py``). Requires frida-python and a Windows
 host.
 """
@@ -103,7 +97,7 @@ def _get_dict(target: object, name: str) -> dict[object, object]:
 async def _unload_script_handle_directly(script: object) -> None:
     """Call ``.unload()`` on an opaque Frida script handle off the event loop thread.
 
-    Used to force one script into Frida's real already-destroyed state
+    Forces one script into Frida's real already-destroyed state
     *before* ``unload_all_scripts`` runs, independently of the bridge's own
     unload path, so the test exercises the exact "already gone" condition
     Stop-All must tolerate.
@@ -137,16 +131,10 @@ def self_attached_bridge() -> Generator[FridaBridge]:
 def test_scan_memory_resolves_within_timeout_and_finds_known_pattern(self_attached_bridge: FridaBridge) -> None:
     """Verify scan_memory finds a known pattern and always resolves within a bounded timeout.
 
-    Regression test for S14-D06: the previous implementation ran a single
-    synchronous ``Memory.scanSync`` RPC across every readable range, which
-    could block past Frida's transport timeout and raise an unhandled
-    ``frida.TransportError`` that the UI worker never caught -- the Scan
-    button stayed disabled forever with no ``memory_scan_completed``. The
-    fix chunks the scan through an async ``Memory.scan`` RPC agent so the
-    coroutine always resolves. Wrapping the call in ``asyncio.wait_for`` is
-    the falsifiable gate here: a real hang fails this test loudly with a
-    ``TimeoutError`` instead of hanging the whole suite, and a broken scan
-    (e.g. one that silently returns no results) fails the match assertion.
+    The scan runs in chunks through an async ``Memory.scan`` RPC agent, so the coroutine always resolves. Wrapping the
+    call in ``asyncio.wait_for`` is the falsifiable gate here: a real hang fails this test loudly with a
+    ``TimeoutError`` instead of hanging the whole suite, and a broken scan (e.g. one that silently returns no results)
+    fails the match assertion.
 
     Args:
         self_attached_bridge: Bridge fixture attached to the current test process.
@@ -177,16 +165,12 @@ def test_unload_all_scripts_clears_every_script_even_when_one_is_already_destroy
 ) -> None:
     """Verify Stop-All unloads every script and clears bookkeeping even when one is already gone.
 
-    Regression test for S14-D10: some scripts raised ``InvalidOperationError``
-    when unloaded a second time (already destroyed/detached), and that
-    failure used to leave the script's handle behind instead of being
-    treated as a tolerated no-op. This test loads several persistent
-    scripts, pre-destroys one of them out-of-band via the real Frida
-    ``.unload()`` call (the exact "already gone" state Stop-All must
-    tolerate), then calls ``unload_all_scripts`` and asserts every script --
-    including the pre-destroyed one -- ends up removed from the bridge's
-    internal registry and reports ``is_destroyed`` on the real Frida side,
-    with no early abort of the sweep.
+    Some scripts raise ``InvalidOperationError`` when unloaded a second time (already destroyed/detached), and that
+    failure must be tolerated as a no-op rather than leaving the script's handle behind. This test loads several
+    persistent scripts, pre-destroys one of them out-of-band via the real Frida ``.unload()`` call (the exact "already
+    gone" state Stop-All must tolerate), then calls ``unload_all_scripts`` and asserts every script -- including the
+    pre-destroyed one -- ends up removed from the bridge's internal registry and reports ``is_destroyed`` on the real
+    Frida side, with no early abort of the sweep.
 
     Args:
         self_attached_bridge: Bridge fixture attached to the current test process.

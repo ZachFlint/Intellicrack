@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Fourth-pass critical-coverage tests for the Frida bridge: device removal, device switching and canceled attaches.
+"""Coverage tests for the Frida bridge: device removal, device switching and canceled attaches.
 
 Every test drives the real Frida runtime against a child process that the test
 itself starts (a Python interpreter blocked on stdin, a uniquely named copy of
@@ -327,7 +327,7 @@ def test_attach_by_name_with_a_canceled_token_raises_a_tool_error_and_attaches_n
     idle_bridge: FridaBridge,
     named_target: tuple[Popen[bytes], str],
 ) -> None:
-    """Canceling the attach token before the attach ends the call with a tool error and leaves the bridge detached (suspected defect, red until fixed).
+    """Canceling the attach token before the attach ends the call with a tool error and leaves the bridge detached .
 
     Args:
         idle_bridge: Initialized bridge without a session.

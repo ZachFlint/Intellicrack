@@ -7,9 +7,9 @@
 Drives the real :class:`ProviderSettingsStore` against real ``providers.json``
 and ``.env`` files and fails when:
 
-* a base URL or organization that an earlier release stored only in
-  ``providers.json`` never reaches ``.env`` -- the file startup reads -- or can
-  be imported again after the user cleared it;
+* a base URL or organization saved only in ``providers.json`` never reaches
+  ``.env`` -- the file startup reads -- or can be imported again after the user
+  cleared it;
 * a ``.env`` value is overwritten by a stale ``providers.json`` copy;
 * a failed ``.env`` write silently drops the saved endpoint;
 * the old untouched 120-second default is applied as a deliberate timeout,
@@ -164,7 +164,7 @@ def test_cleared_endpoint_is_not_resurrected_by_a_later_launch(tmp_path: Path) -
 
 
 def test_legacy_default_ollama_host_is_dropped_without_creating_an_override(tmp_path: Path) -> None:
-    """The default Ollama host that old releases always saved is not written to ``.env``.
+    """The default Ollama host is not written to ``.env``, even when a legacy file carries it.
 
     Args:
         tmp_path: Per-test temporary directory.

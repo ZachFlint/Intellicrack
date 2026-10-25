@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D50(a): the vendored ETW assemblies must reach the guest and load.
+"""The vendored ETW assemblies must reach the guest and load.
 
 Measured live: neither ``api_trace.ps1`` nor ``injection_monitor.ps1`` ever
 found ``Microsoft.Diagnostics.Tracing.TraceEvent.dll``, because nothing ever
@@ -24,7 +24,7 @@ assemblies are not actually staged where either script looks, this test
 observes the same "not found" text and diagnostic category the live run did.
 
 A real run against a full Windows PowerShell 5.1 (Desktop CLR) surfaced a
-second, distinct problem once discovery itself was fixed: ``Add-Type``
+second, distinct problem once discovery works: ``Add-Type``
 eagerly enumerates every type in ``Microsoft.Diagnostics.Tracing.TraceEvent.dll``
 to register PowerShell type accelerators, and that enumeration throws a
 ``ReflectionTypeLoadException`` naming ``System.Memory``,
@@ -305,14 +305,14 @@ class TestARealApiTraceRecorderLoadsTraceEvent:
     async def test_api_trace_no_longer_reports_the_dll_as_unavailable(self, tmp_path: Path) -> None:
         """A real, staged ``api_trace.ps1`` run must get past assembly discovery.
 
-        This drives the whole S17-D50(a) path for ``api_trace.ps1``: the
+        This drives the whole path for ``api_trace.ps1``: the
         bundled script and the vendored assemblies are staged by production
         code, and the script is launched under the real ``powershell.exe`` a
         guest would run it under with a bounded ``-DurationSeconds`` so it
         exits on its own. A pass here means the recorder's own lifecycle log
         shows it starting, and neither its exit code nor its data log carry
         the "unavailable" (exit code 2) assembly-*discovery* failure the live
-        run measured - the specific defect S17-D50(a) fixes. The distinct
+        run measured - the specific defect the staging fix addresses. The distinct
         *load-time* gap past discovery is closed by the dependency resolver
         and verified separately by
         :class:`TestAddTypeLoadsTheVendoredAssemblyUnderTheDesktopCLR`, so it
@@ -381,16 +381,16 @@ class TestARealInjectionMonitorRecorderLoadsTraceEvent:
         assembly staged, ``injection_monitor.ps1`` locates it -
         :meth:`Add-Type` is reached, so the diagnostic category and data-row
         text both move from "missing" to "load failed" - proving discovery
-        itself, the specific defect S17-D50(a) fixes, no longer fails.
+        itself, the specific defect, no longer fails.
 
         ``injection_monitor.ps1``'s assembly-discovery and ``Add-Type``
         block runs before its ``started`` lifecycle line is written, and
         outside any enclosing ``try``/``finally``, so a load failure there
-        used to terminate the script before it ever reached that line -
+        that terminates the script before it ever reaches that line -
         :func:`intellicrack.sandbox.log_parsers.parse_collector_lifecycle`
         reports an absent lifecycle log as a "never reported starting"
         outage rather than as a healthy, silent recorder, which is exactly
-        what S17-D50(b) verifies in ``test_collector_outage_reporting_s17d50b.py``.
+        what the outage reporting gate verifies in ``test_collector_outage_reporting_s17d50b.py``.
         With the dependency resolver closing the load gap, ``Add-Type`` now
         succeeds and the script reaches ``started``, so this test also
         confirms the lifecycle log carries it.
@@ -446,7 +446,7 @@ class TestARealInjectionMonitorRecorderLoadsTraceEvent:
 
 @pytest.mark.asyncio
 class TestAddTypeLoadsTheVendoredAssemblyUnderTheDesktopCLR:
-    """S17-D50(a)'s residual load gap is closed: ``Add-Type`` now succeeds under the Desktop CLR.
+    """The residual load gap is closed: ``Add-Type`` now succeeds under the Desktop CLR.
 
     Both recorder scripts reach ``Add-Type -LiteralPath <staged assembly>``
     once the assembly is staged. Under the Desktop CLR (Windows PowerShell

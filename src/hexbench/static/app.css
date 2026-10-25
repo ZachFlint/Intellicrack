@@ -169,8 +169,8 @@ svg {
   --hb-dock-bottom-h: 240px;
 
   /* -- Control sizes --------------------------------------------- */
-  /* The chrome heights above were tokenised; the controls sitting inside them
-     were not, so the same 26px was retyped in five rules. --hb-hit-min is the
+  /* The controls sitting inside the chrome heights above share their tokens, so
+     the same 26px is not retyped across rules. --hb-hit-min is the
      separate constraint: WCAG 2.5.8 wants a 24px target, and the boxes grow to
      meet it while the glyphs inside them stay the size they are. */
   --hb-hit-min: 24px;
@@ -1491,10 +1491,9 @@ pre {
 }
 
 /* The diff bands wait on their caller. grid.highlight(ranges, className) is
-   generic and is passed 'is-hit' today; BE-1's Diff panel is what will pass
-   these three, from diff_bytes / diff_files. Until then they are produced only
-   by design/build_cards.py, which is why the shape channel below already
-   carries a mark for each of them. */
+   generic and is passed 'is-hit' today; the Diff panel passes these three, from
+   diff_bytes / diff_files, and design/build_cards.py produces them too, which is
+   why the shape channel below carries a mark for each of them. */
 .hb-byte.is-diff-added,
 .hb-ascii.is-diff-added {
   --hb-cell-diff: var(--hb-diff-added-bg);
@@ -1803,7 +1802,7 @@ pre {
 
 /* A docked panel fills its dock and needs no frame; is-framed is for a panel
    that floats inside another surface, which is what the Entropy and Diff panels
-   of UX-1 and BE-1 do inside the bottom dock. Rendered today by
+   do inside the bottom dock. Rendered today by
    design/build_cards.py. */
 .hb-panel.is-framed {
   border: 1px solid var(--hb-border);
@@ -1883,7 +1882,7 @@ pre {
 }
 
 /* No panel in the app carries a footer yet. Every one of the five dock panels
-   specified for UX-1, UX-6, BE-1, BE-2 and BE-5 does - run counts, diff timings,
+   in the design spec does - run counts, diff timings,
    the template hint - and panels.js is where they will be built. */
 .hb-panel-footer {
   display: flex;
@@ -2190,7 +2189,7 @@ pre {
   min-height: var(--hb-hit-min);
 }
 
-/* The rounded badge is the count form - the dock tab pill of A-4 and UX-9 is
+/* The rounded badge is the count form - the dock tab pill is
    the one that will ask for it. Drawn today by design/build_cards.py. */
 .hb-badge.is-pill {
   border-radius: var(--hb-radius-pill);
@@ -3036,8 +3035,8 @@ pre {
   word-break: break-word;
 }
 
-/* renderError prints the message and stops; the second line is what UX-5 adds,
-   from DispatchError.detail, and it is the line that says what to do about the
+/* renderError prints the message and stops; the second line comes from
+   DispatchError.detail, and it is the line that says what to do about the
    failure rather than what it was. */
 .hb-error-detail {
   grid-column: 2;

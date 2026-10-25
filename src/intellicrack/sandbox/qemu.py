@@ -130,8 +130,8 @@ MONITOR_SCRIPT_NAMES: Final[tuple[str, ...]] = (
 )
 # api_trace.ps1 and injection_monitor.ps1 both load this assembly by
 # searching $PSScriptRoot among other locations - staging it beside them
-# under the same name they already search for is what lets S17-D50(a) work
-# without editing either script. Every other file under vendor/traceevent/
+# under the name they search for is what lets them load it without editing
+# either script. Every other file under vendor/traceevent/
 # is staged alongside it (see enumerate_traceevent_assembly_files) because
 # TraceEvent 3.2.5 ships no net4x build: it depends on the whole .NET
 # Standard 2.0 support-pack closure to load under the Desktop CLR, and both
@@ -381,8 +381,8 @@ _QEMU_GA_CONNECT_TIMEOUT = 30.0
 # worst single attempt rather than a round number, because an attempt that is
 # abandoned costs its own reply deadline plus the resync that follows it
 # (QEMU_GA_EXEC_TIMEOUT + _QEMU_GA_RESYNC_TIMEOUT), and a budget that cannot
-# hold two of those has no retry left in it at all - which is how a guest that
-# was one slow command away from ready came to fail its whole start.
+# hold two of those has no retry left in it at all, which can leave a guest
+# one slow command away from ready failing its whole start.
 _QEMU_GA_READY_TIMEOUT: Final[float] = 300.0
 _QEMU_GA_CONNECT_RETRY_INTERVAL: Final[float] = 1.0
 _QEMU_GA_EXEC_PROBE_INTERVAL: Final[float] = 2.0
@@ -401,9 +401,9 @@ _QGA_FILE_COMMAND_TIMEOUT: Final[float] = 30.0
 # Budget for the resync that follows a command timeout. This is the same
 # negotiation against the same agent that opening the connection performs, so it
 # is given the same budget rather than a shorter one of its own. A shorter one
-# made a slow guest permanently unusable: the budget ran out before the fallback
-# sync command had ever been sent, so the abandoned reply was never consumed and
-# every command after it read the previous command's answer.
+# would leave a slow guest permanently unusable: the budget runs out before the
+# fallback sync command is sent, so the abandoned reply is never consumed and
+# every command after it reads the previous command's answer.
 _QEMU_GA_RESYNC_TIMEOUT: Final[float] = _QEMU_GA_CONNECT_TIMEOUT
 
 # Bound on how many times a mid-session hard socket failure re-opens the
@@ -414,8 +414,8 @@ _QEMU_GA_RESYNC_TIMEOUT: Final[float] = _QEMU_GA_CONNECT_TIMEOUT
 # peer that keeps refusing past that is refusing on purpose - see
 # QemuGuestAgentClient._retain_socket_on_handshake_failure - and a socket
 # that was accepted but never answered its sync is not retried here at all,
-# because forfeiting an accepted socket to try for another one is the exact
-# mistake that cost the channel for the life of the VM before.
+# because forfeiting an accepted socket to try for another one would cost the
+# channel for the life of the VM.
 _QGA_CHANNEL_RESET_ATTEMPTS: Final[int] = 2
 
 # The guest-shutdown mode that powers the guest off rather than rebooting or
@@ -431,9 +431,8 @@ _QEMU_QUIT_SETTLE_S: Final[float] = 2.0
 # can stay open for a moment after the process itself is gone. These bound how
 # long removing an instance's temporary tree keeps retrying before the failure
 # is reported rather than discarded. Measured live: a ~4.1GB memory dump's
-# handle outlasted the previous 5-attempt/0.5s-step budget (about 7.5s total),
-# so the ceiling here is generous enough to cover that without blocking
-# indefinitely.
+# handle can outlast a 5-attempt, 0.5s-step budget (about 7.5s total), so the
+# ceiling here is generous enough to cover that without blocking indefinitely.
 _TEMP_TREE_REMOVE_ATTEMPTS: Final[int] = 10
 _TEMP_TREE_REMOVE_BACKOFF_S: Final[float] = 1.0
 _TEMP_TREE_REMOVE_BACKOFF_CAP_S: Final[float] = 10.0
@@ -522,7 +521,7 @@ _GUEST_SHARED_ROOT_LINUX: Final[str] = "/mnt/shared"
 # to commit a guest's directory changes back to the host directory - measured as
 # exit code 3 preceded by ``cluster 0 used more than once`` and ``Error handling
 # renames (-5)`` - and the append-heavy monitor logs plus the write-then-rename
-# used to publish a result are exactly what provokes it. The share is mounted
+# that publishes a result are exactly what provokes it. The share is mounted
 # read-only instead, so that commit path is never entered, and the host collects
 # what the guest produced over the guest-agent file commands.
 _GUEST_WORK_ROOT_WINDOWS_RELATIVE: Final[str] = "intellicrack"
@@ -1557,10 +1556,10 @@ class QMPClient(QemuJsonProtocolClient):
         QMP is not a request/response protocol on its own: QEMU pushes
         asynchronous events onto the same socket whenever the machine changes
         state, so the next line after a command is frequently not that
-        command's reply. Reading it as one is what made a ``snapshot-save``
-        report ``{"return": None}`` and success - the frame actually read was
-        ``JOB_STATUS_CHANGE`` - and it left every later command reading the
-        previous command's answer for the life of the connection.
+        command's reply. Reading it as one would report a ``snapshot-save`` as
+        successful (``{"return": None}``) when the frame actually read is
+        ``JOB_STATUS_CHANGE``, and every later command would read the previous
+        command's answer for the life of the connection.
 
         The protocol's own remedy is the optional ``id`` member, which QEMU
         echoes verbatim on the reply and never puts on an event. Tagging every
@@ -1728,10 +1727,10 @@ class QMPClient(QemuJsonProtocolClient):
 
         This is the only query that distinguishes the disk the guest writes to
         from the images behind it. ``query-named-block-nodes`` reports every
-        layer, so on the copy-on-write chain each instance now runs on it
+        layer, so on the copy-on-write chain each instance runs on it
         offers the read-only backing image as an equally plausible qcow2 node -
         and writing a snapshot there would put state back into the image
-        S17-D58 stopped sharing.
+        that the overlay keeps unshared.
 
         Returns:
             QMPResponse: A list of device records, each carrying an
@@ -2002,8 +2001,8 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
         never answered is not retried here at all: that socket has already
         been accepted, so tearing it down for another attempt would forfeit
         the one connection this peer may only ever grant once - the exact
-        mistake that cost the channel for the life of the VM before this
-        method existed. That socket is left in place for
+        mistake that would cost the channel for the life of the VM. That socket is
+        left in place for
         :meth:`resynchronise` to keep trying, the same as an unanswered sync
         during initial bring-up.
 
@@ -2099,9 +2098,9 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
         Trying the sync commands "in order" only holds if the budget outlives
         the first of them. A fixed per-attempt share does not guarantee that:
         once the budget is no larger than that share, the first command consumes
-        all of it and the fallback is never sent - which is how a resync against
-        a slow guest came to fail without ever trying the command that guest
-        answers. Dividing what is left keeps the ordering meaningful at any
+        all of it and the fallback is never sent, so a resync against a slow guest
+        can fail without ever trying the command that guest answers. Dividing what
+        is left keeps the ordering meaningful at any
         budget, while the fixed share still caps an attempt when the budget is
         generous enough to allow several rounds.
 
@@ -2635,7 +2634,7 @@ class GuestAgentClient:
             retry_interval: Per-attempt budget for the connect and the
                 readiness handshake.
             backoff_interval: Seconds to wait between attempts. Defaults to
-                ``retry_interval``, which is the historical behaviour.
+                ``retry_interval``.
 
         Returns:
             bool: True if connected successfully.
@@ -3573,11 +3572,11 @@ class QEMUSandbox(SandboxBase):
         Hyper-V hypervisor is *running*.
 
         The primary signal is ``Win32_ComputerSystem.HypervisorPresent``, which
-        needs no elevation. The original checks -
+        needs no elevation. Those checks -
         ``Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform``
-        and ``bcdedit /enum {current}`` - both require an elevated token, so on
-        the ordinary unelevated run they failed, left stdout empty, and made
-        this method report "not enabled" on hosts where WHPX works perfectly.
+        and ``bcdedit /enum {current}`` - both require an elevated token, so on an
+                ordinary unelevated run they fail, leave stdout empty, and make this
+                method report "not enabled" on hosts where WHPX works.
         They are retained only as a fallback for when the unelevated query
         cannot answer.
 
@@ -4328,10 +4327,10 @@ class QEMUSandbox(SandboxBase):
         ``guest-ping`` is answered by the agent's dispatch loop and proves
         nothing about ``guest-exec``, which has to reach the guest's process
         creation path. On a Windows guest those two become usable minutes
-        apart: measured on a cold ``windows11-intellicrack-v4`` boot the agent
-        answered ping twelve seconds in and left the next ``guest-exec``
-        unanswered past its ten-second reply deadline, which aborted the whole
-        start with almost the entire readiness budget unspent. Since the
+        apart: on a cold ``windows11-intellicrack-v4`` boot the agent can answer
+        ping twelve seconds in and still leave the next ``guest-exec`` unanswered
+        past its ten-second reply deadline, which would abort the whole start with
+        almost the entire readiness budget unspent. Since the
         backend's very next act is always to run something inside the guest,
         readiness has to mean a command completed, and a command that times out
         while the budget still has room is a retry rather than a failure.
@@ -5142,8 +5141,7 @@ class QEMUSandbox(SandboxBase):
         :meth:`_anti_evasion_smbios_entries` (SMBIOS launch arguments) and by
         :meth:`apply_anti_evasion` (Windows registry patches). Keeping both
         paths driven by the same mapping prevents the detectable inconsistency
-        described in audit finding F-0029, where SMBIOS reported one vendor and
-        the registry advertised another.
+        where SMBIOS reported one vendor and the registry advertised another.
 
         Args:
             profile: Profile name (``default``, ``workstation``, or ``laptop``).
@@ -5171,9 +5169,9 @@ class QEMUSandbox(SandboxBase):
         in-guest :func:`Test-AllowedCommand` allowlist - which accepts an
         executable only under ``System32``/``SysWOW64`` of that same reported
         root - accepts the invocation on any guest, not only one whose Windows
-        lives at ``C:\Windows`` (audit finding F-0022). Manufacturer and product
+        lives at ``C:\Windows``. Manufacturer and product
         strings come from :meth:`_anti_evasion_identity` so they agree with the
-        SMBIOS launch arguments (audit finding F-0029).
+        SMBIOS launch arguments.
 
         Args:
             profile: Anti-evasion profile name (``default``, ``workstation``,
@@ -5571,8 +5569,8 @@ class QEMUSandbox(SandboxBase):
             # early boot), so the model is qemu64 plus the two features named
             # explicitly. Both are required: Windows 11 24H2 refuses to boot
             # without SSE4.2 and POPCNT, and bare qemu64 advertises neither, so
-            # a Windows guest triple-faulted with the same WHPX exit code
-            # before its boot manager produced any output. WHPX accepts them
+            # a Windows guest triple-faults with the same WHPX exit code before its boot
+            # manager produces any output. WHPX accepts them
             # named individually - what it rejects is the whole host feature
             # set. The anti-evasion masks ride along unchanged.
             cpu_arg = "qemu64,+sse4.2,+popcnt,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
@@ -5590,8 +5588,7 @@ class QEMUSandbox(SandboxBase):
         # the boot spinner by a single frame, while QEMU's own ioapic counted
         # tens of thousands of undelivered IRQ 0 events. The same media with
         # kernel-irqchip=on reaches Windows Setup in about a minute. The
-        # earlier "Unexpected VP exit code 4" that this option was blamed for
-        # was the CPU model, not the IRQ chip.
+        # "Unexpected VP exit code 4" error comes from the CPU model, not the IRQ chip.
         machine_arg = f"q35,accel={self._accelerator.value}"
         if self._accelerator == AcceleratorType.WHPX:
             machine_arg += ",kernel-irqchip=on"
@@ -6377,10 +6374,9 @@ class QEMUSandbox(SandboxBase):
         disk overlay - or a multi-gigabyte guest memory dump left in the same
         tree - can still be open for a moment after QEMU exits and a single
         attempt loses the race. Every failure is retried with backoff and the
-        last one is reported: the removal this replaced passed
-        ``ignore_errors=True``, which cannot fail and cannot log, and that is
-        how 48 abandoned overlays accumulated without one line about them
-        anywhere. If every retry still fails, the remaining entries are
+        last one is reported. A silent ``ignore_errors=True`` removal cannot fail and
+        cannot log, so abandoned overlays would accumulate without one line about
+        them anywhere. If every retry still fails, the remaining entries are
         scheduled for deletion on the next reboot as a last resort, so the
         space is reclaimed later instead of being leaked silently forever.
 
@@ -6425,9 +6421,8 @@ class QEMUSandbox(SandboxBase):
         later step did not - and on Windows nothing else would end it, because
         QEMU implements neither ``-daemonize`` nor ``-pidfile`` there and the
         PID-file branch below can never fire. A running QEMU also holds its disk
-        overlay open, which is precisely why the directories that survived a
-        failed start held that one file and nothing else: everything not locked
-        was removed, and the overlay could not be.
+        overlay open, which is why a directory that survives a failed start holds that
+        one file: everything not locked is removed, and the overlay cannot be.
 
         Every step is idempotent, because :meth:`_stop_impl` has already
         performed each of them by the time it calls this.
@@ -6985,9 +6980,8 @@ while ($true) {
         :func:`intellicrack.sandbox.log_parsers.parse_resource_log`, taking two
         readings so the CPU column is a real busy percentage and the disk and
         network columns are real per-second rates rather than counters. Both
-        logs were previously written only by the Windows monitor path, which
-        left the Network Activity and Resources report tabs permanently empty
-        for a Linux guest.
+        logs are what fills the Network Activity and Resources report tabs for a Linux
+        guest; without them those tabs stay permanently empty.
 
         The Windows agent bundle also carries every vendored ETW assembly
         found by :func:`enumerate_traceevent_assembly_files` into the same
@@ -7988,11 +7982,11 @@ if __name__ == "__main__":
             agent_path = f"{_GUEST_SHARED_ROOT_LINUX}/{_MONITOR_AGENT_RELATIVE_LINUX}"
             log_dir = f"{_GUEST_WORK_ROOT_LINUX}/{_GUEST_AGENT_LOG_DIR_RELATIVE}"
             # ``exec`` rather than a background job, and a redirect rather than a
-            # discarded stream: backgrounding made the shell exit 0 whatever
-            # became of the agent, so the pid qemu-guest-agent reported belonged
-            # to a shell that had already succeeded and the agent's own failure
-            # went nowhere. Now the reported pid is the agent, and whatever it
-            # said on its way out is on the guest's disk.
+            # discarded stream: backgrounding would make the shell exit 0 whatever became
+            # of the agent, so the pid qemu-guest-agent reports would belong to a shell that
+            # had already succeeded and the agent's own failure would go nowhere. The
+            # reported pid is the agent, and whatever it says on its way out is on the
+            # guest's disk.
             startup_content = (
                 f"#!/bin/bash\nmkdir -p '{log_dir}'\nexec python3 '{agent_path}' >>'{log_dir}/{_GUEST_BOOTSTRAP_LOG_NAME}' 2>&1\n"
             )
@@ -8477,7 +8471,7 @@ if __name__ == "__main__":
         Deliberately not the shared folder. That directory backs a read-only
         vvfat volume the guest is still reading, and writing into a directory
         vvfat has already built its FAT over is how this whole class of failure
-        started. The collected copies therefore live beside it instead.
+        arises. The collected copies therefore live beside it instead.
 
         Returns:
             Path | None: The collection root, or ``None`` before the sandbox
@@ -9173,7 +9167,7 @@ if __name__ == "__main__":
         qcow2 media that :meth:`_snapshot_target_nodes` selects by node with the
         outer device id ``query-block`` reports for the same medium. The same
         writable-qcow2 filter keeps the read-only install media and the shared
-        copy-on-write backing image (S17-D58) out of the set.
+        copy-on-write backing image out of the set.
 
         Returns:
             list[str]: Device ids, in QEMU's device order.
@@ -9245,8 +9239,8 @@ if __name__ == "__main__":
         install media a guest may still have attached and, importantly, the
         backing image behind each instance's copy-on-write overlay. The
         overlay and its backing image are both qcow2, so a filter on format
-        alone would offer the shared base - the very image S17-D58 stopped
-        instances from writing to.
+        alone would offer the shared base - the very image that instances
+        must never write to.
 
         Returns:
             list[str]: Node names, in QEMU's device order.
@@ -9525,10 +9519,9 @@ if __name__ == "__main__":
         """List available snapshots.
 
         The names come from the block layer's own records rather than from the
-        ``info snapshots`` monitor table. That table was parsed by column, and
-        rows were kept only when the first column was numeric - but QEMU prints
-        ``--`` there for these snapshots, so every row was discarded and the
-        list came back empty for a disk that plainly held snapshots.
+        ``info snapshots`` monitor table, which is unreliable to parse by column: QEMU
+                prints ``--`` in the first column for these snapshots, so a parser that
+                keeps only rows with a numeric first column discards every one.
 
         Returns:
             list[str]: Snapshot names, in the order the disks report them and

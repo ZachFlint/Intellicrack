@@ -2,15 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression test for finding H3: hex-editor panel teardown must stop every worker.
+"""Hex-editor panel teardown must stop every worker.
 
-Pre-fix, ``HexEditorPanel._cleanup`` interrupted only ``_statistics_worker``,
-``_search_worker``, and ``_numeric_search_worker``. The four other
-``GenericCallableWorker`` ``QThread`` objects created without a Qt parent
-(``_diff_worker``, ``_strings_worker``, ``_sig_worker``, ``_script_worker``)
-were never stopped, so closing the panel mid-run destroyed a live ``QThread``
-and aborted the process; a mid-flight diff also stranded its
-``NamedTemporaryFile``. This test starts seven real interruptible worker threads
+``HexEditorPanel._cleanup`` must interrupt and join every ``GenericCallableWorker``
+``QThread``, including ``_diff_worker``, ``_strings_worker``, ``_sig_worker``, and
+``_script_worker``, which are created without a Qt parent. Closing the panel
+mid-run otherwise destroys a live ``QThread`` and aborts the process, and a
+mid-flight diff strands its ``NamedTemporaryFile``. This test starts seven real interruptible worker threads
 plus a real snapshot tempfile, drives the production ``_cleanup`` orchestration,
 and asserts every thread was joined (stopped) and the tempfile removed. A worker
 whose body only exits on ``isInterruptionRequested`` stays running forever unless
@@ -178,11 +176,11 @@ def _join_leftover(workers: list[GenericCallableWorker]) -> None:
 
 @pytest.mark.usefixtures("qapp")
 class TestCleanupStopsEveryWorker:
-    """H3: panel teardown must interrupt/join every worker and remove the diff tempfile."""
+    """Panel teardown must interrupt/join every worker and remove the diff tempfile."""
 
     @staticmethod
     def test_all_seven_workers_joined(qapp: QApplication, tmp_path: Path) -> None:
-        """Assert every worker thread (including the four previously leaked) is stopped.
+        """Assert every worker thread, including the four without a Qt parent, is stopped.
 
         Args:
             qapp: Qt application fixture (kept alive for thread construction).
@@ -205,7 +203,7 @@ class TestCleanupStopsEveryWorker:
 
     @staticmethod
     def test_previously_leaked_workers_specifically_joined(qapp: QApplication, tmp_path: Path) -> None:
-        """Assert the four workers the pre-fix code ignored are now joined.
+        """Assert the four workers without a Qt parent are joined on cleanup.
 
         Args:
             qapp: Qt application fixture (kept alive for thread construction).

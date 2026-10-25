@@ -3,13 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Docker network the sandbox attaches by default.
+"""Gates for the Docker network the sandbox attaches by default.
 
-The harness used to hardcode ``bridge`` for the integration and e2e run modes.
+The harness must not hardcode ``bridge`` for the integration and e2e run modes.
 ``bridge`` is the Linux engine's built-in connected network; the Windows
-container engine this project runs on names it ``nat`` instead, so every e2e
-run died with ``network bridge not found`` at ``docker run`` time, before a
-single test was collected.
+container engine this project runs on names it ``nat`` instead, so a hardcoded
+``bridge`` fails with ``network bridge not found`` at ``docker run`` time,
+before a single test is collected.
 
 These tests drive the real selection code with the network name sets the two
 engines actually report, so a return to any hardcoded name fails here.

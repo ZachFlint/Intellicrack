@@ -3,23 +3,21 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for the Ghidra panel result-table layout defects D12/D39/D41.
+"""Gates for the Ghidra panel result-table layout.
 
 Covers ``intellicrack.ui.panels.ghidra_panel``:
 
-* D12 -- the Memory Map tab rendered at most ~1 of 8 returned blocks because
-  ``self._memory_table`` had no minimum height and no stretch factor in its
-  ``QVBoxLayout``, so the surrounding form rows (read/write/create-block/
-  remove-split-join/overlay) squeezed it down to a sliver. ``_apply_memory_map``
-  itself always looped over every returned block; the residual defect was
-  purely layout sizing.
-* D39 -- eleven result-display widgets across the panel (the memory hex dump
+* Memory map -- the Memory Map tab must show every returned block. ``self._memory_table`` needs a minimum height and a stretch factor in its
+  ``QVBoxLayout``, or the surrounding form rows (read/write/create-block/
+  remove-split-join/overlay) squeeze it down to a sliver. ``_apply_memory_map``
+  already loops over every returned block, so the layout sizing is what must hold.
+* Result widgets -- eleven result-display widgets across the panel (the memory hex dump
   view, the comment text input, the namespaces/equates/relocations tables,
   the script output view, the analyzer options input, and the data-type
-  result view) were pinned with ``setFixedHeight``, clipping them to a fixed
-  handful of pixels regardless of how much content the bridge returned.
-* D41 -- ``self._dt_get_addr_input``, ``self._dt_set_addr_input``, and
-  ``self._dt_type_input`` had their ``setMaximumWidth`` driven by the
+  result view) must not be pinned with ``setFixedHeight``, which would clip them to a fixed
+  handful of pixels regardless of how much content the bridge returns.
+* Input widths -- ``self._dt_get_addr_input``, ``self._dt_set_addr_input``, and
+  ``self._dt_type_input`` must not have their ``setMaximumWidth`` driven by the
   splitter-ratio constants ``_MAIN_SPLIT_RATIO_RIGHT`` /
   ``_CODE_SPLIT_RATIO_BOTTOM`` (250 / 300), which are fractions of a splitter
   size, not pixel widths for a single-line address/type field.
@@ -53,7 +51,7 @@ _MEMORY_BLOCK_COUNT = 8
 # Mirrors the exact dict shape ``GhidraBridge.get_memory_map`` builds from
 # ``currentProgram.getMemory().getBlocks()`` (src/intellicrack/bridges/ghidra.py,
 # ``get_memory_map``): name/start/end/size/read/write/execute/initialized/volatile
-# per block. C1 owns ghidra.py; this fixture is a standalone stand-in so the
+# per block. This fixture is a standalone stand-in so the
 # panel test needs no live bridge.
 _MEMORY_BLOCKS: list[dict[str, object]] = [
     {
@@ -188,7 +186,7 @@ def _rows_worth_of_height(table: QTableWidget, visible_rows: int) -> int:
 
 
 class TestD12MemoryMapTableRendersAllBlocks:
-    """D12: the memory map table must show all returned blocks, not ~1 row."""
+    """The memory map table must show all returned blocks, not ~1 row."""
 
     @staticmethod
     def test_apply_memory_map_inserts_one_row_per_block(panel: GhidraPanel) -> None:
@@ -219,12 +217,11 @@ class TestD12MemoryMapTableRendersAllBlocks:
     def test_memory_table_can_show_at_least_seven_rows_without_a_fixed_clip(panel: GhidraPanel) -> None:
         """The memory table's minimum height must fit >= 7 rows, and its max height must not be pinned.
 
-        Regression: pre-fix, ``self._memory_table`` had no ``setMinimumHeight``
-        and no layout stretch factor, so the surrounding read/write/create-
-        block/remove-split-join/overlay form rows in the Memory tab's
-        ``QVBoxLayout`` squeezed it to a sliver (its ``minimumHeight()``
-        stayed at Qt's unset default of 0). Reverting the fix restores that
-        0-height floor, well under the 7-row bound checked here.
+        ``self._memory_table`` must set ``setMinimumHeight`` and a layout stretch factor, or the surrounding
+        read/write/create-block/remove-split-join/overlay form rows in the Memory tab's
+        ``QVBoxLayout`` squeeze it to a sliver (its ``minimumHeight()``
+        would stay at Qt's unset default of 0). Without that sizing the
+        0-height floor returns, well under the 7-row bound checked here.
 
         Args:
             panel: A live ``GhidraPanel`` fixture instance.
@@ -244,7 +241,7 @@ class TestD12MemoryMapTableRendersAllBlocks:
 
 
 class TestD39ResultTablesAreNotFixedHeight:
-    """D39: result-display tables/text views must not be clipped with setFixedHeight."""
+    """Result-display tables/text views must not be clipped with setFixedHeight."""
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -262,7 +259,7 @@ class TestD39ResultTablesAreNotFixedHeight:
     ) -> None:
         """Namespaces/equates/relocations tables must fit >= 4 rows and allow growth.
 
-        Regression: pre-fix, each of these three tables called
+        Each of these three tables must not call
         ``setFixedHeight(80)``, which pins both ``minimumHeight()`` and
         ``maximumHeight()`` to exactly 80px -- far below what 4 rows plus a
         header need in any real Qt style, and impossible to grow past.
@@ -293,7 +290,7 @@ class TestD39ResultTablesAreNotFixedHeight:
         ],
     )
     def test_result_text_views_are_not_pinned_to_a_fixed_height(panel: GhidraPanel, attr: str) -> None:
-        """Every former ``setFixedHeight`` text-edit site must allow growth past its minimum.
+        """Every ``setFixedHeight`` text-edit site must allow growth past its minimum.
 
         Args:
             panel: A live ``GhidraPanel`` fixture instance.
@@ -324,7 +321,7 @@ class TestD39ResultTablesAreNotFixedHeight:
 
 
 class TestD41WidthsUseNamedPixelConstantsNotSplitRatios:
-    """D41: address/type input max-widths must not reuse splitter-ratio constants as pixels."""
+    """Address/type input max-widths must not reuse splitter-ratio constants as pixels."""
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -334,7 +331,7 @@ class TestD41WidthsUseNamedPixelConstantsNotSplitRatios:
     def test_address_inputs_use_the_address_width_constant(panel: GhidraPanel, attr: str) -> None:
         """The Get/Set Data Type address fields must use ``_ADDRESS_INPUT_MAX_WIDTH``.
 
-        Regression: pre-fix, both fields called
+        Both fields must not call
         ``setMaximumWidth(_MAIN_SPLIT_RATIO_RIGHT)`` -- the *right pane's
         splitter-size fraction* (250), not a pixel width chosen for a short
         hex-address field.
@@ -354,7 +351,7 @@ class TestD41WidthsUseNamedPixelConstantsNotSplitRatios:
     def test_type_input_uses_the_type_width_constant(panel: GhidraPanel) -> None:
         """The Set Data Type type field must use ``_TYPE_INPUT_MAX_WIDTH``.
 
-        Regression: pre-fix, this field called
+        This field must not call
         ``setMaximumWidth(_CODE_SPLIT_RATIO_BOTTOM)`` -- the *bottom code-pane
         splitter fraction* (300), not a pixel width chosen for a type string
         like ``byte[16]``.
@@ -373,7 +370,7 @@ class TestD41WidthsUseNamedPixelConstantsNotSplitRatios:
     def test_split_ratio_constants_are_no_longer_passed_to_set_maximum_width() -> None:
         """Neither split-ratio constant may appear in a ``setMaximumWidth`` call site.
 
-        A direct source-level gate on the specific misuse D41 describes.
+        A direct source-level gate on the specific misuse of split-ratio constants as pixel widths.
         """
         source_path = Path(str(ghidra_panel_module.__file__))
         source_text = source_path.read_text(encoding="utf-8")

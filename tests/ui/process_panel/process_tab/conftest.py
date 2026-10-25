@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Pytest fixtures for B2 process-tab audit4 tests."""
+"""Pytest fixtures for process tab tests."""
 
 from __future__ import annotations
 

@@ -3,9 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Second-pass critical-coverage tests for ``intellicrack.bridges.installer``.
+"""Coverage tests for ``intellicrack.bridges.installer``.
 
-The first pass left the failure paths that need a hostile or unusual real environment:
+This module covers the failure paths that need a hostile or unusual real environment:
 files whose byte range is locked by another handle, a tool directory that is a file,
 a plugin target that is a directory, an event loop whose default executor has shut
 down, and a ``vswhere.exe`` that actually runs. The last one is a real Windows console

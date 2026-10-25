@@ -2,18 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for GUI audit finding H7 in ``hex_editor/search.py``.
+"""Gate for the hex editor search and replace background dispatch in ``hex_editor/search.py``.
 
-H7 -- Replace All / Replace previously blocked the Qt GUI thread by calling
-the **blocking** ``run_bridge_coroutine`` variant directly from a
-synchronous button-click slot (``SearchMixin._on_replace_all`` /
-``_on_replace`` / ``_replace_all_regex_matches``), freezing the whole
-application for the duration of the ``HexEditorBridge.replace_bytes`` /
-``encode_text`` RPC. The fix routes every one of those dispatch sites
-through the non-blocking ``run_bridge_coroutine_logged`` (built on
-``BridgeCallWorker`` / ``run_bridge_coroutine_async``), which runs the
-coroutine on the persistent background event-loop thread and delivers the
-result back to the GUI thread via a queued Qt signal.
+Replace All and Replace must not call the **blocking** ``run_bridge_coroutine`` variant directly from a synchronous
+button-click slot (``SearchMixin._on_replace_all`` / ``_on_replace`` / ``_replace_all_regex_matches``), which would freeze the whole
+application for the duration of the ``HexEditorBridge.replace_bytes`` / ``encode_text`` RPC. Every dispatch site goes through the
+non-blocking ``run_bridge_coroutine_logged`` (built on ``BridgeCallWorker`` / ``run_bridge_coroutine_async``), which runs the
+coroutine on the persistent background event-loop thread and delivers the result back to the GUI thread via a queued Qt signal.
 
 Every test below drives the real ``SearchMixin`` handlers on a real
 ``HexEditorPanel`` against a real ``HexEditorBridge`` bound to a real
@@ -263,17 +258,17 @@ def _make_panel(bridge: HexEditorBridge, document: object) -> HexEditorPanel:
 
 
 class TestH7ReplaceAllHexModeNonBlockingDispatch:
-    """H7: Hex-mode Replace All dispatches ``replace_bytes`` without blocking the GUI thread."""
+    """Hex-mode Replace All dispatches ``replace_bytes`` without blocking the GUI thread."""
 
     def test_h7_on_replace_all_returns_before_delayed_replace_completes(self, qapp: QApplication) -> None:
         """``_on_replace_all`` returns almost immediately, well before the delayed RPC finishes.
 
-        Pre-fix, ``_on_replace_all`` called the blocking
+        ``_on_replace_all`` must not call the blocking
         ``run_bridge_coroutine(bridge.replace_bytes(...))``, which invokes
         ``future.result(timeout_s=None)`` on the calling (GUI) thread and
         therefore would not return until the full ``_DELAY_S`` artificial
         delay -- plus the real replace -- had elapsed, and the document
-        would already be mutated by the time the call returned. Post-fix,
+        would already be mutated by the time the call returned. With the worker,
         the RPC is dispatched via ``run_bridge_coroutine_logged`` onto a
         background ``BridgeCallWorker`` thread, so the handler returns in a
         small fraction of the delay and the document is untouched until the
@@ -323,17 +318,17 @@ class TestH7ReplaceAllHexModeNonBlockingDispatch:
 
 
 class TestH7ReplaceAllTextModeNonBlockingDispatch:
-    """H7: Text-mode Replace All folds two ``encode_text`` round trips and a replace into one non-blocking dispatch."""
+    """Text-mode Replace All folds two ``encode_text`` round trips and a replace into one non-blocking dispatch."""
 
     def test_h7_on_replace_all_text_mode_returns_before_encode_and_replace_complete(self, qapp: QApplication) -> None:
         """``_on_replace_all`` in Text mode returns before any of the three delayed RPCs finish.
 
-        Pre-fix, ``_resolve_hex_replace_pair`` issued two sequential
+        ``_resolve_hex_replace_pair`` must not issue two sequential
         blocking ``run_bridge_coroutine(bridge.encode_text(...))`` calls
         directly on the GUI thread before ``_on_replace_all`` issued a
         third blocking ``replace_bytes`` call, so the handler would not
         return until all three delayed RPCs (``3 * _DELAY_S`` at minimum)
-        had completed synchronously. Post-fix, all three round trips are
+        had completed synchronously. All three round trips are
         folded into the single ``_replace_all_text_bytes`` coroutine
         dispatched via ``run_bridge_coroutine_logged``, so the handler
         returns in a small fraction of even one delay.
@@ -378,16 +373,16 @@ class TestH7ReplaceAllTextModeNonBlockingDispatch:
 
 
 class TestH7SingleReplaceTextModeNonBlockingDispatch:
-    """H7: single Replace in Text mode dispatches ``encode_text`` without blocking the GUI thread."""
+    """Single Replace in Text mode dispatches ``encode_text`` without blocking the GUI thread."""
 
     def test_h7_on_replace_text_mode_returns_before_encode_completes(self, qapp: QApplication) -> None:
         """``_on_replace`` in Text mode returns before the delayed ``encode_text`` RPC finishes.
 
-        Pre-fix, ``_resolve_single_replacement_bytes`` issued a blocking
+        ``_resolve_single_replacement_bytes`` must not issue a blocking
         ``run_bridge_coroutine(bridge.encode_text(...))`` directly from
         ``_on_replace``, so the single-match write would not happen (and
         the handler would not return) until the delayed RPC completed.
-        Post-fix, Text/Regex modes dispatch ``encode_text`` via
+        Text/Regex modes dispatch ``encode_text`` via
         ``run_bridge_coroutine_logged`` and the write is completed later in
         ``_apply_encoded_single_replacement`` once the queued result
         signal fires.
@@ -433,7 +428,7 @@ class TestH7SingleReplaceTextModeNonBlockingDispatch:
 
 
 class TestH7ReplaceAllFailureSurfacedAsynchronously:
-    """H7: a failed Replace All RPC is surfaced via the async error callback, not a blocking wait."""
+    """A failed Replace All RPC is surfaced via the async error callback, not a blocking wait."""
 
     def test_h7_on_replace_all_failure_reported_only_after_event_pump(
         self,
@@ -442,10 +437,10 @@ class TestH7ReplaceAllFailureSurfacedAsynchronously:
     ) -> None:
         """A failing ``replace_bytes`` warns the user only once the delayed coroutine actually fails.
 
-        Pre-fix, the blocking dispatch's ``try/except`` around
+        A blocking dispatch's ``try/except`` around
         ``run_bridge_coroutine(...)`` meant ``show_warning`` was already
         invoked, on the calling thread, by the time ``_on_replace_all``
-        returned -- after blocking for the full ``_DELAY_S``. Post-fix,
+        returned -- after blocking for the full ``_DELAY_S``. Instead,
         ``run_bridge_coroutine_logged`` delivers the exception via the
         queued ``call_error`` signal to ``_on_replace_all_failed``, so the
         handler returns immediately and no warning has been recorded until

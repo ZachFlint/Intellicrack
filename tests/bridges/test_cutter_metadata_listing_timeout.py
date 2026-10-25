@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate for the Cutter heavy-listing command-timeout fix.
+"""Falsifiable gate for the Cutter heavy-listing command timeout.
 
 The whole-binary listing scans exposed by the bridge -- ROP gadget search
 (``/Rj``), vtable recovery (``avj``), syscall resolution (``asj``), and the
@@ -15,8 +15,7 @@ tab auto-refresh made them time out. Worse, a timed-out ``_r2_cmd`` abandons
 its ``asyncio.to_thread`` worker without being able to stop the underlying OS
 thread, which keeps reading/writing the single analysis pipe and corrupts the
 commands that follow (the cascade of ``r2_command_timeout`` warnings and
-``rizin_json_unrecoverable`` parse failures observed in the field). The fix
-gives these heavy listings a dedicated :data:`_METADATA_LISTING_TIMEOUT`,
+``rizin_json_unrecoverable`` parse failures observed in the field). The bridge gives these heavy listings a dedicated :data:`_METADATA_LISTING_TIMEOUT`,
 mirroring the existing ``pdg`` (``_PDG_DECOMPILE_TIMEOUT``) precedent, so they
 complete instead of spuriously timing out.
 
@@ -27,7 +26,7 @@ default is monkeypatched down to a tiny value; a fixed bridge lets the heavy
 listing outlive that tiny default because it passes the larger dedicated
 timeout, while an ordinary command still dies against the default. Reverting
 the ``command_timeout=_METADATA_LISTING_TIMEOUT`` plumbing makes every heavy
-listing inherit the tiny default and time out, turning these gates RED.
+listing inherit the tiny default and time out, turning these gates.
 """
 
 from __future__ import annotations

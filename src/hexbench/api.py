@@ -524,8 +524,8 @@ def _window_payload(document: HexDocument, offset: int, requested: int) -> dict[
 
     Every member of the reply comes from one acquisition inside the engine, so
     the window describes a single moment. Assembling it from separate calls to
-    ``length``, ``read`` and the slot's cached state let a write landing between
-    them pair the bytes with a length or a generation they never had, and left a
+    ``length``, ``read`` and the slot's cached state would let a write landing between
+    them pair the bytes with a length or a generation they never had, and would leave a
     scroll clamped against a stale length able to ask for an offset the document
     no longer reaches.
 

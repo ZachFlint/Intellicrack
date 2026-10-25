@@ -2,14 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Strengthened coverage for highlight rule application to the real widget.
+"""Coverage for highlight rule application to the real widget.
 
-The audit (shard 13, c2 trivial findings) flagged that the existing routing
-tests only assert that the bridge was *called*: they do not verify the
+The existing routing tests only assert that the bridge was *called*: they do not verify the
 highlight is actually applied to the widget with the correct colour, priority
 ordering, condition parameters, or pattern hit offsets.
 
-These tests close that gap by driving the real
+These tests drive the real
 :meth:`HighlightingMixin._apply_bridge_highlight_rule_added` and
 :meth:`seed_highlights_from_bridge` event-confirmation path against a genuine
 :class:`HexEditorWidget`. They assert the exact ``HighlightRule`` objects the

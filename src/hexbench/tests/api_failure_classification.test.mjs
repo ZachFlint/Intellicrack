@@ -33,7 +33,7 @@ const apiSource = await readFile(`${staticDir}api.js`, 'utf8');
 
 const { classifyFailure, DispatchError, isBusy } = await import('../static/api.js');
 
-/* --------------------------------------------------------------- #61: classifyFailure */
+/* --------------------------------------------------------------- classifyFailure */
 
 const busyFailure = classifyFailure({ error: { message: 'compute_hash is busy', kind: 'busy', status: 503 } }, 503, 'Service Unavailable');
 check('a real server busy envelope classifies as busy', isBusy(busyFailure), `expected a busy DispatchError, got kind=${busyFailure.kind}`);
@@ -49,7 +49,7 @@ check('a classified error missing a kind falls back to internal', missingKind.ki
 
 /* The server sets an actionable second line as `error.detail`; renderError draws
    it under the message, so classifyFailure must carry it onto the DispatchError
-   rather than dropping it at the transport boundary (the defect). */
+   rather than dropping it at the transport boundary. */
 const withDetail = classifyFailure(
   { error: { message: "unknown operation 'nope'", kind: 'unknown_operation', status: 404, detail: 'GET /api/catalog lists every one of them' } },
   404,
@@ -67,10 +67,9 @@ check('a failure with no detail carries a null detail rather than undefined', no
 const nonStringDetail = classifyFailure({ error: { message: 'boom', kind: 'internal', status: 500, detail: 42 } }, 500, 'Internal Server Error');
 check('a non-string detail is rejected rather than passed through', nonStringDetail.detail === null, `expected a non-string detail to become null, got ${JSON.stringify(nonStringDetail.detail)}`);
 
-/* The server never emits a bare {"busy": true} envelope (BusyError is always
-   routed through dispatch.py's _EXCEPTION_RULES into the same {"error": {...}}
-   shape as every other classified failure) - this was dead code claiming a
-   second server contract that does not exist (the defect). */
+/* The server never emits a bare {"busy": true} envelope: BusyError is routed
+   through dispatch.py's _EXCEPTION_RULES into the same {"error": {...}} shape as
+   every other classified failure, so no second server contract exists. */
 const bareBusyShape = classifyFailure({ busy: true, operation: 'compute_hash' }, 503, 'Service Unavailable');
 check(
   'a bare {busy: true} payload (a shape the server never sends) is not treated as busy (the defect)',

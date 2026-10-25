@@ -3,13 +3,13 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates BE-4: the Patch menu used to offer a hardcoded pair (IPS export, JSON
- * export, IPS import) while the engine already published eight export
- * formats and three import formats (ips, ips32, cod, json, bps, bps_from_path,
- * ups, ups_from_path / ips, bps, ups). The fix replaces that pair with one
- * `patch.export` and one `patch.import` command, each opening a format picker
- * built from `this.#catalog.operations` at runtime rather than a list typed
- * into shell.js.
+ * Gates the Patch menu's format picker. It must offer every export and import
+ * patch format the engine publishes, rather than a hardcoded pair (IPS export,
+ * JSON export, IPS import). The engine publishes eight export formats and three
+ * import formats (ips, ips32, cod, json, bps, bps_from_path, ups, ups_from_path /
+ * ips, bps, ups). `patch.export` and `patch.import` each open a format picker
+ * built from `this.#catalog.operations` at runtime rather than a list typed into
+ * shell.js.
  *
  * The expected format list is not typed out here either: it comes from
  * actually running `hexbench.catalog.build_catalog()` in the same Python

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D23: ``run_command`` must land in the working directory asked for.
+r"""``run_command`` must land in the working directory asked for.
 
 ``QEMUSandbox.run_command`` applies a working directory by prefixing a ``cd``
 to the command line it hands the guest's own interpreter. Composing that prefix

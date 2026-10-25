@@ -2,20 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S14-D01: no UI path to add an attached/inspected process to Tracked.
+"""Gate for adding an attached or inspected process to the Tracked tab from the UI.
 
-Prior to this fix, the System Processes table had no context menu and the
-Tracked tab had no way to register the process currently selected/attached
-there, so ``ProcessManager.get_all_tracked()`` (backing
-``TrackedRefreshWorker`` / the Tracked tab) could only ever show processes
-spawned directly by the application via ``register()``. A user who attached
-to or inspected an external process saw "0 tracked" with no affordance to
-change that.
+The System Processes table must offer a context-menu action that registers the process
+currently selected or attached there, so ``ProcessManager.get_all_tracked()`` (backing
+``TrackedRefreshWorker`` / the Tracked tab) can show external processes alongside those
+spawned via ``register()``.
 
-The fix adds a "Track This Process" context-menu action on
-``ProcessTab._process_table`` that calls
-``ProcessManager.register_external_pid`` for the right-clicked row's PID,
-then jumps to and refreshes the Tracked tab. These tests drive the real
+The "Track This Process" context-menu action on ``ProcessTab._process_table`` calls
+``ProcessManager.register_external_pid`` for the right-clicked row's PID, then jumps to
+and refreshes the Tracked tab. These tests drive the real
 ``ProcessTab`` widget end to end -- populate a row, trigger the context menu
 (or its handler) exactly as a user right-click would, run the real
 background ``TrackedRefreshWorker`` QThread, and assert the Tracked table
@@ -177,8 +173,8 @@ class TestSystemProcessTableHasTrackContextMenu:
     def test_context_menu_policy_is_custom(tab: ProcessTab) -> None:
         """The process table must opt into a custom (right-click) context menu.
 
-        Pre-fix, the table used Qt's default ``NoContextMenu`` policy, so
-        right-clicking a row did nothing at all.
+        The table must not keep the default Qt ``NoContextMenu`` policy, which makes
+        right-clicking a row do nothing.
 
         Args:
             tab: Real, shown ProcessTab fixture.
@@ -253,12 +249,9 @@ class TestTrackThisProcessSurfacesInTrackedTab:
     ) -> None:
         """After tracking a PID, the Tracked tab table must show a row for it.
 
-        This is the end-to-end falsifiable gate for S14-D01: pre-fix, no
-        code path could add an externally inspected PID to the Tracked
-        store, so the Tracked table stayed empty ("0 tracked") no matter
-        what the user did. Post-fix, invoking the Track This Process
-        handler and then refreshing the Tracked tab (as ``_on_track_process``
-        itself also does) must produce a matching row.
+        This is the end-to-end falsifiable gate: invoking the Track This Process handler and
+        then refreshing the Tracked tab (as ``_on_track_process`` itself also does) must
+        produce a matching row in the Tracked table.
 
         Args:
             tab: Real, shown ProcessTab fixture.

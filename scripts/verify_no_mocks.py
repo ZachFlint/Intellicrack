@@ -15,7 +15,6 @@ import sys
 from pathlib import Path
 
 
-# Patterns that indicate mock usage
 MOCK_PATTERNS = [
     # Direct mock imports
     r"from\s+unittest\.mock\s+import",
@@ -55,7 +54,6 @@ MOCK_PATTERNS = [
     r'["\']fixme["\']',
 ]
 
-# Files to exclude from checking
 EXCLUDE_FILES = [
     "conftest.py",
     "__init__.py",
@@ -63,7 +61,6 @@ EXCLUDE_FILES = [
     "verify_no_mocks.py",
 ]
 
-# Directories to exclude
 EXCLUDE_DIRS = [
     "__pycache__",
     ".pytest_cache",

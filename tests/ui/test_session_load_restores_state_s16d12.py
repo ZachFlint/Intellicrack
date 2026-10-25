@@ -2,16 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for audit defect S16-D12 in ``SessionManagerDialog``.
+"""Gate for restoring a loaded session into the live UI from ``SessionManagerDialog``.
 
-Pre-fix, ``SessionManagerDialog._load_selected_session`` only emitted the
-``session_loaded`` Qt signal and accepted the dialog -- it never pulled the
-saved session's chat history or active binary back into the live UI. A
-listener that only reacted to the emitted session id (mirroring the
-production ``MainWindow`` wiring in ``app.py``, which clears the chat panel
-before the load completes and never repopulates it afterward) was left with
-an empty chat panel and no active binary even though the session file on
-disk genuinely contained both.
+``SessionManagerDialog._load_selected_session`` must restore the saved session into the live UI,
+not only emit the ``session_loaded`` signal and accept the dialog. A listener that only reacts to
+the emitted session id would otherwise leave an empty chat panel and no active binary, even though
+the session file on disk holds both.
 
 This test builds a real session with non-empty chat history and an active
 binary through a real ``SessionManager``/``SessionStore`` (temp SQLite),

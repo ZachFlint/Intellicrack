@@ -3,20 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for ``X64DbgPanel._on_switch_thread``'s success sequencing.
+"""Gate for ``X64DbgPanel._on_switch_thread``'s success sequencing.
 
-Covers the 2026-09-20 Qodana ``PyNoneFunctionAssignmentInspection`` finding:
-the success callback built the tuple ``(self._console_output.appendPlainText(...),
-self._refresh_state())[0]`` purely to sequence two ``None``-returning calls
-inside a single-expression ``lambda`` -- indexing into a tuple of ``None``
-values to fake multi-statement execution. It is replaced with a proper
-nested function whose body is two ordinary statements. This test proves the
-replacement genuinely still runs *both* steps, in order, which the tuple
-trick's own type-checker finding could not by itself guarantee to a reader:
-a future edit that reintroduces a single-expression lambda and drops one of
-the two calls (a real risk when "simplifying" a two-statement function back
-down) is caught because either the console message or the state refresh
-goes missing.
+Covers the success callback, which must run two ``None``-returning calls in order:
+the console message and the state refresh. The callback is a nested function with two
+ordinary statements, not a tuple-indexing single-expression ``lambda``. This test proves
+both steps run, in order. A future edit that reintroduces a single-expression lambda and
+drops one of the two calls (a real risk when simplifying a two-statement function) is
+caught because either the console message or the state refresh goes missing.
 """
 
 from __future__ import annotations
@@ -47,7 +41,7 @@ class _RecordingX64DbgBridge:
     """Stand-in bridge recording exactly which thread id ``switch_thread`` forwarded."""
 
     def __init__(self) -> None:
-        """Initialise an empty call log and a ready plugin status."""
+        """Initialize an empty call log and a ready plugin status."""
         self.calls: list[int] = []
         self.plugin_status: dict[str, object] = {"ready": True, "diagnostic": "", "plugin_deployed": True}
 

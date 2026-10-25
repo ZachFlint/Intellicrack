@@ -5,8 +5,7 @@
 
 """Real-data coverage for :mod:`intellicrack.ui.panels.analysis_panel`.
 
-The audit (shard 14) flagged ``analysis_panel.py`` as having **no test file**
-and demanded that the panel be proven to render *real* parsed binary data:
+This module checks that ``analysis_panel.py`` renders *real* parsed binary data:
 real section names (``.text``), real import/export symbols, real entropy, and
 real navigation addresses.
 

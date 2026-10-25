@@ -3,32 +3,21 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for FridaBridge default-hook-callback and child-gating defects.
+"""Tests for FridaBridge default hook callbacks and child-gating error reporting.
 
-Covers two real defects fixed in ``FridaBridge``:
-
-* S14-D07 -- The managed "Add hook" flow (``FridaPanel._on_add_hook``) calls
-  ``FridaBridge.hook_function(target)`` with no ``on_enter``/``on_leave``
-  callbacks. The agent used to install a completely empty ``onEnter``/
-  ``onLeave`` pair in that case, so the hook attached successfully but never
-  emitted anything -- it looked installed in the Hooks table but silently did
-  nothing on every invocation. The fix installs a default logging callback
-  (``onEnter``/``onLeave`` both ``send()`` a ``hook_fire`` message with the
-  target address, a few argument pointers, and the return value) whenever no
-  custom callback code is supplied, so the hook is observable through the
-  console even without custom JS.
-* S14-D18 -- Enabling Advanced > Child Gating on Windows fails because Frida's
-  local device does not support spawn gating on this platform
-  (``frida.NotSupportedError: 'not yet supported on this OS'``), but the
-  bridge used to swallow that real error text and raise a bare
-  ``ToolError("child gating operation failed")``, masking the platform
-  limitation behind a generic message. The fix attaches the real Frida error
-  text to ``ToolError.details['reason']`` so the UI (and this test) can see
-  the actual cause instead of a generic failure.
+* A hook installed with no callback code gets a default logging callback. The managed "Add hook" flow
+  (``FridaPanel._on_add_hook``) calls ``FridaBridge.hook_function(target)`` with no ``on_enter``/``on_leave``
+  callbacks, and the agent installs a default callback in that case: ``onEnter`` and ``onLeave`` both ``send()`` a
+  ``hook_fire`` message with the target address, a few argument pointers, and the return value. The hook is therefore
+  observable through the bridge's message handler even without custom JS.
+* Enabling Advanced > Child Gating on Windows fails because Frida's local device does not support spawn gating on
+  this platform (``frida.NotSupportedError: 'not yet supported on this OS'``). The bridge attaches that real error text
+  to ``ToolError.details['reason']``, so the UI (and this test) can show the actual cause instead of the generic
+  ``ToolError("child gating operation failed")``.
 
 Both tests drive a REAL Frida runtime attached to the current test process
 (no external process is spawned, so no ``spawns_process`` marker is needed --
-matching the ``self_attached_bridge`` idiom already used in
+matching the ``self_attached_bridge`` idiom also used in
 ``tests/bridges/test_frida_scan_unload_s14.py`` and
 ``tests/bridges/test_frida_bridge.py``). Requires frida-python and a Windows
 host.
@@ -125,18 +114,13 @@ def _wait_until(predicate: Callable[[], bool], timeout: float = _MESSAGE_WAIT_TI
 def test_add_hook_default_callback_fires_on_invocation(self_attached_bridge: FridaBridge) -> None:
     """Verify a hook installed with no explicit callbacks still logs on every invocation.
 
-    Regression test for S14-D07: the managed "Add hook" flow installs a hook
-    via ``hook_function(target)`` with no ``on_enter``/``on_leave`` JS. The
-    previous agent template defaulted those to empty no-op functions, so the
-    hook attached but never emitted anything. This test hooks a real WinAPI
-    export (``kernel32.dll!GetCurrentProcessId``) in the current (self-
-    attached) process with no callbacks, drives real invocations of that
-    export via ctypes, and asserts that ``hook_fire`` ``send()`` messages
-    for both the ``enter`` and ``leave`` phases actually arrive through the
-    bridge's message handler -- including a ``leave`` message whose
-    ``retval`` matches the real PID returned by the hooked call. Falsifiable:
-    if the agent still installs an empty callback, no ``hook_fire`` message
-    is ever emitted and the wait times out / the assertions fail.
+    The managed "Add hook" flow installs a hook via ``hook_function(target)`` with no ``on_enter``/``on_leave`` JS,
+    so the default callbacks must emit messages. This test hooks a real WinAPI export
+    (``kernel32.dll!GetCurrentProcessId``) in the current (self-attached) process with no callbacks, drives real
+    invocations of that export via ctypes, and asserts that ``hook_fire`` ``send()`` messages for both the ``enter``
+    and ``leave`` phases arrive through the bridge's message handler, including a ``leave`` message whose ``retval``
+    matches the real PID returned by the hooked call. Falsifiable: if the agent installs an empty callback, no
+    ``hook_fire`` message is emitted and the wait times out and the assertions fail.
 
     Args:
         self_attached_bridge: Bridge fixture attached to the current test process.
@@ -211,10 +195,8 @@ def test_add_hook_default_callback_fires_on_invocation(self_attached_bridge: Fri
 def test_enable_child_gating_surfaces_real_platform_reason(self_attached_bridge: FridaBridge) -> None:
     """Verify enabling child gating on Windows surfaces the platform-limitation reason.
 
-    Regression test for S14-D18: on this Windows build, Frida's local device
-    raises ``frida.NotSupportedError('not yet supported on this OS')`` from
-    ``Device.enable_spawn_gating()`` -- confirmed directly against the real
-    ``frida`` package before writing this assertion. The bridge classifies
+    On Windows, Frida's local device raises ``frida.NotSupportedError('not yet supported on this OS')`` from
+    ``Device.enable_spawn_gating()``. The bridge classifies
     that ``frida.NotSupportedError`` into a stable, distinct platform-
     limitation reason rather than either the bare generic
     ``ToolError("child gating operation failed")`` (which carries no reason)

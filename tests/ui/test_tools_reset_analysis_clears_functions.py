@@ -6,13 +6,11 @@
 
 ``reset_analysis`` (tools.py) is invoked from ``app.py._on_binary_loaded``
 when a freshly loaded binary turns out to be an unsupported/unrecognised
-format (F11): the analysis panel's header resets to "No binary loaded" so no
-stale data is shown against the failed load. Pre-fix, ``reset_analysis`` only
-called ``self.analysis_panel.clear()`` and never touched ``func_list`` /
-``xref_panel`` -- both populated independently by
-``update_bridge_analysis`` -- so the right-hand Functions navigator and
-Cross References tree kept showing the *previous* binary's data even though
-the header said no binary was loaded.
+format: the analysis panel's header resets to "No binary loaded" so no stale data is shown
+against the failed load. ``reset_analysis`` must clear ``func_list`` and ``xref_panel`` as well as
+``analysis_panel``. Both are populated independently by ``update_bridge_analysis``, so a reset that
+only cleared the analysis panel would leave the right-hand Functions navigator and Cross References
+tree showing the previous binary's data while the header says no binary was loaded.
 """
 
 from __future__ import annotations

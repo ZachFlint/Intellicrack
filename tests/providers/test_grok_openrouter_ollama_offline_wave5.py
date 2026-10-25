@@ -2,16 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable offline gates for Grok, OpenRouter, and Ollama providers (wave5).
+"""Falsifiable offline gates for Grok, OpenRouter, and Ollama providers.
 
-Covers 15 NOT_RESOLVED findings from group-07-report.md:
-  Grok      : #42 chat_stream accumulation, #46 _open_grok_stream HTTP body
-  OpenRouter : #48 chat enable_cache wiring, #49 chat_stream accumulation,
-               #50 get_generation, #51 _parse_tool_calls_from_response,
-               #52 _raise_for_stream_status, #53 _build_usage_from_data
-  Ollama     : #55 list_tags, #56 list_running_models, #57 show_model,
-               #60 chat local NDJSON loop, #61 chat cloud path,
-               #62 chat_stream, #65 _get_client_and_model cloud prefix
+Grok: chat_stream accumulation and the _open_grok_stream HTTP body.
+OpenRouter: chat enable_cache wiring, chat_stream accumulation, get_generation,
+_parse_tool_calls_from_response, _raise_for_stream_status, and
+_build_usage_from_data.
+Ollama: list_tags, list_running_models, show_model, the local NDJSON chat loop,
+the cloud chat path, chat_stream, and _get_client_and_model cloud prefix routing.
 
 All tests are fully offline. Grok uses a ``_StaticSSETransport`` backed by the
 real openai SDK; OpenRouter uses a ``_CannedTransport`` backed by a real
@@ -464,7 +462,7 @@ def _build_grok_provider(transport: httpx2.AsyncBaseTransport) -> GrokProvider:
 
 
 class TestGrokChatStreamAccumulation:
-    """Finding #42 — GrokProvider.chat_stream must accumulate and yield text in order."""
+    """GrokProvider.chat_stream must accumulate and yield text in order."""
 
     @staticmethod
     def test_yielded_text_fragments_match_sse_deltas_in_order() -> None:
@@ -502,7 +500,7 @@ class TestGrokChatStreamAccumulation:
 
 
 class TestGrokOpenGrokStreamHttpBody:
-    """Finding #46 — GrokProvider._open_grok_stream must send model, messages, and stream=True."""
+    """GrokProvider._open_grok_stream must send model, messages, and stream=True."""
 
     @staticmethod
     def test_http_request_body_contains_model_messages_and_stream_flag() -> None:
@@ -553,7 +551,7 @@ class TestGrokOpenGrokStreamHttpBody:
 
 
 class TestOpenRouterChatEnableCache:
-    """Finding #48 — OpenRouterProvider.chat must wire enable_cache to _apply_cache_control."""
+    """OpenRouterProvider.chat must wire enable_cache to _apply_cache_control."""
 
     @staticmethod
     def test_enable_cache_true_rewrites_user_message_to_structured_block() -> None:
@@ -638,7 +636,7 @@ class TestOpenRouterChatEnableCache:
 
 
 class TestOpenRouterChatStreamAccumulation:
-    """Finding #49 — OpenRouterProvider.chat_stream must accumulate and yield text."""
+    """OpenRouterProvider.chat_stream must accumulate and yield text."""
 
     @staticmethod
     def test_chat_stream_yields_delta_text_in_order() -> None:
@@ -703,7 +701,7 @@ class TestOpenRouterChatStreamAccumulation:
 
 
 class TestOpenRouterGetGeneration:
-    """Finding #50 — OpenRouterProvider.get_generation must return exact fields from /generation."""
+    """OpenRouterProvider.get_generation must return exact fields from /generation."""
 
     @staticmethod
     def test_get_generation_returns_dict_with_stub_fields() -> None:
@@ -752,7 +750,7 @@ class TestOpenRouterGetGeneration:
 
 
 class TestOpenRouterParseToolCallsFromResponse:
-    """Finding #51 — OpenRouterProvider._parse_tool_calls_from_response exact fields."""
+    """OpenRouterProvider._parse_tool_calls_from_response exact fields."""
 
     @staticmethod
     def test_parses_single_tool_call_with_exact_id_name_and_arguments() -> None:
@@ -807,7 +805,7 @@ class TestOpenRouterParseToolCallsFromResponse:
 
 
 class TestOpenRouterRaiseForStreamStatus:
-    """Finding #52 — OpenRouterProvider._raise_for_stream_status typed exception mapping."""
+    """OpenRouterProvider._raise_for_stream_status typed exception mapping."""
 
     @staticmethod
     def test_401_raises_authentication_error() -> None:
@@ -868,7 +866,7 @@ class TestOpenRouterRaiseForStreamStatus:
 
 
 class TestOpenRouterBuildUsageFromData:
-    """Finding #53 — OpenRouterProvider._build_usage_from_data exact field mapping."""
+    """OpenRouterProvider._build_usage_from_data exact field mapping."""
 
     @staticmethod
     def test_all_three_fields_mapped_exactly() -> None:
@@ -927,7 +925,7 @@ class TestOpenRouterBuildUsageFromData:
 
 
 class TestOllamaListTags:
-    """Finding #55 — OllamaProvider.list_tags must return the /api/tags model list."""
+    """OllamaProvider.list_tags must return the /api/tags model list."""
 
     @staticmethod
     def test_list_tags_returns_models_field_from_stub() -> None:
@@ -966,7 +964,7 @@ class TestOllamaListTags:
 
 
 class TestOllamaListRunningModels:
-    """Finding #56 — OllamaProvider.list_running_models must return /api/ps model list."""
+    """OllamaProvider.list_running_models must return /api/ps model list."""
 
     @staticmethod
     def test_list_running_models_returns_ps_response() -> None:
@@ -1001,7 +999,7 @@ class TestOllamaListRunningModels:
 
 
 class TestOllamaShowModel:
-    """Finding #57 — OllamaProvider.show_model must return parameters and template fields."""
+    """OllamaProvider.show_model must return parameters and template fields."""
 
     @staticmethod
     def test_show_model_returns_exact_parameters_and_template() -> None:
@@ -1036,7 +1034,7 @@ class TestOllamaShowModel:
 
 
 class TestOllamaChatLocalNDJSON:
-    """Finding #60 — OllamaProvider.chat must complete the full local NDJSON HTTP cycle."""
+    """OllamaProvider.chat must complete the full local NDJSON HTTP cycle."""
 
     @staticmethod
     def test_chat_local_returns_message_content_and_no_tool_calls() -> None:
@@ -1131,7 +1129,7 @@ class TestOllamaChatLocalNDJSON:
 
 
 class TestOllamaChatCloudPath:
-    """Finding #61 — OllamaProvider.chat must route cloud/ models to /v1/chat/completions."""
+    """OllamaProvider.chat must route cloud/ models to /v1/chat/completions."""
 
     @staticmethod
     def test_chat_cloud_model_uses_openai_compatible_endpoint_and_parses_choices() -> None:
@@ -1185,7 +1183,7 @@ class TestOllamaChatCloudPath:
 
 
 class TestOllamaChatStream:
-    """Finding #62 — OllamaProvider.chat_stream must yield NDJSON content chunks in order."""
+    """OllamaProvider.chat_stream must yield NDJSON content chunks in order."""
 
     @staticmethod
     def test_chat_stream_local_yields_content_parts_in_order() -> None:
@@ -1239,7 +1237,7 @@ class TestOllamaChatStream:
 
 
 class TestOllamaGetClientAndModelCloudPrefix:
-    """Finding #65 — OllamaProvider._get_client_and_model must route cloud/ prefix correctly."""
+    """OllamaProvider._get_client_and_model must route cloud/ prefix correctly."""
 
     @staticmethod
     def test_cloud_prefix_returns_cloud_client_and_strips_prefix() -> None:

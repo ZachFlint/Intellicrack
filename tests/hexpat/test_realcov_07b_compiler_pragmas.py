@@ -6,8 +6,7 @@
 
 These tests drive :class:`intellicrack.core.hexpat_compiler.HexPatCompiler`
 and :class:`HexPatCodegen` over real HexPat DSL source strings and over real
-``.hexpat`` files committed under ``vendor/community-patterns``. They close the
-audit findings for pragma propagation, conditional inverted-operator logic,
+``.hexpat`` files committed under ``vendor/community-patterns``. They cover pragma propagation, conditional inverted-operator logic,
 dynamic arrays with field references, pointer emission, magic detection,
 validation annotations, and constant-expression evaluator correctness.
 """

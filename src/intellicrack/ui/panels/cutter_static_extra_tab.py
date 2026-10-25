@@ -8,7 +8,7 @@ Provides a self-contained Qt widget exposing the native rizin static-analysis ca
 debug information (``iDj``), classes/RTTI enumeration (``icj``), the global call graph (``agcj``), virtual-function table detection
 (``avj``), syscall enumeration (``asj``), the four zignature/FLIRT-equivalent operations (``zj``/``zg``/``za``/``z/j``), per-function basic-
 block listing (``afbj``), linear whole-function disassembly text (``pdf``), and per-function parameter/local-variable/calling-convention
-detail (``afij``/``afvj``), all driven by the ``CutterBridge`` static-analysis surface (``cutter.py:2016-2104,2630-2901,3329-3403,3936-3984``).
+detail (``afij``/``afvj``), all driven by the ``CutterBridge`` static-analysis surface.
 """
 
 from __future__ import annotations

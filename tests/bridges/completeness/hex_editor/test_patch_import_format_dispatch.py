@@ -3,16 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L3 regression gate for T2-7(c): BPS/UPS patch import must use the native-backend-aware bridge method.
+"""L3 gate: BPS/UPS patch import must use the native-backend-aware bridge method.
 
-Prior to this fix ``PatchesMixin._on_import_patches`` always called the
-generic ``HexEditorBridge.import_patches``, which for BPS/UPS payloads never
-delegates to ``import_patches_bps`` / ``import_patches_ups`` -- the methods
+``PatchesMixin._on_import_patches`` calls the
+generic ``HexEditorBridge.import_patches``, which for BPS/UPS payloads does not delegate to ``import_patches_bps`` / ``import_patches_ups`` -- the methods
 that prefer the backend's native ``document.import_patches_bps`` /
-``import_patches_ups`` accessor -- and instead always falls through the
+``import_patches_ups`` accessor -- and falls through the
 slow, pure-Python ``_apply_bps_patch`` / ``_apply_ups_patch`` path.
 
-The fix makes ``_on_import_patches`` select ``import_patches_bps`` /
+``_on_import_patches`` selects ``import_patches_bps`` /
 ``import_patches_ups`` by the chosen file's ``.bps`` / ``.ups`` extension,
 while any other extension (``.ips``, ``.ips32``, or unrecognised) still goes
 through the generic ``import_patches`` dispatcher, which already picks the
@@ -258,7 +257,7 @@ class TestBpsUpsImportUsesNativeAwareBridgeMethod:
 
         Falsifiable: if ``_on_import_patches`` were reverted to always call
         ``bridge.import_patches(patch_b64, original_path)`` regardless of
-        suffix (the pre-fix behaviour), ``bridge.import_patches_bps_calls``
+        suffix (the unrouted behaviour), ``bridge.import_patches_bps_calls``
         would stay empty and ``import_patches_calls`` would carry the entry
         instead.
 
@@ -373,7 +372,7 @@ class TestBpsUpsImportUsesNativeAwareBridgeMethod:
         instead of treating it as an unexpected payload type.
 
         Falsifiable: if ``_on_import_patches_success`` only accepted
-        ``isinstance(result, int)`` (the pre-fix behaviour), it would call
+        ``isinstance(result, int)`` (the unrouted behaviour), it would call
         ``show_warning`` with "Bridge returned an unexpected payload type."
         instead of ``show_info``.
 

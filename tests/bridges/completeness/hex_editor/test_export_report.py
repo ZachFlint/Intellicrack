@@ -3,13 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L1/L3 gate tests for the hex-editor annotated report export (rows #74-75).
+"""L1/L3 gate tests for the hex-editor annotated report export .
 
-Covers ``audit/bridge-completeness/agent-09-hex-editor.md`` rows #74-75:
-``export_annotated_html`` (``hex_editor.py:8342``) and ``export_annotated_pdf``
-(``hex_editor.py:8413``) were fully implemented, reporting-grade features
-with zero GUI trigger anywhere in the panel package. The remediation adds
-an "Export Report" toolbar button (``panel.py``, ``_build_export_report_menu``)
+Covers ``export_annotated_html``  and ``export_annotated_pdf``
+ are reporting-grade features. The panel adds an "Export Report" toolbar button (``panel.py``,
+ ``_build_export_report_menu``)
 with "Annotated HTML..."/"Annotated PDF..." menu actions wired to
 ``ExportReportMixin._on_export_annotated_html``/``_on_export_annotated_pdf``
 (``ui/panels/hex_editor/export_report.py``), which call the real bridge
@@ -241,10 +239,8 @@ class TestExportAnnotatedHtmlGuiDispatchesRealBridgeL3:
     """L3: the "Annotated HTML..." action drives the real bridge call end-to-end and writes the file.
 
     ``AnnotatedExportRangeDialog.exec`` and ``QFileDialog.getSaveFileName``
-    are genuine modal Qt chrome that cannot be driven headlessly; per the
-    established convention in this codebase (see
-    ``tests/test_bridge_completeness/sandbox-process/test_process_panel_l3.py``'s
-    ``QMessageBox.warning`` patching), only that chrome is substituted --
+    are genuine modal Qt chrome that cannot be driven headlessly; as the other gate tests do for
+    ``QMessageBox.warning``, only that chrome is substituted --
     never the bridge or the dispatch call under test.
     """
 

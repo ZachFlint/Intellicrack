@@ -2,19 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for GUI audit finding M7 in ``hex_editor/patches.py``.
+"""Gate for the hex editor patch export and import dispatch in ``hex_editor/patches.py``.
 
-M7 -- ``_on_export_patches`` and ``_on_import_patches`` previously called the
-**blocking** ``run_bridge_coroutine(bridge.export_patches(...))`` /
-``run_bridge_coroutine(bridge.import_patches(...))`` directly from a
-synchronous Qt button-click slot. For BPS/UPS formats (and, in general, for
-any non-trivial patch payload) the bridge performs a full byte-diff or
-target-rebuild against the original file on disk; with the blocking variant
-that work runs while the Qt GUI thread sits parked in ``future.result()``
-with no ``processEvents``/event-loop pumping, freezing the whole application
-window for the duration of the export/import.
+``_on_export_patches`` and ``_on_import_patches`` must not call the **blocking** ``run_bridge_coroutine(bridge.export_patches(...))``
+or ``run_bridge_coroutine(bridge.import_patches(...))`` directly from a synchronous Qt button-click slot. For BPS/UPS formats (and, in general,
+for any non-trivial patch payload) the bridge performs a full byte-diff or target-rebuild against the original file on disk; with the blocking
+variant that work would run while the Qt GUI thread sits parked in ``future.result()`` with no event-loop pumping, freezing the whole
+application window for the duration of the export or import.
 
-The fix routes both handlers through ``run_bridge_coroutine_logged`` (built
+Both handlers route through ``run_bridge_coroutine_logged`` (built
 on ``BridgeCallWorker`` / ``run_bridge_coroutine_async``), which starts the
 bridge coroutine on the persistent background event-loop thread and returns
 to the caller immediately; the file write (export) or patch-count/viewport
@@ -367,15 +363,14 @@ def test_m7_export_patches_returns_before_delayed_bridge_call_completes(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """M7: ``_on_export_patches`` must return before the delayed bridge RPC finishes.
+    """``_on_export_patches`` must return before the delayed bridge RPC finishes.
 
-    Pre-fix, ``_on_export_patches`` called the blocking
+    ``_on_export_patches`` must not call the blocking
     ``run_bridge_coroutine(bridge.export_patches(...))``, which invokes
     ``future.result()`` on the calling (GUI) thread and would not return
     until the full artificial delay plus the real export had elapsed, with
     the destination file already written by the time the call returned.
-    Post-fix, the RPC is dispatched via ``run_bridge_coroutine_logged`` onto
-    a background ``BridgeCallWorker`` thread, so the handler returns in a
+    The RPC is dispatched via ``run_bridge_coroutine_logged`` onto a background ``BridgeCallWorker`` thread, so the handler returns in a
     small fraction of the delay and the file does not exist until the Qt
     event loop is later pumped and the queued result signal fires.
 
@@ -442,16 +437,13 @@ def test_m7_export_patches_failure_surfaced_only_after_async_callback(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """M7: a failed export RPC is surfaced via the async error callback, not a blocking wait.
+    """A failed export RPC is surfaced via the async error callback, not a blocking wait.
 
-    Pre-fix, the blocking dispatch's ``try/except`` around
-    ``run_bridge_coroutine(...)`` meant ``show_warning`` was already invoked,
-    on the calling thread, by the time ``_on_export_patches`` returned --
-    after blocking for the full delay. Post-fix, ``run_bridge_coroutine_logged``
-    delivers the exception via the queued ``call_error`` signal to
-    ``_on_export_patches_error``, so the handler returns immediately and no
-    warning has been recorded until the Qt event loop is pumped and the
-    background coroutine has had time to fail.
+    A blocking dispatch's ``try/except`` around ``run_bridge_coroutine(...)`` would mean ``show_warning`` was already invoked,
+    on the calling thread, by the time ``_on_export_patches`` returned, after blocking for the full delay.
+    ``run_bridge_coroutine_logged`` instead delivers the exception via the queued ``call_error`` signal to
+    ``_on_export_patches_error``, so the handler returns immediately and no warning has been recorded until the Qt event loop
+    is pumped and the background coroutine has had time to fail.
 
     Args:
         qapp: The shared QApplication fixture.
@@ -513,16 +505,14 @@ def test_m7_import_patches_returns_before_delayed_bridge_call_completes(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """M7: ``_on_import_patches`` must return before the delayed bridge RPC finishes.
+    """``_on_import_patches`` must return before the delayed bridge RPC finishes.
 
-    Pre-fix, ``_on_import_patches`` called the blocking
+    ``_on_import_patches`` must not call the blocking
     ``run_bridge_coroutine(bridge.import_patches(...))`` directly on the GUI
-    thread, so the document would already carry the applied patch by the
+    thread, since the document would already carry the applied patch by the
     time the call returned and the caller would have blocked for the full
-    delay. Post-fix, the RPC is dispatched via ``run_bridge_coroutine_logged``,
-    so the handler returns in a small fraction of the delay and the document
-    is untouched until the Qt event loop is pumped and the queued result
-    signal fires.
+    delay. The RPC is dispatched via ``run_bridge_coroutine_logged``, so the
+    handler returns in a small fraction of the delay and the document is untouched until the Qt event loop is pumped and the queued result signal fires.
 
     Args:
         qapp: The shared QApplication fixture.
@@ -588,16 +578,13 @@ def test_m7_import_patches_failure_surfaced_only_after_async_callback(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """M7: a failed import RPC is surfaced via the async error callback, not a blocking wait.
+    """A failed import RPC is surfaced via the async error callback, not a blocking wait.
 
-    Pre-fix, ``_on_import_patches`` called the blocking
-    ``run_bridge_coroutine(bridge.import_patches(...))`` inside a
-    ``try/except``, so ``show_warning`` would already have been invoked, on
-    the calling thread, by the time the handler returned -- after blocking
-    for the full delay. Post-fix, ``run_bridge_coroutine_logged`` delivers
-    the exception via the queued ``call_error`` signal to
-    ``_on_import_patches_error``, so the handler returns immediately and no
-    warning has been recorded until the Qt event loop is pumped.
+    A blocking ``run_bridge_coroutine(bridge.import_patches(...))`` inside a ``try/except`` in ``_on_import_patches`` would
+    already have invoked ``show_warning`` on the calling thread by the time the handler returned, after blocking for the full
+    delay. ``run_bridge_coroutine_logged`` delivers the exception via the queued ``call_error`` signal to
+    ``_on_import_patches_error``, so the handler returns immediately and no warning has been recorded until the Qt event loop
+    is pumped.
 
     Args:
         qapp: The shared QApplication fixture.
@@ -659,15 +646,12 @@ def test_m7_export_patches_pending_state_cleared_after_success(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """M7: the harness's pending-export bookkeeping is cleared once the async callback runs.
+    """The harness's pending-export bookkeeping is cleared once the async callback runs.
 
-    Proves the new ``_pending_export_patches_*`` attributes that the fix
-    introduced to carry state across the async dispatch boundary are
-    populated immediately (before the delayed RPC resolves) and reset back
-    to ``None`` once ``_on_export_patches_success`` has run. Pre-fix there
-    were no such attributes at all -- the save path, count, and format were
-    plain locals captured in the (blocking) call frame -- so this state
-    machine did not exist.
+    Proves the ``_pending_export_patches_*`` attributes that carry state across the async dispatch boundary are
+    populated immediately (before the delayed RPC resolves) and reset back to ``None`` once ``_on_export_patches_success``
+    has run. Without an async dispatch boundary, the save path, count, and format would be plain locals captured
+    in the blocking call frame, and this state machine would not exist.
 
     Args:
         qapp: The shared QApplication fixture.

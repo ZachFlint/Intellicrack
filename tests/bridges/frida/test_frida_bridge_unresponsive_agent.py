@@ -6,7 +6,7 @@
 """Every Frida call the bridge makes is bounded when the agent or its target stops answering.
 
 Frida's Python API waits for a native reply with no limit, so a target that is frozen or an agent whose
-script thread is stuck used to hold the caller until Frida gave up after 25 seconds, or forever for
+script thread is stuck holds the caller until Frida gives up after 25 seconds, or forever for
 attach, detach and shutdown. These tests make a real ``notepad.exe`` unresponsive in the two ways
 measured in the sandbox (a script handler that never returns, and freezing the whole process) and
 check that each bound ends the call with a ``ToolError`` that names the call, that the bridge's view of

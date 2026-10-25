@@ -23,9 +23,11 @@ would otherwise form cannot close.
 
 from __future__ import annotations
 
+import inspect
+import sys
 import time
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache, lru_cache
 from pathlib import PurePath
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Final, cast
@@ -54,6 +56,7 @@ __all__ = [
     "operation_for",
     "resolve_references",
     "translate_exception",
+    "with_engine_defaults",
 ]
 
 _STATUS_BAD_REQUEST: Final = 400
@@ -266,9 +269,8 @@ def _read_reference(registry: Registry, reference: dict[str, JsonValue], paramet
         raise DispatchError(message, kind="value", status=_STATUS_BAD_REQUEST)
 
     slot = registry.slot(handle)
+    span = sys.maxsize if requested == _TO_END else requested
     with slot.read() as document:
-        total = document.length()
-        span = max(total - offset, 0) if requested == _TO_END else requested
         data = document.read(offset, span)
     return data.hex()
 
@@ -308,6 +310,49 @@ def resolve_references(registry: Registry, parameters: tuple[Parameter, ...], pa
         elif parameter.kind is ValueKind.BYTES_MAP and isinstance(value, dict):
             resolved[parameter.name] = {key: _resolve_entry(registry, key, item, parameter.name) for key, item in value.items()}
     return resolved
+
+
+@cache
+def _engine_defaults(name: str, receiver: Receiver) -> Mapping[str, JsonValue]:
+    """Read the defaults the compiled engine declares for one operation.
+
+    Args:
+        name: Operation name.
+        receiver: Binding classification, which decides where the callable lives.
+
+    Returns:
+        Mapping[str, JsonValue]: Read-only mapping from parameter name to the
+        default the engine gives it. Parameters without a default, and defaults
+        that are not plain JSON scalars, are absent.
+    """
+    owner = intellicrack_hexcore if receiver is Receiver.MODULE else HexDocument
+    signature = inspect.signature(getattr(owner, name))
+    defaults: dict[str, JsonValue] = {}
+    for parameter in signature.parameters.values():
+        default: object = parameter.default
+        if isinstance(default, (bool, int, float, str)):
+            defaults[parameter.name] = default
+    return MappingProxyType(defaults)
+
+
+def with_engine_defaults(operation: Operation, payload: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Fill in the arguments a request left out and the engine gives defaults to.
+
+    The catalog lists every parameter, and decoding insists on all of them, so
+    without this a call that relies on an engine default, such as ``diff_bytes``
+    without its ``min_match`` and ``max_regions``, would be refused as missing
+    arguments. The defaults are read from the compiled engine itself rather than
+    restated here, so they cannot drift from it.
+
+    Args:
+        operation: The operation being invoked.
+        payload: Raw JSON arguments keyed by parameter name.
+
+    Returns:
+        dict[str, JsonValue]: A new payload carrying every argument the request
+        supplied, plus the engine's default for each one it did not.
+    """
+    return {**_engine_defaults(operation.name, operation.receiver), **payload}
 
 
 def _resolve_entry(registry: Registry, key: str, value: JsonValue, parameter: str) -> JsonValue:
@@ -434,7 +479,7 @@ def invoke(registry: Registry, invocation: Invocation, *, timeout: float = _WAIT
         document the call acted on or created.
     """
     operation = invocation.operation
-    payload = resolve_references(registry, operation.parameters, invocation.arguments)
+    payload = with_engine_defaults(operation, resolve_references(registry, operation.parameters, invocation.arguments))
     arguments = decode_arguments(operation.parameters, payload)
 
     value: object = None
@@ -447,7 +492,7 @@ def invoke(registry: Registry, invocation: Invocation, *, timeout: float = _WAIT
             if operation.mutating:
                 with slot.borrow(timeout=timeout) as target:
                     value = _call(target, operation.name, arguments)
-                slot.bump()
+                    slot.bump()
             else:
                 with slot.read() as target:
                     value = _call(target, operation.name, arguments)

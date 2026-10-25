@@ -4,14 +4,14 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Falsifiable gates: a callable worker must outlive the widget that dispatched it.
 
-Every ``GenericCallableWorker`` dispatch site used to hand the calling widget to the worker as its Qt parent. Qt destroys a parent's
+No ``GenericCallableWorker`` dispatch site may hand the calling widget to the worker as its Qt parent. Qt destroys a parent's
 children along with it, and destroying a ``QThread`` whose OS thread is still running aborts the process with a native access violation and
 no Python traceback: exit 255 with nothing reported. Closing the hex editor during a full-file entropy scan, a signature scan or a long
-pattern search did exactly that, as did closing the sandbox dialog while its ``taskkill`` was still running.
+pattern search does exactly that, as does closing the sandbox dialog while its ``taskkill`` is still running.
 
-Dispatch now goes through :func:`run_callable_async`, which creates the worker unparented, records the widget as its owner so
+Dispatch goes through :func:`run_callable_async`, which creates the worker unparented, records the widget as its owner so
 :func:`drain_bridge_workers_for` still finds it, and wraps both callbacks in :func:`guarded_delivery` so a result arriving after the widget
-is gone is dropped instead of raising out of a Qt slot. The same treatment reached the two sites that build their own worker (the strings
+is gone is dropped instead of raising out of a Qt slot. The same treatment applies to the two sites that build their own worker (the strings
 extractor and the process-region lister), whose callbacks capture the worker instance and so cannot be handed to the helper.
 
 The gates below come in three layers:
@@ -477,7 +477,7 @@ def _parented_worker_sites(root: Path) -> list[str]:
 def test_the_dispatched_worker_is_not_parented_to_its_owner(qtbot: QtBot, held_server: _HeldResponseServer) -> None:
     """The dispatched worker must be unparented, with the widget recorded as its owner.
 
-    This is the structural half of the crash fix, and the one behavioural gate that reports a clean failure rather than an aborted
+    This is the structural check, and the one behavioural check that reports a clean failure rather than an aborted
     interpreter: a worker parented to the widget is destroyed with it, and Qt answers the destruction of a running ``QThread`` with an
     access violation.
 
@@ -607,9 +607,9 @@ def test_no_dispatch_site_parents_its_worker_to_a_widget() -> None:
 def test_deleting_the_owner_mid_run_leaves_the_worker_running(qtbot: QtBot, held_server: _HeldResponseServer) -> None:
     """Deleting the widget mid-call must not touch the worker, and must drop its result.
 
-    The crash gate. With the worker parented to the widget again, the ``deleteLater`` below destroys a ``QThread`` that is still blocked
-    inside its request and the interpreter dies on a native access violation: exit 255, no traceback, nothing collected. With the fix the
-    worker runs on, finishes normally once released, and its result is dropped instead of being delivered into freed memory.
+    The crash gate. With the worker parented to the widget, the ``deleteLater`` below destroys a ``QThread`` that is still blocked
+    inside its request and the interpreter dies on a native access violation: exit 255, no traceback, nothing collected. With the worker
+    unparented, the worker runs on, finishes normally once released, and its result is dropped instead of being delivered into freed memory.
 
     Args:
         qtbot: pytest-qt bot, which fails the test on an exception raised inside the Qt event loop -- including a late delivery reaching a

@@ -221,7 +221,7 @@ def _gemini_generate_ok(text: str) -> ScriptedResponse:
 
 @pytest.mark.asyncio
 async def test_gemini_stream_requests_sse_and_yields_text(server: ScriptedHttpServer) -> None:
-    """Item 6: streaming asks for ``alt=sse`` and yields every text chunk."""
+    """Streaming asks for ``alt=sse`` and yields every text chunk."""
     chunks = [
         _gemini_chunk([{"text": "The binary imports "}]),
         _gemini_chunk([{"text": "kernel32.dll"}]),
@@ -246,7 +246,7 @@ async def test_gemini_stream_requests_sse_and_yields_text(server: ScriptedHttpSe
 
 @pytest.mark.asyncio
 async def test_sse_event_split_across_data_lines_is_joined(server: ScriptedHttpServer) -> None:
-    """Item 6: an SSE event whose payload spans two ``data:`` lines still decodes."""
+    """An SSE event whose payload spans two ``data:`` lines still decodes."""
     chunk = json.dumps(_gemini_chunk([{"text": "multi-line event"}], finish="STOP"), indent=1)
     framed = "".join(f"data: {line}\r\n" for line in chunk.splitlines()) + "\r\n"
     server.script("POST", _GEMINI_STREAM_PATH, sse_response([framed.encode()]))
@@ -260,7 +260,7 @@ async def test_sse_event_split_across_data_lines_is_joined(server: ScriptedHttpS
 
 @pytest.mark.asyncio
 async def test_stream_http_error_surfaces_body_not_stream_closed(server: ScriptedHttpServer) -> None:
-    """Items 49 and 61: a failed stream raises the typed error with the body's detail."""
+    """A failed stream raises the typed error with the body's detail."""
     error_body = {"error": {"code": 404, "message": "models/gemini-9 is not found for API version v1beta", "status": "NOT_FOUND"}}
     server.script("POST", _GEMINI_STREAM_PATH, json_response(404, error_body))
     provider = await _connect(server, ApiDialect.GEMINI, "gemini")
@@ -276,7 +276,7 @@ async def test_stream_http_error_surfaces_body_not_stream_closed(server: Scripte
 
 @pytest.mark.asyncio
 async def test_stream_auth_error_carries_body_detail(server: ScriptedHttpServer) -> None:
-    """Item 49: a 401 on a stream becomes AuthenticationError with the endpoint's explanation."""
+    """A 401 on a stream becomes AuthenticationError with the endpoint's explanation."""
     error_body = {"type": "error", "error": {"type": "authentication_error", "message": "invalid x-api-key"}}
     server.script("POST", _ANTHROPIC_MESSAGES_PATH, json_response(401, error_body))
     provider = await _connect(server, ApiDialect.MESSAGES, "anthropic")
@@ -289,7 +289,7 @@ async def test_stream_auth_error_carries_body_detail(server: ScriptedHttpServer)
 
 @pytest.mark.asyncio
 async def test_non_stream_error_keeps_detail_for_every_status(server: ScriptedHttpServer) -> None:
-    """Item 61: a 400 from ``chat`` and a 500 from ``list_models`` keep the body's detail."""
+    """A 400 from ``chat`` and a 500 from ``list_models`` keep the body's detail."""
     bad_request = {"error": {"code": 400, "message": 'Invalid JSON payload received. Unknown name "foo"', "status": "INVALID_ARGUMENT"}}
     server.script("POST", _GEMINI_GENERATE_PATH, json_response(400, bad_request))
     server.script("GET", _GEMINI_MODELS_PATH, json_response(500, {"error": {"code": 500, "message": "backend exploded"}}))
@@ -333,7 +333,7 @@ def _signed_history() -> list[Message]:
 
 @pytest.mark.asyncio
 async def test_thought_signature_replayed_as_base64_string(server: ScriptedHttpServer) -> None:
-    """Item 51: a signed call is replayed over raw HTTP with its base64 signature."""
+    """A signed call is replayed over raw HTTP with its base64 signature."""
     server.script("POST", _GEMINI_GENERATE_PATH, _gemini_generate_ok("opened"))
     provider = await _connect(server, ApiDialect.GEMINI, "gemini")
     try:
@@ -350,7 +350,7 @@ async def test_thought_signature_replayed_as_base64_string(server: ScriptedHttpS
 
 
 def test_function_call_part_is_valid_for_google_genai() -> None:
-    """Item 51: the shared part builder still yields the signature bytes through google-genai."""
+    """The shared part builder still yields the signature bytes through google-genai."""
     call = _signed_history()[1].tool_calls
     assert call is not None
     part = GeminiAdapter.build_function_call_part(call[0], name_style=ToolNameStyle.DOUBLE_UNDERSCORE)
@@ -360,7 +360,7 @@ def test_function_call_part_is_valid_for_google_genai() -> None:
 
 @pytest.mark.asyncio
 async def test_unencodable_body_raises_provider_error(server: ScriptedHttpServer) -> None:
-    """Item 51: a body JSON cannot represent raises ProviderError, not TypeError, and sends nothing."""
+    """A body JSON cannot represent raises ProviderError, not TypeError, and sends nothing."""
     provider = await _connect(server, ApiDialect.GEMINI, "gemini", extra_body={"labels": {"a", "b"}})
     try:
         with pytest.raises(ProviderError, match="cannot be encoded as JSON"):
@@ -374,7 +374,7 @@ async def test_unencodable_body_raises_provider_error(server: ScriptedHttpServer
 
 @pytest.mark.asyncio
 async def test_listed_gemini_model_id_is_not_doubled(server: ScriptedHttpServer) -> None:
-    """Item 59: a model id taken from the listing reaches ``/v1beta/models/<id>`` once."""
+    """A model id taken from the listing reaches ``/v1beta/models/<id>`` once."""
     server.script(
         "GET",
         _GEMINI_MODELS_PATH,
@@ -397,7 +397,7 @@ async def test_listed_gemini_model_id_is_not_doubled(server: ScriptedHttpServer)
 
 @pytest.mark.asyncio
 async def test_streamed_function_calls_keep_ids_and_signatures(server: ScriptedHttpServer) -> None:
-    """Item 60: streamed calls use Gemini's id, never merge, never use the name, and keep signatures."""
+    """Streamed calls use Gemini's id, never merge, never use the name, and keep signatures."""
     chunks = [
         _gemini_chunk([{"functionCall": {"name": "hex_editor__read", "args": {"offset": 0}}}]),
         _gemini_chunk([{"functionCall": {"name": "hex_editor__read", "args": {"offset": 512}}}]),
@@ -425,7 +425,7 @@ async def test_streamed_function_calls_keep_ids_and_signatures(server: ScriptedH
 
 @pytest.mark.asyncio
 async def test_non_streamed_same_name_calls_get_distinct_ids(server: ScriptedHttpServer) -> None:
-    """Item 60: two id-less calls to one function get distinct ids that are not the name."""
+    """Two id-less calls to one function get distinct ids that are not the name."""
     body = _gemini_chunk(
         [
             {"functionCall": {"name": "hex_editor__read", "args": {"offset": 0}}},
@@ -478,7 +478,7 @@ def _rate_limited(headers: tuple[tuple[str, str], ...] = (), message: str = "Rat
 
 @pytest.mark.asyncio
 async def test_retry_after_seconds_is_honoured(server: ScriptedHttpServer) -> None:
-    """Item 62: ``Retry-After: 2`` delays the retry by two seconds, not the 1s backoff."""
+    """``Retry-After: 2`` delays the retry by two seconds, not the 1s backoff."""
     server.script("POST", _OPENAI_CHAT_PATH, _rate_limited((("retry-after", "2"),)), _openai_ok())
     provider = await _connect(server, ApiDialect.CHAT_COMPLETIONS, "openai")
     try:
@@ -494,7 +494,7 @@ async def test_retry_after_seconds_is_honoured(server: ScriptedHttpServer) -> No
 
 @pytest.mark.asyncio
 async def test_retry_after_http_date_is_honoured(server: ScriptedHttpServer) -> None:
-    """Item 62: an HTTP-date ``Retry-After`` delays the retry until that moment."""
+    """An HTTP-date ``Retry-After`` delays the retry until that moment."""
     when = datetime.now(tz=UTC) + timedelta(seconds=3)
     header = email.utils.format_datetime(when, usegmt=True)
     server.script("POST", _OPENAI_CHAT_PATH, _rate_limited((("retry-after", header),)), _openai_ok())
@@ -511,7 +511,7 @@ async def test_retry_after_http_date_is_honoured(server: ScriptedHttpServer) -> 
 
 @pytest.mark.asyncio
 async def test_retry_after_beyond_limit_fails_fast(server: ScriptedHttpServer) -> None:
-    """Item 62: a wait longer than the retry ceiling raises at once instead of hanging."""
+    """A wait longer than the retry ceiling raises at once instead of hanging."""
     server.script("POST", _OPENAI_CHAT_PATH, _rate_limited((("retry-after", "3600"),)), _openai_ok())
     provider = await _connect(server, ApiDialect.CHAT_COMPLETIONS, "openai")
     try:
@@ -525,7 +525,7 @@ async def test_retry_after_beyond_limit_fails_fast(server: ScriptedHttpServer) -
 
 @pytest.mark.asyncio
 async def test_permanent_quota_error_is_not_retried(server: ScriptedHttpServer) -> None:
-    """Item 62: a 429 reporting exhausted billing quota fails once, without retries."""
+    """A 429 reporting exhausted billing quota fails once, without retries."""
     exhausted = json_response(
         429,
         {
@@ -549,7 +549,7 @@ async def test_permanent_quota_error_is_not_retried(server: ScriptedHttpServer) 
 
 @pytest.mark.asyncio
 async def test_gemini_retry_info_marks_quota_429_transient(server: ScriptedHttpServer) -> None:
-    """Item 62: Gemini's per-minute 429 carries ``RetryInfo`` and is retried after its delay.
+    """Gemini's per-minute 429 carries ``RetryInfo`` and is retried after its delay.
 
     The failure is captured as a plain outcome string rather than left to
     propagate, because the package conftest turns any ``ProviderError``
@@ -587,7 +587,7 @@ async def test_gemini_retry_info_marks_quota_429_transient(server: ScriptedHttpS
 
 @pytest.mark.asyncio
 async def test_rate_limited_stream_is_retried_before_any_text(server: ScriptedHttpServer) -> None:
-    """Item 62: a stream rejected with 429 before any bytes is retried and then streams."""
+    """A stream rejected with 429 before any bytes is retried and then streams."""
     ok = _gemini_stream_route([_gemini_chunk([{"text": "streamed after retry"}], finish="STOP")])
     limited = json_response(
         429,
@@ -667,7 +667,7 @@ def _thinking_stream(label: str, *, gates: dict[int, threading.Event], signals: 
 
 @pytest.mark.asyncio
 async def test_concurrent_streams_do_not_share_thinking_state(server: ScriptedHttpServer) -> None:
-    """Item 64: two interleaved Messages streams on one provider keep their own thinking blocks."""
+    """Two interleaved Messages streams on one provider keep their own thinking blocks."""
     alpha_open, beta_open, alpha_done = threading.Event(), threading.Event(), threading.Event()
     streams = {
         "alpha": _thinking_stream("alpha", gates={1: beta_open}, signals={0: alpha_open, 1: alpha_done}),
@@ -702,7 +702,7 @@ async def test_concurrent_streams_do_not_share_thinking_state(server: ScriptedHt
 
 @pytest.mark.asyncio
 async def test_anthropic_model_listing_follows_every_page(server: ScriptedHttpServer) -> None:
-    """Item 66: Anthropic listing follows ``has_more``/``last_id`` through ``after_id``."""
+    """Anthropic listing follows ``has_more``/``last_id`` through ``after_id``."""
 
     def entry(model_id: str) -> dict[str, Any]:
         return {
@@ -735,7 +735,7 @@ async def test_anthropic_model_listing_follows_every_page(server: ScriptedHttpSe
 
 @pytest.mark.asyncio
 async def test_gemini_model_listing_follows_every_page(server: ScriptedHttpServer) -> None:
-    """Item 66: Gemini listing follows ``nextPageToken`` through ``pageToken``."""
+    """Gemini listing follows ``nextPageToken`` through ``pageToken``."""
     server.script(
         "GET",
         _GEMINI_MODELS_PATH,

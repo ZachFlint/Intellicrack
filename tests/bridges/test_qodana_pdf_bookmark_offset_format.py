@@ -3,12 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for ``_pdf_render_bookmarks``'s offset formatting.
+"""Test for ``_pdf_render_bookmarks``'s offset formatting.
 
-Covers the 2026-09-20 Qodana ``PyStringFormatInspection`` finding:
+Covers a ``PyStringFormatInspection`` case:
 ``bookmarks: list[dict[str, object]]`` means ``bm.get("offset", 0)`` types as
-bare ``object``, which does not support the ``:X`` format spec. The function
-now coerces the raw value to ``int`` (falling back to ``0`` for a
+bare ``object``, which does not support the ``:X`` format spec. The function coerces the raw value to
+``int`` (falling back to ``0`` for a
 non-``int`` offset) before formatting it, so a malformed bookmark entry from
 an untrusted or hand-edited bookmark list renders ``0x0`` instead of raising
 ``TypeError`` and aborting the whole PDF export mid-document.
@@ -169,8 +169,8 @@ def test_missing_offset_defaults_to_zero() -> None:
 def test_non_int_offset_falls_back_to_zero_without_crashing() -> None:
     """A malformed non-int ``offset`` must not reach ``:X}`` and must fall back to 0x0.
 
-    Regression target: reverting the ``isinstance(raw_offset, int)`` coercion
-    back to a bare ``bm.get("offset", 0)`` would let this string reach
+    Without the ``isinstance(raw_offset, int)`` coercion,
+    a bare ``bm.get("offset", 0)`` would let this string reach
     ``f"...:X}"`` and raise ``TypeError``, aborting the PDF export.
     """
     pdf = _RecordingFPDF()

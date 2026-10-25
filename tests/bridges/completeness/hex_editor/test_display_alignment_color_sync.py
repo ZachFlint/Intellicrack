@@ -5,13 +5,13 @@
 
 """L3 regression gate: display mode / alignment grid / color mode must sync in both directions.
 
-Covers the hex-editor bridge-routing finding's display-config sub-item.
+Covers display-config synchronization between the GUI and the bridge.
 
 GUI -> bridge: ``HexEditorPanel._on_display_mode_changed`` /
 ``_on_alignment_changed`` / ``_on_color_mode_changed``
-(``ui/panels/hex_editor/panel.py``) only ever called the widget's own
+(``ui/panels/hex_editor/panel.py``) call only the widget's own
 ``set_display_mode`` / ``set_alignment_grid_size`` / ``set_color_mode``.
-They never informed the bridge, so ``hex_editor.get_display_mode`` /
+They do not inform the bridge, so ``hex_editor.get_display_mode`` /
 ``get_color_mode`` / ``get_alignment_grid`` never reflected what the user
 actually picked in the toolbar.
 
@@ -22,11 +22,11 @@ Bridge -> GUI: ``HexEditorPanel._on_state_event`` handled
 so an AI-issued ``hex_editor.set_display_mode(...)`` changed bridge state and
 nothing visible happened in the open window.
 
-The fix adds synchronous ``HexEditorBridge.update_display_mode_from_gui`` /
+Synchronous ``HexEditorBridge.update_display_mode_from_gui`` /
 ``update_alignment_grid_from_gui`` / ``update_color_mode_from_gui`` methods
 (mirroring the existing ``update_selection_from_gui``), calls them -- plus
 the matching ``HexDocumentState.notify_*_changed(..., source="panel")`` --
-from the three GUI handlers, and adds the three missing inbound cases to
+from the three GUI handlers, and adds the three inbound cases to
 ``_on_state_event`` that apply the bridge-driven value to
 ``self._hex_widget``.
 

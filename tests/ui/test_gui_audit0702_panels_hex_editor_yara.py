@@ -2,26 +2,22 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""GUI-audit regression gate for :mod:`intellicrack.ui.panels.hex_editor.yara`.
+"""Gate for the YARA results tree column sizing in :mod:`intellicrack.ui.panels.hex_editor.yara`.
 
-Covers the 2026-07-02 audit finding for ``yara.py``:
+Covers the YARA results tree in ``yara.py``:
 
-* M56 -- the YARA results tree's "Rule" column had no resize mode configured,
-  so ``QTreeView``'s default (``Interactive`` on every section, with only the
-  last section stretched) left the "Rule" column at a fixed, clipped width no
-  matter how long the compiled YARA rule's identifier was. Rule names are
-  exactly the field an analyst reads first when triaging matches, and real
-  rulesets commonly use long, descriptive identifiers. The fix configures the
-  results tree header so column 0 ("Rule") stretches to fill available space,
-  columns 1-3 size to their content, ``stretchLastSection`` is disabled (so
-  "Match Data" no longer eats the freed space), and each rule row also gets a
-  tooltip carrying the full, untruncated rule name.
+* The YARA results tree's "Rule" column must have a resize mode configured. Left at ``QTreeView``'s default (``Interactive`` on
+  every section, with only the last section stretched), the column stays at a fixed, clipped width no matter how long the compiled
+  YARA rule's identifier is. Rule names are exactly the field an analyst reads first when triaging matches, and real rulesets
+  commonly use long, descriptive identifiers. The header configures column 0 ("Rule") to stretch to fill available space, columns
+  1-3 to size to their content, and disables ``stretchLastSection`` (so "Match Data" does not eat the freed space). Each rule row
+  also gets a tooltip carrying the full, untruncated rule name.
 
 All tests drive a real ``YaraMixin`` instance (via a minimal harness exposing
 only the mixin's own bound methods, following the pattern used by the sibling
 ``test_gui_audit_hexsub_yara_goto.py`` gate file) under an offscreen
 ``QApplication``, and inspect the real ``QHeaderView``/``QTreeWidgetItem``
-state the fix produces.
+state the configured header produces.
 """
 
 from __future__ import annotations
@@ -90,10 +86,10 @@ def _build_tab(qapp: QApplication) -> tuple[_YaraTabHarness, QWidget]:
 
 
 def test_m56_rule_column_uses_stretch_others_resize_to_contents(qapp: QApplication) -> None:
-    """M56: the results tree header configures per-column resize modes.
+    """The results tree header configures per-column resize modes.
 
-    Pre-fix, ``_create_yara_tab`` never called ``header()`` at all, so every
-    column (including "Rule") stayed at Qt's default ``Interactive`` resize
+    ``_create_yara_tab`` must call ``header()``; otherwise every
+    column (including "Rule") would stay at Qt's default ``Interactive`` resize
     mode and only the last column ("Match Data") stretched. This asserts the
     fixed configuration: column 0 ("Rule") is ``Stretch``, columns 1-3 are
     ``ResizeToContents``, and ``stretchLastSection`` is disabled so the freed
@@ -119,13 +115,13 @@ def test_m56_rule_column_uses_stretch_others_resize_to_contents(qapp: QApplicati
 
 
 def test_m56_rule_column_actually_widens_with_the_panel_at_runtime(qapp: QApplication) -> None:
-    """M56: the "Rule" column's real on-screen width tracks the widget size.
+    """The "Rule" column's real on-screen width tracks the widget size.
 
     This exercises the concrete runtime consequence of the ``Stretch`` resize
-    mode rather than just the configured enum: with the pre-fix default
+    mode rather than just the configured enum: with the default
     ``Interactive`` mode, a section's pixel width is fixed once computed and
     does not grow when the containing widget is enlarged, so a long rule name
-    stays clipped no matter how much room becomes available. Post-fix, the
+    stays clipped no matter how much room becomes available. Once the header is configured, the
     "Rule" section is bound to the available header width and must measurably
     widen when the container is enlarged.
 
@@ -165,12 +161,12 @@ def test_m56_rule_column_actually_widens_with_the_panel_at_runtime(qapp: QApplic
 
 
 def test_m56_long_rule_name_gets_full_untruncated_tooltip(qapp: QApplication) -> None:
-    """M56: a long rule name is recoverable via tooltip even if visually elided.
+    """A long rule name is recoverable via tooltip even if visually elided.
 
-    Pre-fix, ``_on_yara_scan_success`` built the rule row with
-    ``QTreeWidgetItem([rule_name, "", "", ""])`` and set no tooltip, so a
-    clipped "Rule" cell gave the analyst no way to read the full identifier
-    short of manually widening the column. Post-fix, the row's tooltip on
+    ``_on_yara_scan_success`` builds the rule row with
+    ``QTreeWidgetItem([rule_name, "", "", ""])`` and must set a tooltip, since otherwise a
+    clipped "Rule" cell would give the analyst no way to read the full identifier
+    short of manually widening the column. The row's tooltip on
     column 0 carries the complete rule name regardless of the rendered width.
 
     Args:

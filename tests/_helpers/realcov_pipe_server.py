@@ -232,7 +232,7 @@ def _serve_connection(k32: ctypes.WinDLL, handle: int, mode: str) -> None:
         if mode == MODE_DELAYED_EVENT and request_count == 1:
             # Stay silent for longer than a short client io_timeout before
             # pushing an unsolicited event, reproducing the legitimate idle
-            # gap between debugger events (F16). The client must not treat
+            # gap between debugger events. The client must not treat
             # this silence as a fatal read timeout.
             k32.FlushFileBuffers(handle)
             time.sleep(IDLE_DELAY_SECONDS)

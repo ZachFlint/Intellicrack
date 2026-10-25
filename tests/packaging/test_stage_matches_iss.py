@@ -353,7 +353,7 @@ def test_required_binaries_present_in_stage() -> None:
     assert not missing, "staged tree is missing required binaries:\n  " + "\n  ".join(missing)
 
 
-# --- Falsifiability proofs (run everywhere, including the sandbox) -----------
+# Falsifiability proofs (run everywhere, including the sandbox)
 
 _FAKE_ISS: Final[str] = (
     '#define MyAppName "Intellicrack"\n'
@@ -498,7 +498,7 @@ def test_jdk_glob_requires_exactly_one_directory(tmp_path: Path) -> None:
     assert any("jdk-21" in entry for entry in missing)
 
 
-# --- [Setup] configuration invariants (read the real .iss directly) ----------
+# [Setup] configuration invariants (read the real .iss directly)
 
 # The wizard image directives whose PNG targets must physically exist next to
 # the .iss, keyed by the [Setup] directive that names them.
@@ -607,7 +607,7 @@ def test_setup_directive_parser_is_section_scoped() -> None:
     assert directives["closeapplications"] == "yes"
 
 
-# --- Upgrade/uninstall lifecycle invariants (new installer features) ----------
+# Upgrade/uninstall lifecycle invariants
 
 # The AppMutex the .iss declares must equal the name the running application
 # creates in intellicrack.core.single_instance; asserted verbatim here and
@@ -711,7 +711,7 @@ def test_code_wires_reboot_detection_and_uninstall_cleanup() -> None:
     assert body.count("SetDefenderExclusion") >= 2, "SetDefenderExclusion must be invoked for both add (install) and remove (uninstall)"
 
 
-# --- [Setup] hardening + upgrade/UX invariants (read the real .iss) -----------
+# [Setup] hardening + upgrade/UX invariants (read the real .iss)
 
 
 def test_setup_shows_welcome_and_disables_solid_compression() -> None:
@@ -789,7 +789,7 @@ def test_defender_exclusion_runs_before_payload_extraction() -> None:
     The bundled activation/injection utilities can trip antivirus heuristics, so
     the folder must be excluded *before* ``[Files]`` extracts them. The add path
     (``SetDefenderExclusion('Add')``) must sit in the ``ssInstall`` branch of
-    ``CurStepChanged``; leaving it at ``ssPostInstall`` (the original bug) lets the
+    ``CurStepChanged``; leaving it at ``ssPostInstall`` lets the
     payload land unprotected and turns this red.
     """
     code_lines = iss_section_lines(_read_real_iss(), "Code")
@@ -829,7 +829,7 @@ def test_defender_exclusion_escapes_the_install_path() -> None:
     )
 
 
-# --- [Icons] -> [Files] destination cross-check ------------------------------
+# [Icons] -> [Files] destination cross-check
 
 # An icon target that Inno itself generates (not staged by a [Files] entry).
 _GENERATED_ICON_TARGETS: Final[frozenset[str]] = frozenset({"{uninstallexe}"})
@@ -895,7 +895,7 @@ def unresolved_icon_targets(iss_text: str) -> list[str]:
     ``[Files]`` entry stages -- either an exact non-wildcard destination or a file
     beneath a wildcard-populated directory. Inno-generated targets (the
     uninstaller) are exempt. This is the gate that catches a shortcut pointing at
-    a path the stager never produces (the original dead Hexbench shortcut).
+    a path the stager never produces.
 
     Args:
         iss_text: The full text of an Inno Setup ``.iss`` script.
@@ -926,7 +926,7 @@ def unresolved_icon_targets(iss_text: str) -> list[str]:
 def test_every_icon_points_at_a_staged_file() -> None:
     r"""Real gate: every ``[Icons]`` shortcut resolves to a ``[Files]`` destination.
 
-    Falsifiable against the exact regression that shipped a dead Hexbench
+    Falsifiable against a dead Hexbench
     shortcut: had ``{app}\hexbench\hexbench.exe`` been named while the exe is
     staged as ``{app}\Hexbench.exe``, it would appear here as unresolved.
     """
@@ -969,7 +969,7 @@ def test_icon_files_cross_check_is_falsifiable() -> None:
     assert unresolved == ["{app}/hexbench/hexbench.exe"]
 
 
-# --- Section-parser falsifiability proofs (run everywhere) -------------------
+# Section-parser falsifiability proofs (run everywhere)
 
 _FAKE_SECTIONS_ISS: Final[str] = (
     "[Setup]\n"
@@ -1004,7 +1004,7 @@ def test_iss_section_lines_is_scoped_and_skips_comments() -> None:
     assert iss_section_lines(_FAKE_SECTIONS_ISS, "UninstallDelete") == []
 
 
-# --- Staged-runtime build-path hygiene ---------------------------------------
+# Staged-runtime build-path hygiene
 
 # The build interpreter path substring that pip/distlib console-script shims and
 # the editable dist-info embed. It is drive/checkout- and env-independent (the
@@ -1200,11 +1200,10 @@ def test_build_path_hygiene_checkers_are_falsifiable(tmp_path: Path) -> None:
     assert editable_dist_infos(stage) == ["intellicrack-0.1.0a1.dist-info"], "the dist-info checker missed a planted editable install"
 
 
-# --- Git tracking of the launcher build inputs (host-native) -----------------
+# Git tracking of the launcher build inputs (host-native)
 
 # The launcher bootstrappers and their PyInstaller specs must be committed, or a
-# clean clone cannot build the installer (the original blocker: a broad *.spec
-# ignore swallowed two of the three specs).
+# clean clone cannot build the installer.
 _TRACKED_LAUNCHER_FILES: Final[tuple[str, ...]] = (
     "launcher.py",
     "launcher.spec",

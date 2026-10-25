@@ -5,9 +5,8 @@
 """Gates for the MCP settings dialog's background-worker lifetime.
 
 A ``QThread`` destroyed while its OS thread is still running aborts the
-process. That defect shipped once already in the provider settings dialog and
-took CI's test job down with it, so every way this dialog can be dismissed has
-to let go of a running worker rather than destroy it.
+process, so every way this dialog can be dismissed has to let go of a running
+worker rather than destroy it.
 """
 
 from __future__ import annotations

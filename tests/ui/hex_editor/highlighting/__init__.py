@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for audit4 C2: hex highlighting routing (F-0049)."""
+"""Tests for hex highlighting routing."""

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit7 findings: ``QEMUSandbox`` agent connect lifecycle.
+"""Tests for ``QEMUSandbox`` agent connect lifecycle.
 
 These tests validate ``GuestAgentClient.connect`` against real TCP sockets and
 ``QEMUSandbox._attach_qemu_agents`` / ``_ensure_agent_connected`` directly.
@@ -80,7 +80,7 @@ async def listening_server() -> AsyncIterator[int]:
     A bare TCP listener will not do. The agent is reached through a QEMU SLIRP
     ``hostfwd``, which accepts a host-side connection whether or not anything
     listens inside the guest, so a socket that only accepts is exactly the dead
-    channel S17-D25 was about - and a client that reported it connected would
+    channel was about, and a client that reported it connected would
     pass a test written against it. This peer answers the agent's own protocol,
     so ``connect`` returning True here means what it claims.
 
@@ -483,7 +483,7 @@ class TestQEMUConfigHasAgentConnectTimeout:
     def test_default_value_is_60_seconds(self) -> None:
         """``QEMUConfig().agent_connect_timeout`` defaults to ``60.0`` seconds.
 
-        The audit7 plan calls for a 60s default; verifying the value pins
+        The default is 60s; verifying the value pins
         the configuration contract.
         """
         cfg = QEMUConfig()

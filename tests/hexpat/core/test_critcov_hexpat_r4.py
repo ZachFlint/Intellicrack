@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Fourth-pass critical-coverage tests for two private helpers of the HexPat evaluator.
+"""Critical-coverage tests for two private helpers of the HexPat evaluator.
 
 ``HexPatEvaluator._declared_user_type`` names the user-defined type a variable was declared with and is documented to return ``None``
 when the declaration does not name one. ``HexPatEvaluator._dispatch_resolved_type`` is documented to hand a resolved struct, union,

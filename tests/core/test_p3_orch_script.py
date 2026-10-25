@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""P3-ORCH-SCRIPT: Orchestrator tail operations + ScriptManager gate tests.
+"""Orchestrator tail operations + ScriptManager gate tests.
 
-Covers orchestrator section-7 tails (shutdown, list_sessions, delete_session,
+Covers orchestrator tail operations (shutdown, list_sessions, delete_session,
 mid-pipeline error propagation, JSON export/import round-trip) and ScriptManager
-section-8 tails (list_scripts, delete_script) with real falsifiable gates.
+tail operations (list_scripts, delete_script) with real falsifiable gates.
 Every assertion is verified against an independent oracle, never against a value
 recomputed by the same production code.
 """

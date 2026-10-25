@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Critical-coverage tests for the process bridge's guards, failure paths and thread probes.
+"""Coverage tests for the process bridge's guards, failure paths and thread probes.
 
 Every test that touches a live process drives the real Win32 APIs against a child
 process that the test itself starts (a Python interpreter blocked on stdin), never

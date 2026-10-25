@@ -2,35 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for S16-D07 and S16-D08 in ``provider_config``.
+"""Tests for OAuth login error reporting and API key revocation in ``provider_config``.
 
-* S16-D07: clicking "OAuth Login" for a provider with no ``client_id``
-  configured used to fail silently -- the real
-  ``OAuthManager.build_authorization_url`` already raised
-  ``OAuthConfigurationError`` for a missing ``client_id``, but the flow's
-  ``_on_error`` callback in ``ProviderConfigDialog._run_oauth_flow`` only
-  logged the failure and never told the user. The gate below drives the
-  real ``_run_oauth_flow`` error-handling closure, with a real
-  ``OAuthManager`` and a real (empty-``client_id``) ``OAuthConfig``, and
-  asserts a user-facing error is actually raised through ``show_error``.
+An OAuth login with no ``client_id`` must surface a user-facing error, and revoking a provider without an OAuth flow must delete its stored API key. The gates drive the real ``_run_oauth_flow`` error closure and ``_revoke_credential`` coroutine with a real ``OAuthManager`` and a real ``CredentialStore`` backed by an in-memory ``keyring`` backend, so the host credential manager is never touched.
 
-* S16-D08: "Revoke Token" only ever called the OAuth manager, so for a
-  provider that ``OAuthProvider`` does not recognise (OpenAI, OpenRouter,
-  Grok, Ollama, local Transformers, ...) the handler silently returned
-  without touching the stored API key. The gate below drives the real,
-  private ``provider_config._revoke_credential`` coroutine against a real
-  ``CredentialStore`` backed by an in-memory ``keyring`` backend (so the
-  host's real OS credential manager is never touched) and asserts the
-  stored API key is actually deleted.
-
-Neither production unit under test is mocked: the OAuth failure comes from
-the real ``OAuthManager.build_authorization_url`` client_id guard, and the
-credential deletion comes from the real ``CredentialStore.delete`` running
-against a real (in-memory) ``keyring.backend.KeyringBackend``. Doubles are
-used only for Qt-widget/UI plumbing (a ``SimpleNamespace`` standing in for
-the dialog, and dispatch-recording stand-ins for the async bridge runner),
-mirroring the pattern used by the other ``provider_config`` regression
-suites in this repository.
+Only Qt widget plumbing is stubbed: a ``SimpleNamespace`` stands in for the dialog, and dispatch-recording stand-ins replace the async bridge runner.
 """
 
 from __future__ import annotations
@@ -66,9 +42,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Iterator
 
 
-# ---------------------------------------------------------------------------
-# S16-D07: OAuth Login must not fail silently for a missing client_id
-# ---------------------------------------------------------------------------
+# OAuth Login must not fail silently for a missing client_id
 
 
 def _drive_and_capture_configuration_error(
@@ -105,7 +79,7 @@ def _drive_and_capture_configuration_error(
 
 
 class TestOAuthLoginMissingClientId:
-    """S16-D07: "OAuth Login" must surface an actionable error for a missing client_id."""
+    """Clicking "OAuth Login" must surface an actionable error for a missing client_id."""
 
     @staticmethod
     def test_missing_client_id_surfaces_actionable_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -120,10 +94,9 @@ class TestOAuthLoginMissingClientId:
         ``_on_error`` closure actually surfaces that failure to the user via
         ``show_error`` instead of only logging it.
 
-        Without the fix, ``_on_error`` only called ``_logger.warning(...)``
-        and reloaded the credential overview -- ``show_error`` was never
-        invoked, so this test goes red against the pre-fix code because
-        ``errors`` stays empty.
+        If ``_on_error`` only called ``_logger.warning(...)`` and reloaded the
+        credential overview, ``show_error`` would never run and ``errors`` would
+        stay empty.
 
         Args:
             monkeypatch: Pytest fixture used to patch the module-level OAuth
@@ -178,9 +151,7 @@ class TestOAuthLoginMissingClientId:
         assert reload_calls, "the credential overview must still be reloaded after a failed OAuth flow"
 
 
-# ---------------------------------------------------------------------------
-# S16-D08: Revoke Token must delete a stored API key, not silently no-op
-# ---------------------------------------------------------------------------
+# Revoke Token must delete a stored API key, not silently no-op
 
 
 class _InMemoryKeyringBackend(keyring.backend.KeyringBackend):
@@ -340,7 +311,7 @@ def _revoke_credential_fn() -> _RevokeCredentialFn:
 
 
 class TestRevokeApiKeyProvider:
-    """S16-D08: "Revoke Token" must delete a stored API key instead of silently no-opping."""
+    """Clicking "Revoke Token" must delete a stored API key instead of silently no-opping."""
 
     @staticmethod
     def test_revoke_deletes_api_key_from_real_credential_store(isolated_keyring_backend: _InMemoryKeyringBackend) -> None:
@@ -353,11 +324,9 @@ class TestRevokeApiKeyProvider:
         into the in-memory keyring backend, then the real
         ``_revoke_credential`` coroutine is awaited directly.
 
-        Without the fix, ``_revoke_credential`` (or its caller) either does
-        not exist or unconditionally routes through the OAuth manager and
-        returns without ever calling ``CredentialStore.delete``, so the
-        in-memory backend would still ``contains`` the entry afterward and
-        this test goes red.
+        If ``_revoke_credential`` routed only through the OAuth manager, it would
+        return without calling ``CredentialStore.delete``, so the in-memory
+        backend would still contain the entry afterward.
 
         Args:
             isolated_keyring_backend: The in-memory keyring backend fixture.
@@ -397,7 +366,7 @@ class TestRevokeApiKeyProvider:
     ) -> None:
         """Revoking a non-OAuth provider with nothing configured must not silently report success.
 
-        Guards against a trivial (still-broken) implementation that always
+        Guards against a trivial implementation that always
         returns ``success=True`` regardless of whether anything was actually
         stored.
 

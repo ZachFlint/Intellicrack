@@ -97,7 +97,7 @@ def _read_generated_defines() -> dict[str, str]:
     return dict(_ISS_DEFINE_RE.findall(text))
 
 
-# --- Numeric derivation (pure; runs everywhere including the sandbox) ---------
+# Numeric derivation (pure; runs everywhere including the sandbox)
 
 
 def test_numeric_derivation_strips_prerelease_and_pads() -> None:
@@ -109,7 +109,7 @@ def test_numeric_derivation_strips_prerelease_and_pads() -> None:
     assert derive_numeric_version("3.1") == "3.1.0.0"
 
 
-# --- Installer-critical coupling (sandbox: mounted src + packaging) -----------
+# Installer-critical coupling (sandbox: mounted src + packaging)
 
 
 def test_generated_iss_appversion_matches_metadata() -> None:
@@ -145,7 +145,7 @@ def test_generated_iss_numeric_is_derived_from_metadata() -> None:
     )
 
 
-# --- Developer-metadata agreement (host-native: repo-root files) --------------
+# Developer-metadata agreement (host-native: repo-root files)
 
 
 def test_pyproject_package_and_workspace_versions_agree() -> None:

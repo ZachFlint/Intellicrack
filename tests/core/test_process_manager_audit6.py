@@ -3,13 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit6 CORE-D regression tests for ``intellicrack.core.process_manager``.
+"""Regression tests for ``intellicrack.core.process_manager``.
 
 Exercises:
-    * F-0014 - ``register_external_pid`` rejects PIDs without a live OS process.
-    * F-0020 - ``_atexit_cleanup`` is deduplicated and only walks the process
+    * ``register_external_pid`` rejects PIDs without a live OS process.
+    * ``_atexit_cleanup`` is deduplicated and only walks the process
       tree once.
-    * F-0025 - ``_signal_handler`` does not block synchronously when no event
+    * ``_signal_handler`` does not block synchronously when no event
       loop is running.
 """
 
@@ -253,7 +253,7 @@ class TestF0025SignalHandlerNonBlocking:
         """The handler must complete quickly even when cleanup is slow.
 
         Schedules ``_sync_cleanup`` on a daemon thread and returns to the
-        caller within milliseconds; without the fix, ``_sync_cleanup`` blocks
+        caller within milliseconds; running ``_sync_cleanup`` inline would block
         the OS-level signal handler for the full graceful timeout.
 
         Args:

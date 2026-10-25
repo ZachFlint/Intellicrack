@@ -2,15 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S13-D07 -- Load Binary dialog abnormally short.
+"""Gate for the Load Binary dialog minimum size.
 
-``MainWindow._on_load_binary`` used to call the static
-``QFileDialog.getOpenFileName`` convenience function, which opens the native
-OS dialog. Native dialogs cannot be resized programmatically, and on this
-platform the resulting dialog rendered abnormally short with the OK/Cancel
+``MainWindow._on_load_binary`` must not call the static
+``QFileDialog.getOpenFileName`` convenience function. That function opens the
+native OS dialog, which cannot be resized programmatically, and on this
+platform the resulting dialog renders abnormally short with the OK/Cancel
 buttons and the filter combo clipped off the bottom.
 
-The fix constructs a real ``QFileDialog`` instance with
+The method constructs a real ``QFileDialog`` instance with
 ``QFileDialog.Option.DontUseNativeDialog`` set and a sane minimum size before
 calling ``exec()``. These tests drive the real ``_on_load_binary`` method (not
 a reimplementation), monkeypatching only ``QFileDialog.exec`` so no modal
@@ -108,7 +108,7 @@ def _patch_exec_capture_and_accept(monkeypatch: pytest.MonkeyPatch, captured: li
 
 @pytest.mark.usefixtures("qapp")
 class TestLoadBinaryDialogMinSize:
-    """S13-D07: the Load Binary dialog must be a sized non-native instance."""
+    """The Load Binary dialog must be a sized non-native instance."""
 
     @staticmethod
     def test_dialog_is_non_native_with_min_size_floor(

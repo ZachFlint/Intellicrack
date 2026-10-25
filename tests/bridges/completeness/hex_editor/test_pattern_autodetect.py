@@ -3,16 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L3 regression gates for the hex-editor pattern auto-detect reroute (row #57).
+"""L3 regression gates for the hex-editor pattern auto-detect reroute.
 
-Covers ``audit/bridge-completeness/agent-09-hex-editor.md`` row #57:
+Covers the pattern auto-detect reroute:
 ``SectionsMixin._try_pattern_registry_match`` (``ui/panels/hex_editor/sections.py``)
-previously instantiated its own GUI-local ``PatternRegistry`` and called
+instantiates its own GUI-local ``PatternRegistry`` and called
 ``registry.match_file(DataReaderCls.from_document(self.document))`` directly,
 bypassing ``HexEditorBridge.auto_detect_pattern`` entirely -- so an AI/
-orchestration caller asking the bridge to auto-detect a pattern exercised a
-wholly untested-against-the-GUI code path. The remediation routes the
-auto-detect-on-open feature through
+orchestration caller asking the bridge to auto-detect a pattern ran a path that the GUI did not share. The auto-detect-on-open feature routes through
 ``run_bridge_coroutine_logged(bridge.auto_detect_pattern())``.
 
 Every test drives the real ``HexEditorBridge.auto_detect_pattern`` (real
@@ -127,7 +125,7 @@ class TestPatternAutoDetectGuiRoutesThroughBridge:
 
         Falsifiable: if ``_try_pattern_registry_match`` were reverted to
         instantiate its own local ``PatternRegistry``/``DataReader`` pair
-        (the pre-remediation behaviour) instead of calling
+        (the unrouted behaviour) instead of calling
         ``bridge.auto_detect_pattern()``, the panel's own
         ``bridge._pattern_registry`` (set directly by this test to the gate
         registry) would never be consulted, and the status label would

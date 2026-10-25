@@ -3,14 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Second-pass critical-coverage tests for ``intellicrack.bridges.hex_editor``.
+"""Coverage tests for ``intellicrack.bridges.hex_editor``.
 
-The first pass and the earlier suites already drive every branch that a real
-``intellicrack_hexcore.HexDocument`` can reach. What is left here is small: the
+Other suites already drive every branch that a real
+``intellicrack_hexcore.HexDocument`` can reach. This module covers the remainder: the
 probe-failure path of ``initialize``, the unavailable transform-pipeline guard, the
 ASCII scanner when the buffer ends on a non-printable byte, the no-document guard of
 ``export_patches_ups``, the PDF hex-row renderer (driven through a real subclass of
-the bridge's own ``_FPDFProtocol``), and a red test for the PE checksum contract.
+the bridge's own ``_FPDFProtocol``), and a test for the PE checksum contract.
 Expectations are written out literally from the documented layouts.
 """
 

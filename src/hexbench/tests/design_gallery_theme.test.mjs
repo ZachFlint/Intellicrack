@@ -3,7 +3,7 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates the one switch on the design gallery (DS-8).
+ * Gates the one switch on the design gallery.
  *
  * `design/index.html` is generated, links the live stylesheet, and carries the
  * only piece of behaviour in the whole design directory: two inline scripts

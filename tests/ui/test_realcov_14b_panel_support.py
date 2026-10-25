@@ -5,8 +5,8 @@
 
 """Real-Qt coverage for the panel support layer and tool-panel helpers.
 
-The audit flagged ``qt_compat.py``, ``base_panel.py``, and the Frida / Ghidra /
-Cutter panels as having missing or server-only coverage. A live Frida agent,
+This module covers ``qt_compat.py``, ``base_panel.py``, and the Frida / Ghidra /
+Cutter panels. A live Frida agent,
 Ghidra server, and Cutter/Rizin backend are genuine external infrastructure
 that is absent in the container; the network-bound operations are therefore
 out of scope here and covered by the bridge suites.
@@ -137,7 +137,7 @@ class _ConcretePanel(AnalysisPanelBase):
     """Concrete ``AnalysisPanelBase`` exposing a console for lifecycle tests."""
 
     def __init__(self) -> None:
-        """Initialise the panel and record cleanup invocations."""
+        """Initialize the panel and record cleanup invocations."""
         self.cleanup_calls: int = 0
         super().__init__()
 

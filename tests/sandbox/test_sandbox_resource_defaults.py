@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the sandbox CPU/memory defaults and job forwarding.
+"""Gates for the sandbox CPU/memory defaults and job forwarding.
 
 These tests pin the operator-facing contract for sandbox resource sizing: the
 per-run CPU and memory share is left unpinned by default so the admission
@@ -80,8 +80,8 @@ def test_cpu_and_memory_are_unpinned_by_default() -> None:
     """Omitting the flags must leave the per-run size for the governor to pick.
 
     A non-``None`` parser default would pin every run to one fixed size, which
-    is what the admission governor replaced: sizing is derived from the host so
-    several runs fit concurrently.
+    defeats the admission governor: sizing is derived from the host so several
+    runs fit concurrently.
     """
     args = _build_parser().parse_args(["coverage"])
     assert args.cpus is None, f"--cpus must default to auto-sizing; got {args.cpus!r}"
@@ -117,13 +117,13 @@ def test_pinned_resources_are_honoured_verbatim() -> None:
 
 
 def test_cpu_flag_overrides_default() -> None:
-    """An explicit ``--cpus`` still wins over the new default."""
+    """An explicit ``--cpus`` still wins over the default."""
     args = _build_parser().parse_args(["coverage", "--cpus", "4"])
     assert args.cpus == "4"
 
 
 def test_memory_flag_overrides_default() -> None:
-    """An explicit ``--memory`` still wins over the new default."""
+    """An explicit ``--memory`` still wins over the default."""
     args = _build_parser().parse_args(["coverage", "--memory", "8g"])
     assert args.memory == "8g"
 

@@ -3,7 +3,7 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates UX-8: the toolbar's Go to field states its base, and the field and the
+ * Gates the toolbar's Go to field, which states its base, and the field and the
  * Ctrl+G dialog are one answer to one question rather than two.
  *
  * Both halves are markup and wiring -- the affordance is a literal prefix in
@@ -90,7 +90,7 @@ check(
   '#jumpTo no longer seeks and focuses the grid, so Go to would update a text field and nothing else',
 );
 /*
- * 'Not an offset' is also the toast BE-3's block-editing dialogs raise for
+ * 'Not an offset' is also the toast the block-editing dialogs raise for
  * their own destination-offset fields (copyBlock, moveBlock, swapBlocks), so
  * counting the literal across the whole file no longer isolates the two Go to
  * routes. Each route's own method body is checked instead.

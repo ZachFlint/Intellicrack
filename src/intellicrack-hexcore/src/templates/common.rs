@@ -5,6 +5,8 @@
 
 use super::{Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry};
 
+/// Registers the built-in common-structure templates (GUID and the like) into
+/// `registry`.
 pub fn register_templates(registry: &mut TemplateRegistry) {
     registry.register(guid_template());
     registry.register(filetime_template());
@@ -12,6 +14,7 @@ pub fn register_templates(registry: &mut TemplateRegistry) {
 
 fn fd(name: &str, field_type: FieldType, description: &str) -> FieldDefinition {
     FieldDefinition {
+        at: None,
         name: name.to_string(),
         field_type,
         endianness: None,

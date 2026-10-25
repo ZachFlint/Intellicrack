@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Third-pass coverage tests for ``CutterBridge`` built on measured rizin 0.9.1 behavior.
+"""Coverage tests for ``CutterBridge`` built on measured rizin 0.9.1 behavior.
 
 Static tests load ``where.exe`` through a real rizin session and compare the bridge
 with the ``pefile`` entry point, the SHA-256 of a byte-identical copy, and the

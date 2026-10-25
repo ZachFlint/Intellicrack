@@ -3,11 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L3 gate tests for the x64dbg Patches tab (rows 29-31 of the state-manipulation slice).
+"""L3 gate tests for the x64dbg Patches tab .
 
-``get_patches``, ``restore_patch``, and ``export_patches`` were fully
-implemented and registered bridge methods with no GUI surface at all
-(NO-CONTROL). The remediation added a "Patches" tab to ``x64dbg_panel.py``
+``get_patches``, ``restore_patch``, and ``export_patches`` are registered bridge methods. The panel adds a "Patches" tab to ``x64dbg_panel.py``
 that lists applied patches, restores a selected patch, and exports the
 patch set to a file, each backed by a real bridge coroutine dispatched via
 ``run_bridge_coroutine_logged``.
@@ -277,10 +275,7 @@ class TestExportPatchesDrivesExportPatchesBridgeCall:
     """Clicking Export must call the real ``bridge.export_patches(path)`` and report success.
 
     ``QFileDialog.getSaveFileName`` is a native OS dialog that cannot run
-    headless in the sandbox, so it is monkeypatched to return a
-    deterministic path (the same accepted pattern used in
-    ``tests/test_audit4/c13_hex_patches_route/test_patches_bridge_route.py``);
-    everything downstream of the dialog -- button click, bridge dispatch,
+    headless in the sandbox, so it is monkeypatched to return a deterministic path. Everything downstream of the dialog -- button click, bridge dispatch,
     ``get_patches``/``savedata`` command framing, output-file
     verification, and console rendering -- is real production code.
     """

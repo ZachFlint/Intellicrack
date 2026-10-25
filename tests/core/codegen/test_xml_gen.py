@@ -2,16 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit3 U10 regression tests for ``intellicrack.core.xml_gen``.
+"""Regression tests for ``intellicrack.core.xml_gen``.
 
 Covers:
 
-- F-0011: ``xml_gen.py`` must not obfuscate its
-  ``xml.etree.ElementTree`` dependency. Earlier revisions used
-  :func:`importlib.import_module` and later
-  ``__import__("xml" + ".etree.ElementTree")`` purely to dodge bandit
-  B405. Both forms broke static analysers and type checkers. The
-  production fix uses a plain ``import xml.etree.ElementTree as ET``
+- ``xml_gen.py`` must not obfuscate its
+  ``xml.etree.ElementTree`` dependency. Dynamic imports such as
+  :func:`importlib.import_module` or ``__import__`` break static analysers and
+  type checkers, so the module uses a plain ``import xml.etree.ElementTree as ET``
   with the B405 skip recorded once in ``pyproject.toml`` instead of
   scattered inline directives.
 """
@@ -36,15 +34,13 @@ from intellicrack.core.xml_gen import (
 )
 
 
-# ---------------------------------------------------------------------------
-# F-0011: the re-exported XML primitives must be the genuine, fully functional
+# The re-exported XML primitives must be the genuine, fully functional
 # stdlib ``xml.etree.ElementTree`` objects. The behavioural property that
 # matters -- regardless of how the import is spelled in source -- is that the
 # module's factories produce byte-for-byte identical XML to the stdlib
 # originals imported directly. These gates drive the production re-exports
 # end-to-end and compare against an independent oracle: the same operation
 # performed with the directly-imported stdlib objects.
-# ---------------------------------------------------------------------------
 
 
 def test_f0011_element_factory_matches_stdlib_element() -> None:
@@ -163,9 +159,7 @@ def test_f0011_re_exports_are_the_stdlib_objects() -> None:
     assert xml_gen.tostring is _stdlib_tostring
 
 
-# ---------------------------------------------------------------------------
-# Functional surface: re-exports must remain operational after the refactor
-# ---------------------------------------------------------------------------
+# Functional surface: re-exports must remain operational
 
 
 def test_xml_gen_exports_match_dunder_all() -> None:

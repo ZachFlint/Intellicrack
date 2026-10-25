@@ -4,11 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates that every painted view takes its colours from the ThemeManager palette of the active theme id.
 
-The hex editor, its charts, the control-flow graph, the call-stack table, the credential indicators and the hex-mark defaults used to hold
-private dark/light tables keyed off ``is_dark_theme()``, so ``dark2`` could never differ from ``dark``. These gates build the real widgets,
-apply themes through the real :class:`ThemeManager`, and read back what the widgets resolved. The decisive check gives ``dark2`` a palette
-entry of its own and requires the widget to show it under ``dark2`` only: a widget that still reads a private table, or a family-wide one,
-cannot pass.
+The hex editor, its charts, the control-flow graph, the call-stack table, the credential indicators and the
+hex-mark defaults must read the palette of the active theme id, not private dark/light tables keyed off
+``is_dark_theme()``, which cannot tell ``dark2`` from ``dark``. These gates build the real widgets, apply
+themes through the real :class:`ThemeManager`, and read back what the widgets resolved. The decisive check
+gives ``dark2`` a palette entry of its own and requires the widget to show it under ``dark2`` only: a widget
+that still reads a private table, or a family-wide one, cannot pass.
 """
 
 from __future__ import annotations

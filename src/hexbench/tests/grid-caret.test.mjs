@@ -66,7 +66,7 @@ check('clamp: above the ceiling', clamp(15, 0, 10) === 10, `expected 10, got ${c
 check('clamp: inside the range is untouched', clamp(4, 0, 10) === 4, `expected 4, got ${clamp(4, 0, 10)}`);
 check('clamp: reaching the ceiling exactly is allowed', clamp(10, 0, 10) === 10, `expected 10, got ${clamp(10, 0, 10)}`);
 
-/* --------------------------------------------------------- findings #3, #12 */
+/* --------------------------------------------------------- typing caret */
 
 const typeByte = extractBlock(gridSource, /#typeByte\(value\) \{/).full;
 check(
@@ -100,7 +100,7 @@ check(
   'a caller still clamps a post-edit caret to one byte short of where the write actually reached',
 );
 
-/* -------------------------------------------------------------- finding #36 */
+/* -------------------------------------------------------------- empty selection */
 
 const selectMethod = extractBlock(gridSource, /select\(offset, length\) \{/).full;
 check(
@@ -114,7 +114,7 @@ check(
   'select() still derives start/end from Math.max(0, total - 1), which collapses to 0 on an empty document and manufactures a phantom selection',
 );
 
-/* -------------------------------------------------------------- finding #64 */
+/* -------------------------------------------------------------- append-position caret */
 
 const hexClass = extractBlock(gridSource, /#hexClass\(column, offset, value, beyond, shared\) \{/).full;
 const asciiClass = extractBlock(gridSource, /#asciiClass\(offset, value, beyond, shared\) \{/).full;
@@ -131,7 +131,7 @@ check(
   'the append-position cell (offset === caretOffset === documentLength) is still excluded from every caret class by the bare !beyond guard',
 );
 
-/* -------------------------------------------------------------- finding #65 */
+/* -------------------------------------------------------------- nibble stepping */
 
 const stepLeft = extractBlock(gridSource, /#stepLeft\(\) \{/).full;
 const stepRight = extractBlock(gridSource, /#stepRight\(\) \{/).full;

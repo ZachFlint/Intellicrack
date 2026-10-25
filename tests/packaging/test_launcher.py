@@ -4,12 +4,11 @@
 # This file is part of Intellicrack. See LICENSE for details.
 r"""Falsifiable gates for the frozen ``Intellicrack.exe`` launcher.
 
-These gates pin the launcher behaviours the installer audit flagged:
+These gates pin the launcher behaviours below:
 
 * A fatal startup failure must be reportable even when ``sys.stderr`` is
   ``None`` -- which it is in a frozen windowed process. The launcher must not
-  raise ``AttributeError`` trying to write to a missing stream (the original
-  bug, where ``return 1`` was unreachable dead code).
+  raise ``AttributeError`` trying to write to a missing stream.
 * ``runtime\\Scripts`` must never be placed on the child PATH: its pip
   console-script shims embed the absolute build-interpreter path, a hijack
   surface on a target where that path is user-writable.
@@ -134,7 +133,7 @@ def _make_fake_install(root: Path) -> Path:
     return root
 
 
-# --- Startup failure reporting (the dead-stderr bug) --------------------------
+# Startup failure reporting
 
 
 def test_report_error_survives_a_none_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -177,7 +176,7 @@ def test_report_error_writes_to_stderr_when_present(monkeypatch: pytest.MonkeyPa
     assert "".join(written) == "boom\n"
 
 
-# --- Child spawn configuration ------------------------------------------------
+# Child spawn configuration
 
 
 @_WINDOWS_CREATION_FLAGS
@@ -296,7 +295,7 @@ def test_child_env_does_not_mutate_the_process_environment(tmp_path: Path, monke
     assert dict(os.environ) == before
 
 
-# --- launch() routes failures through report_error ----------------------------
+# launch() routes failures through report_error
 
 
 def test_launch_reports_and_fails_when_the_runtime_is_absent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -331,9 +330,9 @@ def test_launch_reports_and_fails_when_the_state_dir_cannot_be_created(tmp_path:
 
     ``build_child_env`` performs the one disk-touching step on the launch path:
     it creates ``%LOCALAPPDATA%\Intellicrack``. A file already occupying that
-    name -- or a locked-down profile -- makes that ``mkdir`` raise, and the call
-    used to sit outside every ``try``, so the exception escaped ``launch`` and
-    the frozen windowed bootloader put a raw traceback on screen.
+    name -- or a locked-down profile -- makes that ``mkdir`` raise. Unguarded, the
+    exception would escape ``launch`` and
+    the frozen windowed bootloader shows a raw traceback.
 
     The failure is produced for real rather than simulated: a *file* is placed
     where the directory must go, and the precondition below confirms

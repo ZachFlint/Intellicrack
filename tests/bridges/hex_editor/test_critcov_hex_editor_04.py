@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Critical-coverage tests for the patch, VA, export, PE and scan slice of ``intellicrack.bridges.hex_editor``.
+"""Coverage tests for the patch, VA, export, PE and scan paths of ``intellicrack.bridges.hex_editor``.
 
 Every test drives the real ``HexEditorBridge`` against a real in-memory or on-disk
 ``intellicrack_hexcore.HexDocument``. Patch files are encoded by hand from the IPS, BPS and

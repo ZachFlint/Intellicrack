@@ -3,36 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Gates for S18-D03: trace-record hit counts need the page armed first.
+"""Gates for trace-record hit counts, which need the page armed first.
 
-``get_trace_record`` could not return a non-zero ``hitCount`` for any address
-under any circumstances. x64dbg allocates a page's per-byte execution counters
-only once a trace record type has been set for that page, and nothing in the
-bridge or the plugin ever called ``SetTraceRecordType`` - so the
-``GetTraceRecordHitCount`` the plugin read had no buffer behind it and answered
-zero forever. The step half of the same audit item worked; only the hit-count
-accounting was inert.
+``get_trace_record`` could not return a non-zero ``hitCount`` for any address. x64dbg allocates a page's per-byte execution counters only once a trace record type has been set for that page, and the bridge never called ``SetTraceRecordType``. The ``GetTraceRecordHitCount`` the plugin read therefore had no buffer behind it and answered zero. The step half of the same behaviour worked; only the hit-count accounting was inert.
 
-Driven live against a real x64dbg and a real ``notepad.exe`` before these gates
-were written. The probe read the entry point at ``0x7FFFEEB21194`` four times:
+The live probe on a real x64dbg and a real ``notepad.exe`` debuggee read the entry point four times. Before arming, the page type was ``none`` with hit count 0. After ``set_trace_record`` it was ``word`` with hit count 0. After 12 single-steps it was ``word`` with hit count 1. After releasing the page it was ``none`` with hit count 0. Stepped addresses on a second, never-armed page stayed at zero even though the debuggee executed them.
 
-===========================  ==========  ==========
-stage                        page type   hit count
-===========================  ==========  ==========
-before arming                ``none``    0
-after ``set_trace_record``   ``word``    0
-after 12 single-steps        ``word``    1
-after releasing the page     ``none``    0
-===========================  ==========  ==========
-
-and the eleven stepped addresses that landed on a *second* page
-(``0x7FFFEE9CA000``, never armed) stayed at zero throughout even though the
-debuggee had just executed every one of them.
-
-:class:`_X64DbgTraceRecordEngine` below is derived from those observations -
-per-page arming, counters that exist only for armed pages, a release that
-discards them - rather than from the bridge's own logic, so each gate fails
-when its half of the fix is reverted.
+:class:`_X64DbgTraceRecordEngine` below models those observations: per-page arming, counters that exist only for armed pages, and a release that discards them. It is not derived from the bridge's own logic, so each gate fails if its half of the behaviour is mishandled.
 """
 
 from __future__ import annotations
@@ -53,7 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-# The live probe's entry point, and an address the probe showed on a different
+# The entry point, and an address on a different
 # page: 0x7FFFEEB21194 vs 0x7FFFEE9CA399 differ well beyond one page.
 _ENTRY_ADDR: Final[int] = 0x7FFFEEB21194
 _OTHER_PAGE_ADDR: Final[int] = 0x7FFFEE9CA399
@@ -65,17 +42,15 @@ _READ_SPAN: Final[int] = 4
 
 
 class _X64DbgTraceRecordEngine:
-    """x64dbg's trace-record behaviour as the live probe observed it.
+    """x64dbg's trace-record behaviour, as observed on a live debuggee.
 
-    Four properties, each read off the probe rather than off the bridge:
+    Four properties:
 
     * every page starts at record type ``none``;
     * setting a type stores it for the 4 KiB page an address falls in, and
-      reading the type back returns it - the probe's replies named the
-      queried address' page, masked to 4 KiB;
+      reading the type back returns it - the replies name the queried address' page, masked to 4 KiB;
     * a page at ``none`` has no counters, so every address on it reads
-      back as zero no matter how often the debuggee executed it - which is
-      what the eleven addresses on the never-armed second page did;
+      back as zero no matter how often the debuggee executed it - as seen on a never-armed second page;
     * executing an address on an armed page increments that address'
       counter, which is how the entry point reached 1 after stepping.
     """
@@ -298,7 +273,7 @@ def engine() -> _X64DbgTraceRecordEngine:
 
 @pytest.mark.asyncio
 class TestHitCountsRequireAnArmedPage:
-    """The defect and its fix, against the observed x64dbg engine."""
+    """Hit-count reporting against the observed x64dbg engine."""
 
     async def test_execution_alone_records_nothing_and_says_so(
         self,
@@ -307,11 +282,7 @@ class TestHitCountsRequireAnArmedPage:
     ) -> None:
         """An unarmed page counts nothing however often the debuggee runs it.
 
-        This is S18-D03 itself: without ``set_trace_record`` there is no
-        counter to read, which is why the pre-fix bridge could only ever
-        report zero. The reply must now also carry the page's ``type``, so
-        that zero is diagnosable rather than indistinguishable from an
-        address that genuinely never ran.
+        Without ``set_trace_record`` there is no counter to read, so an unarmed page can only ever report zero. The reply must also carry the page's ``type``, so that zero is diagnosable rather than indistinguishable from an address that genuinely never ran.
 
         Args:
             bridge: Fixture bridge instance.
@@ -336,7 +307,7 @@ class TestHitCountsRequireAnArmedPage:
         """Arming the page turns the identical execution into a real count.
 
         The only difference from the gate above is the ``set_trace_record``
-        call, so a fix that stops arming the page - or arms it with the
+        call, so a change that stops arming the page - or arms it with the
         wrong type - drops this straight back to zero.
 
         Args:
@@ -362,9 +333,7 @@ class TestHitCountsRequireAnArmedPage:
     ) -> None:
         """A second page keeps counting nothing until it is armed in turn.
 
-        The live probe saw exactly this: eleven stepped addresses on a page
-        the probe never armed stayed at zero while the armed entry point
-        reached one.
+        Eleven stepped addresses on a page that was never armed stay at zero while the armed entry point reaches one.
 
         Args:
             bridge: Fixture bridge instance.
@@ -387,7 +356,7 @@ class TestHitCountsRequireAnArmedPage:
         bridge: X64DbgBridge,
         engine: _X64DbgTraceRecordEngine,
     ) -> None:
-        """``none`` releases the page's counters, as the probe's teardown did.
+        """``none`` releases the page's counters.
 
         Args:
             bridge: Fixture bridge instance.
@@ -411,9 +380,7 @@ class TestHitCountsRequireAnArmedPage:
     ) -> None:
         """``size`` selects how many bytes' counters come back, not just one.
 
-        x64dbg keeps a counter per byte, so a caller asking about a span of
-        an instruction's bytes gets the whole span. The pre-fix reply
-        ignored ``size`` entirely.
+        x64dbg keeps a counter per byte, so a caller asking about a span of an instruction's bytes gets the whole span. A reply that ignored ``size`` would return only the first byte's counter.
 
         Args:
             bridge: Fixture bridge instance.
@@ -479,9 +446,9 @@ class TestArmingIsVerifiedBeforeItIsBelieved:
 
         x64dbg allocates the page's counter buffer inside
         ``SetTraceRecordType``; when that allocation fails the page keeps
-        its old type while the call still returns. Trusting the call alone
+        the type it had before the call while the call still returns. Trusting the call alone
         would leave the caller reading zeros forever and believing the page
-        armed - the exact shape of the original defect.
+        armed - the zero-hit-count failure these gates exist to prevent.
 
         Args:
             bridge: Fixture bridge instance.

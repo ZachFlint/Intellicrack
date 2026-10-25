@@ -5,7 +5,7 @@
 """Closing Provider Settings mid-request must not destroy the running worker.
 
 The settings widget refreshes its model list on a background ``QThread``. That
-thread used to be parented to the widget, so closing the widget while a
+thread must not be parented to the widget, so closing the widget while a
 refresh was in flight -- against a slow or unreachable endpoint, for up to the
 request's 15-second timeout -- had Qt delete a running thread together with its
 parent. Qt answers that with an access violation that takes the whole

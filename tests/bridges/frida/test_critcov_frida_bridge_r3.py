@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Third-pass critical-coverage tests for the Frida bridge, written from measurements in the real container.
+"""Coverage tests for the Frida bridge, written from measurements in the real container.
 
 Every test drives the real Frida runtime against a child process that the test
 itself starts (a Python interpreter blocked on stdin), never against the pytest
@@ -365,7 +365,7 @@ def test_script_error_replies_become_tool_errors_and_leave_nothing_registered(
 
 
 def test_query_protection_failure_names_the_reason_pd079(attached_bridge: FridaBridge) -> None:
-    """A protection query that Frida refuses carries the script's error text (logged defect PD-079, red until fixed).
+    """A protection query that Frida refuses carries the script's error text .
 
     Args:
         attached_bridge: Bridge attached to the child.
@@ -616,7 +616,7 @@ def test_dead_remote_device_surfaces_as_a_tool_error_not_a_raw_frida_error(
     dead_remote_host: str,
     call: Callable[[FridaBridge], Coroutine[object, object, object]],
 ) -> None:
-    """Attach, kill and spawn on a remote device with no server raise the documented tool error (suspected defect, red until fixed).
+    """Attach, kill and spawn on a remote device with no server raise the documented tool error .
 
     Args:
         idle_bridge: Initialized bridge without a session.
@@ -633,7 +633,7 @@ def test_attach_to_an_exited_process_whose_handle_is_still_open_raises_a_tool_er
     idle_bridge: FridaBridge,
     tmp_path: Path,
 ) -> None:
-    """A process that has exited but is still referenced cannot take the agent, and the attach reports that as a tool error (suspected defect, red until fixed).
+    """A process that has exited but is still referenced cannot take the agent, and the attach reports that as a tool error .
 
     Args:
         idle_bridge: Initialized bridge without a session.

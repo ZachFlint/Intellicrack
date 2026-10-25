@@ -2,13 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S16-D02 -- chat assistant markdown rendered as raw text.
+"""Chat assistant markdown must render as formatted text, not as raw markup.
 
-Before the fix, ``MessageBubble.content_label`` was a plain ``QLabel`` fed
+``MessageBubble.content_label`` must not be a plain ``QLabel`` fed
 through ``setText``/``.content_label.setText``, so assistant markdown such as
 ``## Registers``, ``* **EAX**``, and fenced ```` ```python ```` code blocks
-was displayed to the user literally, backticks and all. The fix replaces the
-``QLabel`` with a ``QTextBrowser``-based ``_MarkdownView`` that renders
+would be displayed to the user literally, backticks and all. The content view is a
+``QTextBrowser``-based ``_MarkdownView`` that renders
 CommonMark markdown via Qt's native ``setMarkdown`` support, re-rendering the
 accumulated text on every streamed chunk.
 
@@ -138,7 +138,7 @@ def test_streaming_reflows_accumulated_markdown_on_each_chunk(qapp: object) -> N
 def test_user_message_content_is_preserved_and_selectable(qapp: object) -> None:
     """A plain user message still displays its full text and remains selectable.
 
-    Guards against the markdown rendering fix regressing user-message
+    Guards against the markdown rendering regressing user-message
     display: plain conversational text with no markdown syntax must still
     show up verbatim in the rendered view, and the view must keep
     text-selection enabled so users can still copy content out of the chat.
@@ -163,7 +163,7 @@ def test_empty_content_bubble_stays_hidden(qapp: object) -> None:
 
     Streaming responses start with an empty ``Message.content`` before the
     first chunk arrives; the content view must stay invisible until real
-    text is appended, matching the previous ``QLabel``-based behavior.
+        text is appended.
 
     Args:
         qapp: Session-scoped offscreen QApplication fixture.

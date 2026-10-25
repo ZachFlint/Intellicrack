@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the coverage runner's collection targets.
+"""Gates for the coverage runner's collection targets.
 
 The coverage runner spawns one pytest process per leaf test directory. When a
 group is addressed by filesystem path, pytest builds the package chain twice

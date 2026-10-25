@@ -3,25 +3,25 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GUI audit regression gates for ``intellicrack.ui.panels.x64dbg_panel``.
+"""Gates for ``intellicrack.ui.panels.x64dbg_panel`` teardown, status, splitters and labels.
 
-Covers the 2026-07-02 audit findings for ``x64dbg_panel.py``:
+Covers the ``x64dbg_panel.py`` widgets:
 
-* H13 -- ``_cleanup`` must dispatch the teardown ``stop()`` RPC through
+* ``_cleanup`` must dispatch the teardown ``stop()`` RPC through
   ``run_bridge_coroutine`` with a bounded ``timeout_s`` so a hung debugger
   IPC pipe cannot freeze the Qt event loop forever.
-* H28 -- the toolbar status label must be assigned to the base class's
+* The toolbar status label must be assigned to the base class's
   ``self.status_label`` (not a shadowing ``self._status_label``), so every
   ``_set_status`` call actually reaches the widget the user sees.
-* M31 -- switching the module-detail table from Sections to Exports must
+* Switching the module-detail table from Sections to Exports must
   reset the column count to the Exports schema instead of leaving a stale,
   always-empty 4th column behind.
-* M64 -- the main/top splitters must be non-collapsible and their child
+* The main/top splitters must be non-collapsible and their child
   panes must carry minimum sizes so a drag cannot hide the disassembly view,
   inspect tabs, or bottom tab area entirely.
-* M65 -- the Process Info Path/Command Line labels must word-wrap long
+* The Process Info Path/Command Line labels must word-wrap long
   values instead of clipping them with no way to read the full text.
-* L17 -- the module table must stretch only the variable-length Path
+* The module table must stretch only the variable-length Path
   column (short columns size to content) and Path cells must carry a
   tooltip with the untruncated value.
 
@@ -216,7 +216,7 @@ def _assert_wraps_within_width(label: QLabel, width: int) -> None:
     Constrains the label to a narrow width and checks that the wrapped
     height for that width spans multiple text lines; a label without word
     wrap reports a fixed single-line ``heightForWidth`` regardless of width,
-    which is the pre-fix clipping failure mode.
+    which is the clipping failure this check guards against.
 
     Args:
         label: The label under test, already populated with long text.
@@ -233,7 +233,7 @@ def _assert_wraps_within_width(label: QLabel, width: int) -> None:
 
 
 class TestH13CleanupUsesBoundedTeardownTimeout:
-    """H13: teardown's ``stop()`` RPC must not be able to block forever."""
+    """Teardown's ``stop()`` RPC must not be able to block forever."""
 
     @staticmethod
     def test_h13_cleanup_dispatches_stop_with_a_bounded_timeout(
@@ -242,9 +242,9 @@ class TestH13CleanupUsesBoundedTeardownTimeout:
     ) -> None:
         """``_cleanup`` must call ``run_bridge_coroutine`` with a non-``None`` ``timeout_s``.
 
-        Regression: pre-fix, ``_cleanup`` called
+        ``_cleanup`` must not call
         ``run_bridge_coroutine(self._bridge.stop())`` with no ``timeout_s``
-        keyword at all, so the recorder installed here would observe
+        keyword, since the recorder installed here would otherwise observe
         ``timeout_s=None`` (its default) -- an unbounded wait.
 
         Args:
@@ -279,8 +279,8 @@ class TestH13CleanupUsesBoundedTeardownTimeout:
         the caught ``TimeoutError`` path actually bounds the wall-clock
         wait instead of the caller blocking until the coroutine completes.
 
-        Regression: pre-fix, ``_CLEANUP_STOP_TIMEOUT_S`` did not exist and
-        the call site passed no ``timeout_s`` at all, so
+        ``_CLEANUP_STOP_TIMEOUT_S`` must exist, and the call site must pass
+        a ``timeout_s``, otherwise
         ``future.result(timeout=None)`` would have blocked for the full 30
         seconds (or forever, for a genuinely hung RPC) instead of returning
         in a fraction of a second.
@@ -306,15 +306,15 @@ class TestH13CleanupUsesBoundedTeardownTimeout:
 
 
 class TestH28StatusLabelWiredToBaseClassAttribute:
-    """H28: status text must reach the base class's ``status_label``, not a shadow attribute."""
+    """Status text must reach the base class's ``status_label``, not a shadow attribute."""
 
     @staticmethod
     def test_h28_toolbar_label_is_exposed_as_base_class_status_label(qapp: QApplication) -> None:
         """The toolbar status ``QLabel`` must be assigned to ``self.status_label``.
 
-        Regression: pre-fix the label was stored as ``self._status_label``
+        The label must not be stored as ``self._status_label``
         (a private, panel-only attribute), so
-        ``AnalysisPanelBase.status_label`` stayed at its ``__init__``-time
+        ``AnalysisPanelBase.status_label`` would stay at its ``__init__``-time
         value of ``None`` for the panel's entire lifetime.
 
         Args:
@@ -355,7 +355,7 @@ class TestH28StatusLabelWiredToBaseClassAttribute:
 
 
 class TestM31ModuleDetailColumnCountResetsPerView:
-    """M31: switching Sections -> Exports must not leave a stale 4th column."""
+    """Switching Sections -> Exports must not leave a stale 4th column."""
 
     @staticmethod
     def test_m31_exports_view_drops_the_stale_sections_column(
@@ -364,10 +364,10 @@ class TestM31ModuleDetailColumnCountResetsPerView:
     ) -> None:
         """After viewing Sections then Exports, the detail table must have exactly 3 columns.
 
-        Regression: pre-fix, ``_on_show_module_exports`` only called
+        ``_on_show_module_exports`` must reset the column count. Calling only
         ``setHorizontalHeaderLabels`` with 3 strings on a table still fixed
-        at 4 columns from construction/the Sections view, leaving column
-        3's header text (``"Characteristics"``) and every exports row's 4th
+        at 4 columns from construction/the Sections view would leave column
+        3's header text ("Characteristics") and every exports row's 4th
         cell permanently stale and blank.
 
         Args:
@@ -412,9 +412,9 @@ class TestM31ModuleDetailColumnCountResetsPerView:
     ) -> None:
         """Exports must populate real name/ordinal/address data into the reset 3-column table.
 
-        Confirms the fixed ``_apply_module_exports`` writes correct data
+        Confirms ``_apply_module_exports`` writes correct data
         into the exact columns the reset (3-column) header expects, rather
-        than the fix merely hiding an extra column while leaving the data
+        than merely hiding an extra column while leaving the data
         mapping broken.
 
         Args:
@@ -457,13 +457,13 @@ class TestM31ModuleDetailColumnCountResetsPerView:
 
 
 class TestM64SplittersNonCollapsibleWithMinimumPaneSizes:
-    """M64: main/top splitters must forbid collapsing a pane to zero size."""
+    """Main/top splitters must forbid collapsing a pane to zero size."""
 
     @staticmethod
     def test_m64_main_and_top_splitters_are_non_collapsible(qapp: QApplication) -> None:
         """Both the vertical main splitter and horizontal top splitter must be non-collapsible.
 
-        Regression: neither splitter called ``setChildrenCollapsible(False)``,
+        Neither splitter may skip ``setChildrenCollapsible(False)``,
         so dragging a handle to the edge could collapse the disassembly
         view, the inspect-tabs column, or the bottom tab area to 0px with
         no visible affordance to recover it.
@@ -493,8 +493,8 @@ class TestM64SplittersNonCollapsibleWithMinimumPaneSizes:
     def test_m64_top_splitter_panes_carry_a_minimum_width(qapp: QApplication) -> None:
         """The disassembly and inspect-tabs panes must each carry a positive minimum width.
 
-        Regression: pre-fix, ``top_splitter.addWidget`` was called directly
-        on freshly-built child widgets with no ``setMinimumWidth`` call, so
+        ``top_splitter.addWidget`` must not be called directly
+        on freshly-built child widgets without a ``setMinimumWidth`` call, so
         Qt's default collapsible-to-zero behaviour had no floor to stop at.
 
         Args:
@@ -521,9 +521,8 @@ class TestM64SplittersNonCollapsibleWithMinimumPaneSizes:
     def test_m64_bottom_tabs_pane_carries_a_minimum_height(qapp: QApplication) -> None:
         """The bottom tab area (breakpoints/memory/console/etc.) must carry a minimum height.
 
-        Regression: pre-fix, ``main_splitter.addWidget(self._create_bottom_tabs())``
-        set no minimum height, so the entire bottom tab area could be
-        dragged to zero height and disappear.
+        ``main_splitter.addWidget(self._create_bottom_tabs())`` must set a minimum height, otherwise the entire bottom tab
+        area could be dragged to zero height and disappear.
 
         Args:
             qapp: The shared offscreen QApplication fixture.
@@ -546,14 +545,13 @@ class TestM64SplittersNonCollapsibleWithMinimumPaneSizes:
 
 
 class TestM65ProcInfoLabelsWordWrapLongText:
-    """M65: Process Info Path/Command Line labels must wrap instead of clipping."""
+    """Process Info Path/Command Line labels must wrap instead of clipping."""
 
     @staticmethod
     def test_m65_word_wrap_enabled_on_construction(qapp: QApplication) -> None:
         """``_procinfo_path`` and ``_procinfo_cmdline`` must have word wrap enabled at construction.
 
-        Regression: pre-fix, both were bare ``QLabel("--")`` instances with
-        no ``setWordWrap(True)`` call, so long values would be hard-clipped
+        Both must call ``setWordWrap(True)``: bare ``QLabel("--")`` instances would hard-clip long values
         at the pane boundary instead of wrapping.
 
         Args:
@@ -611,14 +609,14 @@ class TestM65ProcInfoLabelsWordWrapLongText:
 
 
 class TestL17ModuleTablePathColumnStretchesAndTooltips:
-    """L17: the module table must stretch only Path and tooltip its cells."""
+    """The module table must stretch only Path and tooltip its cells."""
 
     @staticmethod
     def test_l17_path_column_stretches_other_columns_size_to_content(qapp: QApplication) -> None:
         """Only the "Path" column uses Stretch resize mode; Name/Base/Size size to content.
 
-        Regression: pre-fix, a single header-wide
-        ``setSectionResizeMode(Stretch)`` call put all 4 columns in Stretch
+        A single header-wide
+        ``setSectionResizeMode(Stretch)`` call would put all 4 columns in Stretch
         mode uniformly, so the short, fixed-width Base and Size columns
         claimed the same width share as the variable-length Path column.
 
@@ -646,8 +644,8 @@ class TestL17ModuleTablePathColumnStretchesAndTooltips:
     def test_l17_path_cell_carries_the_full_untruncated_path_as_a_tooltip(qapp: QApplication) -> None:
         """A long module path must be recoverable in full via the Path cell's tooltip.
 
-        Regression: pre-fix, ``QTableWidgetItem(str(getattr(mod, "path", "")))``
-        set no tooltip at all, so an elided Path cell left the full path
+        ``QTableWidgetItem(str(getattr(mod, "path", "")))`` must set a tooltip,
+        since otherwise an elided Path cell would leave the full path
         unrecoverable from the UI without external tooling.
 
         Args:

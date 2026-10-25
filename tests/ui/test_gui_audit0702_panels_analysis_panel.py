@@ -2,23 +2,23 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-02 GUI audit findings in ``analysis_panel``.
+"""Gates for the ``analysis_panel`` table sizing, theme colour and header labels.
 
-Each test targets one audit finding for
+Each test targets one defect in
 :class:`intellicrack.ui.panels.analysis_panel.BridgeAnalysisPanel` and fails
-against the pre-fix behaviour:
+against the defective behaviour:
 
-* ``test_h33_*`` (H33): every table column, including the variable-length
+* Column sizing: every table column, including the variable-length
   Value/Function/Name columns, must size to its content instead of relying
   on ``setStretchLastSection`` granting space to an unrelated trailing
   column, so a long value widens its column and the table scrolls
   horizontally to it; and every populated cell must carry a tooltip with its
   full, unclipped text.
-* ``test_m34_*`` (M34): the address-column accent colour must be re-resolved
+* Theme: the address-column accent colour must be re-resolved
   from :class:`ThemeManager` and reapplied to every already-rendered address
   cell when the application theme changes live, instead of staying pinned to
   the colour captured at construction time.
-* ``test_m41_*`` (M41): the header's format/sources summary labels must wrap
+* Header labels: the format/sources summary labels must wrap
   instead of being clipped by the panel width, and must carry a tooltip with
   their full text.
 
@@ -114,12 +114,10 @@ def _restore_theme() -> None:
 def test_h33_every_table_column_sizes_to_its_content(qapp: QApplication) -> None:
     """Every column of every table resizes to its content and overflow scrolls.
 
-    Pre-fix, only ``setStretchLastSection(True)`` was used with
-    ``QHeaderView.ResizeMode.Interactive`` everywhere, so the Value/Function
-    column stayed at a fixed default width. A ``Stretch`` column is no fix
-    either: it always fills exactly the remaining viewport width, so it can
+    Using ``QHeaderView.ResizeMode.Interactive`` everywhere, with only ``setStretchLastSection(True)``, would hold the Value/Function
+    column at a fixed default width. A ``Stretch`` column is no fix either: it always fills exactly the remaining viewport width, so it can
     never overflow into the horizontal scrollbar and is crushed to its minimum
-    in a narrow dock (S20-D16). Content-sized columns with no stretched last
+    in a narrow dock. Content-sized columns with no stretched last
     section keep long values whole and reachable by scrolling.
 
     Args:
@@ -155,7 +153,7 @@ def test_h33_every_table_column_sizes_to_its_content(qapp: QApplication) -> None
 def test_h33_long_value_widens_its_column_past_a_narrow_viewport(qapp: QApplication) -> None:
     """A long Value is shown whole and the narrow table scrolls to it.
 
-    Pre-fix the Value column used ``Interactive`` resize mode, so a long
+    With ``Interactive`` resize mode on the Value column, a long
     value was clipped to the default ~100px width; this measures real
     geometry, not just the declared resize-mode enum.
 
@@ -186,10 +184,8 @@ def test_h33_long_value_widens_its_column_past_a_narrow_viewport(qapp: QApplicat
 def test_h33_populated_cells_expose_full_text_via_tooltip(qapp: QApplication) -> None:
     """Every populated data cell carries a tooltip with its full, unclipped text.
 
-    Pre-fix, cells were built with bare ``QTableWidgetItem(text)`` and no
-    ``setToolTip`` call anywhere in the file, so ``item.toolTip()`` would be
-    the empty string for a genuinely long value -- this assertion fails
-    against that code.
+    Bare ``QTableWidgetItem(text)`` cells with no ``setToolTip`` call would leave ``item.toolTip()`` as the
+    empty string for a genuinely long value, so this assertion fails against that code.
 
     Args:
         qapp: The shared QApplication fixture.
@@ -226,11 +222,9 @@ def test_h33_populated_cells_expose_full_text_via_tooltip(qapp: QApplication) ->
 def test_m34_theme_switch_reapplies_address_color_to_existing_cells(qapp: QApplication) -> None:
     """A live theme switch re-resolves and reapplies the address-column colour.
 
-    Proves the panel subscribes to ``ThemeManager.theme_changed``: pre-fix
-    ``self._addr_color`` was resolved exactly once in ``__init__`` and never
-    updated, so already-rendered address cells would keep the dark-theme
-    accent colour after switching to light -- this assertion fails against
-    that code because the before/after colours would compare equal.
+    Proves the panel subscribes to ``ThemeManager.theme_changed``. A ``self._addr_color`` resolved once in
+    ``__init__`` and never updated would leave already-rendered address cells on the dark-theme accent colour after
+    switching to light, and this assertion fails against that code because the before/after colours would compare equal.
 
     Args:
         qapp: The shared QApplication fixture.
@@ -274,7 +268,7 @@ def test_m34_theme_switch_reapplies_address_color_to_existing_cells(qapp: QAppli
 def test_m34_newly_populated_cells_use_live_theme_after_switch(qapp: QApplication) -> None:
     """Rows populated after a theme switch use the newly resolved colour.
 
-    Pre-fix, ``self._addr_color`` was a stale instance attribute set once in
+    A stale ``self._addr_color`` instance attribute set once in
     ``__init__``; even a fresh ``set_analysis`` call after switching themes
     would keep painting with the original colour, since nothing ever
     re-queried :class:`ThemeManager`.
@@ -303,9 +297,8 @@ def test_m34_newly_populated_cells_use_live_theme_after_switch(qapp: QApplicatio
 def test_m41_header_summary_labels_have_word_wrap_enabled(qapp: QApplication) -> None:
     """The format and sources labels have word wrap enabled.
 
-    Pre-fix, neither ``QLabel`` had ``setWordWrap(True)`` called, so
-    ``wordWrap()`` defaults to ``False`` -- this assertion fails against that
-    code.
+    Without ``setWordWrap(True)`` on either ``QLabel``, ``wordWrap()`` stays ``False``, and this
+    assertion fails against that code.
 
     Args:
         qapp: The shared QApplication fixture.
@@ -322,7 +315,7 @@ def test_m41_header_summary_labels_have_word_wrap_enabled(qapp: QApplication) ->
 def test_m41_bridges_label_wraps_onto_more_lines_when_narrowed(qapp: QApplication) -> None:
     """The sources label grows taller when narrowed, proving it wraps instead of clipping.
 
-    Pre-fix, ``wordWrap`` was disabled, so ``sizePolicy().hasHeightForWidth()``
+    With ``wordWrap`` disabled, ``sizePolicy().hasHeightForWidth()``
     is ``False`` and ``heightForWidth`` returns ``-1`` regardless of width --
     the narrow/wide comparison collapses to ``-1 == -1`` and this assertion
     fails against that code.
@@ -351,8 +344,7 @@ def test_m41_bridges_label_wraps_onto_more_lines_when_narrowed(qapp: QApplicatio
 def test_m41_header_summary_labels_carry_full_text_tooltip(qapp: QApplication) -> None:
     """The format and sources labels carry a tooltip with their full text.
 
-    Pre-fix, no ``setToolTip`` call existed anywhere in the file, so
-    ``toolTip()`` on either label would be the empty string, not the full
+    With no ``setToolTip`` call anywhere in the file, either label's ``toolTip()`` is the empty string, not the full
     (non-empty) summary text -- this assertion fails against that code.
 
     Args:

@@ -2,27 +2,25 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for S19-R08 at the shared ``_spawn_hex_worker`` re-arm site.
+"""Regression test for ``HashingMixin._spawn_hex_worker`` with a deleted prior worker.
 
 ``HashingMixin._spawn_hex_worker`` (``ui/panels/hex_editor/hashing.py``) is the
 shared entry that every hashing/CRC computation routes through to start a
-background ``GenericCallableWorker`` "unless one is already running". Its
+background ``GenericCallableWorker`` unless one is already running. Its
 supersede logic probes the caller-supplied ``existing`` worker and eagerly
 schedules it for deletion before arming a fresh one.
 
 A ``GenericCallableWorker`` wires ``finished -> deleteLater``, so a previously
 finished worker handed back as ``existing`` may already be a dangling sip
-wrapper. The whole-class S19-R08 fix routes this site through
-``worker_is_running(existing)`` (liveness probe that tolerates the dead
-wrapper) and ``discard_worker(existing)`` (deletion that tolerates an
-already-destroyed C++ object).
+wrapper. The site therefore probes liveness with ``worker_is_running(existing)``,
+which tolerates the dead wrapper, and deletes it with ``discard_worker(existing)``,
+which tolerates an already-destroyed C++ object.
 
 This test drives the real ``_spawn_hex_worker`` on a real ``HexEditorPanel``
-with a **genuinely destroyed** prior worker as ``existing``: it asserts the
-method treats the dead wrapper as "not running", arms and returns a fresh live
-worker, and never raises. Reverting either helper at this site back to a bare
-``existing.isRunning()`` / ``existing.deleteLater()`` turns this RED -- the
-dangling-wrapper probe raises ``RuntimeError``.
+with a genuinely destroyed prior worker as ``existing``: it asserts the method
+treats the dead wrapper as "not running", arms and returns a fresh live worker,
+and never raises. A bare ``existing.isRunning()`` call on the dead wrapper
+would raise ``RuntimeError``.
 """
 
 from __future__ import annotations

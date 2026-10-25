@@ -47,9 +47,7 @@ def _compute_invalid_handle_value() -> int:
 
 INVALID_HANDLE_VALUE: Final[int] = _compute_invalid_handle_value()
 
-# ---------------------------------------------------------------------------
 # Process access rights
-# ---------------------------------------------------------------------------
 PROCESS_ALL_ACCESS: Final[int] = 0x1F0FFF
 PROCESS_QUERY_INFORMATION: Final[int] = 0x0400
 PROCESS_QUERY_LIMITED_INFORMATION: Final[int] = 0x1000
@@ -61,14 +59,10 @@ PROCESS_SUSPEND_RESUME: Final[int] = 0x0800
 PROCESS_CREATE_THREAD: Final[int] = 0x0002
 PROCESS_DUP_HANDLE: Final[int] = 0x0040
 
-# ---------------------------------------------------------------------------
 # Standard access rights
-# ---------------------------------------------------------------------------
 SYNCHRONIZE: Final[int] = 0x00100000
 
-# ---------------------------------------------------------------------------
 # Thread access rights
-# ---------------------------------------------------------------------------
 THREAD_QUERY_INFORMATION: Final[int] = 0x0040
 THREAD_QUERY_LIMITED_INFORMATION: Final[int] = 0x0800
 THREAD_SUSPEND_RESUME: Final[int] = 0x0002
@@ -76,9 +70,7 @@ THREAD_GET_CONTEXT: Final[int] = 0x0008
 THREAD_SET_CONTEXT: Final[int] = 0x0010
 THREAD_ALL_ACCESS: Final[int] = 0x1F03FF
 
-# ---------------------------------------------------------------------------
 # Toolhelp32 snapshot flags
-# ---------------------------------------------------------------------------
 TH32CS_SNAPHEAPLIST: Final[int] = 0x00000001
 TH32CS_SNAPPROCESS: Final[int] = 0x00000002
 TH32CS_SNAPTHREAD: Final[int] = 0x00000004
@@ -86,9 +78,7 @@ TH32CS_SNAPMODULE: Final[int] = 0x00000008
 TH32CS_SNAPMODULE32: Final[int] = 0x00000010
 TH32CS_SNAPALL: Final[int] = 0x0000001F
 
-# ---------------------------------------------------------------------------
 # Memory constants
-# ---------------------------------------------------------------------------
 MEM_COMMIT: Final[int] = 0x1000
 MEM_RESERVE: Final[int] = 0x2000
 MEM_DECOMMIT: Final[int] = 0x4000
@@ -98,9 +88,7 @@ MEM_PRIVATE: Final[int] = 0x20000
 MEM_MAPPED: Final[int] = 0x40000
 MEM_IMAGE: Final[int] = 0x1000000
 
-# ---------------------------------------------------------------------------
 # Page protection constants
-# ---------------------------------------------------------------------------
 PAGE_NOACCESS: Final[int] = 0x01
 PAGE_READONLY: Final[int] = 0x02
 PAGE_READWRITE: Final[int] = 0x04
@@ -111,9 +99,7 @@ PAGE_EXECUTE_READWRITE: Final[int] = 0x40
 PAGE_EXECUTE_WRITECOPY: Final[int] = 0x80
 PAGE_GUARD: Final[int] = 0x100
 
-# ---------------------------------------------------------------------------
 # Token access rights
-# ---------------------------------------------------------------------------
 TOKEN_QUERY: Final[int] = 0x0008
 TOKEN_ADJUST_PRIVILEGES: Final[int] = 0x0020
 TOKEN_DUPLICATE: Final[int] = 0x0002
@@ -124,9 +110,7 @@ SE_PRIVILEGE_REMOVED: Final[int] = 0x00000004
 
 ERROR_NOT_ALL_ASSIGNED: Final[int] = 1300
 
-# ---------------------------------------------------------------------------
 # NtDll information classes
-# ---------------------------------------------------------------------------
 SystemProcessInformation: Final[int] = 5
 SystemHandleInformation: Final[int] = 16
 SystemExtendedHandleInformation: Final[int] = 64
@@ -138,9 +122,7 @@ ProcessWow64Information: Final[int] = 26
 ThreadBasicInformation: Final[int] = 0
 ThreadQuerySetWin32StartAddress: Final[int] = 9
 
-# ---------------------------------------------------------------------------
 # Context flags (AMD64)
-# ---------------------------------------------------------------------------
 CONTEXT_AMD64: Final[int] = 0x00100000
 CONTEXT_CONTROL: Final[int] = CONTEXT_AMD64 | 0x01
 CONTEXT_INTEGER: Final[int] = CONTEXT_AMD64 | 0x02
@@ -160,9 +142,7 @@ CONTEXT_I386_DEBUG_REGISTERS: Final[int] = CONTEXT_I386 | 0x10
 CONTEXT_I386_FULL: Final[int] = CONTEXT_I386_CONTROL | CONTEXT_I386_INTEGER | CONTEXT_I386_SEGMENTS
 CONTEXT_I386_ALL: Final[int] = CONTEXT_I386_FULL | CONTEXT_I386_FLOATING_POINT | CONTEXT_I386_DEBUG_REGISTERS
 
-# ---------------------------------------------------------------------------
 # PE / IMAGE_FILE_HEADER machine types (used by IsWow64Process2 and StackWalk64)
-# ---------------------------------------------------------------------------
 IMAGE_FILE_MACHINE_UNKNOWN: Final[int] = 0x0000
 IMAGE_FILE_MACHINE_I386: Final[int] = 0x014C
 IMAGE_FILE_MACHINE_AMD64: Final[int] = 0x8664
@@ -171,9 +151,7 @@ IMAGE_FILE_MACHINE_ARM64: Final[int] = 0xAA64
 IMAGE_FILE_MACHINE_ARMNT: Final[int] = 0x01C4
 IMAGE_FILE_MACHINE_IA64: Final[int] = 0x0200
 
-# ---------------------------------------------------------------------------
 # PE header layout offsets (DOS / NT / OptionalHeader navigation)
-# ---------------------------------------------------------------------------
 PE_HEADER_OFFSET: Final[int] = 0x3C
 """Offset of the ``e_lfanew`` field inside the DOS header pointing to the NT headers."""
 
@@ -183,9 +161,7 @@ PE_MAGIC_OFFSET: Final[int] = 0x40
 NT_HEADERS_OPTIONAL_OFFSET: Final[int] = 0x18
 """Offset from the NT headers signature to the start of the OptionalHeader."""
 
-# ---------------------------------------------------------------------------
 # SCM constants
-# ---------------------------------------------------------------------------
 SC_MANAGER_ENUMERATE_SERVICE: Final[int] = 0x0004
 SC_MANAGER_ALL_ACCESS: Final[int] = 0xF003F
 SERVICE_WIN32: Final[int] = 0x00000030
@@ -193,9 +169,7 @@ SERVICE_STATE_ALL: Final[int] = 0x00000003
 SERVICE_ACTIVE: Final[int] = 0x00000001
 SERVICE_INACTIVE: Final[int] = 0x00000002
 
-# ---------------------------------------------------------------------------
 # Mitigation policy constants
-# ---------------------------------------------------------------------------
 ProcessDEPPolicy: Final[int] = 0
 ProcessASLRPolicy: Final[int] = 1
 ProcessDynamicCodePolicy: Final[int] = 2
@@ -208,49 +182,35 @@ ProcessSignaturePolicy: Final[int] = 8
 ProcessFontDisablePolicy: Final[int] = 9
 ProcessImageLoadPolicy: Final[int] = 10
 
-# ---------------------------------------------------------------------------
 # Wait / synchronisation constants
-# ---------------------------------------------------------------------------
 INFINITE: Final[int] = 0xFFFFFFFF
 WAIT_OBJECT_0: Final[int] = 0x00000000
 WAIT_TIMEOUT: Final[int] = 0x00000102
 WAIT_FAILED: Final[int] = 0xFFFFFFFF
 
-# ---------------------------------------------------------------------------
 # Generic file/object access rights (CreateFileW, CreateNamedPipeW, etc.)
-# ---------------------------------------------------------------------------
 GENERIC_READ: Final[int] = 0x80000000
 GENERIC_WRITE: Final[int] = 0x40000000
 
-# ---------------------------------------------------------------------------
 # CreateFileW disposition values
-# ---------------------------------------------------------------------------
 OPEN_EXISTING: Final[int] = 3
 
-# ---------------------------------------------------------------------------
 # Pipe constants
-# ---------------------------------------------------------------------------
 PIPE_ACCESS_DUPLEX: Final[int] = 0x00000003
 PIPE_READMODE_BYTE: Final[int] = 0x00000000
 PIPE_WAIT: Final[int] = 0x00000000
 NMPWAIT_WAIT_FOREVER: Final[int] = 0xFFFFFFFF
 NMPWAIT_USE_DEFAULT_WAIT: Final[int] = 0x00000000
 
-# ---------------------------------------------------------------------------
 # Overlapped I/O
-# ---------------------------------------------------------------------------
 FILE_FLAG_OVERLAPPED: Final[int] = 0x40000000
 ERROR_IO_PENDING: Final[int] = 997
 
-# ---------------------------------------------------------------------------
 # RTL_USER_PROCESS_PARAMETERS command-line offsets
-# ---------------------------------------------------------------------------
 CMD_LINE_OFFSET_32: Final[int] = 0x40
 CMD_LINE_OFFSET_64: Final[int] = 0x70
 
-# ---------------------------------------------------------------------------
 # Registry constants
-# ---------------------------------------------------------------------------
 HKEY_CLASSES_ROOT: Final[int] = 0x80000000
 HKEY_CURRENT_USER: Final[int] = 0x80000001
 HKEY_LOCAL_MACHINE: Final[int] = 0x80000002
@@ -266,21 +226,15 @@ REG_DWORD: Final[int] = 4
 REG_QWORD: Final[int] = 11
 REG_MULTI_SZ: Final[int] = 7
 
-# ---------------------------------------------------------------------------
 # GUI resource types
-# ---------------------------------------------------------------------------
 GR_GDIOBJECTS: Final[int] = 0
 GR_USEROBJECTS: Final[int] = 1
 
-# ---------------------------------------------------------------------------
 # Job object info classes
-# ---------------------------------------------------------------------------
 JobObjectBasicLimitInformation: Final[int] = 2
 JobObjectExtendedLimitInformation: Final[int] = 9
 
-# ---------------------------------------------------------------------------
 # Thread state values (from SYSTEM_THREAD_INFORMATION)
-# ---------------------------------------------------------------------------
 THREAD_STATE_INITIALIZED: Final[int] = 0
 THREAD_STATE_READY: Final[int] = 1
 THREAD_STATE_RUNNING: Final[int] = 2
@@ -301,9 +255,7 @@ THREAD_STATE_NAMES: Final[dict[int, str]] = {
     THREAD_STATE_DEFERRED_READY: "deferred_ready",
 }
 
-# ---------------------------------------------------------------------------
 # Overlapped I/O structures
-# ---------------------------------------------------------------------------
 
 
 class OVERLAPPED(ctypes.Structure):
@@ -323,9 +275,7 @@ class OVERLAPPED(ctypes.Structure):
     ]
 
 
-# ---------------------------------------------------------------------------
 # Toolhelp32 Structures
-# ---------------------------------------------------------------------------
 
 
 class PROCESSENTRY32(ctypes.Structure):
@@ -393,9 +343,7 @@ class MEMORY_BASIC_INFORMATION(ctypes.Structure):
 MemoryBasicInformation = MEMORY_BASIC_INFORMATION
 
 
-# ---------------------------------------------------------------------------
 # Process memory counters
-# ---------------------------------------------------------------------------
 
 
 class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
@@ -415,9 +363,7 @@ class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
     ]
 
 
-# ---------------------------------------------------------------------------
 # Token / privilege structures
-# ---------------------------------------------------------------------------
 
 
 class LUID(ctypes.Structure):
@@ -447,9 +393,7 @@ class TOKEN_PRIVILEGES(ctypes.Structure):
     ]
 
 
-# ---------------------------------------------------------------------------
 # NtDll process / thread information structures
-# ---------------------------------------------------------------------------
 
 
 class UNICODE_STRING(ctypes.Structure):
@@ -489,9 +433,7 @@ class THREAD_BASIC_INFORMATION(ctypes.Structure):
     ]
 
 
-# ---------------------------------------------------------------------------
 # Handle information structures (NtQuerySystemInformation)
-# ---------------------------------------------------------------------------
 
 
 class SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX(ctypes.Structure):
@@ -519,9 +461,7 @@ class SYSTEM_HANDLE_INFORMATION_EX(ctypes.Structure):
     ]
 
 
-# ---------------------------------------------------------------------------
 # Heap structures (Toolhelp32)
-# ---------------------------------------------------------------------------
 
 
 class HEAPLIST32(ctypes.Structure):
@@ -551,9 +491,7 @@ class HEAPENTRY32(ctypes.Structure):
     ]
 
 
-# ---------------------------------------------------------------------------
 # Thread context structures (AMD64 / i386)
-# ---------------------------------------------------------------------------
 
 
 class M128A(ctypes.Structure):
@@ -675,9 +613,7 @@ process. The layout is identical to :class:`CONTEXT32`, so aliasing keeps
 the Win32 types surface minimal while making call sites self-documenting.
 """
 
-# ---------------------------------------------------------------------------
 # DbgHelp stack walk structures
-# ---------------------------------------------------------------------------
 
 
 class ADDRESS64(ctypes.Structure):
@@ -730,9 +666,7 @@ class SYMBOL_INFO(ctypes.Structure):
     ]
 
 
-# ---------------------------------------------------------------------------
 # SEH chain structure
-# ---------------------------------------------------------------------------
 
 
 class EXCEPTION_REGISTRATION_RECORD(ctypes.Structure):
@@ -745,9 +679,7 @@ EXCEPTION_REGISTRATION_RECORD._fields_ = [
 ]
 
 
-# ---------------------------------------------------------------------------
 # Service structures
-# ---------------------------------------------------------------------------
 
 
 class SERVICE_STATUS_PROCESS(ctypes.Structure):
@@ -776,9 +708,7 @@ class ENUM_SERVICE_STATUS_PROCESSW(ctypes.Structure):
     ]
 
 
-# ---------------------------------------------------------------------------
 # Job object structures
-# ---------------------------------------------------------------------------
 
 
 class IO_COUNTERS(ctypes.Structure):
@@ -823,9 +753,7 @@ class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
     ]
 
 
-# ---------------------------------------------------------------------------
 # Mitigation policy structures
-# ---------------------------------------------------------------------------
 
 
 class PROCESS_MITIGATION_DEP_POLICY(ctypes.Structure):
@@ -901,9 +829,7 @@ class PROCESS_MITIGATION_FONT_DISABLE_POLICY(ctypes.Structure):
     ]
 
 
-# ---------------------------------------------------------------------------
 # DLL handle helpers
-# ---------------------------------------------------------------------------
 
 
 @functools.lru_cache(maxsize=1)

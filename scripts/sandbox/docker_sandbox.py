@@ -122,11 +122,11 @@ _IMAGE_PROBE_RETRY_DELAY = 2.0
 _CONNECTED_NETWORK_CANDIDATES: tuple[str, ...] = ("nat", "bridge")
 
 # Windows containers, WHPX virtual machines and Windows Sandbox sessions all run
-# on the Host Compute Service, and interleaving them bugchecked this host on
-# 2026-08-02. The WHPX boot gates already refuse to start a VM while a container
-# is running; without the mirror image of that check the interlock is only
-# one-directional, and a container started here while a VM is live is the same
-# collision from the other side.
+# on the Host Compute Service, and interleaving them has bugchecked this host.
+# The WHPX boot gates refuse to start a VM while a container is running; without
+# the mirror image of that check the interlock is one-directional, and a
+# container started here while a VM is live is the same collision from the
+# other side.
 _HCS_VM_PROCESS_PREFIXES: tuple[str, ...] = (
     "qemu-system",
     "windowssandboxremotesession",
@@ -1008,7 +1008,7 @@ def _remove_stale_container(name: str) -> None:
     A prior run killed abruptly (``kill -9``, power cut) leaves a container
     behind that ``--rm`` never removed; left in place it wastes disk and, when
     the name matches, blocks the next ``docker run --name``. Because container
-    names are now unique per run, cleanup can no longer key on the name alone:
+    names are unique per run, cleanup cannot key on the name alone:
     it reaps sandbox-labeled containers in an exited or dead status plus this
     run's own name, and leaves every running container of a concurrent run
     untouched.
@@ -1449,8 +1449,7 @@ def _force_stop_container(container_name: str) -> None:
 
     Terminating the host-side ``docker run`` client does **not** stop the
     container it launched: the container runs detached in the Docker engine and
-    keeps executing (this is why an earlier hung run continued for hours after
-    the host timeout fired). ``docker kill`` sends the stop to the engine, which
+    keeps executing. ``docker kill`` sends the stop to the engine, which
     terminates the container and, via ``--rm``, removes it.
 
     Args:

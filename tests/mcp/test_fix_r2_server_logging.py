@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 33: servers' own log messages reach Intellicrack's logging, at the level the operator chose.
+"""Servers' own log messages reach Intellicrack's logging, at the level the operator chose.
 
 The gates connect Intellicrack's real connection to a real ``MCPServer`` that logs from inside a tool, on 2026-07-28 over stdio (where
 logging is opted into per request) and 2025-11-25 over SSE (where ``logging/setLevel`` governs it). Messages arrive with the server they

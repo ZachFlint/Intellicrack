@@ -4,10 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Falsifiable gate: every ``intellicrack`` import in the repository resolves.
 
-A test module that imports a name its target module no longer defines is not one failing test. pytest reports it as a collection error and
-stops: ``Interrupted: 1 error during collection``, no tests run at all, no coverage written. That is what happened when a name a module
-merely re-exported by accident -- ``GenericCallableWorker``, imported by ``ui/log_viewer/window.py`` and read back out of it by the log
-viewer's own gate -- was replaced by the dispatcher the module actually calls now. The whole 13,217-test suite collected zero.
+A test module that imports a name its target no longer defines is not one failing test: collection stops with an error, so no tests run and no coverage is written. Names that a module merely re-exports by accident are the usual casualties of a refactor.
 
 Resolving the names by parsing rather than importing is what makes this gate cheap enough to be worth running everywhere: it needs no Qt
 platform, no native extension and no provider credentials, so it catches a rename that would otherwise only surface as an aborted suite.

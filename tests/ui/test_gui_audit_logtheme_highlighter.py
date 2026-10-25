@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Regression tests for syntax-highlighter theming and comment scanning.
 
-Covers two GUI audit findings:
+Covers two log theme highlighter behaviours:
 
 - Token theming: highlighter token formats were hard-coded VS-Code-dark, so the
   operator color ``#D4D4D4`` was invisible on the light background and numbers

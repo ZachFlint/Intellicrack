@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Critical-coverage tests for the second slice of ``intellicrack.bridges.hex_editor``.
+"""Coverage tests for ``intellicrack.bridges.hex_editor``.
 
 The slice spans the integer and float parsing helpers, the DIE and ClamAV signature
 matchers, the BPS and UPS patch encoders and decoders, the file, sandbox and byte-editing
@@ -1538,8 +1538,12 @@ async def test_replace_bytes_that_changes_the_size_announces_the_whole_document(
 
 
 @pytest.mark.asyncio
-async def test_replace_bytes_with_an_empty_pattern_replaces_nothing_and_stays_silent(observed: tuple[HexEditorBridge, _EventLog]) -> None:
-    """An empty pattern matches nothing: zero replacements, unchanged bytes, no notification.
+async def test_replace_bytes_with_an_empty_pattern_is_rejected_and_changes_nothing(observed: tuple[HexEditorBridge, _EventLog]) -> None:
+    """An empty pattern is refused before the document is touched.
+
+    Matching an empty pattern has no meaningful answer, so the bridge raises
+    instead of reporting zero replacements that a caller cannot tell apart
+    from a search that simply found nothing.
 
     Args:
         observed: Bridge with an attached observer.
@@ -1547,11 +1551,13 @@ async def test_replace_bytes_with_an_empty_pattern_replaces_nothing_and_stays_si
     bridge, log = observed
     document = _open_bytes(bridge, b"ABCD")
 
-    replaced = await bridge.replace_bytes("", "FF")
+    with capture_logs() as captured, pytest.raises(ValueError, match=r"^pattern cannot be empty$"):
+        await bridge.replace_bytes("", "FF")
 
-    assert replaced == 0
     assert document.read(0, 4) == b"ABCD"
+    assert document.can_undo() is False
     assert log.events == []
+    assert "replace_bytes_failed_empty_pattern" in _logged_events(captured)
 
 
 @pytest.mark.asyncio

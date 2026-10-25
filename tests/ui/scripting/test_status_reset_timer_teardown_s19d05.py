@@ -3,9 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for S19-D05: ``ScriptManagerPanel`` status-reset QTimer lifetime.
+"""Gate for ``ScriptManagerPanel`` status-reset QTimer lifetime.
 
-Both ``_on_validate`` and ``acknowledge_execution`` used to arm their
+Both ``_on_validate`` and ``acknowledge_execution`` must not arm their
 status-bar reset via an ownerless ``QTimer.singleShot(_STATUS_RESET_MS,
 reset_status)``, where ``reset_status`` closed over ``self`` and touched
 ``self._status_bar``. That timer is driven by Qt's global timer system, not by
@@ -15,7 +15,7 @@ fired against the deleted ``QStatusBar`` it raised::
 
     RuntimeError: wrapped C/C++ object of type QStatusBar has been deleted
 
-which surfaced as an intermittent teardown crash in combined UI test runs.
+which surfaces as an intermittent teardown crash in combined UI test runs.
 
 Both gates below construct a real ``ScriptManagerPanel`` under a real,
 offscreen ``QApplication``, arm the status-reset timer through one of the two

@@ -143,11 +143,9 @@ class TestGoogleModelListing:
     ) -> None:
         """Test every returned model has correct types and provider tag.
 
-        Collapses the N8 structural-only individual field tests into one
-        consolidated gate so the seven separate isinstance-only checks are
-        replaced by a single well-formedness assertion that remains paired with
-        the value gate below.  If any model is returned with a wrong type on any
-        field this test fails immediately.
+        Checks every field's type in a single well-formedness assertion, paired
+        with the value gate below.  If any model is returned with a wrong type
+        on any field this test fails immediately.
 
         Args:
             google_provider: Connected Google provider fixture.

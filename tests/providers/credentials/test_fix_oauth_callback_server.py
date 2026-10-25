@@ -5,7 +5,7 @@
 """Gates for the loopback OAuth callback server.
 
 The server must wait for the real authorization redirect and nothing else: a browser's favicon fetch, a port probe, a request on another
-path or a callback carrying the wrong ``state`` is answered and ignored. It must also own its port: starting it no longer flips
+path or a callback carrying the wrong ``state`` is answered and ignored. It must also own its port: starting it does not flip
 ``socketserver.TCPServer.allow_reuse_address`` for the whole process, and two servers never share one port.
 """
 

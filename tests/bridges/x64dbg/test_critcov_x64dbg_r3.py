@@ -2,20 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Third-pass critical-coverage tests for the x64dbg bridge, built on facts measured in the test container.
+"""Coverage tests for the x64dbg bridge, built on facts measured in the test container.
 
 Every expectation rests on a measurement or on an independent oracle:
 
-* A 32-bit child from ``SysWOW64`` is a real WOW64 process: ``IsWow64Process2`` reports machine ``0x14C`` for it, so the bridge's
-  pointer-size helper must answer 4, and a 64-bit child must answer 8.
-* ``Thread32First`` and ``Process32FirstW`` return FALSE (error 6) for ``INVALID_HANDLE_VALUE`` and (error 24) for a structure whose size
-  is not the documented one; the bridge must then report no threads and parent 0.
-* A child that keeps loading and unloading DLLs makes a module snapshot fail with ``ERROR_BAD_LENGTH`` (24) in about 15 percent of the
-  snapshots, so the bridge's retry loop runs for real.
-* A region the bridge listed can be made unreadable by the child itself on a signal from the test, which makes the scan's chunk-failure
-  handler deterministic.
-* The optional disassembler, assembler and YARA imports are checked in real child interpreters in which the packages are made
-  unimportable with ``sys.modules[name] = None``.
+* A 32-bit child from ``SysWOW64`` is a real WOW64 process: ``IsWow64Process2`` reports machine ``0x14C`` for it, so the bridge's pointer-size helper must answer 4, and a 64-bit child must answer 8.
+* ``Thread32First`` and ``Process32FirstW`` return FALSE (error 6) for ``INVALID_HANDLE_VALUE`` and (error 24) for a structure whose size is not the documented one; the bridge must then report no threads and parent 0.
+* A child that keeps loading and unloading DLLs makes a module snapshot fail with ``ERROR_BAD_LENGTH`` (24) in about 15 percent of the snapshots, so the bridge's retry loop runs for real.
+* A region the bridge listed can be made unreadable by the child itself on a signal from the test, which makes the scan's chunk-failure handler deterministic.
+* The optional disassembler, assembler and YARA imports are checked in real child interpreters in which the packages are made unimportable with ``sys.modules[name] = None``.
 """
 
 from __future__ import annotations
@@ -419,9 +414,7 @@ def test_pointer_size_is_four_for_a_32_bit_child_and_eight_for_a_64_bit_child(
 
     The oracle is ``IsWow64Process2``, which reports the 32-bit child's machine as ``IMAGE_FILE_MACHINE_I386``.
 
-    Probe key: ``wow64_run_ping.exe`` (``IsWow64Process2`` machine ``0x14c``, ``product_pointer_size`` 4).
-
-    One-line change that fails it: change ``return POINTER_SIZE_32`` to ``return POINTER_SIZE_64`` at x64dbg.py:819.
+    Mutation caught: changing ``return POINTER_SIZE_32`` to ``return POINTER_SIZE_64`` at x64dbg.py:819 makes this fail.
 
     Args:
         wow64_child: Running 32-bit child.
@@ -448,12 +441,9 @@ def test_pointer_size_is_four_for_a_32_bit_child_and_eight_for_a_64_bit_child(
 def test_thread_enumeration_lists_nothing_for_an_invalid_snapshot_handle() -> None:
     """``Thread32First`` fails for ``INVALID_HANDLE_VALUE``, so no thread is listed.
 
-    The bridge is attached to pid 0 on purpose: a zeroed entry has owner pid 0, so an enumeration that ignored the failed first call would
-    list one phantom thread.
+    The bridge is attached to pid 0 on purpose: a zeroed entry has owner pid 0, so an enumeration that ignored the failed first call would list one phantom thread.
 
-    Probe key: ``th_first_invalid_handle_value`` (``ret`` false, ``last_error`` 6) and ``product_thread_enum_closed_snapshot``.
-
-    One-line change that fails it: replace the ``return`` at x64dbg.py:5898 with ``pass``.
+    Mutation caught: replacing the ``return`` at x64dbg.py:5898 with ``pass`` makes this fail.
     """
     bridge = X64DbgBridge()
     bridge.attached_pid = 0
@@ -467,12 +457,9 @@ def test_thread_enumeration_lists_nothing_for_an_invalid_snapshot_handle() -> No
 def test_thread_enumeration_lists_nothing_when_the_entry_structure_has_the_wrong_size() -> None:
     """``Thread32First`` rejects an entry whose ``dwSize`` is not the documented one (error 24), so no thread is listed.
 
-    The same snapshot is first walked directly with the documented structure size: ``Thread32First`` succeeds and the walk finds this
-    test's own native thread id under this process id, which shows the snapshot is good and only the structure size differs.
+    The same snapshot is first walked directly with the documented structure size: ``Thread32First`` succeeds and the walk finds this test's own native thread id under this process id, which shows the snapshot is good and only the structure size differs.
 
-    Probe key: ``th_first_valid_struct_ThreadEntryShort`` (``ret`` false, ``last_error`` 24) and ``product_thread_enum_short_struct``.
-
-    One-line change that fails it: replace the ``return`` at x64dbg.py:5898 with ``pass``.
+    Mutation caught: replacing the ``return`` at x64dbg.py:5898 with ``pass`` makes this fail.
     """
     kernel32 = _typed_kernel32()
     snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD | TH32CS_SNAPPROCESS, 0)
@@ -505,10 +492,7 @@ def test_parent_pid_lookup_is_zero_for_an_invalid_snapshot_handle() -> None:
 
     The same call on a valid snapshot returns ``os.getppid()``, which shows the 0 is the failure answer and not the true value.
 
-    Probe key: ``ps_first_invalid_handle_value`` (``ret`` false, ``last_error`` 6), ``product_parent_lookup_closed_snapshot`` (0) and
-    ``product_parent_lookup_valid_control``.
-
-    One-line change that fails it: change ``return 0`` to ``return -1`` at x64dbg.py:6504.
+    Mutation caught: changing ``return 0`` to ``return -1`` at x64dbg.py:6504 makes this fail.
     """
     kernel32 = _typed_kernel32()
     lookup = _sync_method(X64DbgBridge, "_find_parent_pid_in_snapshot")
@@ -525,9 +509,7 @@ def test_parent_pid_lookup_is_zero_for_an_invalid_snapshot_handle() -> None:
 def test_parent_pid_lookup_is_zero_when_the_entry_structure_has_the_wrong_size() -> None:
     """``Process32FirstW`` rejects an entry whose ``dwSize`` is not the documented one (error 24), so the lookup answers 0.
 
-    Probe key: ``ps_first_valid_struct_ProcEntryShort`` (``ret`` false, ``last_error`` 24) and ``product_parent_lookup_short_struct`` (0).
-
-    One-line change that fails it: change ``return 0`` to ``return -1`` at x64dbg.py:6504.
+    Mutation caught: changing ``return 0`` to ``return -1`` at x64dbg.py:6504 makes this fail.
     """
     kernel32 = _typed_kernel32()
     snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
@@ -544,13 +526,9 @@ def test_parent_pid_lookup_is_zero_when_the_entry_structure_has_the_wrong_size()
 async def test_module_snapshot_is_retried_while_the_target_changes_its_module_list(churning_child: subprocess.Popen[str]) -> None:
     """A module snapshot that fails with ``ERROR_BAD_LENGTH`` is retried after a delay and then succeeds.
 
-    The child loads and unloads DLLs without pause, which made 92 of 600 snapshots fail with error 24 in the probe. The product call is
-    repeated until one call has waited out at least half the retry delay; every call must still return a valid snapshot, because a
-    transient failure is retried. The chance that 400 consecutive calls see no failure is below 1e-27 at the measured rate.
+    The child loads and unloads DLLs without pause, which makes roughly 15 percent of module snapshots fail with error 24. The product call is repeated until one call has waited out at least half the retry delay; every call must still return a valid snapshot, because a transient failure is retried. The chance that 400 consecutive calls see no failure is below 1e-27 at the measured rate.
 
-    Probe key: ``modsnap_dll_churn_child`` (histogram ``{"24": 92, "ok": 508}``).
-
-    One-line change that fails it: change ``error_code != _ERROR_BAD_LENGTH`` to ``True`` at x64dbg.py:6157 (error 24 then raises at once).
+    Mutation caught: changing ``error_code != _ERROR_BAD_LENGTH`` to ``True`` at x64dbg.py:6157 makes error 24 raise at once.
 
     Args:
         churning_child: Child whose module list keeps changing.
@@ -589,15 +567,9 @@ async def test_scan_skips_chunks_of_a_region_that_became_unreadable_after_it_was
 ) -> None:
     """A chunk that cannot be read is skipped, the carried tail is dropped, and later chunks are still scanned at the right addresses.
 
-    The child owns a 4 MB read-write region (four 1 MB chunks) with a 16-byte marker straddling the first chunk boundary and another in
-    the third chunk. The bridge lists the region, the child then makes part or all of it unreadable on a signal from the test, and the
-    scan runs on the stale region record. Before the change both markers are found at the offsets the child wrote; afterwards the
-    straddling marker is lost (its second half is in the unreadable chunk) and a marker in a still-readable chunk is reported at its
-    true address, not shifted by the dropped tail.
+    The child owns a 4 MB read-write region (four 1 MB chunks) with a 16-byte marker straddling the first chunk boundary and another marker in the third chunk. The bridge lists the region, the child then makes part or all of it unreadable on a signal from the test, and the scan runs on the stale region record. The straddling marker is lost because its second half sits in the unreadable chunk, while a marker in a still-readable chunk is reported at its true address rather than shifted by the dropped tail.
 
-    Probe key: ``scan_stale_protect_mid``, ``scan_stale_protect_all``, ``scan_stale_free``.
-
-    One-line change that fails it: delete ``carry = b""`` at x64dbg.py:5697 (the third chunk's marker is then reported 15 bytes off).
+    Mutation caught: deleting ``carry = b""`` at x64dbg.py:5697 makes the third chunk's marker report 15 bytes off.
 
     Args:
         stale_region_child: The child and the base address of its region.
@@ -630,9 +602,7 @@ async def test_scan_skips_chunks_of_a_region_that_became_unreadable_after_it_was
 def test_module_import_leaves_all_three_optional_packages_unset_when_none_can_be_imported(all_blocked_state: dict[str, Any]) -> None:
     """With capstone, keystone and yara unimportable the module still imports and every handle is ``None``.
 
-    Probe key: ``imports_child_all_three_blocked``.
-
-    One-line change that fails it: change ``except ImportError:`` to ``except KeyError:`` at x64dbg.py:140 (the import then fails in the child).
+    Mutation caught: changing ``except ImportError:`` to ``except KeyError:`` at x64dbg.py:140 makes the import fail in the child.
 
     Args:
         all_blocked_state: State reported by the child interpreter.
@@ -649,9 +619,7 @@ def test_module_import_leaves_all_three_optional_packages_unset_when_none_can_be
 def test_module_import_keeps_capstone_and_keystone_when_only_yara_is_missing(yara_blocked_state: dict[str, Any]) -> None:
     """The three import guards are independent: a missing yara does not disable capstone or keystone.
 
-    Probe key: ``imports_child_only_yara_blocked``.
-
-    One-line change that fails it: set ``_capstone = None`` inside the yara ``except ImportError`` block at x64dbg.py:155.
+    Mutation caught: setting ``_capstone = None`` inside the yara ``except ImportError`` block at x64dbg.py:155 makes this fail.
 
     Args:
         yara_blocked_state: State reported by the child interpreter.

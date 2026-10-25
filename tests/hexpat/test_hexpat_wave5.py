@@ -2,14 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave 5 gates for Group 01: HexPat engine findings (F14-F17).
+"""Gates for HexPat error formatting and preprocessor behaviour.
 
-Closes the following NOT_RESOLVED findings from group-01-report.md:
-
-F14 - HexPatError.__str__ exact format (errors.py:44-45)
-F15 - preprocessor import directive (preprocessor.py:220)
-F16 - circular include prevention (preprocessor.py:290)
-F17 - _process_defines 64-pass limit (preprocessor.py:320)
+Covers HexPatError.__str__ formatting (errors.py:44-45), the preprocessor import
+directive (preprocessor.py:220), circular include prevention (preprocessor.py:290),
+and the _process_defines 64-pass limit (preprocessor.py:320).
 """
 
 from __future__ import annotations
@@ -26,9 +23,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-# ---------------------------------------------------------------------------
-# F14 -- HexPatError.__str__ exact format (errors.py:44-45)
-# ---------------------------------------------------------------------------
+# HexPatError.__str__ exact format (errors.py:44-45)
 
 
 class TestHexPatErrorStrFormat:
@@ -91,9 +86,9 @@ class TestHexPatErrorStrFormat:
         assert str(err) == "3: syntax error"
 
     def test_exact_string_from_report_spec(self) -> None:
-        """Assert the exact example from the group-01-report STILL OPEN spec.
+        """Assert the exact example string from the HexPatError format specification.
 
-        The report spec is:
+        The specification is:
         `str(HexPatError('bad type', line=3, column=7, file='test.hexpat'))
         == 'test.hexpat:3:7: bad type'`
 
@@ -104,9 +99,7 @@ class TestHexPatErrorStrFormat:
         assert result == "test.hexpat:3:7: bad type"
 
 
-# ---------------------------------------------------------------------------
-# F15 -- preprocessor import directive (preprocessor.py:220)
-# ---------------------------------------------------------------------------
+# preprocessor import directive (preprocessor.py:220)
 
 
 class TestPreprocessorImportDirective:
@@ -196,9 +189,7 @@ class TestPreprocessorImportDirective:
         assert "import std.io;" not in processed_text, "The import directive must be replaced, not echoed to output"
 
 
-# ---------------------------------------------------------------------------
-# F16 -- circular include prevention (preprocessor.py:290)
-# ---------------------------------------------------------------------------
+# circular include prevention (preprocessor.py:290)
 
 
 class TestCircularIncludePrevention:
@@ -304,9 +295,7 @@ class TestCircularIncludePrevention:
             pytest.fail(f"Circular include raised HexPatPreprocessorError: {exc}")
 
 
-# ---------------------------------------------------------------------------
-# F17 -- _process_defines 64-pass limit (preprocessor.py:320)
-# ---------------------------------------------------------------------------
+# _process_defines 64-pass limit (preprocessor.py:320)
 
 
 class TestProcessDefines64PassLimit:

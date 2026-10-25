@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, items 3, 4, 5 and 47: trust and approvals follow what a server can do, and survive concurrent writers.
+"""Trust and approvals follow what a server can do, and survive concurrent writers.
 
 Every gate drives the real :class:`TrustStore`, :class:`ApprovalStore` and :class:`McpConsentGate` over real files in the test's own
 directory. The identity gates for a remote server connect a real :class:`McpConnectionManager` to a real SDK ``MCPServer`` over Streamable
@@ -144,7 +144,7 @@ _WIDENINGS: Final[dict[str, tuple[McpServerConfig, McpServerConfig]]] = {
 
 
 class TestPrivilegeWideningChangesAskAgain:
-    """Item 3: every change that widens what a server can reach revokes trust and asks again."""
+    """Every change that widens what a server can reach revokes trust and asks again."""
 
     @pytest.mark.parametrize("change", sorted(_WIDENINGS))
     def test_local_server_is_asked_about_again(self, tmp_path: Path, change: str) -> None:
@@ -267,7 +267,7 @@ def _manager(tmp_path: Path, config: McpServerConfig, approvals: ApprovalStore) 
 
 
 class TestApprovalsFollowIdentity:
-    """Item 4: an ``always`` approval applies only to the server it was given about."""
+    """An ``always`` approval applies only to the server it was given about."""
 
     def test_remote_server_repointed_loses_its_approvals(self, tmp_path: Path) -> None:
         """An HTTP server whose headers change no longer matches, and its persisted approvals are gone.
@@ -343,7 +343,7 @@ class TestApprovalsFollowIdentity:
 
 
 class TestConcurrentWritesLoseNothing:
-    """Item 5: the trust and approval files survive concurrent writers."""
+    """The trust and approval files survive concurrent writers."""
 
     def test_threads_writing_through_two_stores_keep_every_record(self, tmp_path: Path) -> None:
         """Writers on many threads, through two store instances on one file, lose nothing.

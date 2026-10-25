@@ -255,8 +255,7 @@ class TestBuildApiKwargs:
     def test_thinking_enabled_omits_temperature_and_inflates_max_tokens(self) -> None:
         """Extended thinking inflates max_tokens and never sets a temperature.
 
-        The old-style thinking API required ``temperature=1.0``; the
-        anthropic 1.x SDK removed the parameter entirely, so the helper
+        The anthropic 1.x SDK rejects ``temperature``, so the helper
         must leave it out (the API default of 1.0 already applies to
         thinking requests) while still raising ``max_tokens`` to at least
         ``budget_tokens + 1024``.
@@ -1001,9 +1000,8 @@ class TestAnthropicModelListing:
     ) -> None:
         """At least one independently-known production model appears in the listing.
 
-        The set of known IDs below represents models that have been
-        publicly documented by Anthropic and were confirmed available
-        via a live API call on 2026-06-07. The test fails only if none
+        The set of known IDs below represents models that Anthropic
+        publicly documents. The test fails only if none
         of these IDs appear in the live response, which would indicate
         the bridge is silently truncating or filtering the model list.
 

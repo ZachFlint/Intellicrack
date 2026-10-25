@@ -2,29 +2,29 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Audit 1 regression tests for the providers-local unit.
+r"""Regression tests for the local providers unit.
 
-Covers F-0001..F-0007 from ``audit1.md``:
+Covers these behaviours:
 
-* F-0001 - dead constants ``_B580_DEVICE_IDS`` / ``_INTEL_VENDOR_ID`` must be
+* dead constants ``_B580_DEVICE_IDS`` / ``_INTEL_VENDOR_ID`` must be
   wired into the live detection path.
-* F-0002 - cloud-stream OpenAI tool-call dict arguments must not be silently
+* cloud-stream OpenAI tool-call dict arguments must not be silently
   dropped during streaming accumulation.
-* F-0003 - ``LocalTransformersProvider.chat`` / ``chat_stream`` must raise on
+* ``LocalTransformersProvider.chat`` / ``chat_stream`` must raise on
   empty model strings instead of substituting a default.
-* F-0004 - ``LocalTransformersProvider.__init__`` must bind a ``provider``
+* ``LocalTransformersProvider.__init__`` must bind a ``provider``
   field on its bound logger.
-* F-0005 - tool-call extraction must locate pretty-printed JSON tool calls
+* tool-call extraction must locate pretty-printed JSON tool calls
   with whitespace after the opening brace and around the colon.
-* F-0006 - prompt formatting must tolerate tokenizers without a
+* prompt formatting must tolerate tokenizers without a
   ``chat_template`` attribute at all.
-* F-0007 - the Resizable-BAR detector must derive ReBAR state from the
+* the Resizable-BAR detector must derive ReBAR state from the
   authoritative PCI BAR size (cfgmgr32) rather than the NVIDIA-only
   ``RmGpuLdPciResizableBar`` registry value, and must not raise when BAR
   enumeration returns no data.
 
 These tests use real provider code paths and structlog loggers; the only
-process boundary they stub for F-0007 is :func:`max_memory_bar_bytes`, the
+process boundary they stub for ReBAR detection is :func:`max_memory_bar_bytes`, the
 cfgmgr32 BAR enumeration shim, which is the integration point Intel Arc
 ReBAR detection now depends on.
 """
@@ -212,16 +212,14 @@ def _format_prompt(
     return result
 
 
-# ---------------------------------------------------------------------------
-# F-0001: dead constants must be wired into live detection paths.
-# ---------------------------------------------------------------------------
+# dead constants must be wired into live detection paths.
 
 
 def test_f0001_b580_device_ids_constant_drives_detection() -> None:
     r"""``_is_b580_device`` device-ID path must be wired to ``_B580_DEVICE_IDS``.
 
-    Before the fix, ``_is_b580_device`` matched against a hard-coded literal
-    set and ignored the module constant. This gate proves the constant
+    ``_is_b580_device`` must not match against a hard-coded literal
+    set instead of the module constant. This gate proves the constant
     actually drives the verdict by routing a *realistic Windows PNP
     enumeration string* through the independent ``_parse_device_id_from_pnp``
     oracle to obtain the device ID, then feeding the parsed ID (never a value
@@ -284,8 +282,8 @@ def test_f0001_b580_device_name_path_is_independent_of_device_id() -> None:
 def test_f0001_intel_vendor_id_filters_non_intel_pnp() -> None:
     r"""``_parse_device_id_from_pnp`` must reject non-Intel vendor IDs.
 
-    Before the fix, the helper extracted ``DEV_<id>`` from any PNP string
-    even when the vendor was an NVIDIA / AMD device. After the fix, the
+    The helper must not extract ``DEV_<id>`` from any PNP string
+    even when the vendor is an NVIDIA / AMD device. The
     parser must consult ``_INTEL_VENDOR_ID`` and return an empty string
     for anything other than Intel (vendor ``0x8086``).
     """
@@ -300,9 +298,7 @@ def test_f0001_intel_vendor_id_filters_non_intel_pnp() -> None:
     assert not _parse_device_id_from_pnp(amd_card)
 
 
-# ---------------------------------------------------------------------------
-# F-0002: dict-typed OpenAI tool-call arguments must not be dropped.
-# ---------------------------------------------------------------------------
+# dict-typed OpenAI tool-call arguments must not be dropped.
 
 
 def test_f0002_openai_stream_dict_arguments_are_preserved() -> None:
@@ -313,8 +309,8 @@ def test_f0002_openai_stream_dict_arguments_are_preserved() -> None:
     than a streamed JSON string. ``_accumulate_openai_tool_call_deltas``
     must capture that dict exactly (mirroring the native NDJSON path) so
     ``_finalize_openai_tool_calls`` produces a ``ToolCall`` with the right
-    arguments. The pre-fix behaviour discarded dicts and finalised with
-    ``"{}"``.
+    arguments. Dicts must not be discarded: the finalizer must produce
+    ``"{}"`` only when there are no arguments.
     """
     accumulated: dict[int, dict[str, Any]] = {}
     chunk_one: list[dict[str, Any]] = [
@@ -365,17 +361,15 @@ def test_f0002_openai_stream_string_chunks_still_accumulate() -> None:
     assert finalised[0].arguments == {"query": "needle"}
 
 
-# ---------------------------------------------------------------------------
-# F-0003: empty model string must raise instead of silently substituting.
-# ---------------------------------------------------------------------------
+# empty model string must raise instead of silently substituting.
 
 
 @pytest.mark.asyncio
 async def test_f0003_chat_rejects_empty_model_string() -> None:
     """``chat()`` must raise ``ProviderError`` on an empty ``model``.
 
-    Pre-fix, ``model_id = model or _DEFAULT_MODEL`` silently swapped in
-    ``microsoft/Phi-3-mini-4k-instruct``. Post-fix the contract is that
+    ``model_id = model or _DEFAULT_MODEL`` would silently swap in
+    ``microsoft/Phi-3-mini-4k-instruct``. The contract is that
     callers must supply a real model.
     """
     provider = LocalTransformersProvider()
@@ -401,17 +395,15 @@ async def test_f0003_chat_stream_rejects_empty_model_string() -> None:
         await anext(iterator)
 
 
-# ---------------------------------------------------------------------------
-# F-0004: __init__ must bind the provider field on the bound logger.
-# ---------------------------------------------------------------------------
+# __init__ must bind the provider field on the bound logger.
 
 
 def test_f0004_init_logger_binds_provider_field() -> None:
     """``LocalTransformersProvider.__init__`` must produce a bound logger.
 
     The logger must carry ``provider="local_transformers"`` so log lines
-    are filterable by provider in production. The pre-fix code reassigned
-    the unbound module logger and lost that field on every emit.
+    are filterable by provider in production. Reassigning
+    the unbound module logger would lose that field on every emit.
 
     Verifies the binding by inspecting the structlog ``BoundLogger``'s
     captured context directly: the lazily-evaluated ``_context`` mapping
@@ -442,17 +434,15 @@ def test_f0004_provider_name_matches_logger_binding() -> None:
     assert provider.name == provider_ids.LOCAL_TRANSFORMERS
 
 
-# ---------------------------------------------------------------------------
-# F-0005: tool-call extraction must accept whitespace.
-# ---------------------------------------------------------------------------
+# tool-call extraction must accept whitespace.
 
 
 def test_f0005_extract_text_handles_pretty_printed_tool_call() -> None:
     r"""Whitespace inside ``{ "tool_call": ... }`` must not hide the call.
 
     Instruction-tuned models routinely emit a leading space and/or
-    newline after the opening brace. The pre-fix regex
-    ``r'\{"tool_call":'`` only matched the compact form.
+    newline after the opening brace. The regex
+    ``r'\{"tool_call":'`` only matches the compact form.
     """
     pretty = (
         "Sure, let me read those bytes.\n"
@@ -488,15 +478,13 @@ def test_f0005_extract_text_handles_compact_tool_call() -> None:
     assert extracted == "Calling tool now."
 
 
-# ---------------------------------------------------------------------------
-# F-0006: prompt formatting must tolerate tokenizers without chat_template.
-# ---------------------------------------------------------------------------
+# prompt formatting must tolerate tokenizers without chat_template.
 
 
 def test_f0006_format_prompt_handles_tokenizer_without_chat_template() -> None:
     """``_format_prompt`` must not raise when the tokenizer has no template.
 
-    Reproduces the exact failure from F-0006: a tokenizer object that
+    Reproduces the exact failure: a tokenizer object that
     raises ``AttributeError`` on ``tokenizer.chat_template`` access.
     """
 
@@ -533,9 +521,7 @@ def test_f0006_format_prompt_handles_tokenizer_without_chat_template() -> None:
     assert "<|im_start|>assistant" in prompt
 
 
-# ---------------------------------------------------------------------------
-# F-0007: ReBAR detection derives status from authoritative PCI BAR size.
-# ---------------------------------------------------------------------------
+# ReBAR detection derives status from authoritative PCI BAR size.
 
 
 _INTEL_ARC_B580_PNP: str = r"PCI\VEN_8086&DEV_E20B&SUBSYS_A003207E&REV_00\6&128604AE&0&00080008"
@@ -625,8 +611,8 @@ def test_f0007_check_rebar_status_handles_missing_bar_data(
 ) -> None:
     """When PCI enumeration returns no data, surface an indeterminate warning.
 
-    Pre-fix, ``int(count)`` could propagate ``ValueError`` out of the
-    registry-based parser. The PCI-BAR-based replacement must always
+    ``int(count)`` could propagate ``ValueError`` out of the
+    registry-based parser. The PCI-BAR-based check must always
     return ``(bool, str)`` regardless of whether cfgmgr32 produced data.
     """
     _install_fake_bar_size(monkeypatch, 0)

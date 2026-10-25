@@ -247,13 +247,12 @@ function Write-TraceFatal {
     )
     # The catch-all around Invoke-ApiTrace reports every unguarded failure under
     # the single stage 'session', and $_.Exception.Message names neither the
-    # statement nor the line. A null-receiver failure therefore surfaced as a
+    # statement nor the line. A null-receiver failure therefore surfaces as a
     # bare "You cannot call a method on a null-valued expression" with nothing
-    # to locate it by, which is what left S18-D08 undiagnosable across runs.
-    # InvocationInfo is not enough on its own: once an error crosses a function
-    # boundary it describes the *call site*, so it named the Invoke-ApiTrace
-    # call rather than the statement that failed. ScriptStackTrace's first
-    # frame is the innermost one and carries the real function, file and line.
+    # to locate it by. InvocationInfo is not enough on its own: once an error
+    # crosses a function boundary it describes the *call site*, not the
+    # statement that failed. ScriptStackTrace's first frame is the innermost one
+    # and carries the real function, file and line.
     $located = $Message
     if ($null -ne $ErrorRecord) {
         $frames = @()
@@ -314,10 +313,10 @@ function Invoke-ApiTrace {
         # has to be named explicitly to get that. TraceEvent 3.2.5 declares no
         # (name, fileName) constructor at all - only (name, options) and
         # (name, fileName, options) - so passing $null as a second argument
-        # bound the options parameter to null and produced a *file* session with
-        # no file. Construction still succeeded; the first EnableProvider then
-        # failed with ERROR_BAD_PATHNAME (0x800700A1), one call away from the
-        # cause, and the whole API Calls tab was empty (S17-D70).
+        # binds the options parameter to null and produces a *file* session with
+        # no file. Construction still succeeds, and the first EnableProvider then
+        # fails with ERROR_BAD_PATHNAME (0x800700A1), one call away from the
+        # cause.
         $script:Session = $sessionType::new($sessionName, [Microsoft.Diagnostics.Tracing.Session.TraceEventSessionOptions]::Create)
         $script:Session.StopOnDispose = $true
     } catch {
@@ -400,11 +399,9 @@ function Invoke-ApiTrace {
     $source.Dynamic.add_All($boundHandler)
     # UnhandledEvents is a .NET *event* on TraceEventDispatcher, not a parser
     # property like Dynamic. PowerShell surfaces events only as add_/remove_
-    # methods, so reading $source.UnhandledEvents always yielded $null and the
-    # .add_All() on it threw before Process() was ever reached - every run of
-    # this collector died here with the providers already enabled and the
-    # handlers already wired, so the API Calls tab was empty on every run
-    # (S18-D08). The event's own accessor takes the Action<TraceEvent> directly.
+    # methods, so reading $source.UnhandledEvents yields $null and the .add_All()
+    # on it throws before Process() is reached. The event's own accessor takes
+    # the Action<TraceEvent> directly.
     $source.add_UnhandledEvents($boundHandler)
 
     $tsStart = Get-Date -Format 'o'
@@ -464,7 +461,7 @@ function Invoke-ApiTrace {
         # ETWTraceEventSource and EventPipeEventSource, with or without any
         # handler registered. It is specific to the member name: the Boolean
         # EnableProvider above binds normally. psbase reaches the .NET object
-        # directly and the same source then delivers its events (S18-D08).
+        # directly and the same source then delivers its events.
         $source.psbase.Process() | Out-Null
     } catch {
         Write-TraceFatal -Code 5 -Stage 'process' -Message $_.Exception.Message -ErrorRecord $_

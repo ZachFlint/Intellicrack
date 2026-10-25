@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Second-pass critical-coverage tests for the HexPat evaluator and standard library.
+"""Critical-coverage tests for the HexPat evaluator and standard library.
 
 Drives the real preprocessor, lexer, parser, evaluator and ``BuiltinFunctions``
 with small pattern sources over a byte buffer built in the tests. Expected

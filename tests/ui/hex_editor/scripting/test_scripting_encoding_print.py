@@ -2,16 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit4 C10 regression tests for hex editor scripting (F-0020, F-0021).
+"""Regression tests for hex editor scripting.
 
 Covers:
 
-- F-0020: ``_DocAPI.search_text`` must use the encoding passed to
+- ``_DocAPI.search_text`` must use the encoding passed to
   ``_DocAPI.__init__`` rather than the hard-coded ``"utf-8"`` literal.
   When the panel's encoding combo selects ``"latin-1"``, a call to
   ``doc.search_text('café')`` must encode the search term using latin-1.
 
-- F-0021: ``execute_script`` must capture output from ``print()`` calls
+- ``execute_script`` must capture output from ``print()`` calls
   regardless of whether ``file=`` is passed.  The captured output must
   appear in the ``"output"`` key of the returned dict; no exception should
   be raised and the call must not crash when ``file=`` is set to an
@@ -175,7 +175,7 @@ def _encoding_provider(name: str) -> Callable[[], str | None]:
 
 
 class TestF0020SearchTextEncoding:
-    """F-0020: ``_DocAPI.search_text`` must honour the encoding from the panel combo."""
+    """``_DocAPI.search_text`` must honour the encoding from the panel combo."""
 
     @staticmethod
     def test_default_encoding_is_utf8() -> None:
@@ -199,10 +199,10 @@ class TestF0020SearchTextEncoding:
     def test_latin1_encoding_not_utf8() -> None:
         """With latin-1 encoding, the forwarded encoding must be exactly ``'latin1'``.
 
-        Falsifiability: changing ``_resolve_search_encoding`` to always return
-        ``"ascii"`` (or any codec other than ``"latin1"``) makes this assertion
-        fail because ``"ascii" != "latin1"``.  The negative-only predecessor
-        ``!= "utf-8"`` would still pass under that mutation.
+        Falsifiability: a ``_resolve_search_encoding`` that always returns
+        ``"ascii"`` (or any codec other than ``"latin1"``) fails this assertion
+        because ``"ascii" != "latin1"``.  A check that only rules out
+        ``"utf-8"`` would still pass under that mutation.
         """
         doc = _RecordingDoc()
         api = _DocAPI(doc, None, None, _encoding_provider("latin1"))
@@ -237,7 +237,7 @@ class TestF0020SearchTextEncoding:
 
 
 class TestF0021PrintCapture:
-    """F-0021: ``execute_script`` must capture ``print()`` output regardless of ``file=``."""
+    """``execute_script`` must capture ``print()`` output regardless of ``file=``."""
 
     @staticmethod
     def _make_doc_api() -> object:

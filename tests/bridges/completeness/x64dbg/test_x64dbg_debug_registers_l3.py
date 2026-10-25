@@ -11,7 +11,7 @@ generic, allowlist-free ``reg_get`` RPC. Arming a hardware breakpoint
 requires writing *both* the address register (e.g. ``dr0``) and the
 matching enable bit in ``dr7`` - a caller that writes only the address
 leaves the breakpoint silently disarmed, so this module gates that
-dual write explicitly (the Stream-A DR7-enable-bit hazard).
+dual write explicitly (the DR7 enable-bit hazard).
 
 A matching "Debug Registers" table in ``x64dbg_panel.py`` renders the
 values and is wired into ``_refresh_state()`` alongside the GPR table.
@@ -168,7 +168,7 @@ class TestDebugRegisterTableWiring:
         """``_refresh_state()`` must render the real ``dr0``..``dr7`` values, not placeholders.
 
         Falsifiable: if ``_refresh_debug_registers`` were never wired into
-        ``_refresh_state`` (a DEAD-CONTROL table), the Debug Registers
+        ``_refresh_state`` (an unwired table), the Debug Registers
         table would stay empty forever and this assertion would time out.
 
         Args:

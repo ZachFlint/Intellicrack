@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Shared helpers for FIX UNIT 14a real-data process-panel coverage tests.
+"""Shared helpers for real-data process-panel coverage tests.
 
 These helpers drive the *real* :class:`~intellicrack.bridges.process.ProcessBridge`
 against the *real* running Python interpreter process so the process-panel

@@ -2,14 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit7 U2 regression tests for discovery cache invalidation on exceptions.
+"""Regression tests for discovery cache invalidation on exceptions.
 
-Each test corresponds to F-0021 in audit7.md under "Findings:
-providers-meta". The fix in
-:mod:`intellicrack.providers.discovery` ensures that when a per-provider
-``discover_one`` task escapes with an exception type not caught
-internally, ``discover_all`` invalidates the corresponding cache entry
-so future reads cannot return stale data.
+When a per-provider ``discover_one`` task escapes with an exception type not
+caught internally, :mod:`intellicrack.providers.discovery` must invalidate the
+corresponding cache entry so future reads cannot return stale data.
 
 The tests use real ``ModelDiscovery``, ``DiscoveryCache``, and
 ``ProviderRegistry`` instances; only the provider's ``list_models``
@@ -373,15 +370,14 @@ def _event_names(records: Sequence[Mapping[str, Any]]) -> list[str]:
     return [str(rec.get("event", "")) for rec in records]
 
 
-# --- F-0021: discover_all invalidates cache on unexpected exceptions ---
+# discover_all invalidates cache on unexpected exceptions
 
 
 class TestF0021DiscoverAllInvalidatesCacheOnException:
-    """F-0021: ``discover_all`` invalidates the cache on unexpected exceptions.
+    """``discover_all`` invalidates the cache on unexpected exceptions.
 
-    The pre-fix code logged the error and continued without touching the
-    cache. The post-fix code calls ``await self._cache.ainvalidate(provider)``
-    before logging, so any stale or pre-seeded entry is dropped.
+    ``discover_all`` calls ``await self._cache.ainvalidate(provider)`` before
+    logging, so any stale or pre-seeded entry is dropped.
     """
 
     @pytest.mark.asyncio
@@ -392,8 +388,7 @@ class TestF0021DiscoverAllInvalidatesCacheOnException:
         ``AttributeError`` is not in the explicit ``except`` clause inside
         ``discover_one`` (``ConnectionError | OSError | RuntimeError |
         ValueError``), so it propagates through ``asyncio.gather`` and reaches
-        the result loop. Pre-fix, the loop logged but left the cache untouched.
-        Post-fix, the cache entry for that provider is removed.
+        the result loop, where the cache entry for that provider is removed.
         """
         registry = ProviderRegistry()
         provider = _RaisingProvider(
@@ -446,8 +441,7 @@ class TestF0021DiscoverAllInvalidatesCacheOnException:
     async def test_discovery_task_exception_log_event_emitted_with_provider() -> None:
         """The structured log event still names the affected provider.
 
-        The fix adds a ``provider`` key to the existing
-        ``discovery_task_exception`` event while preserving the event name.
+        The ``discovery_task_exception`` event carries a ``provider`` key and keeps its event name.
         """
         registry = ProviderRegistry()
         provider = _RaisingProvider(
@@ -481,9 +475,8 @@ class TestF0021DiscoverAllInvalidatesCacheOnException:
     async def test_other_providers_still_complete_when_one_raises() -> None:
         """A successful provider remains in the result when another raises.
 
-        This guards against a regression where pairing results via
-        ``zip(registered, completed)`` accidentally drops successful results
-        or misattributes them to the wrong provider.
+        Results must stay paired with their providers, so a successful result is never dropped
+        or attributed to the wrong provider.
         """
         registry = ProviderRegistry()
         good_provider = _SuccessfulProvider(

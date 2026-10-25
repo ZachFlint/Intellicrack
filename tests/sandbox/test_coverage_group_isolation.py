@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the isolated coverage group enumeration.
+"""Gates for the isolated coverage group enumeration.
 
 The coverage runner (:file:`docker/coverage_runner.py`) runs the ``coverage``
 test type as one pytest process per *leaf* test directory so that a native

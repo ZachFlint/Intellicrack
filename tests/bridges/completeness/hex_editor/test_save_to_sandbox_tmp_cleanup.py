@@ -7,16 +7,15 @@
 
 When the open document has never been written to disk, ``save_to_sandbox``
 materialises it to a ``tempfile.mkstemp`` path so the sandbox bridge has a real
-host file to copy. ``HexDocument.save`` leaves that temp file memory-mapped by
-the document, so on Windows the ``finally``-block ``unlink`` failed with
-``PermissionError: [WinError 5]``; the error was swallowed into a
-``tmp_file_cleanup_failed`` warning and the temp file leaked on every call.
+host file to copy. Using ``HexDocument.save`` would both leave the temp file
+memory-mapped (so on Windows the ``finally``-block ``unlink`` failed with
+``PermissionError: [WinError 5]`` and the temp file leaked) and would re-point the document at that temp path, so a later Save would write to a file that was just deleted.
 
-The remediation calls ``HexDocument.close()`` before the unlink, releasing the
-mapping (the document keeps its bytes in an owned buffer) so the delete
-succeeds. These tests drive the real ``HexEditorBridge`` and the real Rust
-``HexDocument``; only the sandbox-VM boundary is faked, because provisioning a
-Windows Sandbox or QEMU VM cannot run inside the Docker test sandbox.
+The bridge writes the scratch copy with ``HexDocument.save_copy``, which
+neither maps nor adopts the path. These tests drive the real
+``HexEditorBridge`` and the real Rust ``HexDocument``; only the sandbox-VM
+boundary is faked, because provisioning a Windows Sandbox or QEMU VM cannot run
+inside the Docker test sandbox.
 """
 
 from __future__ import annotations
@@ -89,5 +88,22 @@ def test_save_to_sandbox_copies_real_document_bytes_and_leaves_document_usable()
 
     assert bridge.document is not None
     assert bridge.document.read(0, bridge.document.length()) == _DOCUMENT_BYTES, (
-        "closing the map must not disturb the open document's content"
+        "writing the scratch copy must not disturb the open document's content"
     )
+
+
+def test_save_to_sandbox_leaves_unsaved_document_without_a_path() -> None:
+    """The scratch copy must not become the document's file.
+
+    Falsifiable: writing the scratch copy with ``HexDocument.save`` re-points the
+    document at the temp path, so ``file_path()`` returns the path of a file the
+    bridge has just deleted and the next Save silently writes there.
+    """
+    bridge, fake = _make_bridge_with_in_memory_document()
+
+    asyncio.run(bridge.save_to_sandbox(_SANDBOX_DEST_PATH))
+
+    assert len(fake.copy_calls) == 1
+    assert bridge.document is not None
+    assert bridge.document.file_path() is None
+    assert bridge.document.is_modified() is False

@@ -2,10 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Section 11 deterministic gate tests for OAuth and CredentialStore.
+"""Deterministic gate tests for OAuth and CredentialStore.
 
-Covers the boundary math and decision-tree branches identified in the
-section-11 audit: expiry buffers, serialisation round-trips, handle_callback
+Covers the boundary math and decision-tree branches: expiry buffers, serialisation round-trips, handle_callback
 error paths, get_token decision branches, revoke_token cache guarantee,
 refresh_token 403 path, CredentialStore.get_or_raise, and malformed-JSON
 deserialisation.
@@ -190,17 +189,11 @@ def _seed_token_cache(
     cache[provider] = token
 
 
-# ---------------------------------------------------------------------------
 # OAuthToken.is_expired_at — 5-minute buffer boundary
-# ---------------------------------------------------------------------------
 
 
 def test_is_expired_at_past_expiry() -> None:
-    """Token that expired 10 seconds ago must report is_expired_at=True.
-
-    Mutation: changing ``>=`` to ``>`` in is_expired_at lets an
-    exactly-at-boundary token appear valid.
-    """
+    """Token that expired 10 seconds ago must report is_expired_at=True."""
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     expires_at = now - timedelta(seconds=10)
     token = OAuthToken(
@@ -213,11 +206,7 @@ def test_is_expired_at_past_expiry() -> None:
 
 
 def test_is_expired_at_within_5min_buffer() -> None:
-    """Token expiring in 3 minutes is inside the 5-minute buffer, so expired.
-
-    Mutation: raising the buffer from 5 to 0 minutes would let this token
-    appear valid.
-    """
+    """Token expiring in 3 minutes is inside the 5-minute buffer, so expired."""
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     expires_at = now + timedelta(minutes=3)
     token = OAuthToken(
@@ -233,7 +222,6 @@ def test_is_expired_at_exact_5min_boundary() -> None:
     """Token expiring in exactly 5 minutes sits on the >= boundary, so expired.
 
     The oracle: ``now >= (now+5min - 5min) = now >= now`` is True.
-    Mutation: using ``>`` instead of ``>=`` would return False here.
     """
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     expires_at = now + timedelta(minutes=5)
@@ -250,7 +238,6 @@ def test_is_expired_at_outside_5min_buffer() -> None:
     """Token expiring in 6 minutes is outside the 5-minute buffer, not expired.
 
     Oracle: ``now >= (now+6min - 5min) = now >= now+1min`` is False.
-    Mutation: lowering the buffer to 6+ minutes would make this return True.
     """
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     expires_at = now + timedelta(minutes=6)
@@ -264,11 +251,7 @@ def test_is_expired_at_outside_5min_buffer() -> None:
 
 
 def test_is_expired_at_no_expiry() -> None:
-    """Token with expires_at=None must never be considered expired.
-
-    Mutation: removing the ``None`` guard would cause a TypeError instead of
-    returning False.
-    """
+    """Token with expires_at=None must never be considered expired."""
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     token = OAuthToken(
         access_token="acc",
@@ -279,16 +262,11 @@ def test_is_expired_at_no_expiry() -> None:
     assert token.is_expired_at(now) is False
 
 
-# ---------------------------------------------------------------------------
 # OAuthToken.needs_refresh_at — 10-minute buffer boundary
-# ---------------------------------------------------------------------------
 
 
 def test_needs_refresh_at_past_expiry() -> None:
-    """Expired token must also need a refresh.
-
-    Mutation: raising the needs_refresh buffer to 0 minutes would return False.
-    """
+    """Expired token must also need a refresh."""
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     expires_at = now - timedelta(seconds=10)
     token = OAuthToken(
@@ -305,7 +283,6 @@ def test_needs_refresh_at_within_10min_buffer_not_in_5min() -> None:
 
     Oracle for needs_refresh_at: ``now >= (now+7min - 10min) = now >= now-3min`` True.
     Oracle for is_expired_at: ``now >= (now+7min - 5min) = now >= now+2min`` False.
-    Mutation: changing the 10-minute buffer to 6 minutes would make this False.
     """
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     expires_at = now + timedelta(minutes=7)
@@ -323,7 +300,6 @@ def test_needs_refresh_at_exact_10min_boundary() -> None:
     """Token expiring in exactly 10 minutes sits on the boundary, so needs refresh.
 
     Oracle: ``now >= (now+10min - 10min) = now >= now`` is True.
-    Mutation: using ``>`` instead of ``>=`` would return False here.
     """
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     expires_at = now + timedelta(minutes=10)
@@ -340,7 +316,6 @@ def test_needs_refresh_at_outside_10min_buffer() -> None:
     """Token expiring in 11 minutes is outside the buffer, no refresh needed.
 
     Oracle: ``now >= (now+11min - 10min) = now >= now+1min`` is False.
-    Mutation: raising the buffer from 10 to 11+ minutes would return True.
     """
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     expires_at = now + timedelta(minutes=11)
@@ -354,10 +329,7 @@ def test_needs_refresh_at_outside_10min_buffer() -> None:
 
 
 def test_needs_refresh_at_no_expiry() -> None:
-    """Token with expires_at=None must never need a refresh via the timed path.
-
-    Mutation: removing the ``None`` guard would cause a TypeError.
-    """
+    """Token with expires_at=None must never need a refresh via the timed path."""
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     token = OAuthToken(
         access_token="acc",
@@ -368,17 +340,11 @@ def test_needs_refresh_at_no_expiry() -> None:
     assert token.needs_refresh_at(now) is False
 
 
-# ---------------------------------------------------------------------------
 # OAuthToken.to_dict — exact field mapping
-# ---------------------------------------------------------------------------
 
 
 def test_to_dict_exact_field_keys_and_values() -> None:
-    """to_dict must emit exactly the six documented keys with correct values.
-
-    Mutation: renaming a key (e.g. ``access_token`` → ``token``) in to_dict
-    would cause this assertion to fail.
-    """
+    """to_dict must emit exactly the six documented keys with correct values."""
     expires_at = datetime(2030, 6, 1, 0, 0, 0, tzinfo=UTC)
     token = OAuthToken(
         access_token="acc123",
@@ -407,10 +373,7 @@ def test_to_dict_exact_field_keys_and_values() -> None:
 
 
 def test_to_dict_none_values_preserved() -> None:
-    """None refresh_token and id_token must appear as None in the dict, not absent.
-
-    Mutation: using ``dict.pop`` to drop None values would make these keys absent.
-    """
+    """None refresh_token and id_token must appear as None in the dict, not absent."""
     token = OAuthToken(
         access_token="acc",
         refresh_token=None,
@@ -426,11 +389,7 @@ def test_to_dict_none_values_preserved() -> None:
 
 
 def test_to_dict_scopes_converted_to_list() -> None:
-    """Scopes tuple must be converted to a list in to_dict output.
-
-    Mutation: emitting a tuple instead of list would break JSON round-trip
-    when callers expect a list type.
-    """
+    """Scopes tuple must be converted to a list in to_dict output."""
     token = OAuthToken(
         access_token="acc",
         refresh_token=None,
@@ -445,11 +404,7 @@ def test_to_dict_scopes_converted_to_list() -> None:
 
 
 def test_to_dict_empty_scopes_to_empty_list() -> None:
-    """Empty scopes tuple must produce an empty list, not omit the key.
-
-    Mutation: omitting the scopes key when empty would break from_dict
-    round-trip contracts.
-    """
+    """Empty scopes tuple must produce an empty list, not omit the key."""
     token = OAuthToken(
         access_token="acc",
         refresh_token=None,
@@ -462,17 +417,11 @@ def test_to_dict_empty_scopes_to_empty_list() -> None:
     assert "scopes" in result
 
 
-# ---------------------------------------------------------------------------
 # OAuthToken.from_dict — round-trip and malformed input
-# ---------------------------------------------------------------------------
 
 
 def test_from_dict_round_trip_identity() -> None:
-    """from_dict(to_dict(token)) must reproduce the original token field-by-field.
-
-    Mutation: dropping a field in to_dict (e.g. id_token) would make the
-    round-trip token have id_token=None instead of the original value.
-    """
+    """from_dict(to_dict(token)) must reproduce the original token field-by-field."""
     expires_at = datetime(2031, 3, 15, 8, 30, 0, tzinfo=UTC)
     original = OAuthToken(
         access_token="orig_acc",
@@ -493,11 +442,7 @@ def test_from_dict_round_trip_identity() -> None:
 
 
 def test_from_dict_empty_dict_applies_defaults() -> None:
-    """from_dict({}) must return a usable token with documented default values.
-
-    Mutation: changing the default token_type to None in from_dict would
-    break callers that expect a non-None string.
-    """
+    """from_dict({}) must return a usable token with documented default values."""
     token = OAuthToken.from_dict({})
 
     assert len(token.access_token) == 0
@@ -509,11 +454,7 @@ def test_from_dict_empty_dict_applies_defaults() -> None:
 
 
 def test_from_dict_wrong_access_token_type_falls_back_to_empty() -> None:
-    """Non-string access_token in dict must fall back to empty string, not raise.
-
-    Mutation: removing the isinstance guard in from_dict would cause int 42
-    to be stored as the access_token, producing a type-incorrect token.
-    """
+    """Non-string access_token in dict must fall back to empty string, not raise."""
     data: dict[str, str | list[str] | None] = {"access_token": None}
     token = OAuthToken.from_dict(data)
 
@@ -525,23 +466,16 @@ def test_from_dict_bad_expires_at_string_raises_value_error() -> None:
 
     This is the documented propagation path: ValueError surfaces to
     _load_token which catches it and returns None.
-    Mutation: adding a bare ``except Exception`` in from_dict would silently
-    swallow the error and return a token with expires_at=None.
     """
     with pytest.raises(ValueError, match="not-a-datetime"):
         OAuthToken.from_dict({"expires_at": "not-a-datetime"})
 
 
-# ---------------------------------------------------------------------------
 # OAuthState.is_expired_at — 10-minute state timeout
-# ---------------------------------------------------------------------------
 
 
 def test_oauth_state_is_expired_at_past() -> None:
-    """State created 11 minutes ago must be expired.
-
-    Mutation: changing the 10-minute timeout to 12 minutes would return False.
-    """
+    """State created 11 minutes ago must be expired."""
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     created_at = now - timedelta(minutes=11)
     config = OAuthConfig(
@@ -568,7 +502,6 @@ def test_oauth_state_is_expired_at_exact_boundary() -> None:
     """State created exactly 10 minutes ago is on the >= boundary, so expired.
 
     Oracle: ``now >= (now-10min + 10min) = now >= now`` is True.
-    Mutation: using ``>`` instead of ``>=`` would return False.
     """
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     created_at = now - timedelta(minutes=10)
@@ -596,7 +529,6 @@ def test_oauth_state_is_expired_at_recent() -> None:
     """State created 9 minutes ago must not yet be expired.
 
     Oracle: ``now >= (now-9min + 10min) = now >= now+1min`` is False.
-    Mutation: lowering the timeout to 8 minutes would return True.
     """
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     created_at = now - timedelta(minutes=9)
@@ -620,17 +552,11 @@ def test_oauth_state_is_expired_at_recent() -> None:
     assert state.is_expired_at(now) is False
 
 
-# ---------------------------------------------------------------------------
 # OAuthManager.handle_callback — error paths
-# ---------------------------------------------------------------------------
 
 
 def test_handle_callback_unknown_state_raises() -> None:
-    """handle_callback with a state not in _pending_states must raise OAuthCallbackError.
-
-    Mutation: removing the ``oauth_state is None`` guard in handle_callback
-    would allow code exchange for an unrecognised state.
-    """
+    """handle_callback with a state not in _pending_states must raise OAuthCallbackError."""
     manager = OAuthManager(credential_store=None)
 
     with pytest.raises(OAuthCallbackError, match="Unknown state"):
@@ -638,11 +564,7 @@ def test_handle_callback_unknown_state_raises() -> None:
 
 
 def test_handle_callback_expired_state_raises() -> None:
-    """handle_callback with an expired OAuthState must raise OAuthCallbackError.
-
-    Mutation: removing the ``oauth_state.is_expired`` guard would allow
-    authorization flows that started more than 10 minutes ago.
-    """
+    """handle_callback with an expired OAuthState must raise OAuthCallbackError."""
     config = OAuthConfig(
         provider=OAuthProvider.GOOGLE,
         client_id="c",
@@ -670,11 +592,7 @@ def test_handle_callback_expired_state_raises() -> None:
 
 
 def test_handle_callback_pkce_verifier_missing_raises() -> None:
-    """handle_callback with use_pkce=True but code_verifier=None must raise OAuthCallbackError.
-
-    Mutation: removing the ``not oauth_state.code_verifier`` guard would
-    silently attempt the code exchange without a PKCE verifier.
-    """
+    """handle_callback with use_pkce=True but code_verifier=None must raise OAuthCallbackError."""
     config = OAuthConfig(
         provider=OAuthProvider.GOOGLE,
         client_id="c",
@@ -701,17 +619,11 @@ def test_handle_callback_pkce_verifier_missing_raises() -> None:
         asyncio.run(manager.handle_callback("code", "state_key_pkce"))
 
 
-# ---------------------------------------------------------------------------
 # OAuthManager.get_token — decision-tree branches
-# ---------------------------------------------------------------------------
 
 
 def test_get_token_returns_none_when_no_token_in_cache() -> None:
-    """get_token must return None when no token exists and no store is provided.
-
-    Mutation: returning a placeholder token instead of None when the cache
-    is empty would break callers that test ``if token is None``.
-    """
+    """get_token must return None when no token exists and no store is provided."""
     manager = OAuthManager(credential_store=None)
 
     result = asyncio.run(manager.get_token(OAuthProvider.GOOGLE))
@@ -719,12 +631,7 @@ def test_get_token_returns_none_when_no_token_in_cache() -> None:
 
 
 def test_get_token_returns_valid_token_without_refresh() -> None:
-    """get_token must return the cached token unchanged when it is not near expiry.
-
-    Mutation: always triggering a refresh regardless of needs_refresh would
-    cause an unnecessary network call and this assertion to fail on the
-    token identity check.
-    """
+    """get_token must return the cached token unchanged when it is not near expiry."""
     now = datetime.now(UTC)
     token = OAuthToken(
         access_token="valid_acc",
@@ -745,8 +652,6 @@ def test_get_token_returns_none_when_token_is_expired_and_no_auto_refresh() -> N
     """get_token with auto_refresh=False must return None for an is_expired token.
 
     Oracle: token expiring in 3 minutes satisfies is_expired (within 5-min buffer).
-    Mutation: returning the expired token instead of None would expose an
-    unusable token to callers.
     """
     now = datetime.now(UTC)
     token = OAuthToken(
@@ -769,8 +674,6 @@ def test_get_token_returns_stale_token_when_needs_refresh_not_expired_and_no_aut
     Oracle: token expiring in 7 minutes satisfies needs_refresh (within 10-min
     buffer) but NOT is_expired (outside 5-min buffer). With auto_refresh=False
     the refresh is skipped and the stale token is returned.
-    Mutation: returning None for all needs_refresh tokens regardless of
-    auto_refresh would break this.
     """
     now = datetime.now(UTC)
     token = OAuthToken(
@@ -788,17 +691,11 @@ def test_get_token_returns_stale_token_when_needs_refresh_not_expired_and_no_aut
     assert result.access_token == "stale_acc"
 
 
-# ---------------------------------------------------------------------------
 # OAuthManager.revoke_token
-# ---------------------------------------------------------------------------
 
 
 def test_revoke_token_returns_false_when_no_token() -> None:
-    """revoke_token must return False immediately when no token is cached.
-
-    Mutation: returning True or raising when there is no token would break the
-    documented ``False`` return contract.
-    """
+    """revoke_token must return False immediately when no token is cached."""
     manager = OAuthManager(credential_store=None)
 
     result = asyncio.run(manager.revoke_token(OAuthProvider.ANTHROPIC))
@@ -811,8 +708,6 @@ def test_revoke_token_always_clears_cache() -> None:
 
     ANTHROPIC has ``revoke_url=None`` in OAUTH_CONFIGS, so only the cache-clear
     path executes. The combined_success must be True (no keyring, no remote call).
-    Mutation: removing ``self._token_cache.pop(provider, None)`` would leave the
-    stale token in cache.
     """
     now = datetime.now(UTC)
     token = OAuthToken(
@@ -835,9 +730,7 @@ def test_revoke_token_always_clears_cache() -> None:
     assert OAuthProvider.ANTHROPIC not in cache_after
 
 
-# ---------------------------------------------------------------------------
 # OAuthManager.refresh_token — 403 must raise OAuthTokenRefreshError
-# ---------------------------------------------------------------------------
 
 
 def test_refresh_token_403_raises_oauth_token_refresh_error(
@@ -846,8 +739,6 @@ def test_refresh_token_403_raises_oauth_token_refresh_error(
     """A 403 response from the token endpoint must raise OAuthTokenRefreshError.
 
     Both 401 and 403 are in the ``{_HTTP_UNAUTHORIZED, _HTTP_FORBIDDEN}`` set.
-    Mutation: removing 403 from that set would raise OAuthTokenError instead,
-    which a caller catching OAuthTokenRefreshError would not see.
 
     Args:
         mock_403_server: Base URL of the mock server returning HTTP 403.
@@ -871,17 +762,11 @@ def test_refresh_token_403_raises_oauth_token_refresh_error(
     asyncio.run(go())
 
 
-# ---------------------------------------------------------------------------
 # OAuthManager.refresh_token — no refresh token raises OAuthTokenError
-# ---------------------------------------------------------------------------
 
 
 def test_refresh_token_no_refresh_token_raises_token_error() -> None:
-    """refresh_token must raise OAuthTokenError when the cached token has no refresh_token.
-
-    Mutation: silently returning without raising would make the caller think
-    the refresh succeeded.
-    """
+    """refresh_token must raise OAuthTokenError when the cached token has no refresh_token."""
     manager = OAuthManager(credential_store=None)
     token = OAuthToken(
         access_token="acc",
@@ -909,9 +794,7 @@ def test_refresh_token_no_refresh_token_raises_token_error() -> None:
     asyncio.run(go())
 
 
-# ---------------------------------------------------------------------------
 # CredentialStore.get_or_raise
-# ---------------------------------------------------------------------------
 
 
 def test_credential_store_get_or_raise_not_found_raises_credential_not_found(
@@ -923,8 +806,6 @@ def test_credential_store_get_or_raise_not_found_raises_credential_not_found(
     injected ``_env_vars`` dict, so the ambient Ollama variables are removed to
     guarantee the keyring-free store resolves nothing for the provider.
 
-    Mutation: raising a generic Exception instead of CredentialNotFoundError
-    would break callers that catch the specific type.
 
     Args:
         monkeypatch: Pytest fixture used to delete the Ollama credential
@@ -942,8 +823,6 @@ def test_credential_store_get_or_raise_found_returns_credentials() -> None:
     """get_or_raise must return the ProviderCredentials when the env fallback finds them.
 
     The env_vars dict is injected directly without touching disk or os.environ.
-    Mutation: returning None when a credential exists would contradict the
-    documented non-None return type.
     """
     store = _make_keyring_free_store({"OLLAMA_API_KEY": "gate_test_key_section11"})
 
@@ -952,17 +831,11 @@ def test_credential_store_get_or_raise_found_returns_credentials() -> None:
     assert creds.api_key == "gate_test_key_section11"
 
 
-# ---------------------------------------------------------------------------
 # CredentialStore._deserialize_credentials — malformed JSON
-# ---------------------------------------------------------------------------
 
 
 def test_credential_store_deserialize_malformed_json_raises_store_error() -> None:
-    """_deserialize_credentials with malformed JSON must raise CredentialStoreError.
-
-    Mutation: catching json.JSONDecodeError silently (returning None or
-    ProviderCredentials()) would hide data corruption from callers.
-    """
+    """_deserialize_credentials with malformed JSON must raise CredentialStoreError."""
     store_cls = cast("Any", CredentialStore)
     with pytest.raises(CredentialStoreError, match=r"[Dd]eserializ|[Ff]ailed"):
         store_cls._deserialize_credentials("not valid json {{{")

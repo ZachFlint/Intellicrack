@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-data coverage for ``intellicrack.bridges.installer`` (SHARD 04).
+"""Real-data coverage for ``intellicrack.bridges.installer`` .
 
 These tests exercise the installer against real archives, the real
 filesystem, real PE bytes, and real Python subprocesses rather than
@@ -21,15 +21,15 @@ faking the capability under test:
 * ``_extract_zip`` is called directly with a Zip-Slip ``../`` member, a
   Windows reserved-name member, and a legitimate PE-like member to
   verify the traversal guard, reserved-name guard, and a real
-  round-trip extraction (finding 04-F008).
+  round-trip extraction.
 * ``probe_python_package`` runs a real subprocess against an installed
   package (present path) and an absent package (None path)
-  (finding 04-F009, finding 04-F018 via the Frida registry entry).
+  (via the Frida registry entry).
 * ``deploy_x64dbg_plugin_detailed`` deploys real plugin bytes into a
   realistic x64dbg tree and the per-arch result is asserted
-  (finding 04-F010).
+.
 * ``find_tool_detailed`` discovers the builtin PROCESS tool and the
-  Frida python-package tool with no mocked subprocess (finding 04-F012).
+  Frida python-package tool with no mocked subprocess.
 """
 
 from __future__ import annotations
@@ -247,9 +247,7 @@ def _patch_get_client(
     monkeypatch.setattr(ToolInstaller, "_get_client", _get_client_override)
 
 
-# ---------------------------------------------------------------------------
-# 04-F008 - Zip-Slip and reserved-name guards, plus real extraction round-trip
-# ---------------------------------------------------------------------------
+# Zip-Slip and reserved-name guards, plus real extraction round-trip
 
 
 class TestExtractZipGuards:
@@ -311,8 +309,7 @@ class TestExtractZipGuards:
         assert extracted.read_bytes() == _PE_BYTES
 
 
-# ---------------------------------------------------------------------------
-# 04-F006, 08-F1, 08-F2 - install_tool with real HTTP transport (MockTransport)
+# 08-F1, 08-F2 - install_tool with real HTTP transport (MockTransport)
 #
 # httpx.MockTransport is injected at the HTTP-transport layer via monkeypatch
 # on ``_get_client``.  The real ``_get_latest_release_url``, ``_download_file``,
@@ -320,7 +317,6 @@ class TestExtractZipGuards:
 # implementation.  This is categorically different from patching those methods:
 # the production GitHub API parsing, streaming-download chunking, error
 # propagation, and archive extraction are all exercised end-to-end.
-# ---------------------------------------------------------------------------
 
 
 class TestInstallToolRealNetworkPipeline:
@@ -334,8 +330,7 @@ class TestInstallToolRealNetworkPipeline:
     over the wire; no production method is replaced, so every code path being
     tested is the genuine one.
 
-    Addresses findings 08-F1 (real network-error path unverified) and 08-F2
-    (only substring 'version' asserted) and 04-F006 (install_tool pipeline).
+    Covers the network-error path, exact error strings and the install pipeline.
     """
 
     @staticmethod
@@ -354,7 +349,7 @@ class TestInstallToolRealNetworkPipeline:
         production error constant ``_ERR_NO_EXE_AFTER_INSTALL`` is asserted so
         any rename or message change is immediately caught.
 
-        Addresses finding 08-F1: the real network-error code paths inside
+        The real network-error code paths inside
         ``_get_latest_release_url`` and ``_download_file`` run; no production
         method is replaced by a stub.
 
@@ -388,8 +383,7 @@ class TestInstallToolRealNetworkPipeline:
         ``_ERR_NO_VERSION_AFTER_INSTALL`` is asserted so any rename or reworded
         message immediately breaks this test.
 
-        Addresses finding 08-F2: exact equality on the error string (not a
-        substring), and the real network pipeline runs without any method stub.
+        Exact equality on the error string (not a substring), and the real network pipeline runs without any method stub.
 
         Args:
             tmp_path: Pytest temporary directory.
@@ -489,11 +483,9 @@ class TestInstallToolRealNetworkPipeline:
         assert result.error == _ERR_DOWNLOAD_FAILED, f"Expected exact error {_ERR_DOWNLOAD_FAILED!r}, got {result.error!r}"
 
 
-# ---------------------------------------------------------------------------
 # Legacy monkeypatch variants for the extract + verify pipeline.
 # These tests stub only the URL/download boundary and let every other
 # layer (extract, exe-search, version-probe) run against real code.
-# ---------------------------------------------------------------------------
 
 
 class TestInstallToolRealExtraction:
@@ -657,9 +649,7 @@ class TestInstallToolRealExtraction:
         assert result.error == _ERR_DOWNLOAD_FAILED, f"Expected exact error {_ERR_DOWNLOAD_FAILED!r}, got {result.error!r}"
 
 
-# ---------------------------------------------------------------------------
-# 04-F010 - deploy_x64dbg_plugin_detailed real per-arch deployment
-# ---------------------------------------------------------------------------
+# deploy_x64dbg_plugin_detailed real per-arch deployment
 
 
 class TestDeployDetailedRealTree:
@@ -707,9 +697,7 @@ class TestDeployDetailedRealTree:
         assert result.success is False
 
 
-# ---------------------------------------------------------------------------
-# 04-F012 - find_tool_detailed real builtin + python-package discovery
-# ---------------------------------------------------------------------------
+# find_tool_detailed real builtin + python-package discovery
 
 
 class TestFindToolDetailedRealHost:
@@ -729,9 +717,7 @@ class TestFindToolDetailedRealHost:
         assert found.path is None
 
 
-# ---------------------------------------------------------------------------
-# 04-F009 / 04-F018 - probe_python_package real subprocess present/absent
-# ---------------------------------------------------------------------------
+# probe_python_package real subprocess present/absent
 
 
 class TestProbePythonPackageRealSubprocess:
@@ -790,7 +776,7 @@ class TestProbePythonPackageRealSubprocess:
     @staticmethod
     @pytest.mark.spawns_process
     def test_real_frida_registry_probe(tmp_path: Path) -> None:
-        """The real Frida registry entry probes via subprocess (04-F018).
+        """The real Frida registry entry probes via subprocess.
 
         On a host with frida installed the returned version must match the
         frida package; otherwise None is returned. Either way the real

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D75: a snapshot can be taken on the accelerator Windows uses.
+r"""A snapshot can be taken on the accelerator Windows uses.
 
 ``snapshot-save`` serialises CPU and RAM state, and WHPX - the only accelerator
 a Windows guest runs under here - registers migration blockers against exactly
@@ -11,7 +11,7 @@ so nothing executes), the job concludes with ``State blocked due to
 non-migratable CPUID feature support, dirty memory tracking support, and
 XSAVE/XRSTOR support``, and it stays blocked. The whole Snapshots surface was
 therefore dead on Windows; it worked only under TCG or KVM, which is why the
-S17-D59 gates never saw it.
+Earlier gates never saw it.
 
 A disk-only internal snapshot stores no machine state and is not blocked: on the
 same WHPX machine, ``blockdev-snapshot-internal-sync`` on the device returned

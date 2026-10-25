@@ -2,14 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for A5 (S14-D13, Low): pattern-search range bounding must reach the UI.
+"""Regression gate for pattern-search range bounding in the memory tab.
 
-Before the fix, ``MemoryTab._build_search_tab`` exposed only a pattern field
-and a Search button; ``_on_search`` always called
-``ProcessBridge.search_pattern`` without ``start_address``/``end_address``,
-so the backend's already-implemented address-range clipping was unreachable
-from the panel. The fix adds Start/End ``QLineEdit`` fields and threads their
-parsed values through to the bridge call.
+The search tab exposes Start/End ``QLineEdit`` fields whose parsed values are passed
+to ``ProcessBridge.search_pattern`` as ``start_address``/``end_address``, so the
+address-range clipping of the backend is reachable from the panel.
 
 ``TestBoundedSearchConfinesResultsToRange`` drives the real
 ``MemoryTab._on_search`` entry point against a real ``ProcessBridge``
@@ -330,7 +327,7 @@ def sentinel_region(scratch_region: int) -> tuple[int, int, int]:
 
 
 class TestBoundedSearchConfinesResultsToRange:
-    """A5/S14-D13: a bounded search must be confined to its address range."""
+    """A bounded search must be confined to its address range."""
 
     def test_narrow_bound_excludes_far_match_and_wide_bound_reveals_it(
         self,

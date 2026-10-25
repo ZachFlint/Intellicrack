@@ -32,7 +32,7 @@ const chartsSource = await readFile(`${staticDir}charts.js`, 'utf8');
 
 const { CHART_TOKEN_FALLBACKS, hoverIndex, histogramPeak, parseColor, tokenHex } = await import('../static/charts.js');
 
-/* -------------------------------------------------------- #62/#63: hoverIndex */
+/* -------------------------------------------------------- hoverIndex */
 
 check('hoverIndex is null for an empty series (the defect)', hoverIndex(0, 10, 100) === null, 'an empty series must not resolve to index 0, which reads out of bounds');
 check('hoverIndex clamps the left edge', hoverIndex(256, 0, 100) === 0, 'the leftmost pointer position should map to the first bucket');
@@ -61,7 +61,7 @@ check(
   'classificationChart onClick no longer routes through hoverIndex',
 );
 
-/* -------------------------------------------------------------- #35: histogramPeak */
+/* -------------------------------------------------------------- histogramPeak */
 
 check('histogramPeak is null for an all-zero histogram (the defect)', histogramPeak(new Array(256).fill(0)) === null, 'an empty document must report no peak rather than a fabricated one');
 
@@ -86,7 +86,7 @@ check(
   'histogramChart no longer computes its caption through histogramPeak',
 );
 
-/* ---------------------------------------------------------------- #77: parseColor */
+/* ---------------------------------------------------------------- parseColor */
 
 check(
   '6-digit hex parses correctly (baseline)',
@@ -120,7 +120,7 @@ check(
  *
  * The stub declares four of the twenty tokens the charts read, which is also
  * what makes it the fixture for the empty-token path: the other sixteen are the
- * "renamed in the stylesheet, silent everywhere" case DS-4 is about. The warning
+ * "renamed in the stylesheet, silent everywhere" case. The warning
  * that path emits is captured rather than printed, so a run that says nothing is
  * a run where the audit stayed quiet, and that is itself an expectation. */
 globalThis.getComputedStyle = (node) => node;

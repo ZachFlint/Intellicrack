@@ -1393,8 +1393,8 @@ class SandboxBridge(ToolBridgeBase):
         r"""Create a new sandbox instance.
 
         Rejects unknown ``sandbox_type`` values explicitly instead of
-        silently coercing them to ``"qemu"``. The previous behaviour
-        hid typos (``"Qemu"``, ``"window"``, ``"vm"``) and caused the
+        silently coercing them to ``"qemu"``, which would hide typos
+        (``"Qemu"``, ``"window"``, ``"vm"``) and cause the
         orchestrator to spin up the wrong sandbox flavour; validating
         up-front surfaces the mistake to the caller immediately.
 
@@ -1681,13 +1681,12 @@ class SandboxBridge(ToolBridgeBase):
 
         Validates ``sandbox_type`` up-front and refuses to launch the
         target under a coerced fallback when the caller supplies an
-        unknown flavour. The previous silent coercion mapped any
-        non-``"windows"`` string to ``"qemu"``, which made
-        ``sandbox_type="Qemu"`` (capitalised) or future sandbox flavours
-        silently behave as QEMU.
+        unknown flavour. Coercing any non-``"windows"`` string to
+        ``"qemu"`` would make ``sandbox_type="Qemu"`` (capitalised) or
+        future sandbox flavours silently behave as QEMU.
 
         Both ``qemu_config`` and ``reuse_instance`` are forwarded to the
-        manager, which has always accepted them. Without the first, a QEMU
+        manager, which accepts them. Without the first, a QEMU
         run reaches the backend with no disk image and cannot start at all;
         without the second, a caller that already has a running sandbox gets
         a second virtual machine booted beside it rather than its binary run
@@ -2274,9 +2273,9 @@ class SandboxBridge(ToolBridgeBase):
         Raises ``ToolError`` when the guest agent is not connected
         instead of returning an empty list, so callers can distinguish
         "no messages waiting" (empty ``messages`` list, success) from
-        "agent channel is dead" (error). Previously both paths returned
-        ``{"messages": [], "count": 0}``, which masked agent-channel
-        faults behind a benign-looking empty response and left GUI /
+        "agent channel is dead" (error). Returning
+        ``{"messages": [], "count": 0}`` for both would mask agent-channel
+        faults behind a benign-looking empty response and leave GUI /
         orchestrator consumers with no way to surface the root cause.
 
         Args:
@@ -2603,7 +2602,7 @@ class SandboxBridge(ToolBridgeBase):
         ``MiniDumpWriteDump`` inside the guest against the process identified
         by ``target_pid``; ``target_pid`` is required for Windows Sandbox
         because passing ``GetCurrentProcess()`` would (incorrectly) dump the
-        PowerShell host instead of the analysis target (audit7 F-0021).
+        PowerShell host instead of the analysis target.
 
         Args:
             instance_id: ID of the sandbox instance.

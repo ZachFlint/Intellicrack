@@ -2,29 +2,23 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S17-D70 and S17-D71: the two ETW recorders that die in every run.
+r"""Gates for the two ETW recorders whose session type and event names were wrong.
 
-Both were found on the first Windows sandbox session that survived long enough
-to be asked (2026-08-09), and both had been invisible for the whole audit
-because every earlier session aborted before a monitor could be read back.
-Neither is a capability gap - the recorders are wired to ETW correctly in every
-other respect - and both are one wrong identifier.
+Neither is a capability gap: the recorders are wired to ETW correctly, and each
+fails on one wrong identifier.
 
-* **S17-D70.** ``api_trace.ps1`` built its session as
+* **Session type.** ``api_trace.ps1`` builds its session as
   ``$sessionType::new($sessionName, $null)``, intending a real-time session.
   TraceEvent 3.2.5 declares no ``(name, fileName)`` constructor at all - only
-  ``(name, options)`` and ``(name, fileName, options)`` - so the ``$null``
-  bound the *options* parameter and produced a **file** session with no file.
-  Construction succeeded; the first ``EnableProvider`` then failed with
-  ``ERROR_BAD_PATHNAME`` (``0x800700A1``) and the monitor exited 4 about six
-  seconds into every run, leaving the API Calls tab with two entries.
-* **S17-D71.** ``injection_monitor.ps1`` registered
+  ``(name, options)`` and ``(name, fileName, options)`` - so the ``$null`` binds the
+  *options* parameter and yields a **file** session with no file. Construction
+  succeeds, and the first ``EnableProvider`` fails with ``ERROR_BAD_PATHNAME``
+  (``0x800700A1``).
+* **Event names.** ``injection_monitor.ps1`` registers
   ``$kernelParser.add_VirtualMemVirtualAlloc`` and ``add_VirtualMemVirtualFree``.
-  ``KernelTraceEventParser`` calls them ``VirtualMemAlloc`` and
-  ``VirtualMemFree``. PowerShell resolves ``add_*`` late, so nothing failed at
-  load: the monitor started, reported itself healthy, enabled its kernel
-  provider and then died about a second in, taking its own Kernel-Process
-  fallback with it and leaving the Injections tab with one entry.
+  ``KernelTraceEventParser`` names them ``VirtualMemAlloc`` and ``VirtualMemFree``.
+  PowerShell resolves ``add_*`` late, so a wrong name fails only mid-run, after the
+  monitor has reported itself healthy.
 
 Both gates run against the **real vendored assembly**, loaded by the
 **production** dependency resolver lifted verbatim out of the staged script,
@@ -199,7 +193,7 @@ def _assembly_preamble(monitor_dir: Path) -> list[str]:
 
 @pytest.mark.asyncio
 class TestTheApiTraceSessionIsRealTime:
-    """S17-D70: the recorder's own session expression must build a real-time session."""
+    """The recorder's own session expression must build a real-time session."""
 
     async def test_the_staged_construction_expression_yields_a_real_time_session(self, tmp_path: Path) -> None:
         """Evaluate ``api_trace.ps1``'s own session construction and ask what it built.
@@ -242,7 +236,7 @@ class TestTheApiTraceSessionIsRealTime:
 
 @pytest.mark.asyncio
 class TestTheInjectionMonitorSubscribesToRealEvents:
-    """S17-D71: every kernel event the recorder registers for must exist."""
+    """Every kernel event the recorder registers for must exist."""
 
     async def test_every_registered_kernel_event_exists_on_the_parser(self, tmp_path: Path) -> None:
         """Look up each ``add_*`` registration on the real ``KernelTraceEventParser``.

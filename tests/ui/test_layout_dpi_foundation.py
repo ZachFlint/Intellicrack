@@ -3,15 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the layout/DPI foundation fixes (D38, D08, D03, D02, D27).
+"""Gates for the layout/DPI foundation fixes.
 
 Covers the shared toolbar-height derivation used by every docked analysis
-panel and the main window toolbar (D38/D08/D03 -- a fixed 32px/40px toolbar
+panel and the main window toolbar (a fixed 32px/40px toolbar
 clips styled ``QPushButton``/``QLineEdit`` children), the docked-tab splitter
 floor that must leave the handle movable and the right dock column on-screen
-instead of pinning to a tab's raw, unbounded ``minimumSizeHint`` (D02), and
+instead of pinning to a tab's raw, unbounded ``minimumSizeHint``, and
 the early splash pixmap composition that must fill its frame edge-to-edge
-instead of pillarboxing (D27).
+instead of pillarboxing.
 
 Drives a real ``MainWindow`` with real embedded Frida/Hex Editor bridges (no
 mocked geometry, no stubbed Qt objects) -- the same fixture wiring used by
@@ -111,7 +111,7 @@ def _toolbar_child_widgets(toolbar: QToolBar) -> list[QWidget]:
 
 
 class TestToolbarHeightFitsStyledControls:
-    """D38/D08/D03: every toolbar must be tall enough for its styled controls.
+    """Every toolbar must be tall enough for its styled controls.
 
     A fixed 32px (base_panel) or 40px toolbar height clips the bottom of a
     styled ``QPushButton`` (min-height 24px + 12px vertical padding) once the
@@ -193,7 +193,7 @@ class TestToolbarHeightFitsStyledControls:
 
 
 class TestDockedSplitterStaysUsable:
-    """D02: the docked left/right column split must never freeze the handle or push content off-screen.
+    """The docked left/right column split must never freeze the handle or push content off-screen.
 
     Pinning the left column's floor to a docked tab's raw, unbounded
     ``minimumSizeHint`` (the Hex Editor's real content -- disassembly,
@@ -246,11 +246,11 @@ class TestDockedSplitterStaysUsable:
 
 
 class TestEarlySplashFillsFrame:
-    """D27: the early splash pixmap must fill its frame edge-to-edge, not pillarbox.
+    """The early splash pixmap must fill its frame edge-to-edge, not pillarbox.
 
     ``KeepAspectRatio`` scales the source image to fit *inside* the target
     frame, leaving solid-background bars on the two sides that do not match
-    the frame's aspect ratio. The fix scales to *cover* the frame
+    the frame's aspect ratio. The composition scales to *cover* the frame
     (``KeepAspectRatioByExpanding``) and center-crops, so real image content
     -- not background fill -- reaches both edge columns.
     """
@@ -271,7 +271,7 @@ class TestEarlySplashFillsFrame:
         background = QColor(_EARLY_SPLASH_BG)
 
         def _column_is_uniform_background(x: int) -> bool:
-            """Report whether every sampled row of column ``x`` is the plain background colour.
+            """Report whether every sampled row of column ``x`` is the plain background color.
 
             Args:
                 x: Pixel column to sample.

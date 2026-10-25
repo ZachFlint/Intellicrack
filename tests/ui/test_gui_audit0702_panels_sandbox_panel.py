@@ -2,39 +2,39 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-02 GUI audit findings in ``sandbox_panel``.
+"""Gates for ``sandbox_panel`` execution report fields, teardown, snapshot rows, restart and splitters.
 
-Each test targets one audit finding and fails against the pre-fix behaviour:
+Each test targets one defect and fails against the defective behaviour:
 
-* ``C6``: ``load_execution_report`` must read real ``TypedDict``/dict fields
+* ``load_execution_report`` must read real ``TypedDict``/dict fields
   (dict access) instead of ``getattr`` on a plain ``dict``, which always fell
   through to placeholder defaults regardless of the report content.
-* ``H11``: ``_cleanup`` must dispatch ``stop_pcap``/``destroy`` through the
+* ``_cleanup`` must dispatch ``stop_pcap``/``destroy`` through the
   non-blocking ``run_bridge_coroutine_logged`` worker path instead of the
   blocking, untimed ``run_bridge_coroutine``, so panel teardown never freezes
   the GUI thread on a slow or unresponsive backend.
-* ``H26``: ``_on_delete_snapshot_success`` must remove the row that matches
+* ``_on_delete_snapshot_success`` must remove the row that matches
   ``self._pending_snapshot_id`` (the snapshot actually deleted), not whatever
   row happens to be selected when the async response arrives.
-* ``M28``: ``_on_destroy_error`` must not force the panel into a destroyed
+* ``_on_destroy_error`` must not force the panel into a destroyed
   UI state when the destroy RPC itself failed; it must resync from real
   status instead of orphaning an active sandbox instance.
-* ``M29``: a restart whose destroy phase succeeded but whose create phase
+* A restart whose destroy phase succeeded but whose create phase
   failed must reset ``sandbox_id`` and disable sandbox-active controls
   (the old instance really is gone); a restart whose destroy phase itself
   failed must leave that state untouched and only re-enable Restart.
-* ``M61``: the panel's main vertical splitter must have
+* The panel's main vertical splitter must have
   ``childrenCollapsible() is False`` so neither pane can be dragged to zero
   size.
-* ``L1``: the File Changes "Details" column must show descriptive content
+* The File Changes "Details" column must show descriptive content
   (a rename's previous path, or a byte-size fallback) instead of always
   echoing the raw ``size`` field regardless of operation.
 
 All tests drive a real :class:`SandboxPanel` under an offscreen
 ``QApplication``; no widget behaviour is mocked. Bridge coroutine dispatch is
-exercised either through real background-thread execution (H11) or by
+exercised either through real background-thread execution or by
 capturing the exact coroutine/callback handed to the module-level bridge
-runner (M29), matching the pattern used by the sibling VNC-connect audit
+runner, matching the pattern used by the sibling VNC-connect audit
 gate.
 """
 
@@ -70,7 +70,7 @@ _MODAL_POLL_INTERVAL_MS: int = 5
 def _dismiss_active_modal() -> None:
     """Close the active modal ``QMessageBox`` if one is open.
 
-    The panel's failure handlers now raise real error dialogs (S17-D09), whose
+    The panel's failure handlers now raise real error dialogs, whose
     blocking static call would otherwise stall any test that drives an error
     handler. The dialogs themselves are gated in
     ``test_sandbox_panel_error_dialogs_s17d09``; here they only need to be let
@@ -141,11 +141,11 @@ def test_c6_load_execution_report_uses_real_field_values_not_getattr_defaults(
 ) -> None:
     """``load_execution_report`` must render the real record fields.
 
-    Pre-fix, every field was read via ``getattr(change, "field", default)``
-    on a plain ``dict`` (``TypedDict`` instances have no attributes), so
-    every call silently fell through to its default ("unknown"/""/0)
-    regardless of the report's actual content; the network block also read
-    nonexistent keys ("destination"/"port"/"data_size"). Post-fix, every
+    Reading fields via ``getattr(change, "field", default)`` on a plain ``dict`` (``TypedDict`` instances have no attributes) would
+    silently fall through to the default ("unknown"/""/0) regardless of the report's actual content, and the network block would read
+    nonexistent keys ("destination"/"port"/"data_size"). Every field must be read via dict access with the correct ``FileChange`` /
+    ``RegistryChange`` / ``NetworkActivity`` keys, so the real values must
+    appear in the trees.
     field is read via dict access with the correct ``FileChange`` /
     ``RegistryChange`` / ``NetworkActivity`` keys, so the real values must
     appear in the trees.
@@ -220,10 +220,10 @@ def test_h11_cleanup_dispatches_async_and_does_not_block_gui_thread(
 ) -> None:
     """``_cleanup`` must return promptly even though the bridge calls are slow.
 
-    Pre-fix, ``_cleanup`` called the blocking ``run_bridge_coroutine`` with no
+    ``_cleanup`` must not call the blocking ``run_bridge_coroutine`` with no
     ``timeout_s`` for both ``stop_pcap`` and ``destroy``, so the calling
     (GUI) thread sat inside ``future.result(timeout=None)`` for the full
-    duration of both RPCs. Post-fix it dispatches both calls through
+    duration of both RPCs. It dispatches both calls through
     ``run_bridge_coroutine_logged`` (the non-blocking worker-thread path), so
     ``_cleanup`` itself returns almost immediately regardless of how long the
     bridge takes, and the destroy phase still eventually runs once
@@ -265,10 +265,8 @@ def test_h26_delete_snapshot_removes_row_by_pending_id_not_by_selection(
 ) -> None:
     """The deleted snapshot's row must be removed, not whatever row is selected.
 
-    Pre-fix, ``_on_delete_snapshot_success`` re-queried the tree's *current
-    selection* at completion time and removed that row, so if the user
-    changed their selection while the async delete was in flight, the wrong
-    row was removed from the UI. Post-fix it looks up the row by
+    ``_on_delete_snapshot_success`` must not re-query the tree's *current selection* at completion time, since a selection change
+    while the async delete is in flight would remove the wrong row. The row must be looked up by
     ``self._pending_snapshot_id`` (the snapshot that was actually deleted).
 
     The panel is activated on the QEMU backend first because the completion
@@ -306,16 +304,16 @@ def test_m28_destroy_error_preserves_active_state_for_orphaned_sandbox(
 ) -> None:
     """A failed destroy must not force the panel into a fabricated destroyed state.
 
-    Pre-fix, ``_on_destroy_error`` cleared ``sandbox_id``, forced the status
+    ``_on_destroy_error`` must not clear ``sandbox_id``, force the status
     indicator to "Inactive", disabled every sandbox control, and stopped the
     poll timer -- identical to the success path -- even though the backend
-    instance (and any active PCAP capture) is still alive. Post-fix it keeps
+    instance (and any active PCAP capture) is still alive. It must keep
     ``sandbox_id`` and the active controls intact and resyncs from a real
     status poll instead of assuming success.
 
     QEMU is the selected backend because the scenario requires an active PCAP
     capture, and ``SandboxBridge.pcap_start`` refuses a non-QEMU instance
-    outright (S17-D10) - a Windows sandbox can never hold the state this test
+    outright - a Windows sandbox can never hold the state this test
     describes.
 
     Args:
@@ -348,13 +346,13 @@ def test_m29_restart_failure_clears_stale_sandbox_id(
 ) -> None:
     """A failed restart must reset the panel instead of keeping a dead instance.
 
-    Pre-fix, the shared ``_on_restart_error`` handler only re-enabled the
+    The shared ``_on_restart_error`` handler must not only re-enable the
     Restart button in every case; if the destroy phase had already succeeded
     (the old instance is really gone) and the subsequent create failed,
     ``sandbox_id`` kept pointing at the destroyed instance while every
     sandbox-active control (Screenshot, PCAP, Execute, ...) stayed enabled.
 
-    Since S17-D14 the restart is one ``SandboxBridge.restart`` operation whose
+    The restart is one ``SandboxBridge.restart`` operation whose
     manager-side semantics guarantee the original instance is gone in every
     failure outcome, so ``_on_restart_error`` routes unconditionally through
     ``_finish_restart_after_destroy_only``: ``sandbox_id`` is cleared, the
@@ -434,7 +432,7 @@ def test_m29_restart_never_chains_destroy_and_create(
     """Restart must be one manager operation, not a GUI-side destroy/create chain.
 
     The two-phase chain is what put the teardown/recreate failure semantics in
-    the GUI in the first place (S17-D14). This gate fails if the panel goes back
+    the GUI in the first place. This gate fails if the panel goes back
     to calling ``bridge.destroy`` (and then ``bridge.create``) for a restart.
 
     Args:
@@ -529,11 +527,11 @@ def test_m29_restart_never_chains_destroy_and_create(
 def test_m61_main_splitter_children_not_collapsible(qapp: QApplication) -> None:
     """The main vertical splitter must not allow either pane to collapse to zero.
 
-    Pre-fix, ``main_splitter`` was constructed without
-    ``setChildrenCollapsible(False)``, so dragging the handle to either
+    ``main_splitter`` must be constructed with
+    ``setChildrenCollapsible(False)``, since otherwise dragging the handle to either
     extreme could hide the entire 15-tab output area (including the live
     Console log and VM Display) with only a thin, hard-to-grab sliver left.
-    Post-fix, ``childrenCollapsible()`` is ``False`` and Qt clamps
+    ``childrenCollapsible()`` is ``False`` and Qt clamps
     ``moveSplitter`` to each pane's minimum size instead of allowing zero.
 
     Args:
@@ -568,10 +566,10 @@ def test_l1_file_change_details_column_shows_rename_or_size_not_bare_size(
 ) -> None:
     """The "Details" column must describe the change, not always echo ``size``.
 
-    Pre-fix, ``_populate_file_changes`` filled the third column with
+    ``_populate_file_changes`` must not fill the third column with
     ``change.get("size", "")`` for every row regardless of operation, so a
     rename showed a raw byte count under a column headed "Details" instead
-    of anything descriptive. Post-fix, a rename shows its previous path and
+    of anything descriptive. A rename must show its previous path and
     a non-rename shows a labelled byte count.
 
     Args:

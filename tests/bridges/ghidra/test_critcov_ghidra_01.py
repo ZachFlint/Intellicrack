@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-object coverage for the first slice of ``intellicrack.bridges.ghidra``.
+"""Real-object coverage for ``intellicrack.bridges.ghidra``.
 
 The slice covers the script-rewriting helpers, the path validators, the Win32
 job-object and project-lock helpers, the headless-launch plumbing (JDK

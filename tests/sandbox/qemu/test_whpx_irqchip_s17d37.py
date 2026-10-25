@@ -2,10 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Regression tests for S17-D37: the WHPX interrupt chip must reach the guest.
+r"""The WHPX interrupt chip must reach the guest.
 
-With the S17-D36 CPU model in place a Windows 11 24H2 guest finally started -
-and then hung forever. Measured over the QEMU human monitor, the guest was at
+With the CPU model in place a Windows 11 24H2 guest starts -
+and then hangs forever. Measured over the QEMU human monitor, the guest was at
 ring 0 with interrupts enabled (``RFL=0x202``), spinning in a backward-``jmp``
 loop that polled a global, while QEMU's own ``info irq`` counted **45080**
 IRQ 0 events on both the i8259 and the ioapic. QEMU was raising timer
@@ -19,7 +19,7 @@ emulation mode in the hypervisor`` when asked for it - and that is the only
 mode that delivers interrupts to a Windows guest. Flipping that single token to
 ``on`` takes the same media from a permanent hang to Windows Setup in about a
 minute. The comment that justified ``off`` blamed ``Unexpected VP exit code 4``
-on the IRQ chip, which is the same symptom S17-D36 turned out to be, so the
+on the IRQ chip, which is the same symptom as the CPU model fault, so the
 option was disabled for a fault it never caused.
 
 **Why this is not an assertion on the argument.** A test that asserted
@@ -98,7 +98,7 @@ _MACHINE_OPTION: Final[str] = "-machine"
 def _with_userspace_irqchip(machine_argument: str) -> str:
     """Rewrite a ``-machine`` value to route interrupts through userspace.
 
-    This reconstructs the machine as it stood before S17-D37: every other
+    This reconstructs the machine without the fix: every other
     token identical, only the interrupt chip changed back.
 
     A value this rewrite cannot change fails the calling test. That covers both

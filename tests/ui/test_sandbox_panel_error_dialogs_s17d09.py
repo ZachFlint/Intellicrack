@@ -2,13 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D09: sandbox panel failures must raise a visible error dialog.
+"""Gates for sandbox panel failures raising a visible error dialog.
 
-Before this fix every failure path in ``SandboxPanel`` only appended a
-``"[-] ..."`` line to the Console tab. There was not a single ``QMessageBox``
-in the whole panel, so a failed Create, Destroy, Restart, Run, snapshot or
-command execution was completely invisible unless the user happened to be
-looking at the Console tab at that moment.
+Every failure path in ``SandboxPanel`` must raise a visible error dialog, not only append a
+``"[-] ..."`` line to the Console tab. A failed Create, Destroy, Restart, Run, snapshot or
+command execution is otherwise invisible unless the user happens to be looking at the
+Console tab at that moment.
 
 These tests drive the real panel handlers with real exceptions and let the
 genuine blocking ``QMessageBox`` that ``dialogs_helpers.show_error`` creates

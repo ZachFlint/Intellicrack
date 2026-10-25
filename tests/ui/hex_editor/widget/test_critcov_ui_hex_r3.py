@@ -2,10 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Third-pass coverage for the custom CRC source lookup and the tool status checker.
+"""Coverage for the custom CRC source lookup and the tool status checker.
 
-Two situations that earlier passes could not stage are driven with real operating-system behavior, each measured in the test container
-before this file was written:
+Two situations that cannot be staged with mocks are driven with real operating-system behavior:
 
 * A file the system refuses to describe. A deny entry on a directory, set with ``icacls`` and removed again directory-first in a
   ``finally``, makes ``Path.is_file()`` raise ``PermissionError`` for the file inside it.

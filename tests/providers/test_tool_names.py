@@ -114,9 +114,7 @@ _register_fallback: Any = vars(tool_names_module)[_REGISTER_FALLBACK_ATTR]
 _fallback_registry: dict[str, str] = vars(tool_names_module)[_WIRE_TO_CANONICAL_ATTR]
 
 
-# ---------------------------------------------------------------------------
 # Real-registry helpers
-# ---------------------------------------------------------------------------
 
 
 def _real_all_tool_definitions() -> list[ToolDefinition]:
@@ -157,9 +155,7 @@ _REAL_NAMES: list[str] = _real_all_function_names()
 _PROVIDER_NAME_REGEX: str = r"[A-Za-z0-9_-]{1,64}"
 
 
-# ---------------------------------------------------------------------------
 # 1. Regex-contract: proof of the rejection, and proof of the fix
-# ---------------------------------------------------------------------------
 
 
 class TestRegexContract:
@@ -195,9 +191,7 @@ class TestRegexContract:
             assert is_valid_wire_name(wire), f"to_wire_name({name!r}) produced invalid wire name {wire!r}"
 
 
-# ---------------------------------------------------------------------------
 # 2. Bijection over the real registry
-# ---------------------------------------------------------------------------
 
 
 class TestBijectionOverRealRegistry:
@@ -231,9 +225,7 @@ class TestBijectionOverRealRegistry:
             assert to_wire_name(name) == name.replace(".", "__")
 
 
-# ---------------------------------------------------------------------------
 # 3. Fallback path: synthetic names that fail the primary mapping
-# ---------------------------------------------------------------------------
 
 
 class TestFallbackPath:
@@ -289,9 +281,7 @@ class TestFallbackPath:
         assert from_wire_name("plain_name") == "plain_name"
 
 
-# ---------------------------------------------------------------------------
 # 4. Real-schema-emission: every provider schema builder emits only valid names
-# ---------------------------------------------------------------------------
 
 
 class TestRealSchemaEmission:
@@ -333,9 +323,7 @@ class TestRealSchemaEmission:
         assert is_valid_wire_name(schema["function"]["name"])
 
 
-# ---------------------------------------------------------------------------
 # 5. Per-provider round trip: emit (wire) -> simulated response -> parse (canonical)
-# ---------------------------------------------------------------------------
 
 _CANONICAL = "ghidra.decompile"
 _WIRE = to_wire_name(_CANONICAL)

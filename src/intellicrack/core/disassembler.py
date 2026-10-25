@@ -145,9 +145,7 @@ class HexDisassembler:
         """
         return self._cs_mod is not None
 
-    # ------------------------------------------------------------------
     # Architecture / mode resolution
-    # ------------------------------------------------------------------
 
     def _resolve_arch_mode(self, arch: str, mode: str) -> tuple[int, int]:
         """Map architecture and mode strings to capstone integer constants.
@@ -207,9 +205,7 @@ class HexDisassembler:
 
         raise ValueError(_ERR_UNSUPPORTED_ARCH)
 
-    # ------------------------------------------------------------------
     # Public API
-    # ------------------------------------------------------------------
 
     def disassemble(
         self,

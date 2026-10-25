@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit5 unit u1: ``CutterBridge`` fixes."""
+"""Regression tests for ``CutterBridge`` fixes."""

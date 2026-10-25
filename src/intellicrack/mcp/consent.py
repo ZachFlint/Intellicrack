@@ -727,8 +727,8 @@ class ApprovalRecord:
         function_name: The canonical dotted function name.
         generation: The key the answer was given about: for a server's
             tool, the :func:`approval_binding` of its tool-listing generation
-            and its identity. Empty for an answer recorded without one, which
-            no longer applies to anything.
+            and its identity. Empty for an answer recorded without one; such an
+            answer matches nothing.
         approved: ``True`` for an approval, ``False`` for a refusal.
         scope: How long the answer lasts.
     """
@@ -745,8 +745,8 @@ class ApprovalRecord:
 
         Returns:
             str: The identity, or an empty string for an answer recorded
-            before approvals were bound to identity, which no longer applies
-            to anything.
+            before approvals were bound to identity, which matches
+            nothing.
         """
         return split_approval_binding(self.generation)[1]
 

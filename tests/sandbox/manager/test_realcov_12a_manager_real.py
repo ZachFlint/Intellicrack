@@ -2,11 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-data coverage for ``intellicrack.sandbox.manager`` (FIX UNIT 12a).
+"""Real-data coverage for ``intellicrack.sandbox.manager``.
 
-The audit notes that every manager test uses ``_TestableManager`` with
-``InMemorySandbox`` stubs and never manages a real sandbox implementation. These
-tests drive the REAL :class:`SandboxManager` against the REAL
+These tests drive the REAL :class:`SandboxManager` against the REAL
 :class:`QEMUSandbox` / :class:`WindowsSandbox` classes:
 
 * ``get_available_types`` / availability probing query the REAL host and return

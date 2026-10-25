@@ -2,16 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for audit F17 -- lingering cancel state after Cancel.
+"""Regression gates for lingering cancel state after Cancel.
 
-Before the fix, ``Orchestrator.cancel()`` set ``_cancel_event`` unconditionally
-and ``process_user_input``'s ``finally`` preserved ``_state == "cancelled"``;
-the event was only cleared at the *start* of the next top-level request. Between
+A Cancel must not leave ``_cancel_event`` armed when nothing is in flight, and
+the request ``finally`` must not keep ``_state == "cancelled"``. Otherwise the
+event lingers until the *start* of the next top-level request. Between
 a Cancel and the next request, any async operation that consulted the cancel
-guard raised ``asyncio.CancelledError`` -- surfacing as a spurious "async
-operation cancelled" modal -- and the status bar stuck on "cancelled".
+guard raises ``asyncio.CancelledError`` -- surfacing as a spurious "async
+operation cancelled" modal -- and the status bar sticks on "cancelled".
 
-The fix (1) makes ``cancel()`` a no-op that clears any stray flag when nothing
+Required: (1) ``cancel()`` is a no-op that clears any stray flag when nothing
 is in flight, and (2) clears ``_cancel_event`` and resets ``_state`` to
 ``"idle"`` in the request ``finally`` as soon as the operation unwinds.
 
@@ -259,10 +259,10 @@ def _cancel_flag_set(orch: Orchestrator) -> bool:
 async def test_idle_cancel_does_not_arm_flag(tmp_path: Path) -> None:
     """Cancelling while idle must not leave the cancel flag armed.
 
-    Pre-fix, ``cancel()`` set the event unconditionally, so a Cancel clicked
-    while nothing was running left the flag set and made the next guarded async
-    operation raise a spurious "async operation cancelled". The fixed no-op path
-    must leave the flag clear and the state idle.
+    ``cancel()`` must not set the event when nothing is running: a Cancel clicked
+    while idle would otherwise leave the flag set and make the next guarded async
+    operation raise a spurious "async operation cancelled". The no-op path must
+    leave the flag clear and the state idle.
 
     Args:
         tmp_path: Pytest temporary directory for the session store.
@@ -284,8 +284,8 @@ async def test_cancelled_turn_settles_state_and_clears_flag(tmp_path: Path) -> N
     the turn while it is genuinely ``"processing"``, then asserts the request
     ``finally`` returned the orchestrator to ``"idle"`` with the cancel flag
     clear -- so a subsequently started operation cannot be aborted by a stale
-    flag. Pre-fix the ``finally`` preserved ``"cancelled"``, so the state
-    assertion is falsified by reverting the fix.
+    flag. Keeping ``"cancelled"`` in the ``finally`` fails the state
+    assertion.
 
     Args:
         tmp_path: Pytest temporary directory for the session store.

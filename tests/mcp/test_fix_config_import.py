@@ -4,9 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates for importing ``mcp.json`` written by other clients.
 
-Import used to reject valid input (keys such as ``GitHub`` or ``my_server``, the ``streamable-http`` transport name, URLs, paths and UUIDs
-that merely sat under a credential-sounding name) and to accept invalid input (literal keys in ``args``). One bad server key also threw
-away the whole document, and a ``${input:x}`` reference in ``args`` parsed but was never resolved, so the launch refused it.
+Import must accept valid input (keys such as ``GitHub`` or ``my_server``, the ``streamable-http`` transport name, URLs, paths and UUIDs
+that merely sat under a credential-sounding name) and must refuse invalid input (literal keys in ``args``). One bad server key also throws
+away the whole document, and a ``${input:x}`` reference in ``args`` parses but is never resolved, so the launch refuses it.
 """
 
 from __future__ import annotations

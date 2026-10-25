@@ -4,9 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """L1/L2 gate tests for the Ghidra bridge-completeness slices 5 and 6.
 
-Covers ``audit/bridge-completeness/agent-05-ghidra-code-analysis.md``,
-``audit/bridge-completeness/agent-06-ghidra-program-model-scripting.md``, and
-their verifier reports. Every test drives a real ``GhidraBridge`` method
+Every test drives a real ``GhidraBridge`` method
 against an in-process fake of the external ``ghidra_bridge`` RPC transport
 (the only test double in this file; it stands in for the live Jython/Ghidra
 process, a genuine external boundary that cannot run in the sandbox) and/or
@@ -14,20 +12,18 @@ dispatches through a real ``ToolRegistry`` so the exact production code path
 -- not a re-implementation of it -- is what makes each assertion pass or
 fail.
 
-Regression coverage for the confirmed correctness bug:
+Regression coverage for ``add_comment`` comment types:
 
-* ``add_comment``'s ``comment_map`` previously silently downgraded an
-  unrecognized/``REPEATABLE`` ``comment_type`` to ``CodeUnit.EOL_COMMENT``.
-  The fix adds ``REPEATABLE`` to the map and raises ``ToolError`` for any
+* ``add_comment``'s ``comment_map`` maps ``REPEATABLE`` to ``CodeUnit.REPEATABLE_COMMENT`` and
+  raises ``ToolError`` for any
   other unrecognized type instead of silently writing the wrong comment
   kind. These tests assert the emitted Jython script references
   ``CodeUnit.REPEATABLE_COMMENT`` (not ``EOL_COMMENT``) for a REPEATABLE
   request, and that a bogus type raises before any RPC call is made.
 
-L1 coverage for the previously MISSING program-model methods
+L1 coverage for the program-model methods
 (``remove_memory_block``, ``split_memory_block``, ``join_memory_blocks``,
-``edit_program_tree``) and the previously NO-CONTROL code-analysis methods
-that slice 5 flagged as fully real but unreachable from the GUI
+``edit_program_tree``) and the code-analysis methods that are real but unreachable from the GUI
 (``get_instruction_flow``, ``get_register_value``, ``get_thunk_info``,
 ``add_thunk``, ``remove_thunk``, ``add_reference``, ``delete_reference``,
 ``add_external_reference``, ``remove_external_reference``,
@@ -95,13 +91,11 @@ def _tool_def_param_names(bridge: GhidraBridge, function_name: str) -> set[str]:
     return {p.name for p in func.parameters}
 
 
-# ---------------------------------------------------------------------------
-# Correctness bug regression: add_comment REPEATABLE downgrade
-# ---------------------------------------------------------------------------
+# add_comment REPEATABLE comment type
 
 
 class TestAddCommentRepeatableRegression:
-    """Regression tests for the REPEATABLE-comment silent-downgrade defect."""
+    """Tests for REPEATABLE comment types."""
 
     @staticmethod
     def test_repeatable_comment_emits_repeatable_constant(
@@ -187,7 +181,7 @@ class TestAddCommentRepeatableRegression:
 
 
 class TestRemoveComment:
-    """L1/L2 gates for remove_comment (slice 6, work order 06-CB4)."""
+    """L1/L2 gates for remove_comment."""
 
     @staticmethod
     def test_happy_path_clears_comment_verified_by_readback(
@@ -274,9 +268,7 @@ class TestRemoveComment:
         assert result["success"] is True
 
 
-# ---------------------------------------------------------------------------
 # remove_memory_block / split_memory_block / join_memory_blocks (MISSING -> real)
-# ---------------------------------------------------------------------------
 
 
 class TestMemoryBlockOps:
@@ -595,9 +587,7 @@ class TestMemoryBlockOps:
         assert result["split_address"] == "0x1000"
 
 
-# ---------------------------------------------------------------------------
 # edit_program_tree (MISSING -> real)
-# ---------------------------------------------------------------------------
 #
 # ``TestEditProgramTreeRealReparentSemantics`` below (near the end of this
 # section) additionally executes the exact script ``edit_program_tree``
@@ -1194,8 +1184,7 @@ class TestEditProgramTree:
         ``.`` immediately followed by ``moveChild(``, so ``".moveChild("``
         unambiguously identifies a genuine bare reorder-only call.
 
-        Falsifiable: reverting to the prior
-        ``parent.moveChild(child_name, 0)`` implementation removes every
+        Falsifiable: reverting to ``parent.moveChild(child_name, 0)`` removes every
         ``reparent(`` occurrence from the emitted script and reintroduces
         a genuine ``.moveChild(`` call, failing both assertions below.
         """
@@ -1219,9 +1208,9 @@ class TestEditProgramTree:
         ``getFragment`` method taking a bare name -- that name-based
         lookup exists only on ``Listing.getModule(treeName, name)`` /
         ``Listing.getFragment(treeName, name)``, confirmed against the
-        real Ghidra 11.2.1 and master sources. The prior
-        ``root.getModule(name)``/``root.getFragment(name)`` calls in
-        this bridge would raise an attribute/method-resolution error at
+        real Ghidra 11.2.1 and master sources. Calls to
+        ``root.getModule(name)``/``root.getFragment(name)`` would raise an
+        attribute/method-resolution error at
         runtime for any parent or child not literally named the same as
         the tree's root.
 
@@ -1330,7 +1319,7 @@ class TestEditProgramTreeRealReparentSemantics:
     ``FakeGhidraBridge`` (this package's only test double) stands in
     solely for the external ``ghidra_bridge``/PyGhidra RPC transport; it
     records the script ``GhidraBridge`` builds but does not execute it.
-    These tests close that gap for the disputed ``move_child`` defect by
+    These tests close that gap for ``move_child`` by
     capturing the real, production-built script text and running it
     (via ``exec``) against ``_FakeProgramTree``, a minimal pure-Python
     model whose ``move_child``/``reparent``/``is_descendant`` methods
@@ -1511,16 +1500,14 @@ class TestEditProgramTreeRealReparentSemantics:
 
     @staticmethod
     def test_real_move_child_raises_not_found_when_reverted_to_move_child_reorder() -> None:
-        """Documents the audited defect directly: bare ``moveChild`` cannot reparent across modules.
+        """Documents that bare ``moveChild`` cannot reparent across modules.
 
         This does not exercise the production bridge; it pins down, on
-        the same faithful fake used above, exactly what the disputed
-        code used to do -- call ``moveChild(child_name, 0)`` on the new
+        the same faithful fake used above, what a bare reorder does: call ``moveChild(child_name, 0)`` on the new
         parent for a child that is not yet one of its direct children.
         Real Ghidra's ``ModuleDB.moveChild`` raises ``NotFoundException``
         in this situation (it never searches other modules); the fake
-        mirrors that with ``LookupError``. This is the concrete
-        behavior the ``reparent``-based fix above replaces.
+        mirrors that with ``LookupError``. This is the behavior that the ``reparent``-based code above avoids.
         """
         tree = _FakeProgramTree("Program Tree")
         old_parent = tree.root.create_module("OldParent")
@@ -1671,9 +1658,7 @@ class TestAssignFragmentRange:
         assert result["success"] is True
 
 
-# ---------------------------------------------------------------------------
 # NO-CONTROL code-analysis methods: real L1 behavior + L2 dispatch
-# ---------------------------------------------------------------------------
 
 
 class TestGetInstructionFlow:
@@ -1710,8 +1695,7 @@ class TestGetInstructionFlow:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.get_instruction_flow must dispatch via ToolRegistry.
 
-        Falsifiable: this NO-CONTROL feature was already tool-def
-        registered per the audit; removing the ToolFunction entry
+        Falsifiable: removing the ToolFunction entry
         would raise ToolError here.
         """
         fake.eval_response = {
@@ -2156,8 +2140,7 @@ class TestGetCallGraph:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.get_call_graph must dispatch via ToolRegistry (this orphaned method has a real tool-def).
 
-        Falsifiable: this feature was already registered per the audit;
-        removing the ToolFunction entry breaks dispatch.
+        Falsifiable: removing the ToolFunction entry breaks dispatch.
         """
         fake.eval_response = {"name": "main", "address": _TEST_ADDR, "callees": [], "callers": []}
         result = cast(
@@ -2507,7 +2490,7 @@ class TestCreateDataType:
 
 
 class TestGetDataTypeTree:
-    """L1/L2 gates for get_data_type_tree (slice 6, work order 06-DT7)."""
+    """L1/L2 gates for get_data_type_tree."""
 
     @staticmethod
     def test_happy_path_returns_every_kind_not_only_structures(
@@ -2519,7 +2502,7 @@ class TestGetDataTypeTree:
         Falsifiable: if the implementation were (incorrectly) built by
         reusing ``get_structures``'s ``getAllStructures()`` iterator
         instead of walking the category tree, this would only ever
-        surface structures -- defeating the entire point of this item.
+        surface structures -- defeating the purpose of this method.
         """
         fake.eval_response = {
             "name": "/",
@@ -2574,7 +2557,7 @@ class TestGetDataTypeTree:
 
 
 class TestImportCHeader:
-    """L1/L2 gates for import_c_header (slice 6, work order 06-DT11)."""
+    """L1/L2 gates for import_c_header."""
 
     @staticmethod
     def test_happy_path_reports_types_added(
@@ -2703,7 +2686,7 @@ class TestDataTypeArchiveRoundTrip:
 
 
 class TestGetInstructionPcode:
-    """L1/L2 gates for get_instruction_pcode (slice 5, row 09 -- work order 05-1)."""
+    """L1/L2 gates for get_instruction_pcode."""
 
     @staticmethod
     def test_happy_path_returns_ops_from_real_pcode_shape(
@@ -2712,8 +2695,7 @@ class TestGetInstructionPcode:
     ) -> None:
         """get_instruction_pcode must read Instruction.getPcode(), never DecompInterface.
 
-        Falsifiable: this is the exact defect get_pcode already has (it
-        returns an empty ops list whenever decompilation fails); routing
+        Falsifiable: ``get_pcode`` returns an empty ops list when decompilation fails, so routing
         this method through DecompInterface instead of
         listing.getInstructionAt(...).getPcode() would make the
         'DecompInterface not in exec_calls' assertion fail immediately.
@@ -2766,7 +2748,7 @@ class TestGetInstructionPcode:
 
 
 class TestDisassembleRange:
-    """L1/L2 gates for disassemble_range (slice 5, row 10 -- work order 05-2)."""
+    """L1/L2 gates for disassemble_range."""
 
     @staticmethod
     def test_happy_path_returns_instructions_created(
@@ -2828,7 +2810,7 @@ class TestDisassembleRange:
 
 
 class TestClearCodeBytes:
-    """L1/L2 gates for clear_code_bytes (slice 5, row 10 -- work order 05-2)."""
+    """L1/L2 gates for clear_code_bytes."""
 
     @staticmethod
     def test_happy_path_emits_clear_code_units(
@@ -2870,7 +2852,7 @@ class TestClearCodeBytes:
 
 
 class TestSetRegisterValue:
-    """L1/L2 gates for set_register_value (slice 5, row 11 -- work order 05-3)."""
+    """L1/L2 gates for set_register_value."""
 
     @staticmethod
     def test_happy_path_verifies_readback(
@@ -2944,7 +2926,7 @@ class TestSetRegisterValue:
 
 
 class TestRenameFunctionVariable:
-    """L1/L2 gates for rename_function_variable (slice 5, row 12 -- work order 05-4)."""
+    """L1/L2 gates for rename_function_variable."""
 
     @staticmethod
     def test_happy_path_emits_set_name_not_set_data_type(
@@ -2953,8 +2935,7 @@ class TestRenameFunctionVariable:
     ) -> None:
         """rename_function_variable must emit Variable.setName, never setDataType.
 
-        Falsifiable: this is precisely the rename-vs-retype confusion
-        this item exists to resolve. If the implementation were
+        Falsifiable: this is the rename-vs-retype confusion the method must avoid. If the implementation were
         accidentally copied from set_function_variable_type without
         changing the mutating call, the second assertion fails
         immediately.
@@ -3000,7 +2981,7 @@ class TestRenameFunctionVariable:
 
 
 class TestSetFunctionFlags:
-    """L1/L2 gates for set_function_flags (slice 5, row 13 -- work order 05-5)."""
+    """L1/L2 gates for set_function_flags."""
 
     @staticmethod
     def test_happy_path_sets_all_three_flags(
@@ -3076,7 +3057,7 @@ class TestSetFunctionFlags:
 
 
 class TestFunctionTags:
-    """L1/L2 gates for create_function_tag / set_function_tags / get_function_tags (slice 5, work order 05-6)."""
+    """L1/L2 gates for create_function_tag / set_function_tags / get_function_tags."""
 
     @staticmethod
     def test_create_function_tag_happy_path(
@@ -3207,7 +3188,7 @@ class TestFunctionTags:
 
 
 class TestPromoteSymbolToPrimary:
-    """L1/L2 gates for promote_symbol_to_primary (slice 5, work order 05-7)."""
+    """L1/L2 gates for promote_symbol_to_primary."""
 
     @staticmethod
     def test_happy_path_promotes_non_primary_symbol(

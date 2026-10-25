@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D17 (guest side): the shared volume must be usable in the guest.
+r"""The shared volume must be usable in the guest.
 
 The host attaches the shared folder either as a FAT-formatted virtio block
 device (every Windows QEMU build has virtio-9p compiled out) or as a virtio-9p
@@ -148,7 +148,7 @@ _SHELL_COMMAND_FLAG: Final[str] = "/c"
 _GUEST_DROP_FILE_NAME: Final[str] = "dropped_payload.bin"
 _GUEST_DROP_PAYLOAD: Final[bytes] = b"written by the sample under analysis\n"
 # The work root is on the guest's own boot volume, which this guest reports as
-# D:. Since S17-D69 the share is read-only, so a staged sample lands here and
+# D:. Since the share is read-only, so a staged sample lands here and
 # not on E:. The drive still discriminates: a host that assumed the compiled-in
 # C: default names a volume this guest does not boot from.
 _GUEST_WORK_ROOT: Final[str] = "D:\\intellicrack"
@@ -172,7 +172,7 @@ _EXPECTED_LOG_DIR: Final[str] = "D:\\intellicrack\\logs"
 _EXPECTED_DROPPED_MIRROR: Final[str] = "D:\\intellicrack\\output\\dropped"
 _RUN_BINARY_TIMEOUT_S: Final[int] = 5
 
-# S17-D22: the anti-evasion registry writes must reach the guest's own
+# The anti-evasion registry writes must reach the guest's own
 # reg.exe. This guest's Windows is D:\WinNT, so the only allowlist-safe path is
 # below that reported root - a patch built on C:\Windows is refused by the
 # guest's own Test-AllowedCommand.
@@ -1120,7 +1120,7 @@ class _WindowsAgentGuest:
             return GuestCommandResult(exit_code=0, stdout="1 File(s) copied\n", stderr="")
 
         if destination.upper().startswith(_GUEST_WORK_ROOT.upper()):
-            # The gather destination is on the guest's own disk since S17-D69,
+            # The gather destination is on the guest's own disk,
             # where only the guest and the guest agent can see it.
             self._guest_files[f"{destination}\\{_GUEST_DROP_FILE_NAME}"] = bytearray(_GUEST_DROP_PAYLOAD)
             self.copied.append((source, destination))
@@ -1135,7 +1135,7 @@ class _WindowsAgentGuest:
         one name, so it is resolved verbatim: nothing splits it on spaces and
         nothing strips quotes from it. It is looked for on the guest's own disk
         first - where the host stages a sample over the guest agent since
-        S17-D69 - then among the tools Windows itself ships below the
+        then among the tools Windows itself ships below the
         ``%SystemRoot%`` *this* guest reports, and on the share drive after
         that. A tool path built on some other Windows directory is found in
         none of the three, which is what a guest whose Windows is not where the
@@ -1499,7 +1499,7 @@ async def _guest_session(
         # The Linux launcher execs the agent rather than backgrounding it, so
         # the process qemu-guest-agent reports is the agent itself and it runs
         # for as long as the sandbox does. A guest that reaps it the moment the
-        # host asks is modelling the defect S17-D82 removed.
+        # host asks is modelling a defect the agent no longer has.
         ga_server.resident_commands = frozenset({sandbox.guest_launch_executable()})
     try:
         yield sandbox, ga_server
@@ -1796,7 +1796,7 @@ class TestMountTransportFollowsTheLaunchArguments:
     ) -> None:
         """A FAT host attaches a read-only ``-drive fat:`` and mounts vfat.
 
-        The volume is read-only in both places since S17-D69: vvfat's
+        The volume is read-only in both places: vvfat's
         write-back path aborts the whole virtual machine, so nothing in the
         guest is allowed to write here.
 
@@ -2074,7 +2074,7 @@ class TestWindowsDataPlaneFollowsTheProbedRoot:
         The in-guest monitor derives the directories it mirrors from
         ``%SystemDrive%`` and ``%SystemRoot%``; this guest booted from ``D:``,
         so a host that scans ``C:`` scans a volume the guest never writes to.
-        Since S17-D69 the gather destination is on that same volume rather than
+        The gather destination is on that same volume rather than
         on the share, which the guest can no longer write to at all, and the
         files come back to the host over the guest agent.
 
@@ -2115,7 +2115,7 @@ class TestGeneratedAgentScriptResolvesItsOwnWorkRoot:
         The generated ``agent.ps1`` is written before the guest has assigned
         the FAT volume a letter, so it derives its location from
         ``$PSScriptRoot`` and ``Split-Path -Parent``, which are evaluated here
-        against the real script text. Since S17-D69 it writes nothing back
+        against the real script text. It writes nothing back
         there: the share is a read-only vvfat volume whose write-back path
         aborts the machine, so the logs and the dropped-file mirror are built
         on ``%SystemDrive%\intellicrack`` instead.
@@ -2176,7 +2176,7 @@ class TestTheModelledAgentEnforcesTheScriptsAllowlist:
         the script the sandbox really staged - which is why the ``System32``
         below this guest's own ``%SystemRoot%`` is accepted even though the
         model has no file there, while the same executable one directory up is
-        not. Both roots a sample can be staged under since S17-D69 are covered:
+        not. Both roots a sample can be staged under are covered:
         the read-only share the agent boots from, and the guest-local work root
         the host stages into over the agent.
 
@@ -2286,7 +2286,7 @@ class TestGeneratedGuestScriptsNeedNoSmbExport:
 
 
 class TestAntiEvasionRegistryFollowsTheProbedSystemRoot:
-    """S17-D22: reg.exe must be dispatched under the guest's own %SystemRoot%."""
+    """Reg.exe must be dispatched under the guest's own %SystemRoot%."""
 
     @pytest.mark.asyncio
     async def test_registry_patches_target_the_probed_reg_exe(

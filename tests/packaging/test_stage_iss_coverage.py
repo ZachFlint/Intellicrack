@@ -10,8 +10,8 @@ each one resolves under ``build/stage``, so the installer can never reference a
 payload the stager did not produce. Nothing gated the opposite direction, and the
 stage-side checklist it does carry (``_REQUIRED_FILES``) asserts *presence in the
 stage*, not *coverage by the installer*. A file the stager produces and the
-installer forgets to package is therefore invisible: that is exactly how
-``app\build-info.json`` came to be staged, asserted, and never installed.
+installer forgets to package is therefore invisible. A file such as
+``app\build-info.json`` can be staged, asserted, and never installed.
 
 This module closes that direction twice, from two independent sources of truth:
 
@@ -20,7 +20,7 @@ This module closes that direction twice, from two independent sources of truth:
   by following the script's own ``$Name = Join-Path $Base 'literal'`` assignment
   chain, and every resolved path that lands under ``$Stage`` must be covered by
   an ``.iss`` ``Source``. This runs everywhere - it needs no built stage - and it
-  is the gate that would have caught ``build-info.json``.
+  catches a case like ``build-info.json``.
 * **Dynamically, from a real ``build/stage`` tree.** Every staged file must be
   packaged by some ``Source``, modulo a deliberately empty, documented allowlist
   of build-only artifacts. The real tree exists only on a build host, so that gate
@@ -224,7 +224,7 @@ def _read_real_iss_sources() -> list[tuple[str, bool]]:
     return iss_source_relpaths(_ISS_PATH.read_text(encoding="utf-8-sig"))
 
 
-# --- stage -> .iss, derived statically from the stager (runs everywhere) ------
+# stage -> .iss, derived statically from the stager (runs everywhere)
 
 
 def test_every_asserted_stage_product_is_packaged_by_the_iss() -> None:
@@ -311,7 +311,7 @@ def test_wildcard_source_does_not_cover_a_sibling_prefix() -> None:
     assert unpackaged_products(["app/tools-extra/x.exe"], sources) == ["app/tools-extra/x.exe"]
 
 
-# --- stage -> .iss, over a real staged tree ----------------------------------
+# stage -> .iss, over a real staged tree
 
 
 def test_every_staged_file_is_packaged_by_the_iss() -> None:

@@ -3,59 +3,22 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the S15 Ghidra read-path wrong-API defects.
+"""Falsifiable gates for the Ghidra read-path accessors that call PyGhidra/jfx_bridge APIs.
 
-Four user-facing ``GhidraBridge`` read accessors built their remote Jython
-script around a PyGhidra/jfx_bridge API call that does not behave the way the
-script assumed, so each either raised or silently returned nothing on a real
-program:
+Four user-facing ``GhidraBridge`` read accessors depend on a PyGhidra/jfx_bridge API call whose real behavior must match what the remote script assumes:
 
-* S15-D06 -- :meth:`GhidraBridge.get_basic_blocks` called ``hasNext()``/
-  ``next()`` on the return value of ``BasicBlockModel.getCodeBlocksContaining
-  (Address, TaskMonitor)``, but that overload returns a ``CodeBlock[]`` Java
-  array, not an iterator -- arrays have no ``hasNext`` method, so the real
-  call raised ``AttributeError`` (wrapped as ``ToolError``) the instant a
-  function's body was walked.
-* S15-D07 -- :meth:`GhidraBridge.get_memory_map` (and its sibling
-  :meth:`GhidraBridge.get_segments`) called the bare name ``getMemory()``,
-  but the PyGhidra script namespace (a ``PyGhidraScript``/``GhidraScript``
-  instance) exposes no such bare method -- only ``currentProgram.getMemory()``
-  resolves.
-* S15-D08 -- :meth:`GhidraBridge.search_symbols` filtered manually in Python
-  after fetching every symbol, but did so by consuming
-  ``SymbolTable.getSymbolIterator(name, True)`` for the glob text itself,
-  which the current live Ghidra 12 API family exposes under different,
-  version-sensitive matching semantics and consistently returned an empty
-  iterator against a real program in practice. The fix drives the search off
-  the always-available ``SymbolTable.getAllSymbols(boolean)`` full traversal
-  and applies the glob/substring match in Python via :mod:`fnmatch`, which is
-  stable across API versions.
-* S15-D12 -- :meth:`GhidraBridge.get_properties` called
-  ``upm.propertyNames()`` on the ``PropertyMapManager`` returned by
-  ``currentProgram.getUsrPropertyManager()``, but that interface has no
-  ``propertyNames()`` method -- only ``propertyManagers()`` (an
-  ``Iterator<String>`` of property-map names) exists, so the real call raised
-  ``AttributeError`` (wrapped as ``ToolError``) on every invocation.
+* :meth:`GhidraBridge.get_basic_blocks` must iterate the ``CodeBlock[]`` Java array returned by ``BasicBlockModel.getCodeBlocksContaining(Address, TaskMonitor)``. That overload returns an array, not an iterator, and arrays have no ``hasNext`` method.
+* :meth:`GhidraBridge.get_memory_map` and :meth:`GhidraBridge.get_segments` must resolve memory through ``currentProgram``. The bare name ``getMemory()`` does not exist in the PyGhidra script namespace; only ``currentProgram.getMemory()`` resolves.
+* :meth:`GhidraBridge.search_symbols` must match glob patterns in Python over ``SymbolTable.getAllSymbols(boolean)`` using :mod:`fnmatch`. ``SymbolTable.getSymbolIterator(name, True)`` returns an empty iterator against a real Ghidra 12 program and is not used for matching.
+* :meth:`GhidraBridge.get_properties` must enumerate map names through ``UsrPropertyManager.propertyManagers()``. The ``PropertyMapManager`` interface has no ``propertyNames()`` method.
 
-These gates drive a real headless Ghidra 12.x instance through PyGhidra
-against a real PE (the running interpreter's own ``python.exe``) -- no
-``ghidra_bridge`` RPC client is mocked and no Ghidra API call is stubbed.
-Each test performs the real read through the corresponding public bridge
-method and asserts on genuine data (real basic block counts, real memory
-block names/permissions, real symbol addresses, a real round-tripped
-property value), so every gate is falsifiable purely by reverting the
-matching fix in ``src/intellicrack/bridges/ghidra.py``.
+These gates drive a real headless Ghidra 12.x instance through PyGhidra against a real PE (the running interpreter's own ``python.exe``) -- no ``ghidra_bridge`` RPC client is mocked and no Ghidra API call is stubbed. Each test performs the real read through the corresponding public bridge method and asserts on genuine data (real basic block counts, real memory block names and permissions, real symbol addresses, a real round-tripped property value), so each gate fails if the matching accessor regresses in ``src/intellicrack/bridges/ghidra.py``.
 
-Host-native only: the Docker sandbox has no JVM/Ghidra install, so this
-module skips itself (via ``pytestmark``) unless ``ghidra_bridge``, ``jpype``
-and ``pyghidra`` are importable *and* a real Ghidra installation is named by
-``GHIDRA_INSTALL_DIR`` or ``GHIDRA_HOME``. Run explicitly on a host with
-Ghidra installed via::
+Host-native only: the Docker sandbox has no JVM/Ghidra install, so this module skips itself (via ``pytestmark``) unless ``ghidra_bridge``, ``jpype`` and ``pyghidra`` are importable *and* a real Ghidra installation is named by ``GHIDRA_INSTALL_DIR`` or ``GHIDRA_HOME``. Run explicitly on a host with Ghidra installed via::
 
     python scripts/host_native_tests.py -- -k "s15_readonly_api" -v
 
-or as part of the orchestrated host-native pass via
-``python scripts/host_native_tests.py``.
+or as part of the orchestrated host-native pass via ``python scripts/host_native_tests.py``.
 """
 
 from __future__ import annotations
@@ -124,7 +87,7 @@ pytestmark = [
 
 # The running interpreter's own executable is a real, always-present PE
 # usable as an analysis target without shipping a binary fixture, matching
-# the pattern used by the S15 transaction-mutator gates.
+# the pattern used by the transaction-mutator gates.
 _TARGET_BINARY: Final[Path] = Path(sys.executable)
 
 _MIN_CFG_BLOCKS: Final[int] = 2
@@ -204,23 +167,12 @@ async def entry_point(real_bridge: GhidraBridge) -> int:
 
 
 async def test_get_basic_blocks_iterates_code_block_array(real_bridge: GhidraBridge) -> None:
-    """S15-D06: get_basic_blocks must iterate the CodeBlock[] array Ghidra returns.
+    """get_basic_blocks must iterate the ``CodeBlock[]`` array Ghidra returns.
 
-    Before the fix, ``blk_it.hasNext()`` was called on the ``CodeBlock[]``
-    array produced by ``BasicBlockModel.getCodeBlocksContaining(Address,
-    TaskMonitor)``. A Java array has no ``hasNext`` attribute, so PyGhidra
-    raised ``AttributeError`` for every candidate function's address range,
-    which the bridge wraps as ``ToolError`` -- so :meth:`get_basic_blocks`
-    itself could never return a populated CFG for any real function,
-    falsifying a reverted fix immediately. This test walks the largest
-    analyzed functions (biggest byte size correlates with real branching
-    control flow) until it finds one whose CFG has at least two blocks, and
-    asserts every returned block dict has a sane start/end pair inside the
-    function.
+    A Java array has no ``hasNext`` attribute, so the accessor must not call ``hasNext()`` on the value returned by ``BasicBlockModel.getCodeBlocksContaining(Address, TaskMonitor)``. Calling it would raise ``AttributeError`` for every candidate function's address range, which the bridge wraps as ``ToolError``. This test walks the largest analyzed functions (biggest byte size correlates with real branching control flow) until it finds one whose CFG has at least two blocks, and asserts every returned block dict has a sane start/end pair inside the function.
 
     Args:
-        real_bridge: Module-scoped bridge fixture with a real, analyzed
-            program loaded.
+        real_bridge: Module-scoped bridge fixture with a real, analyzed program loaded.
     """
     functions = await real_bridge.get_functions()
     assert functions, "expected at least one analyzed function after analyze()"
@@ -247,19 +199,12 @@ async def test_get_basic_blocks_iterates_code_block_array(real_bridge: GhidraBri
 
 
 async def test_get_memory_map_and_segments_return_real_blocks(real_bridge: GhidraBridge) -> None:
-    """S15-D07: get_memory_map/get_segments must resolve memory via currentProgram.
+    """get_memory_map and get_segments must resolve memory via currentProgram.
 
-    Before the fix, both remote scripts called the bare name ``getMemory()``,
-    which does not exist in the PyGhidra script namespace, so PyGhidra raised
-    ``NameError`` for every invocation (wrapped as ``ToolError``) -- neither
-    accessor could ever return a block. This test confirms both accessors
-    return real, non-empty memory block lists for the loaded PE, with at
-    least one block that is an initialized, executable code section (the PE
-    ``.text`` section) and real (non-string-null) permission flags.
+    The bare name ``getMemory()`` does not exist in the PyGhidra script namespace, so both remote scripts must call ``currentProgram.getMemory()``. This test confirms both accessors return real, non-empty memory block lists for the loaded PE, with at least one block that is an initialized, executable code section (the PE ``.text`` section) and real (non-string-null) permission flags.
 
     Args:
-        real_bridge: Module-scoped bridge fixture with a real, analyzed
-            program loaded.
+        real_bridge: Module-scoped bridge fixture with a real, analyzed program loaded.
     """
     memory_map = await real_bridge.get_memory_map()
     assert memory_map, "expected at least one real memory block"
@@ -276,20 +221,12 @@ async def test_get_memory_map_and_segments_return_real_blocks(real_bridge: Ghidr
 
 
 async def test_search_symbols_glob_returns_mem_functions(real_bridge: GhidraBridge) -> None:
-    """S15-D08: search_symbols must resolve real symbols for a glob pattern.
+    """search_symbols must resolve real symbols for a glob pattern.
 
-    Before the fix, ``SymbolTable.getSymbolIterator(name, True)`` yielded no
-    results against a real analyzed program even for a valid glob, so
-    :meth:`GhidraBridge.search_symbols` always returned an empty list. This
-    test searches ``mem*`` against the real, analyzed ``python.exe`` (which
-    imports the Universal CRT string functions) and asserts real results
-    come back with real, non-zero addresses whose names actually match the
-    glob and that at least one of the well-known CRT ``mem*`` functions is
-    present.
+    The search must not depend on ``SymbolTable.getSymbolIterator(name, True)``, which returns no results against a real analyzed program even for a valid glob. This test searches ``mem*`` against the real, analyzed ``python.exe`` (which imports the Universal CRT string functions) and asserts real results come back with real, non-zero addresses whose names match the glob and that at least one of the well-known CRT ``mem*`` functions is present.
 
     Args:
-        real_bridge: Module-scoped bridge fixture with a real, analyzed
-            program loaded.
+        real_bridge: Module-scoped bridge fixture with a real, analyzed program loaded.
     """
     results = await real_bridge.search_symbols(_MEM_SEARCH_GLOB)
     assert results, "expected at least one symbol matching 'mem*'"
@@ -310,20 +247,12 @@ async def test_get_properties_reads_back_real_user_property(
     real_bridge: GhidraBridge,
     entry_point: int,
 ) -> None:
-    """S15-D12: get_properties must enumerate real UsrPropertyManager maps.
+    """get_properties must enumerate real UsrPropertyManager maps.
 
-    Before the fix, ``upm.propertyNames()`` was called on the
-    ``PropertyMapManager``, which has no such method -- PyGhidra raised
-    ``AttributeError`` (wrapped as ``ToolError``) on every call, so
-    :meth:`GhidraBridge.get_properties` could never return a payload. This
-    test first writes a real ``StringPropertyMap`` entry directly through
-    ``execute_script`` (independent of the method under test) under a real
-    transaction, then calls the public :meth:`GhidraBridge.get_properties`
-    accessor and asserts the real value round-trips.
+    The accessor must enumerate map names through ``propertyManagers()``, because ``PropertyMapManager`` has no ``propertyNames()`` method. This test first writes a real ``StringPropertyMap`` entry directly through ``execute_script`` (independent of the method under test) under a real transaction, then calls the public :meth:`GhidraBridge.get_properties` accessor and asserts the real value round-trips.
 
     Args:
-        real_bridge: Module-scoped bridge fixture with a real, analyzed
-            program loaded.
+        real_bridge: Module-scoped bridge fixture with a real, analyzed program loaded.
         entry_point: The loaded program's entry point address.
     """
     prop_addr = entry_point + _PROPERTY_ADDR_OFFSET

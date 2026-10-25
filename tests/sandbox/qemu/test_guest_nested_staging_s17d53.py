@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D53: staging into a guest subdirectory that does not exist yet.
+r"""Staging into a guest subdirectory that does not exist yet.
 
 Measured live: ``copy_to_sandbox(Path('C:/Windows/System32/en-US/ipconfig.exe.mui'),
 'input/en-US/ipconfig.exe.mui')`` raised ``SandboxError: qemu-guest-agent could
@@ -24,7 +24,7 @@ directory, using exactly the invocation
 :meth:`intellicrack.sandbox.qemu.QEMUSandbox._guest_mkdir_command` builds,
 before the file is opened for writing.
 
-The destination itself moved with S17-D69: the share is now read-only to the
+The share is read-only to the
 guest, because vvfat's write-back path calls ``abort()`` and took the whole
 machine down, so a file staged into a running guest lands on the guest's own
 disk under the work root. That makes directory creation the rule rather than
@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 _WINDOWS_SHARED_ROOT: Final[str] = "D:\\"
 _LINUX_SHARED_ROOT: Final[str] = "/mnt/shared"
 _WINDOWS_NESTED_RELATIVE: Final[str] = "input/en-US/ipconfig.exe.mui"
-# Since S17-D69 a file staged into a running guest lands on the guest's own
+# Since a file staged into a running guest lands on the guest's own
 # disk under the work root, because the share is read-only to it.
 _LINUX_TOP_LEVEL_RELATIVE: Final[str] = "input/true_x86_64"
 _EXPECTED_LINUX_TOP_LEVEL_PARENT: Final[str] = "/var/lib/intellicrack/input"
@@ -249,7 +249,7 @@ async def test_a_top_level_destination_issues_one_directory_command(tmp_path: Pa
     """A destination with no subdirectory costs exactly one directory command.
 
     The share's own subdirectories existed host-side before the guest booted,
-    but the work root the guest is staged into since S17-D69 is on the guest's
+    but the work root the guest is staged into is on the guest's
     own disk and nothing creates it ahead of the first copy. One ``mkdir`` of
     the destination's parent is therefore required - and one is all that is
     allowed, since a per-level walk would cost a round trip per component.

@@ -20,8 +20,7 @@ Each parser accepts:
 
 All parsers are tolerant of malformed input: lines that fail length checks
 are skipped silently while file-level errors are logged and an empty list is
-returned. This matches the prior behaviour of both call sites and avoids
-abandoning a partial report on a single bad line.
+returned. This avoids abandoning a partial report on a single bad line.
 """
 
 from __future__ import annotations
@@ -105,9 +104,9 @@ _INJECTION_LOG_TYPE_IDX: Final[int] = 5
 # its stop marker and every fatal into ``api_trace.log`` as records. They carry
 # the collector's marker in the process-name field and one of these names in
 # the API-name field, and none of them is an API call. Read as data they turn a
-# collector that captured nothing at all into a tab reporting API activity -
-# live, a session that died before processing a single event still presented
-# two "API calls" named ERROR and STOP. The outage is not lost by skipping them
+# collector that captured nothing at all into a tab reporting API activity: a
+# session that died before processing a single event would still present two
+# "API calls" named ERROR and STOP. The outage is not lost by skipping them
 # here; it is reported through :func:`parse_collector_lifecycle`.
 _API_TRACE_COLLECTOR_MARKER: Final[str] = "tracer"
 _API_TRACE_COLLECTOR_ERROR: Final[str] = "ERROR"
@@ -121,10 +120,9 @@ _API_LOG_DETAIL_IDX: Final[int] = 5
 # so is the only kind that can be told apart from a sample that did nothing.
 # All four are absent on a Linux guest, which is why the caller gates on the
 # guest OS rather than this list. Measured live: the guest's launcher does not
-# always get every monitor running - across six runs it started different
-# subsets, once none at all - and while only the first two were listed here, a
-# dll_monitor or kernel_object_monitor that never started produced an empty tab
-# with nothing anywhere in the report to distinguish it from a clean run.
+# always get every monitor running, so a collector missing from this list that
+# never started would leave an empty tab with nothing anywhere in the report to
+# distinguish it from a clean run.
 _API_TRACE_COLLECTOR: Final[str] = "api_trace"
 _LIFECYCLE_LOG_SUFFIX: Final[str] = ".lifecycle.log"
 _LIFECYCLE_COLLECTORS: Final[tuple[str, ...]] = (
@@ -454,12 +452,12 @@ async def parse_dll_log(
 
     Log format (extended 8-column): ``timestamp|pid|process_name|dll_path|base_address|size|event_id|payload_schema``.
 
-    The trailing ``event_id`` and ``payload_schema`` columns are populated by
-    F-0019: when the image-load handler cannot resolve an image path from the
-    payload field set, it emits a record with ``dll_path`` empty, the raw
-    ETW event id, and the observed payload field names. Older monitor builds
-    emit only the legacy 6 columns and both extension fields default to 0 /
-    empty string.
+    The trailing ``event_id`` and ``payload_schema`` columns are populated when
+    the image-load handler cannot resolve an image path from the payload field
+    set. The handler then emits a record with ``dll_path`` empty, the raw ETW
+    event id, and the observed payload field names. Older monitor builds emit
+    only the legacy 6 columns and both extension fields default to 0 / empty
+    string.
 
     Args:
         shared_folder: Sandbox shared folder root.

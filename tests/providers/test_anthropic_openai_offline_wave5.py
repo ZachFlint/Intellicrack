@@ -2,29 +2,23 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Offline falsifiable gates for Anthropic and OpenAI providers (wave 5).
-
-Covers 8 NOT_RESOLVED findings from group-07-report.md:
-  Anthropic: #11 disconnect, #12 chat response parsing, #13 chat_stream
-             text accumulation, #14 cancel_request task abort,
-             #15 _finalize_anthropic_stream
-  OpenAI:    #16 connect 401 error path, #17 disconnect,
-             #23 _infer_supports_vision
+"""Offline gates for the Anthropic and OpenAI providers.
 
 All tests are fully offline.  Anthropic gates use a real
 ``anthropic.AsyncAnthropic`` backed by an ``httpx2.AsyncBaseTransport``
 subclass so every SDK serialisation and deserialization layer runs without
-substitution.  The #15 gate calls ``_finalize_anthropic_stream`` directly
+substitution.  The ``_finalize_anthropic_stream`` gate calls that method directly
 via a duck-typed stream stub (the only method called is ``get_final_message``
-which returns a real ``AnthropicMessage`` built from SDK types).  OpenAI
-#16 injects a stub 401 transport via ``monkeypatch.setattr`` on the
+which returns a real ``AnthropicMessage`` built from SDK types).  The OpenAI
+401 gate injects a stub transport via ``monkeypatch.setattr`` on the
 ``openai.AsyncOpenAI`` class so the full ``connect()`` path runs.  No
 ``MagicMock``, ``AsyncMock``, or ``unittest.mock.patch`` is used anywhere
 in this module.
 
-Finding #14 note: ``test_realcov_10_cancel_request.py`` gates ``_cancel_requested=True``
-via a live stream.  That leaves the ``asyncio.Task.cancel()`` branch untested offline;
-this module closes that gap with an explicit asyncio task.
+The ``cancel_request`` gate covers the ``asyncio.Task.cancel()`` branch.
+``test_realcov_10_cancel_request.py`` gates ``_cancel_requested=True`` via a live
+stream and leaves that branch untested offline, so this module plants an explicit
+asyncio task instead.
 """
 
 from __future__ import annotations
@@ -59,9 +53,7 @@ if TYPE_CHECKING:
     from anthropic.lib.streaming import AsyncMessageStream
 
 
-# ---------------------------------------------------------------------------
 # Private-attribute name constants — avoids SLF001 ruff rule on direct access
-# ---------------------------------------------------------------------------
 
 _CLIENT_ATTR: str = "_client"
 _CANCEL_REQUESTED_ATTR: str = "_cancel_requested"
@@ -72,9 +64,7 @@ _FINALIZE_STREAM_ATTR: str = "_finalize_anthropic_stream"
 _INFER_VISION_ATTR: str = "_infer_supports_vision"
 
 
-# ---------------------------------------------------------------------------
 # Anthropic SSE event helpers
-# ---------------------------------------------------------------------------
 
 
 def _anthropic_sse_event(event_type: str, payload: dict[str, Any]) -> str:
@@ -232,9 +222,7 @@ def _make_text_tool_sse_body(
     return "".join(events).encode()
 
 
-# ---------------------------------------------------------------------------
 # Stub httpx2 transports for Anthropic API seam
-# ---------------------------------------------------------------------------
 
 
 class _AnthropicJSONTransport(httpx2.AsyncBaseTransport):
@@ -328,9 +316,7 @@ def _anthropic_provider_with_transport(transport: httpx2.AsyncBaseTransport) -> 
     return provider
 
 
-# ---------------------------------------------------------------------------
-# #11 — AnthropicProvider.disconnect (offline seam)
-# ---------------------------------------------------------------------------
+# AnthropicProvider.disconnect (offline seam)
 
 
 @pytest.mark.asyncio
@@ -343,8 +329,6 @@ async def test_anthropic_disconnect_clears_client_and_connected_flag() -> None:
 
     Oracle: the documented post-disconnect state — ``is_connected is False``
     and ``_client is None`` — independent of the production implementation.
-    Mutation caught: removing ``self._client = None`` from ``disconnect()``
-    leaves ``_client`` non-None, failing the second assertion.
     """
     provider = AnthropicProvider()
     provider.connected = True
@@ -359,9 +343,7 @@ async def test_anthropic_disconnect_clears_client_and_connected_flag() -> None:
     assert getattr(provider, _CLIENT_ATTR) is None
 
 
-# ---------------------------------------------------------------------------
-# #12 — AnthropicProvider.chat response parsing via stub transport
-# ---------------------------------------------------------------------------
+# AnthropicProvider.chat response parsing via stub transport
 
 
 @pytest.mark.asyncio
@@ -374,9 +356,6 @@ async def test_anthropic_chat_text_response_parsed_via_stub_transport() -> None:
     string and that no tool calls were produced.
 
     Oracle: the literal ``"text"`` value embedded in the canned JSON body.
-    Mutation caught: replacing ``content += block.text`` in
-    ``_parse_response_blocks`` with ``content = ""`` makes the returned
-    message content an empty string.
     """
     canned_body: dict[str, Any] = {
         "id": "msg_chat_01",
@@ -409,10 +388,6 @@ async def test_anthropic_chat_thinking_response_sets_thinking_content() -> None:
     thinking text and ``message.content`` equals the text block.
 
     Oracle: literal string values in the canned JSON body.
-    Mutation caught: removing the ``isinstance(block, ThinkingBlock)`` branch
-    in ``_parse_response_blocks`` leaves ``thinking_text`` empty so
-    ``_await_anthropic_chat`` does not set ``thinking_content``, failing the
-    assertion.
     """
     canned_body: dict[str, Any] = {
         "id": "msg_chat_02",
@@ -439,9 +414,7 @@ async def test_anthropic_chat_thinking_response_sets_thinking_content() -> None:
     assert message.thinking_content == "I should decompile first."
 
 
-# ---------------------------------------------------------------------------
-# #13 — AnthropicProvider.chat_stream text accumulation
-# ---------------------------------------------------------------------------
+# AnthropicProvider.chat_stream text accumulation
 
 
 @pytest.mark.asyncio
@@ -453,8 +426,6 @@ async def test_anthropic_chat_stream_text_accumulation() -> None:
     chunks equal the expected list in the exact order emitted.
 
     Oracle: the text strings embedded as constants in the stub SSE body.
-    Mutation caught: removing ``yield text`` from ``_iter_anthropic_stream``
-    yields no chunks, failing the equality assertion.
     """
     expected: list[str] = ["Hello", " from", " Anthropic"]
     provider = _anthropic_provider_with_transport(_AnthropicSSETransport(_make_text_sse_body(expected)))
@@ -471,9 +442,7 @@ async def test_anthropic_chat_stream_text_accumulation() -> None:
     assert collected == expected
 
 
-# ---------------------------------------------------------------------------
-# #14 — AnthropicProvider.cancel_request aborts the in-flight asyncio task
-# ---------------------------------------------------------------------------
+# AnthropicProvider.cancel_request aborts the in-flight asyncio task
 
 
 @pytest.mark.asyncio
@@ -489,9 +458,6 @@ async def test_anthropic_cancel_request_cancels_current_task() -> None:
     Oracle: ``asyncio.Task.cancelled()`` is True after the event loop
     processes the ``CancelledError`` — an asyncio-guaranteed invariant
     independent of Intellicrack code.
-    Mutation caught: removing ``self._current_task.cancel()`` from
-    ``cancel_request()`` leaves the task running so ``task.cancelled()``
-    is False.
     """
     provider = AnthropicProvider()
     provider.connected = True
@@ -513,9 +479,7 @@ async def test_anthropic_cancel_request_cancels_current_task() -> None:
     assert task.cancelled(), "cancel_request() must cancel the in-flight asyncio task"
 
 
-# ---------------------------------------------------------------------------
-# #15 — _finalize_anthropic_stream populates tool calls and thinking
-# ---------------------------------------------------------------------------
+# _finalize_anthropic_stream populates tool calls and thinking
 
 
 class _StubAnthropicStream:
@@ -558,8 +522,6 @@ async def test_anthropic_finalize_stream_populates_tool_calls_and_thinking() -> 
 
     Oracle: literal field values supplied to the ``AnthropicMessage`` and
     block constructors (independent of the production code under test).
-    Mutation caught: removing the ``if block.type == "tool_use":`` branch
-    in ``_finalize_anthropic_stream`` leaves ``_pending_tool_calls`` empty.
     """
     final_msg = AnthropicMessage(
         id="msg_fin_stub",
@@ -608,9 +570,6 @@ async def test_anthropic_finalize_stream_tool_call_via_sse_transport() -> None:
     collected, ``_pending_tool_calls`` must carry the assembled tool call.
 
     Oracle: the ``tool_id`` and ``tool_name`` constants embedded in the SSE body.
-    Mutation caught: removing the tool_use accumulation in
-    ``_finalize_anthropic_stream`` leaves ``_pending_tool_calls`` empty
-    while ``collected`` is unaffected.
     """
     sse_body = _make_text_tool_sse_body(
         text="I will analyze.",
@@ -640,9 +599,7 @@ async def test_anthropic_finalize_stream_tool_call_via_sse_transport() -> None:
     assert tc.arguments == {"address": "0x401000"}
 
 
-# ---------------------------------------------------------------------------
-# #16 — OpenAIProvider.connect 401 error path
-# ---------------------------------------------------------------------------
+# OpenAIProvider.connect 401 error path
 
 
 @pytest.mark.asyncio
@@ -660,10 +617,6 @@ async def test_openai_connect_401_raises_authentication_error(
     on 401; ``connect()`` must map it to ``AuthenticationError`` matching
     the ``_ERR_INVALID_KEY`` template ``"Invalid OpenAI API key"`` and leave
     ``is_connected`` False with ``client`` released to None.
-    Mutation caught: removing the ``raise AuthenticationError(...)`` line
-    in the ``except openai.AuthenticationError`` block propagates the raw
-    SDK exception, which is not our ``AuthenticationError``, failing
-    ``pytest.raises``.
     """
 
     class _UnauthorizedTransport(httpx2.AsyncBaseTransport):
@@ -704,24 +657,20 @@ async def test_openai_connect_401_raises_authentication_error(
     assert provider.client is None
 
 
-# ---------------------------------------------------------------------------
-# #17 — OpenAIProvider.disconnect (offline seam)
-# ---------------------------------------------------------------------------
+# OpenAIProvider.disconnect (offline seam)
 
 
 @pytest.mark.asyncio
 async def test_openai_disconnect_clears_client_and_connected_flag() -> None:
     """disconnect() must set is_connected=False and release client to None.
 
-    Offline mirror of the Grok offline disconnect seam (group-07 row 40):
+    Offline mirror of the Grok disconnect seam:
     manually sets ``provider.connected=True`` and injects a real
     ``openai.AsyncOpenAI`` client, then calls ``disconnect()`` and asserts
     both state mutations without any network activity.
 
     Oracle: documented post-disconnect invariants — ``is_connected is False``
     and ``client is None``.
-    Mutation caught: removing ``self.client = None`` from ``disconnect()``
-    leaves ``client`` non-None after the call.
     """
     provider = OpenAIProvider()
     provider.connected = True
@@ -736,9 +685,7 @@ async def test_openai_disconnect_clears_client_and_connected_flag() -> None:
     assert provider.client is None
 
 
-# ---------------------------------------------------------------------------
-# #23 — OpenAIProvider._infer_supports_vision (parametrized)
-# ---------------------------------------------------------------------------
+# Vision capability inference for OpenAIProvider (parametrized)
 
 
 @pytest.mark.parametrize(
@@ -763,10 +710,6 @@ def test_openai_infer_supports_vision_parametrized(model_id: str, *, expected: b
     ``gpt-4.1``, ``gpt-4.5``) or the literal substring ``"vision"`` in the
     model id.  The expected values are independent, pre-known constants —
     not derived from the production code itself.
-
-    Mutation caught: removing the ``"gpt-4o"`` prefix from the
-    ``startswith`` tuple makes ``gpt-4o`` and ``gpt-4o-mini`` return
-    ``False``, failing both corresponding assertions.
 
     Args:
         model_id: The OpenAI model identifier to evaluate.

@@ -11,13 +11,12 @@ pytest-qt's capture, which dies with the process, and Qt's fast-fail gives
 fatal messages, from a test body and from a fixture's teardown, and require the
 session's output to carry the message and the stack of the test that raised it.
 
-They also hold the recorder to leaving everything else alone. Its first form
-was installed and restored around each test phase, which is not how pytest-qt's
-own handler lives: that one is installed during setup and removed when the call
-phase is reported. The mismatch left one recorder behind per test, each
-forwarding to the last, and took pytest-qt's capture away from the test body.
-A session of more tests than the recursion limit has frames must therefore
-still pass, with a warning raised at its end landing in pytest-qt's capture.
+They also hold the recorder to leaving everything else alone: it is installed during
+setup and removed when the call phase is reported, as pytest-qt's own handler is.
+A recorder left behind per test would forward to the last one and take pytest-qt's
+capture away from the test body, so a session of more tests than the recursion
+limit has frames must still pass, with a warning raised at its end landing in
+pytest-qt's capture.
 """
 
 from __future__ import annotations

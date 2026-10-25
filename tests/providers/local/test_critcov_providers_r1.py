@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Second-pass critical-coverage tests for the XPU utilities, model loader, local transformers provider and Ollama provider.
+"""Tests for the XPU utilities, model loader, local transformers provider and Ollama provider.
 
-Four groups of lines that the first pass left are reached with real objects:
+Four groups of lines are reached with real objects:
 
 * The torch handle of ``xpu_utils`` is pointed at real library objects that lack a usable ``xpu`` namespace, which are the states of an old
   PyTorch build and of a build whose ``xpu`` attribute is not a namespace.
@@ -108,10 +108,7 @@ def _extract_torch_xpu_properties(torch_like: object, device_index: int, device_
 
 
 def test_torch_without_an_xpu_namespace_is_reported_unavailable() -> None:
-    """A torch handle with no ``xpu`` attribute is not available, and initialization says the XPU namespace is missing.
-
-    One-line change that fails it: change ``not hasattr(torch, "xpu")`` to ``hasattr(torch, "xpu")`` at xpu_utils.py:99.
-    """
+    """A torch handle with no ``xpu`` attribute is not available, and initialization says the XPU namespace is missing."""
     with _binding_replaced(xpu_utils, "_torch_module", json):
         assert is_xpu_available() is False
         with pytest.raises(RuntimeError, match="PyTorch XPU support is not available"):
@@ -122,8 +119,6 @@ def test_broken_xpu_namespace_degrades_every_probe_to_its_neutral_value() -> Non
     """A torch whose ``xpu`` attribute has no ``is_available`` yields False, zero, None and the zero pair, not an error.
 
     ``torch.nn.Module.xpu`` is a method, so reading ``is_available`` from it raises ``AttributeError``.
-
-    One-line change that fails it: remove ``AttributeError`` from the ``except`` tuple at xpu_utils.py:104.
     """
     with _binding_replaced(xpu_utils, "_torch_module", torch.nn.Module):
         assert is_xpu_available() is False
@@ -133,10 +128,7 @@ def test_broken_xpu_namespace_degrades_every_probe_to_its_neutral_value() -> Non
 
 
 def test_properties_without_a_properties_getter_keep_the_incoming_name() -> None:
-    """A namespace with no ``get_device_properties`` leaves memory at zero, the driver empty and the name unchanged.
-
-    One-line change that fails it: change ``not hasattr(torch.xpu, "get_device_properties")`` to ``hasattr(...)`` at xpu_utils.py:297.
-    """
+    """A namespace with no ``get_device_properties`` leaves memory at zero, the driver empty and the name unchanged."""
     assert _extract_torch_xpu_properties(torch.nn.Module, 0, "Known Adapter") == (0, "", "Known Adapter")
 
 
@@ -175,8 +167,6 @@ def test_checkpoint_directory_that_cannot_be_listed_is_tolerated(tmp_path: Path)
     """A model folder the operating system refuses to list is skipped instead of failing the validation.
 
     The first assertion proves the precondition: the folder really cannot be listed.
-
-    One-line change that fails it: change ``except OSError`` to ``except FileNotFoundError`` at model_loader.py:179.
 
     Args:
         tmp_path: Parent of the folder that gets the deny entry.
@@ -289,10 +279,7 @@ def _ask() -> list[Message]:
 
 @pytest.mark.asyncio
 async def test_disconnect_releases_the_loaded_model() -> None:
-    """Disconnecting a provider that holds a model empties the model slot and leaves it disconnected.
-
-    One-line change that fails it: delete ``self._loaded_model = None`` at local_transformers.py:463.
-    """
+    """Disconnecting a provider that holds a model empties the model slot and leaves it disconnected."""
     provider = _provider_with(_tool_caller())
     assert provider.current_model_id == _TOOL_MODEL_ID
 
@@ -304,11 +291,7 @@ async def test_disconnect_releases_the_loaded_model() -> None:
 
 @pytest.mark.asyncio
 async def test_chat_returns_the_tool_call_and_only_the_text_before_it() -> None:
-    """A reply made of prose followed by a tool-call object yields the call and keeps just the prose as content.
-
-    One-line change that fails it: delete the ``response_text = self._extract_text_before_tool_call(response_text)`` assignment at
-    local_transformers.py:695, which leaves the JSON in the message text.
-    """
+    """A reply made of prose followed by a tool-call object yields the call and keeps just the prose as content."""
     provider = _provider_with(_tool_caller())
 
     message, tool_calls = await provider.chat(_ask(), model=_TOOL_MODEL_ID, tools=[_decompile_tool()], temperature=0.0, max_tokens=1)
@@ -323,10 +306,7 @@ async def test_chat_returns_the_tool_call_and_only_the_text_before_it() -> None:
 
 @pytest.mark.asyncio
 async def test_chat_stream_publishes_the_tool_call_found_in_the_streamed_text() -> None:
-    """A streamed reply containing a tool-call object leaves that call pending once the stream ends.
-
-    One-line change that fails it: delete ``self._pending_tool_calls = parsed_calls`` at local_transformers.py:834.
-    """
+    """A streamed reply containing a tool-call object leaves that call pending once the stream ends."""
     provider = _provider_with(_tool_caller())
 
     chunks = [
@@ -413,10 +393,7 @@ async def _disconnect_during_probe(
 
 @pytest.mark.asyncio
 async def test_disconnect_while_the_local_probe_is_in_flight_leaves_no_client() -> None:
-    """A disconnect that closes the client during the local probe makes the probe fail without touching the absent client.
-
-    One-line change that fails it: remove the ``if self._local_client:`` guard at ollama.py:335, which then calls ``aclose`` on ``None``.
-    """
+    """A disconnect that closes the client during the local probe makes the probe fail without touching the absent client."""
     arrived = threading.Event()
     gate = threading.Event()
     with ScriptedHttpServer() as local:
@@ -431,10 +408,7 @@ async def test_disconnect_while_the_local_probe_is_in_flight_leaves_no_client() 
 
 @pytest.mark.asyncio
 async def test_disconnect_while_the_cloud_probe_is_in_flight_leaves_no_client() -> None:
-    """A disconnect that closes the client during the cloud probe makes the probe fail without touching the absent client.
-
-    One-line change that fails it: remove the ``if self._cloud_client:`` guard at ollama.py:366, which then calls ``aclose`` on ``None``.
-    """
+    """A disconnect that closes the client during the cloud probe makes the probe fail without touching the absent client."""
     arrived = threading.Event()
     gate = threading.Event()
     with ScriptedHttpServer() as local, ScriptedHttpServer() as cloud:
@@ -450,10 +424,7 @@ async def test_disconnect_while_the_cloud_probe_is_in_flight_leaves_no_client() 
 
 @pytest.mark.asyncio
 async def test_chat_stream_sends_tools_without_a_tool_choice_when_none_is_given() -> None:
-    """Offering tools with no tool choice sends the tool list and no ``tool_choice`` field.
-
-    One-line change that fails it: change ``if tool_choice is not None:`` to ``if True:`` at ollama.py:1451.
-    """
+    """Offering tools with no tool choice sends the tool list and no ``tool_choice`` field."""
     frames = (
         json.dumps({"message": {"role": "assistant", "content": "ok"}, "done": False}).encode() + b"\n",
         json.dumps({"done": True}).encode() + b"\n",

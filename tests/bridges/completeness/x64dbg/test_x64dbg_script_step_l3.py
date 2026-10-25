@@ -80,8 +80,7 @@ class TestScriptStepSendsDedicatedPipeCommand:
         """A non-zero ``script.iserror()`` after stepping must raise ``ToolError``, not a fabricated success.
 
         Falsifiable: a wrapper that claimed ``success: True``
-        unconditionally (the pre-remediation pattern this package's
-        sibling script-op tests gate for ``script_load``/``script_run``/
+        unconditionally (the pattern that the sibling script-op tests guard against for ``script_load``/``script_run``/
         ``script_abort``) would not raise here even though x64dbg's own
         error register proves the step failed.
         """

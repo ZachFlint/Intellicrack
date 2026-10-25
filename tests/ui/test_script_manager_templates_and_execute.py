@@ -3,27 +3,23 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for two Scripts Manager defects.
+"""Gates for Scripts Manager template substitution and Execute dispatch.
 
-* S16-D14: ``ScriptTypeInfo.get_template`` used ``str.format`` to substitute
-  ``{target}``/``{address}`` placeholders, which misparsed the literal
-  ``{``/``}`` code braces embedded in the frida, ghidra, and python
-  templates and raised ``KeyError``/``ValueError`` instead of returning a
-  template. That exception propagated out of ``ScriptManagerPanel._on_new``,
-  so View > Scripts Manager > New silently failed to load a template for
-  every type except Cutter and x64dbg.
-* S15-D13: ``ScriptManagerPanel``'s ``Execute`` button always dispatched
-  through ``self._executor``, but both production call sites
-  (``ToolOutputPanel.add_script_panel`` and
-  ``ToolOutputPanel.wire_script_backend`` in ``intellicrack.ui.tools``)
-  constructed ``set_backend`` without an ``executor`` argument, so
-  ``self._executor`` stayed ``None`` forever and every Execute click timed
-  out after 30s with no script ever actually running.
+* ``ScriptTypeInfo.get_template`` must not use ``str.format`` to substitute ``{target}``/
+  ``{address}`` placeholders. ``str.format`` misparses the literal ``{``/``}`` code braces
+  embedded in the frida, ghidra, and python templates and raises ``KeyError``/``ValueError``
+  instead of returning a template. That exception propagates out of
+  ``ScriptManagerPanel._on_new``, so View > Scripts Manager > New must load a template for
+  every type, not only Cutter and x64dbg.
+* ``ScriptManagerPanel``'s ``Execute`` button dispatches through ``self._executor``, so both
+  production call sites (``ToolOutputPanel.add_script_panel`` and
+  ``ToolOutputPanel.wire_script_backend`` in ``intellicrack.ui.tools``) must pass an
+  ``executor`` argument to ``set_backend``. Without it ``self._executor`` stays ``None`` and
+  every Execute click times out after 30s with no script running.
 
-All tests drive real ``ScriptManagerPanel``/``ToolOutputPanel`` widgets
-under an offscreen ``QApplication`` and a real ``ScriptManager`` backend;
-the Python execution path runs a genuine subprocess and asserts on its
-captured stdout. Nothing here is mocked or stubbed.
+All tests drive real ``ScriptManagerPanel``/``ToolOutputPanel`` widgets under an offscreen
+``QApplication`` and a real ``ScriptManager`` backend; the Python execution path runs a
+genuine subprocess and asserts on its captured stdout. Nothing here is mocked or stubbed.
 """
 
 from __future__ import annotations
@@ -67,14 +63,14 @@ def _auto_dismiss_blocking_dialogs(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestS16D14ScriptTemplates:
-    """Falsifiable gates for S16-D14: ``get_template`` must not crash for any script type."""
+    """Falsifiable gate: ``get_template`` must not crash for any script type."""
 
     def test_get_template_substitutes_placeholders_without_raising(self) -> None:
         """``get_template`` must return a real template with placeholders substituted for every type.
 
-        Before the fix, ``str.format()`` misparsed the literal ``{`` / ``}``
-        code braces embedded in the frida, ghidra, and python templates and
-        raised ``KeyError``/``ValueError`` instead of returning a template.
+        ``str.format()`` must not be used here: it misparses the literal ``{`` / ``}`` code braces
+        embedded in the frida, ghidra, and python templates and raises ``KeyError``/``ValueError``
+        instead of returning a template.
         Not every template references ``{target}``/``{address}`` (ghidra
         uses its own ``currentAddress`` API instead), so only the substring
         checks are unconditional; the substituted value is asserted only for
@@ -134,7 +130,7 @@ class TestS16D14ScriptTemplates:
 
 
 class TestS15D13ScriptExecute:
-    """Falsifiable gates for S15-D13: Scripts-panel Execute must actually run scripts."""
+    """Falsifiable gate: Scripts-panel Execute must actually run scripts."""
 
     def test_run_python_script_captures_real_stdout(self) -> None:
         """``_run_python_script`` must run genuine Python code and capture its stdout."""
@@ -165,9 +161,8 @@ class TestS15D13ScriptExecute:
     def test_add_script_panel_wires_a_real_executor(self, qapp: QApplication, tmp_path: Path) -> None:
         """``add_script_panel`` must wire a non-None executor into a script backend pending before panel creation.
 
-        Before the fix, ``add_script_panel`` called ``set_backend`` without
-        an ``executor`` argument, so ``self._executor`` on the panel stayed
-        ``None`` forever regardless of script type.
+        ``add_script_panel`` passes an ``executor`` argument to ``set_backend``. Without it,
+        ``self._executor`` on the panel stays ``None`` regardless of script type.
 
         Args:
             qapp: Session ``QApplication`` fixture required for widget construction.
@@ -187,8 +182,7 @@ class TestS15D13ScriptExecute:
     def test_wire_script_backend_wires_executor_after_panel_exists(self, qapp: QApplication, tmp_path: Path) -> None:
         """``wire_script_backend`` must wire a non-None executor when the panel already exists.
 
-        Before the fix, ``wire_script_backend`` called ``set_backend``
-        without an ``executor`` argument for the immediate-wiring path too.
+        ``wire_script_backend`` must pass an ``executor`` to ``set_backend`` on the immediate-wiring path too.
 
         Args:
             qapp: Session ``QApplication`` fixture required for widget construction.
@@ -208,8 +202,8 @@ class TestS15D13ScriptExecute:
     def test_execute_button_runs_python_script_and_shows_output(self, qapp: QApplication, tmp_path: Path) -> None:
         """End-to-end: Scripts tab Execute must run a real Python script and show its output.
 
-        Reproduces the exact audited symptom (Scripts tab -> Execute ->
-        "Executing..." then a 30s timeout) and asserts it no longer occurs:
+        Reproduces the reported symptom (Scripts tab -> Execute -> "Executing..." then a 30s
+        timeout) and asserts that it does not occur:
         clicking Execute for a Python script must populate the result pane
         with the script's real stdout, clear the busy state, and never show
         the timeout message.

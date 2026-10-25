@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 19: a tool's one-line signature describes ``allOf`` arguments and nested objects instead of calling them ``any``.
+"""A tool's one-line signature describes ``allOf`` arguments and nested objects instead of calling them ``any``.
 
 The gates map real MCP catalog entries to the functions the system prompt and the tool search list, and read the signature they get. An
 ``allOf`` argument shows every branch it must satisfy, a nested object shows its own properties, and a schema built to be wide and deep

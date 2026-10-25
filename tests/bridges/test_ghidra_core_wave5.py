@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave-5 real-gate suite — GhidraBridge core operations.
+"""Tests for core GhidraBridge operations.
 
 Scope:
 
@@ -15,8 +15,7 @@ Scope:
   ``get_xrefs_from``  — asserts (a) the Jython script contains the correct
                         ``getReferencesFrom`` / ``toAddr`` API calls and (b)
                         the parsed result exposes correct ``from_address`` and
-                        ``to_address`` fields (gaps left by the existing
-                        audit6 tests).
+                        ``to_address`` fields.
 
 The seam: ``_FakeGhidraRemote`` captures every payload the bridge sends via
 ``remote_exec`` in ``exec_calls`` and every sentinel expression via
@@ -148,7 +147,7 @@ def _analysis_complete(expression: str) -> object:
 
 
 class TestAnalyzeScriptFraming:
-    """Real-gate suite for ``GhidraBridge.analyze`` script framing.
+    """Tests for ``GhidraBridge.analyze`` script framing.
 
     Under Jython-less PyGhidra the ``analyze`` method must emit a kickoff
     script that:
@@ -208,7 +207,7 @@ class TestAnalyzeScriptFraming:
     async def test_analyze_script_runs_on_background_thread_not_blocking(self) -> None:
         """``analyze`` script must run analysis on a thread, not block on ``waitForAnalysis``.
 
-        The migrated analyze launches ``analyzeAll`` on ``_ic_analysis_thread``
+        The analyze method launches ``analyzeAll`` on ``_ic_analysis_thread``
         and the client polls ``_ic_analysis_done``; it must not issue a single
         blocking ``waitForAnalysis`` RPC (which times out under PyGhidra).
 
@@ -266,11 +265,9 @@ class TestAnalyzeScriptFraming:
 
 
 class TestGetXrefsFromScriptAndParsing:
-    """Real-gate suite for ``GhidraBridge.get_xrefs_from`` script framing and parsing.
+    """Tests for ``GhidraBridge.get_xrefs_from`` script framing and parsing.
 
-    Existing tests in ``test_ghidra_audit6.py`` (F-0022/F-0026) already
-    assert ``ref_type`` taxonomy and ``from_function``/``to_function``
-    enrichment.  This class closes the remaining gaps:
+    The tests check:
 
     1. Script framing — ``getReferencesFrom`` and ``toAddr(address)``
        must appear in the Jython payload.
@@ -409,9 +406,8 @@ class TestGetXrefsFromScriptAndParsing:
     async def test_get_xrefs_from_call_type_maps_to_call_string(self) -> None:
         """``get_xrefs_from`` maps ``UNCONDITIONAL_CALL`` to ``ref_type == "call"``.
 
-        This closes the loop with the address assertions: the same item
-        whose from/to addresses are verified also has the correct
-        ``ref_type`` so neither field can be accidentally wrong.
+        The same item whose from and to addresses are checked by the tests above also has
+        the correct ``ref_type``, so neither field can be wrong unnoticed.
 
         Mutation caught: returning ``"jump"`` for any CALL-containing
         raw type → assertion fails.

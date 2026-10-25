@@ -709,8 +709,8 @@ def _check_rebar_status(gpus: list[dict[str, str]] | None = None) -> tuple[bool,
     """Check Resizable BAR status by inspecting allocated PCI BAR sizes.
 
     ReBAR is detected by walking the cfgmgr32 ``ALLOC_LOG_CONF`` resource list for each Intel Arc PnP device and checking whether the largest
-    allocated MEM/MEM_LARGE descriptor exceeds the legacy 256 MB pre-ReBAR ceiling. This is vendor-agnostic and accurate for Intel Arc; the
-    previous registry approach relied on NVIDIA-only ``RmGpuLdPciResizableBar`` keys and always reported disabled on Intel hardware.
+    allocated MEM/MEM_LARGE descriptor exceeds the legacy 256 MB pre-ReBAR ceiling. This is vendor-agnostic and accurate for Intel Arc, where NVIDIA-only
+    ``RmGpuLdPciResizableBar`` registry keys do not apply.
 
     Args:
         gpus: Pre-enumerated GPU list from :func:`_get_windows_gpu_info`. When None,

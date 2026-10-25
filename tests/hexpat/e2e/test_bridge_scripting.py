@@ -3,11 +3,11 @@
 
 """E2E tests asserting that HexEditorBridge Python script execution is disabled.
 
-The in-process ``run_python_script`` feature was permanently removed because the
+The in-process ``run_python_script`` feature is permanently disabled because the
 hand-rolled builtin denylist could be escaped (for example via
 ``().__class__.__base__.__subclasses__()``) to reach
 :class:`subprocess.Popen` / :func:`os.system`. As the method is registered as an
-LLM-callable tool, that was a remote-code-execution path on the host. The method
+LLM-callable tool, that would be a remote-code-execution path on the host. The method
 binding is preserved so tool dispatch still resolves, but every invocation now
 raises a typed :class:`~intellicrack.core.types.ToolError`. These tests pin that
 disabled contract.

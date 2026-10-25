@@ -84,8 +84,8 @@ def normalize_provider_id(provider_id: str) -> str:
 
     Surrounding whitespace is stripped and the id is lower-cased before
     validation, so a value typed into the GUI as ``"My-Gateway "`` becomes
-    ``"my-gateway"``. Case folding is what makes the removal of the old
-    ``ProviderEnum(provider.lower())`` call sites behaviour-preserving.
+    ``"my-gateway"``. Case folding keeps the lookup of a provider id stable regardless of
+    the case it was typed in.
 
     Args:
         provider_id: Candidate instance id.

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 10: common launchers run sandboxed, with their own home, arguments intact, and advice when they need more.
+"""Common launchers run sandboxed, with their own home, arguments intact, and advice when they need more.
 
 The platform-independent half is gated everywhere: the command line a ``.cmd`` shim runs under, parsed back with the MSVC rules the
 program behind the shim uses; the environment that points every launcher at the server's own sandbox home; the variables the operator

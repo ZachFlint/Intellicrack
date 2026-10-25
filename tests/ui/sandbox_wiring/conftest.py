@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Shared fixtures for audit7 F-0021 wire_sandbox_backend tests."""
+"""Shared fixtures for the wire_sandbox_backend tests."""
 
 from __future__ import annotations
 

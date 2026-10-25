@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-object coverage for the third slice of ``intellicrack.bridges.ghidra``.
+"""Real-object coverage for ``intellicrack.bridges.ghidra``.
 
 The slice is the error handling that surrounds the remote calls of the analysis
 and editing accessors: the not-connected guards, the ``except ToolError: raise``

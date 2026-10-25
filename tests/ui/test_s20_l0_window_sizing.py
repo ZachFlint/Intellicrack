@@ -2,18 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S20-D15: the main window must fill available screen geometry.
+"""Gate for the main window filling available screen geometry.
 
-Before the fix, ``MainWindow._apply_smart_window_size`` hard-coded
-``max_w, max_h = 1400, 900`` so on any monitor larger than that the window
-opened cropped to 1400x900: the toolbar was cut off at "Hex Edit...", the
-Ghidra/Frida/Process/Sandbox buttons and the Auto-approve/Sandbox/Cancel
-toggles fell off the right edge, the Analysis-Output tab row and the entire
-Functions/Cross-References sidebar were pushed off-screen, and there was no
-scrollbar anywhere to reach them (S20-D15). This test drives the real
-``MainWindow`` construction path with a monkeypatched large screen geometry
-and asserts the window is sized to that geometry (minus the documented
-margin), not the old fixed cap.
+``MainWindow._apply_smart_window_size`` must not hard-code ``max_w, max_h = 1400, 900``.
+On a monitor larger than that, a window capped at 1400x900 cuts off the toolbar at
+"Hex Edit...", pushes the Ghidra/Frida/Process/Sandbox buttons and the
+Auto-approve/Sandbox/Cancel toggles off the right edge, and pushes the Analysis-Output
+tab row and the Functions/Cross-References sidebar off-screen, with no scrollbar anywhere
+to reach them. This test drives the real ``MainWindow`` construction path with a
+monkeypatched large screen geometry and asserts the window is sized to that geometry
+(minus the documented margin), not to a fixed cap.
 """
 
 from __future__ import annotations
@@ -48,7 +46,7 @@ def test_smart_window_size_fills_large_screen_geometry(
     real_orchestrator: Orchestrator,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A 2560x1440 available screen must size the window to that geometry, not the old 1400x900 cap.
+    """A 2560x1440 available screen must size the window to that geometry, not a fixed 1400x900 cap.
 
     Args:
         qapp: Shared QApplication fixture required for Qt widget construction.
@@ -92,8 +90,8 @@ def test_smart_window_size_floors_at_splitter_minimum_on_tiny_screen(
 ) -> None:
     """A screen narrower than the splitter panes' combined minimum must still floor sanely.
 
-    Confirms the fix to remove the 1400x900 cap did not also remove the
-    graceful minimum-width floor for small screens.
+    Confirms that removing the 1400x900 cap keeps the graceful minimum-width floor for small
+    screens.
 
     Args:
         qapp: Shared QApplication fixture required for Qt widget construction.

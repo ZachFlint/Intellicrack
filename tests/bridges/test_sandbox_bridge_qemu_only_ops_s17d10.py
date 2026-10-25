@@ -2,14 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Anchor for S17-D10: the bridge operations that only a QEMU instance can serve.
+"""Anchor for the bridge operations that only a QEMU instance can serve.
 
 The sandbox panel gates a set of controls on the effective backend being QEMU.
 That gating is only correct if the bridge really does refuse those operations
 for a non-QEMU instance - otherwise the panel would be disabling controls that
 actually work. These tests establish the premise against the real
-:class:`SandboxBridge` and a real :class:`SandboxManager`, so the panel gate in
-``tests/ui/test_sandbox_panel_backend_gating_s17d10.py`` is anchored to
+:class:`SandboxBridge` and a real :class:`SandboxManager`, so the panel gate is anchored to
 observed bridge behaviour rather than to an assumption about it.
 
 The manager builds the real :class:`~tests.sandbox.conftest.LocalProcessSandbox`

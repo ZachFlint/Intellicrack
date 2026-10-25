@@ -3,7 +3,7 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates BE-1's grid-marking half: `grid.highlight(ranges, className)` must
+ * Gates the grid-marking half of the diff highlights: `grid.highlight(ranges, className)` must
  * compose the three `is-diff-*` classes onto real rendered cells, at the same
  * time as an unrelated layer (`is-hit`), without one layer clobbering another.
  *
@@ -256,7 +256,7 @@ function classesOf(offset) {
   return cell === null ? [] : cell.className.split(' ').filter((name) => name !== '');
 }
 
-/* --------------------------------------------------------------------- BE-1 */
+/* --------------------------------------------------------------------- diff layers */
 
 /* Three diff layers plus an unrelated search-hit layer, deliberately
    overlapping at a few bytes, the way a real diff and a real search result

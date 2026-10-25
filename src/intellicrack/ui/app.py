@@ -348,7 +348,7 @@ class MainWindow(QMainWindow):
         and no session exists yet, a session is created so the first binary load
         does not need to create one. When no provider is connected or no model
         is selected this is a no-op, and the lazy backstop in
-        :meth:`_load_binary` creates a session on demand instead (N1).
+        :meth:`_load_binary` creates a session on demand instead.
         """
         if self._shutting_down or self._orchestrator.current_session is not None:
             return
@@ -424,7 +424,7 @@ class MainWindow(QMainWindow):
         """Wire up the per-monitor screen-change watcher on first show.
 
         The window has no native ``QWindow`` handle until it is shown for the
-        first time, so the ``screenChanged`` connection (D28) is deferred to
+        first time, so the ``screenChanged`` connection is deferred to
         here and made exactly once, guarded by :attr:`_screen_watcher_connected`.
 
         Args:
@@ -444,7 +444,7 @@ class MainWindow(QMainWindow):
         Moving the window to a monitor with a different scale factor can leave
         toolbar heights sized for the previous font metrics and child widgets
         laid out for the previous geometry until something forces Qt to
-        recompute them (D28). Re-deriving the main toolbar height and
+        recompute them. Re-deriving the main toolbar height and
         reactivating the central widget's layout keeps buttons legible and the
         central widget filling the window on the new monitor.
 
@@ -910,7 +910,7 @@ class MainWindow(QMainWindow):
 
         The Chat pane is the only collapsible splitter child (:meth:`_setup_ui` sets ``setCollapsible(0, True)``), so a user can also
         collapse it by dragging the splitter handle to the left edge -- but a fully collapsed pane has no visible control of its own to
-        reopen it (D14/D16). This toggle is that control: it remembers the pane's last non-collapsed width in
+        reopen it. This toggle is that control: it remembers the pane's last non-collapsed width in
         :attr:`_chat_panel_expanded_width` and restores exactly that width, rather than an arbitrary default, when invoked again.
 
         ``QSplitter.setCollapsible`` only stops the splitter from refusing a requested size of 0 in its own bookkeeping -- it does not
@@ -1561,9 +1561,7 @@ class MainWindow(QMainWindow):
 
         The toolbar's auto-approve button is an override, not a second setting:
         while it is on every call is approved, and while it is off the level is
-        whatever the user chose in Preferences. Hardcoding ``DESTRUCTIVE`` for
-        the off state discarded a persisted ``ALL`` or ``NONE`` choice every
-        time the button was toggled back.
+        whatever the user chose in Preferences.
 
         Returns:
             ConfirmationLevel: ``NONE`` while auto-approve is on, otherwise the
@@ -1648,8 +1646,7 @@ class MainWindow(QMainWindow):
 
         Routes the real ``BridgeAnalysisSummary`` (not a stringified copy)
         through the structured analysis panel so the strings/functions tables
-        populate and no duplicate generic "Analysis" tab is created
-        (F8 / N4 / duplicate-tab).
+        populate and no duplicate generic "Analysis" tab is created.
 
         Args:
             analysis: The BridgeAnalysisSummary result from the orchestrator.
@@ -1754,9 +1751,7 @@ class MainWindow(QMainWindow):
         in place when one is active but its provider/model no longer matches
         the toolbar's current selection, both from the provider and model
         currently selected in the toolbar. This lets the toolbar's
-        Provider/Model combos take effect on the very next send instead of
-        being silently ignored until an explicit "New Session" action
-        (S16-D01).
+        Provider/Model combos take effect on the very next send.
 
         Args:
             text: User's message text.
@@ -1807,7 +1802,7 @@ class MainWindow(QMainWindow):
         matches ``provider``/``model``, rebinds the existing session in
         place so the next completion is routed to the newly selected
         provider/model instead of silently continuing to use the session's
-        original binding (S16-D01) -- "New Session" remains the only way to
+        original binding -- "New Session" remains the only way to
         start a fresh conversation. Connects the selected provider first
         when it is not already connected, loading saved credentials from the
         credential store.
@@ -1889,8 +1884,7 @@ class MainWindow(QMainWindow):
         Lazily creates the streaming message bubble on the first chunk of a
         turn instead of eagerly when the message is sent. A completion that
         never streams therefore never gets a placeholder bubble at all, so no
-        empty orphan "Intellicrack" bubble is left above the user's message
-        (S16-D05); the real reply then arrives as the turn's only assistant
+        empty orphan "Intellicrack" bubble is left above the user's message; the real reply then arrives as the turn's only assistant
         bubble via ``message_received`` -> ``_on_message_received``.
 
         Args:
@@ -1914,8 +1908,8 @@ class MainWindow(QMainWindow):
         message is folded into it instead of rendered as a new bubble. A
         turn that never streamed (``self._stream_append`` is ``None``, e.g.
         streaming disabled, or any non-assistant message such as the user's
-        own echoed message) still renders through ``add_message`` exactly as
-        before, preserving the single-bubble non-streamed path (S16-D05).
+        own echoed message) still renders through ``add_message``, preserving the
+        single-bubble non-streamed path.
 
         Args:
             message: The completed message delivered by the orchestrator.
@@ -2097,9 +2091,9 @@ class MainWindow(QMainWindow):
         bridge call and delivers the result to the GUI thread via a retained
         :class:`BridgeCallWorker`. Using the persistent loop (instead of a
         throwaway per-call loop) keeps asyncio primitives valid across calls -
-        so a chat send issued right after a bridge timeout no longer hits
+        so a chat send issued right after a bridge timeout does not hit
         "Event loop is closed" - and the worker registry pins each worker for
-        the lifetime of its OS thread, so overlapping operations can no longer
+        the lifetime of its OS thread, so overlapping operations cannot
         drop a worker's only reference and crash the GUI thread.
 
         Args:
@@ -2209,9 +2203,9 @@ class MainWindow(QMainWindow):
         All optimistic UI (status label, enabling tool buttons, opening the hex
         editor) is deferred until the asynchronous load chain succeeds and the
         detected format is supported, so a failed or unsupported load never
-        leaves the app looking like a binary is loaded (N1 / F11). A default
+        leaves the app looking like a binary is loaded. A default
         session is created on demand when none is active, so the very first Load
-        Binary cannot fail with "No active session" (N1).
+        Binary cannot fail with "No active session".
 
         Args:
             path: Path to the binary.
@@ -2243,7 +2237,7 @@ class MainWindow(QMainWindow):
         Enables tool buttons and opens the hex editor only for supported
         formats. An ``unknown``/unsupported format surfaces a clear message,
         leaves tools disabled and clears the analysis panel so no stale data
-        lingers (F11).
+        lingers.
 
         Args:
             result: The ``BinaryInfo`` returned by the load chain.
@@ -2354,10 +2348,8 @@ class MainWindow(QMainWindow):
     def _on_session_load_requested(self, session_id: str) -> None:
         """Load a session by ID through the orchestrator.
 
-        The chat and tool panels are left alone until the load actually
-        succeeds. Clearing them up front discarded the history
-        :meth:`SessionManagerDialog._restore_session_to_ui` had already
-        rendered, and blanked the window when the load failed.
+        The chat and tool panels are left alone until the load actually succeeds,
+        so a failed load keeps the history already on screen.
 
         Args:
             session_id: Identifier of the session to load.
@@ -2647,7 +2639,7 @@ class MainWindow(QMainWindow):
             if "already exists" in message.lower():
                 # Recoverable: the user can replace the existing session. Do
                 # not flash "Session import failed" before the confirm dialog
-                # resolves (premature-status glitch).
+                # resolves.
                 reply = QMessageBox.question(
                     self,
                     "Import",
@@ -3465,9 +3457,8 @@ class MainWindow(QMainWindow):
         Tears down every active sandbox instance whose configuration no longer
         matches the dialog-selected isolation parameters and rebuilds the
         ``SandboxManager`` so subsequent sandboxes honour the new defaults.
-        This is the documented fallback pattern used while
-        ``SandboxManager.update_default_config`` is pending on the sandbox
-        back end (Group D scope). Teardown of live instances runs on the
+        The manager is rebuilt because ``SandboxManager.update_default_config`` is
+        not available on the sandbox back end. Teardown of live instances runs on the
         background bridge worker so a slow Windows Sandbox/QEMU stop cannot
         freeze the GUI thread; the manager rebuild and status update happen
         once teardown completes (or fails) via the worker's queued signals.
@@ -3891,7 +3882,7 @@ class MainWindow(QMainWindow):
         """Open Cutter reverse engineering panel.
 
         When a binary is already loaded app-wide, its path is propagated into the freshly opened Cutter panel so the user does not have to
-        load it a second time (F7 context propagation).
+        load it a second time.
         """
         try:
             widget = self.tool_panel.add_cutter_tab()
@@ -3908,7 +3899,7 @@ class MainWindow(QMainWindow):
         """Propagate the app's loaded binary into a freshly opened Cutter panel.
 
         No-ops when no binary is loaded or the panel does not expose the
-        ``inherit_app_binary`` hook (F7 context propagation).
+        ``inherit_app_binary`` hook.
 
         Args:
             widget: The Cutter panel widget just added.
@@ -4126,8 +4117,7 @@ class MainWindow(QMainWindow):
         Prefers the first committed, readable region so the picker's default
         selection (and its OK action) never lands on an unmapped or
         unreadable region such as row 0 / base ``0x0`` (``MEM_FREE``),
-        which previously produced a ReadProcessMemory-failed dialog
-        (S14-D16).
+        which produces a ReadProcessMemory-failed dialog.
 
         Args:
             regions: Enumerated ``(base, size, protection, state)`` tuples in
@@ -4327,7 +4317,7 @@ class MainWindow(QMainWindow):
 
         Triggers the orchestrator's aggregated bridge analysis (radare2/Ghidra strings extraction and function discovery) on the active
         binary and routes the result into the structured analysis panel via the bridge-analysis callback, so the Strings and Functions tabs
-        populate (F8 / N4).
+        populate.
         """
         if self.current_binary is None:
             self._show_no_binary_warning("analyze")
@@ -4358,7 +4348,7 @@ class MainWindow(QMainWindow):
         contributed strings/imports/exports/functions; when it is ``False`` the
         returned summary's ``functions`` list (and any other bridge-derived
         field) is not authoritative, so a "0 functions" outcome must never be
-        presented as a completed analysis (S13-D05).
+        presented as a completed analysis.
 
         Args:
             result: The ``BridgeAnalysisSummary`` produced, or ``None`` when no

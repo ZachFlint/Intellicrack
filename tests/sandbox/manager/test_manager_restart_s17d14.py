@@ -2,13 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D14: ``SandboxManager.restart`` must own the teardown/recreate.
+"""Tests that ``SandboxManager.restart`` owns the teardown/recreate.
 
-Before this fix the manager had ``create`` and ``destroy`` but no ``restart``,
-so the sandbox panel synthesised one by chaining two bridge calls across four
-callbacks. The failure semantics of the window between the teardown and the
-recreate therefore lived in the GUI, where they could neither be reused
-headlessly nor tested.
+The failure semantics of the window between the teardown and the recreate live
+in the manager, so they can be reused headlessly and tested.
 
 These tests drive the real :class:`SandboxManager` against the real
 :class:`~tests.sandbox.conftest.LocalProcessSandbox` backend, which does
@@ -185,7 +182,7 @@ def test_restart_preserves_type_and_binary_path() -> None:
 def test_restart_forwards_qemu_config_to_the_backend() -> None:
     """The QEMU configuration must reach the backend factory on the recreate.
 
-    This is the S17-D06 regression guard: a restart path that drops
+    A restart path that drops
     ``qemu_config`` would rebuild a QEMU sandbox with no disk image, which can
     never boot.
     """

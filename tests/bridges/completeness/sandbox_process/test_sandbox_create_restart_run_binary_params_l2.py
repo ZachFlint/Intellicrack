@@ -4,19 +4,17 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge-completeness remediation gate for the SANDBOX qemu_config slice (L2).
 
-Covers finding T1-6a: the ``ToolFunction`` definitions for ``sandbox.create``,
-``sandbox.restart``, and ``sandbox.run_binary`` omitted several parameters
-their underlying async methods already accepted and the GUI already passed
-correctly - most importantly ``qemu_config``, without which an
-AI/orchestrator-driven QEMU sandbox could never be given a bootable disk and
-the capability was unreachable through tool dispatch.
+Covers the ``ToolFunction`` definitions for ``sandbox.create``,
+``sandbox.restart``, and ``sandbox.run_binary`` must declare every parameter that their underlying
+async methods accept, most importantly ``qemu_config``, without which an
+AI/orchestrator-driven QEMU sandbox could never be given a bootable disk otherwise the capability is
+unreachable through tool dispatch.
 
 ``tests/sandbox/test_sandbox_bridge.py::test_parameter_names_match_signatures``
 already guards the whole bridge against *phantom* declared parameters
 (``def_params.issubset(sig_params)``), but that is a one-directional check:
 it never notices a real method parameter that the tool definition simply
-omits, which is exactly how ``qemu_config``, ``block_telemetry``,
-``companions``, ``reuse_instance``, and ``instance_id`` went missing. This
+omits, which would let a parameter such as ``qemu_config`` go missing unnoticed. This
 module closes that gap for the three methods this finding names, requiring
 the declared parameter set to be an *exact* match for the real method
 signature rather than a subset.
@@ -135,7 +133,7 @@ class TestSandboxCreateRestartRunBinaryParamCompletenessL2:
     def test_run_binary_time_limit_has_no_false_fixed_default(self) -> None:
         """run_binary's time_limit carries no fabricated default; it really means "use sandbox config value".
 
-        Falsified by: restoring the prior ``default=300`` on the
+        Falsified by: restoring ``default=300`` on the
         ``sandbox.run_binary`` ``time_limit`` ``ToolParameter``, which claimed
         a fixed default that never matched the real method's
         ``time_limit: int | None = None`` and contradicted the parameter's

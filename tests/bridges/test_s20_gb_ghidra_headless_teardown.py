@@ -3,17 +3,17 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the S20-D08 Ghidra headless bridge teardown fix.
+"""Falsifiable gates for Ghidra headless bridge teardown.
 
-Before this fix, ``GhidraBridge.start_headless`` spawned a ``python.exe``
+``GhidraBridge.start_headless`` spawns a ``python.exe``
 process that embeds the Ghidra JVM in-process via PyGhidra/jpype with no
 tracked teardown mechanism: if the app process died without running
 :meth:`GhidraBridge.shutdown` (crash, forced kill), the headless bridge child
 kept running, held the jfx_bridge RPC port open, and kept an exclusive OS
-lock on the Ghidra project's ``.lock``/``.lock~`` files. The next launch's
-``start_headless`` then hit a ``LockException`` opening the same project.
+lock on the Ghidra project's ``.lock``/``.lock~`` files. The next launch's ``start_headless`` then fails with a
+``LockException`` opening the same project.
 
-Two independent mechanisms were added to close this gap:
+Two independent mechanisms provide the teardown:
 
 * A Win32 "kill-on-job-close" job object (:func:`_create_kill_on_close_job_object`,
   :func:`_assign_process_to_job_object`, :func:`_close_job_object_handle`) that
@@ -178,7 +178,7 @@ def _wait_until_dead(pid: int, *, timeout: float = _KILL_WAIT_TIMEOUT_S) -> bool
 
 
 class TestKillOnCloseJobObject:
-    """S20-D08: a kill-on-close job object reaps its assigned child."""
+    """A kill-on-close job object reaps its assigned child."""
 
     @pytest.mark.spawns_process
     def test_closing_job_handle_terminates_assigned_process(self) -> None:
@@ -210,7 +210,7 @@ class TestKillOnCloseJobObject:
 
 
 class TestReclaimStaleProjectLock:
-    """S20-D08: stale-lock reclaim deletes dead locks and preserves live ones."""
+    """Stale-lock reclaim deletes dead locks and preserves live ones."""
 
     def test_reclaims_lock_left_by_a_dead_process(self, tmp_path: Path) -> None:
         """Lock files nobody holds open are deleted.

@@ -3,29 +3,29 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for GUI audit finding D04 (bit-editor button labels).
+"""Gate for the bit-editor button labels.
 
-Prior to the fix, ``DataInspectorMixin._create_bit_editor_group`` sized
-each of the 8 bit-toggle buttons with ``setFixedWidth(28)``. The
+Each of the 8 bit-toggle buttons in ``DataInspectorMixin._create_bit_editor_group`` must not be sized with
+``setFixedWidth(28)``, because the
 application-wide stylesheet (:mod:`intellicrack.ui.resources.theme_manager`)
 styles every ``QPushButton`` with ``padding: 6px 16px`` -- 32px of
-horizontal padding alone -- so the 28px button left a negative content
-area and Qt clipped the ``"0"``/``"1"`` label entirely, rendering blank
+horizontal padding alone -- so a 28px button leaves a negative content
+area and Qt clips the ``"0"``/``"1"`` label entirely, rendering blank
 buttons.
 
-The fix (``DataInspectorMixin._compute_bit_button_width``) probes the
+``DataInspectorMixin._compute_bit_button_width`` probes the
 application's live ``QStyle`` with throwaway buttons -- covering every
 label the bit editor can show, in both the unchecked and checked states
 -- and takes the widest reported ``sizeHint``, floored at 40px, so the
 label always has positive room to render regardless of font, DPI, or
-independent stylesheet changes (such as the checked-state border added
-separately for this same finding). This test drives the real
+independent stylesheet changes (such as the checked-state border).
+This test drives the real
 :class:`DataInspectorMixin` bit-editor group under the real application
 stylesheet and a real ``intellicrack_hexcore`` document, toggles a bit
 through the same click path a user would use, and asserts both that the
 button's label matches the document's authoritative bit value and that
 the label physically fits inside the button's style-computed content
-rect. Reverting the fix (widths back to 28px) makes the fit assertion
+rect. Restoring the original 28px widths makes the fit assertion
 fail because the stylesheet's padding alone exceeds 28px.
 """
 
@@ -59,7 +59,7 @@ pytestmark = pytest.mark.integration
 
 
 class _BitEditorHarness(DataInspectorMixin, QWidget):
-    """Minimal widget exposing :class:`DataInspectorMixin` for the D04 gate.
+    """Minimal widget exposing :class:`DataInspectorMixin` for the bit-editor gate.
 
     Wires only the instance attributes the bit-editor code path reads:
     a real hexcore document, no bridge (so writes take the synchronous
@@ -111,7 +111,7 @@ def _bit_button_content_width(btn: QPushButton) -> int:
 def _apply_production_dark_theme() -> None:
     """Apply the real production dark-theme stylesheet for each of this module's tests.
 
-    D04 is a collision between the bit-button width and the application's
+    The bit-button width collides with the application's
     real ``QPushButton { padding: 6px 16px; }`` rule, so the gate must run
     under that real stylesheet rather than an unstyled default ``QStyle``.
     The theme is applied per test so the UI suite's theme-restoring fixture

@@ -2,19 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-gate tests for S16-D04 — streaming on the initial tools-on turn.
+"""Real-gate tests for streaming on the initial tools-on turn.
 
-Covers the fix to ``Orchestrator._should_use_streaming``: in "auto" mode the
-initial (non-final) turn of a normal tools-on chat must now stream, because
+Covers ``Orchestrator._should_use_streaming``: in "auto" mode the
+initial (non-final) turn of a normal tools-on chat must stream, because
 Intellicrack always injects its tool schema so ``tools_available`` is always
-``True`` in production. Before the fix, ``_should_use_streaming`` returned
-``not tools_available or is_final_response``, which is ``False`` for every
-initial turn, so assistant responses never streamed token-by-token in normal
-use.
+``True`` in production. The expression ``not tools_available or is_final_response`` would return
+``False`` for every initial turn, so assistant responses would never stream
+token-by-token.
 
 Two gates:
   * ``TestShouldUseStreamingAutoMode`` — direct unit gate on
-    ``_should_use_streaming`` asserting it now returns ``True`` for the
+    ``_should_use_streaming`` asserting it returns ``True`` for the
     initial tools-on turn in "auto" mode.
   * ``TestStreamedToolsOnTurnEmitsChunks`` — behavioral gate driving the real
     orchestrator agent loop with a genuine streaming provider that yields
@@ -138,7 +137,7 @@ class _StreamProbeBridge(ToolBridgeBase):
 
 
 class _StreamingToolCallProvider(LLMProviderBase):
-    """Genuine streaming provider used to exercise the S16-D04 fix.
+    """Genuine streaming provider used to exercise the auto-mode streaming path.
 
     ``chat_stream`` yields several separate text deltas per turn (simulating
     token-by-token output) rather than a single blob. On the first
@@ -371,14 +370,14 @@ class TestShouldUseStreamingAutoMode:
     """Direct unit gate for the ``_should_use_streaming`` fix itself."""
 
     def test_auto_mode_streams_initial_tools_on_turn(self, tmp_path: Path) -> None:
-        """Auto mode now returns True for a non-final turn with tools available.
+        """Auto mode returns True for a non-final turn with tools available.
 
         Oracle: with ``stream_mode="auto"``, ``stream_responses=True``, and a
         stream callback registered, ``_should_use_streaming(tools_available=True,
         is_final_response=False)`` must return ``True`` — this is exactly the
         initial turn of every normal Intellicrack chat, since the tool schema
-        is always injected. Mutation: reverting to the old
-        ``not tools_available or is_final_response`` expression makes this
+        is always injected. Mutation: restoring the
+                ``not tools_available or is_final_response`` expression makes this
         return ``False`` (``not True or False`` is ``False``), failing the
         assertion below.
         """
@@ -400,7 +399,7 @@ class TestShouldUseStreamingAutoMode:
     def test_never_mode_still_disables_streaming(self, tmp_path: Path) -> None:
         """Never mode still disables streaming regardless of tool availability.
 
-        Oracle: this guards against an overcorrection where the fix removes
+        Oracle: this guards against an overcorrection where the change removes
         mode handling entirely. With ``stream_mode="never"``, the same
         initial tools-on turn must still return ``False``.
         """
@@ -437,8 +436,7 @@ class TestStreamedToolsOnTurnEmitsChunks:
         text; (2) the tool call must still have been collected and executed
         by the bridge exactly once, and the follow-up turn's chunks must
         also have arrived incrementally. Mutation: reverting
-        ``_should_use_streaming`` collapses this test to the pre-fix
-        behavior, in which the initial turn goes through
+        ``_should_use_streaming`` makes the initial turn go through
         ``_non_stream_response`` instead — the stream callback would then
         fire at most once per turn (only ever the empty final turn) and this
         assertion on chunk count would fail.

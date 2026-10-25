@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Regression tests for S17-D36: the WHPX ``-cpu`` model must start Windows.
+r"""The WHPX ``-cpu`` model must start Windows.
 
 ``QEMUSandbox._build_qemu_command`` selects a CPU model per accelerator. Under
 WHPX it cannot pass ``host`` or ``max`` - the guest triple-faults into
@@ -11,7 +11,7 @@ WHPX it cannot pass ``host`` or ``max`` - the guest triple-faults into
 requires, so a Windows guest triple-faulted with that identical WHPX exit code
 before its boot manager produced a single line of output. The entire Windows
 QEMU path was therefore unreachable on this platform, which is also what hid
-S17-D35 (the guest agent binding loopback) behind it: no Windows guest had ever
+The guest agent binding loopback was behind it: no Windows guest had ever
 reached the point of running an agent.
 
 The fix names the two features explicitly - WHPX accepts them individually,
@@ -32,7 +32,7 @@ processor it describes. So:
   this media really does reject a featureless ``qemu64``, so the first half
   cannot pass vacuously.
 
-  What this gates is precisely the S17-D36 boundary - whether the Windows
+  What this gates is precisely the CPU model boundary - whether the Windows
   kernel accepts the processor it is handed, or the machine dies before it can
   execute anything. Whether the guest then goes on to reach Setup is a separate
   property of the machine model, gated by
@@ -91,12 +91,12 @@ _CPU_FLAG_PREFIX: Final[str] = "+"
 def _without_named_features(cpu_argument: str) -> str:
     """Strip every explicitly named CPU feature from a ``-cpu`` value.
 
-    This reconstructs the model as it stood before S17-D36: the same base model
+    This reconstructs the model without the fix: the same base model
     and the same anti-evasion masks, minus the ``+feature`` tokens.
 
     A value that names no feature fails the calling test: there is then nothing
     to strip, the discriminator cannot be built, and the launcher has regressed
-    to exactly the model S17-D36 describes.
+    to exactly the model the fix describes.
 
     Args:
         cpu_argument: The launcher's ``-cpu`` value.

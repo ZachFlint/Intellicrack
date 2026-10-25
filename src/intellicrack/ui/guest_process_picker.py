@@ -7,9 +7,9 @@
 Presents the live process list returned by
 :meth:`~intellicrack.bridges.sandbox_bridge.SandboxBridge.list_guest_processes`
 so the user can choose a ``target_pid`` before dumping a Windows Sandbox
-guest process (S17-D10b / audit7 F-0021: ``SandboxBridge.memory_dump``
-requires an explicit, positive ``target_pid`` for Windows Sandbox instances,
-and the GUI could never supply one before this dialog existed).
+guest process. ``SandboxBridge.memory_dump`` requires an explicit, positive
+``target_pid`` for Windows Sandbox instances, and this dialog is how the GUI
+supplies one.
 """
 
 from __future__ import annotations

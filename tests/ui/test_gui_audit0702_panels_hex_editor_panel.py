@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the GUI audit findings in ``hex_editor.panel``.
+"""Gates for ``hex_editor.panel`` state marshalling, combo sizing and tree headers.
 
-Each test targets one audit finding and fails against the pre-fix behaviour:
+Each test targets one defect and fails against the defective behaviour:
 
-* ``test_c2_*`` (C2): ``HexEditorPanel.set_state_holder`` must register the
+* ``HexEditorPanel.set_state_holder`` must register the
   ``_state_event_received`` pyqtSignal's ``emit`` as the ``HexDocumentState``
   callback, not the GUI-mutating handler directly. Invoking a
   ``HexDocumentState.notify_*`` call from a background thread -- exactly as
@@ -14,11 +14,11 @@ Each test targets one audit finding and fails against the pre-fix behaviour:
   -- must not mutate any Qt widget synchronously on that thread; the mutation
   must only happen once the GUI thread's event loop delivers the queued
   signal.
-* ``test_m51_*`` (M51): the toolbar encoding combo box must use
+* The toolbar encoding combo box must use
   ``AdjustToContents`` sizing (not a fixed 120px width) and must expose the
   full, untruncated codec description via tooltips, both per-item and for
   the current selection.
-* ``test_m52_*`` (M52): ``_make_tree`` must configure every header section to
+* ``_make_tree`` must configure every header section to
   ``ResizeToContents`` with the last section stretched, so variable-length
   columns (e.g. the Imports tree's "Function" column) actually grow to fit
   long content instead of clipping it at Qt's default section width.
@@ -72,7 +72,7 @@ def _pump_until(qapp: QApplication, predicate: Callable[[], bool]) -> bool:
 
 
 class TestC2StateEventCrossThreadMarshalling:
-    """C2: bridge-thread state notifications must be marshalled to the GUI thread."""
+    """Bridge-thread state notifications must be marshalled to the GUI thread."""
 
     def test_c2_background_thread_highlight_added_does_not_mutate_widget_synchronously(
         self,
@@ -86,7 +86,7 @@ class TestC2StateEventCrossThreadMarshalling:
         which ``HexDocumentState._dispatch_one`` delivers by invoking every
         registered callback synchronously on the calling thread.
 
-        Pre-fix, the registered callback was the ``on_state_event`` closure
+        If the registered callback were the ``on_state_event`` closure
         itself, so ``_apply_bridge_highlight_rule_added`` -- and its
         ``QListWidget.addItem`` / ``HexEditorWidget.update`` calls -- would
         run synchronously on this background thread. This test asserts the
@@ -147,8 +147,8 @@ class TestC2StateEventCrossThreadMarshalling:
         Seeds a rule on the GUI thread via the real
         ``_apply_bridge_highlight_rule_added`` method, then removes it from
         a background thread via ``state_holder.notify_highlight_rule_removed``.
-        Pre-fix this would call ``QListWidget.takeItem`` synchronously on the
-        background thread; post-fix the row must survive until the GUI
+        This must not call ``QListWidget.takeItem`` synchronously on the
+        background thread; the row must survive until the GUI
         thread processes the queued signal.
 
         Args:
@@ -199,15 +199,15 @@ class TestC2StateEventCrossThreadMarshalling:
 
 
 class TestM51EncodingComboFitsLongDescriptions:
-    """M51: the toolbar encoding combo must grow to fit and tooltip long codec names."""
+    """The toolbar encoding combo must grow to fit and tooltip long codec names."""
 
     def test_m51_encoding_combo_uses_adjust_to_contents_and_not_fixed_width(self, qapp: QApplication) -> None:
         """The combo must resize to its contents instead of a fixed 120px box.
 
-        Pre-fix, ``setFixedWidth(_ENCODING_COMBO_WIDTH)`` pinned both the
+        ``setFixedWidth(_ENCODING_COMBO_WIDTH)`` would pin both the
         minimum and maximum width to 120px, so no long codec description
         could ever widen the closed combo box beyond a truncated fragment.
-        The fix switches to ``setMinimumWidth`` plus ``AdjustToContents``,
+        The combo uses ``setMinimumWidth`` plus ``AdjustToContents``,
         leaving the maximum width unconstrained.
 
         Args:
@@ -229,7 +229,7 @@ class TestM51EncodingComboFitsLongDescriptions:
     def test_m51_encoding_combo_items_carry_full_description_as_tooltip_role(self, qapp: QApplication) -> None:
         """Every combo item's ToolTipRole must mirror its full display text.
 
-        Pre-fix, no per-item tooltip was ever set, so a user could not
+        Without a per-item tooltip, a user could not
         recover a truncated description without reopening the popup. This
         iterates every populated item and asserts the tooltip role equals
         the item's exact text.
@@ -255,8 +255,8 @@ class TestM51EncodingComboFitsLongDescriptions:
 
         Drives the real ``currentTextChanged`` -> ``_on_encoding_changed``
         connection (not a direct method call), proving the signal wiring
-        itself keeps the combo's tooltip in sync. Pre-fix the combo carried
-        no tooltip at all, so the closed box gave no way to confirm a long
+        itself keeps the combo's tooltip in sync. Without that wiring the combo would carry
+        no tooltip, so the closed box would give no way to confirm a long
         selection.
 
         Args:
@@ -313,16 +313,14 @@ class TestM51EncodingComboFitsLongDescriptions:
 
 
 class TestM52SharedTreeFactoryResizesColumns:
-    """M52: ``_make_tree`` must configure resize-to-contents column behaviour."""
+    """``_make_tree`` must configure resize-to-contents column behaviour."""
 
     def test_m52_make_tree_configures_header_resize_mode_and_stretch(self, qapp: QApplication) -> None:
         """``_make_tree`` must set every section to ``ResizeToContents`` and stretch the last one.
 
-        Pre-fix, ``_make_tree`` only called
-        ``setHeaderLabels``/``setRootIsDecorated``/``setAlternatingRowColors``
-        and never touched ``setSectionResizeMode`` or
-        ``setStretchLastSection``, leaving every header section at Qt's
-        default ``Interactive`` resize mode.
+        ``_make_tree`` must not only call
+        ``setHeaderLabels``/``setRootIsDecorated``/``setAlternatingRowColors`` and leave ``setSectionResizeMode`` or
+        ``setStretchLastSection`` untouched, which would leave every header section at Qt's default ``Interactive`` resize mode.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -345,8 +343,8 @@ class TestM52SharedTreeFactoryResizesColumns:
 
         Uses the real ``_imports_tree`` built by ``_make_tree`` inside a
         live ``HexEditorPanel`` and feeds it a genuinely long C++ mangled
-        import name -- the exact scenario M52 describes. Pre-fix, the
-        default ``Interactive`` resize mode left the column pinned near
+        import name -- the exact scenario the finding describes. The default
+        ``Interactive`` resize mode must not leave the column pinned near
         Qt's small default section width regardless of content length.
 
         Args:

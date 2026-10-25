@@ -52,7 +52,7 @@ _CONTROL_ROW_SCROLLBAR_ALLOWANCE: Final[int] = 16
 # Derived from the styled QPushButton/QToolBar rules in theme_manager.py:
 # QPushButton { padding: 6px 16px; min-height: 24px; } and
 # QToolBar { padding: 4px; }. A fixed toolbar height smaller than this clips
-# the bottom of every styled button placed in it (D38/D08/D03).
+# the bottom of every styled button placed in it.
 _BUTTON_MIN_CONTENT_HEIGHT: Final[int] = 24
 _BUTTON_VERTICAL_PADDING: Final[int] = 12
 _TOOLBAR_CHROME_PADDING: Final[int] = 8
@@ -70,7 +70,7 @@ def compute_toolbar_height(widget: QWidget) -> int:
     :mod:`intellicrack.ui.resources.theme_manager` rather than a
     hardcoded magic number. Shared by :class:`AnalysisPanelBase` and
     :class:`intellicrack.ui.app.MainWindow` so both toolbars use one
-    derivation (D38/D08/D03).
+    derivation.
 
     Args:
         widget: The widget whose font metrics anchor the computation
@@ -176,7 +176,7 @@ class _ContentScrollArea(QScrollArea):
     """A resizable scroll area whose minimum size hint tracks its content's width, not its height.
 
     A plain :class:`QScrollArea` reports a small, content-independent minimum size hint on both axes, which is exactly what makes it absorb
-    tall content instead of clipping it (D28) -- but wrapping a panel's *entire* content in one would also silence the width demand that
+    tall content instead of clipping it -- but wrapping a panel's *entire* content in one would also silence the width demand that
     :meth:`AnalysisPanelBase._wrap_content`'s callers rely on elsewhere (a docked tab's ``minimumSizeHint`` protects it from being squeezed
     narrower than its controls can render). This subclass keeps that width signal flowing through to :meth:`minimumSizeHint` while still
     reporting a small, fixed minimum height so the panel can shrink vertically behind a scrollbar instead of being pinned to the content's
@@ -258,14 +258,13 @@ class AnalysisPanelBase(QWidget):
         A docked analysis tab's content is often taller than the primary
         monitor's usable height (dense forms, stacked control clusters,
         multi-row tables). Hosting it in a resizable scroll area means the
-        content still fills the available space exactly as before when
-        there is room, and only grows a scrollbar -- instead of clipping --
-        when the panel is shorter than the content needs (D28). Uses
+        content fills the available space when there is room, and only grows a scrollbar -- instead of clipping --
+        when the panel is shorter than the content needs. Uses
         :class:`_ContentScrollArea` rather than a plain ``QScrollArea`` so the
         panel's own ``minimumSizeHint`` keeps reporting ``content``'s real
         minimum width -- the signal :meth:`_sync_left_panel_min_width` in
         ``intellicrack.ui.tools`` relies on to keep a docked tab from being
-        squeezed narrower than its controls can render (D02).
+        squeezed narrower than its controls can render.
 
         Args:
             content: The content widget returned by ``_create_content``.
@@ -289,8 +288,8 @@ class AnalysisPanelBase(QWidget):
         populated overflow popup instead of Qt's built-in popup, which renders
         empty for the button widgets these panels add via ``addWidget``.
         The height is derived from font metrics via :func:`compute_toolbar_height`
-        rather than a fixed constant, so styled buttons are never clipped
-        (D38/D08/D03), and is re-derived in :meth:`changeEvent` when the
+        rather than a fixed constant, so styled buttons are never clipped,
+        and is re-derived in :meth:`changeEvent` when the
         panel's font changes.
 
         Returns:

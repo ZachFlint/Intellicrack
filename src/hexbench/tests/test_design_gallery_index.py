@@ -219,7 +219,7 @@ class TheGalleryHoldsEverySpecimenTests(Assertions, unittest.TestCase):
         self.require_same(labelled, _TITLES, "the gallery's nav labels no longer match the titles the card files declare")
 
     def test_every_article_links_the_standalone_card_beside_it(self) -> None:
-        """The cards stay: two suites read them and the handoff cites four by path."""
+        """The cards stay: two suites read them, so they must remain on disk."""
         linked = sorted(_CARD_FILE_LINK.findall(_RENDERED))
         self.require_same(linked, list(_TITLES), "the gallery no longer links every standalone card file")
 

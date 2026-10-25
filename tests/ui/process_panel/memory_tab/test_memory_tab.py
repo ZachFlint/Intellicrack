@@ -3,10 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for audit4 B4 - MemoryTab findings F-0003, F-0005, F-0006, F-0007, F-0008, F-0009.
+"""Tests for MemoryTab filter wiring, action gating, search and free/protect handling.
 
-Each test documents the finding it covers and is written to fail before the
-fix and pass after it.
+Each test pins one behaviour and fails if that behaviour regresses.
 """
 
 from __future__ import annotations
@@ -390,7 +389,7 @@ def _noop_warning_yes(*_args: object, **_kwargs: object) -> QMessageBox.Standard
 
 
 class TestRegionFilterFiltersTable:
-    """F-0003: _region_filter textChanged is wired and filters the region table."""
+    """_region_filter textChanged is wired and filters the region table."""
 
     def test_region_filter_filters_table(self, tab: MemoryTab) -> None:
         """Filter input shows/hides rows based on case-insensitive substring.
@@ -424,7 +423,7 @@ class TestRegionFilterFiltersTable:
     def test_region_filter_wired_to_text_changed(self, tab: MemoryTab) -> None:
         """``_region_filter.textChanged`` is connected to the filter slot.
 
-        Proves the signal wire-up required by F-0003 *directly* rather than by
+        Proves the signal wire-up *directly* rather than by
         outcome alone. Two independent gates are asserted:
 
         * The ``textChanged`` signal reports exactly one connected receiver
@@ -531,7 +530,7 @@ class TestRegionFilterFiltersTable:
 
 
 class TestActionsDisabledWhenUnattached:
-    """F-0005: Memory action buttons are disabled when no process is attached."""
+    """Memory action buttons are disabled when no process is attached."""
 
     def test_buttons_disabled_on_init(self, tab: MemoryTab) -> None:
         """All action buttons are disabled immediately after construction.
@@ -566,7 +565,7 @@ class TestActionsDisabledWhenUnattached:
 
 
 class TestActionsDisabledHandlerNoDispatch:
-    """F-0005: Handler preconditions block dispatch when not attached.
+    """Handler preconditions block dispatch when not attached.
 
     Each unattached test is paired with an attached counterpart that confirms
     the guard on ``_attached_pid`` is the sole controlling factor: when the PID
@@ -851,7 +850,7 @@ class TestActionsDisabledHandlerNoDispatch:
 
 
 class TestSearchStatusResetsOnFailure:
-    """F-0006: _on_search 'Searching...' status resets on failure via _on_error."""
+    """_on_search 'Searching...' status resets on failure via _on_error."""
 
     def test_search_status_resets_on_failure(
         self,
@@ -900,7 +899,7 @@ class TestSearchStatusResetsOnFailure:
 
 
 class TestFreeRemovesAllocationRow:
-    """F-0007: _on_free removes the matching Allocated row instead of adding a Freed row."""
+    """_on_free removes the matching Allocated row instead of adding a Freed row."""
 
     def test_free_removes_allocation_row(
         self,
@@ -1008,7 +1007,7 @@ class TestFreeRemovesAllocationRow:
 
 
 class TestInvalidAddressSurfacesError:
-    """F-0008: _on_protect and _on_free surface user-visible error on invalid address."""
+    """_on_protect and _on_free surface user-visible error on invalid address."""
 
     def test_invalid_protect_address_shows_messagebox(
         self,
@@ -1099,7 +1098,7 @@ class TestInvalidAddressSurfacesError:
 
 
 class TestAddressFieldHasPlaceholder:
-    """F-0009: _build_protect_tab address field has a setPlaceholderText hint."""
+    """_build_protect_tab address field has a setPlaceholderText hint."""
 
     def test_prot_addr_has_placeholder(self, tab: MemoryTab) -> None:
         """_prot_addr placeholder text is exactly the canonical 64-bit example address.

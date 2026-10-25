@@ -5,22 +5,19 @@
 
 """L3 gate tests for the Frida panel's lifecycle/scripting and instrumentation GUI wiring.
 
-Covers the GUI column of ``audit/bridge-completeness/agent-07-frida-lifecycle-scripting.md``
-and ``audit/bridge-completeness/agent-08-frida-instrumentation.md``: every widget/handler
+Covers the GUI column of the Frida lifecycle/scripting and instrumentation slices: every widget/handler
 under test must dispatch through ``run_bridge_coroutine_logged`` to a real
 ``FridaBridge`` coroutine method (never a repaint / local reimplementation), and the
 resulting real Frida operation must actually take effect.
 
 ``run_bridge_coroutine_async`` (the low-level Qt-thread dispatch primitive in
 ``intellicrack.ui.panels.async_bridge``) is monkeypatched to drain the coroutine
-synchronously on a private event loop instead of a background QThread -- this is
-the same pattern used by ``tests/test_audit4/c12_hex_sandbox_route/test_sandbox_route.py``
-and only replaces the *thread-dispatch mechanism*, never the bridge coroutine or the
+synchronously on a private event loop instead of a background QThread -- This only replaces the
+*thread-dispatch mechanism*, never the bridge coroutine or the
 widget's own click handler, both of which execute for real.
 
 Each widget under test is driven through a thin test-only subclass exposing public
-wrapper methods around its protected internals -- the same pattern already used by
-``tests/test_audit4/b2_process_tab/test_process_tab.py`` -- so tests can reach
+wrapper methods around its protected internals -- so tests can reach
 production-declared attributes without violating basedpyright's
 ``reportPrivateUsage`` check (subclass access to a base class's protected members is
 permitted; only access from *outside* the class hierarchy is flagged).
@@ -426,7 +423,7 @@ def attached_bridge() -> Generator[FridaBridge]:
 @pytest.mark.usefixtures("qapp")
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge/GUI integration tests")
 class TestFridaPanelAttachDispatchesRealBridge:
-    """L3 gates for the Attach toolbar button (G1 fix, PID and name branches)."""
+    """L3 gates for the Attach toolbar button (PID and name branches)."""
 
     @staticmethod
     def test_attach_button_numeric_target_calls_bridge_attach(
@@ -500,7 +497,7 @@ class TestFridaPanelAttachDispatchesRealBridge:
 @pytest.mark.usefixtures("qapp")
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge/GUI integration tests")
 class TestFridaPanelStopAllScripts:
-    """L3 gate for the "Stop All Scripts" button (previously NO-CONTROL)."""
+    """L3 gate for the "Stop All Scripts" button."""
 
     @staticmethod
     def test_stop_all_scripts_button_calls_unload_all_scripts(
@@ -536,7 +533,7 @@ class TestFridaPanelStopAllScripts:
 @pytest.mark.usefixtures("qapp")
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge/GUI integration tests")
 class TestInterceptorLifecycleControlsWiring:
-    """L3 gates for the Revert/Flush controls (previously NO-CONTROL)."""
+    """L3 gates for the Revert/Flush controls."""
 
     @staticmethod
     def test_flush_button_calls_flush_interceptor(
@@ -598,7 +595,7 @@ class TestInterceptorLifecycleControlsWiring:
 @pytest.mark.usefixtures("qapp")
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge/GUI integration tests")
 class TestStalkerCallProbeControlsWiring:
-    """L3 gates for the Stalker call-probe add/remove controls (previously NO-CONTROL)."""
+    """L3 gates for the Stalker call-probe add/remove controls."""
 
     @staticmethod
     def test_add_probe_button_calls_stalker_add_call_probe_and_populates_table(
@@ -667,7 +664,7 @@ class TestStalkerCallProbeControlsWiring:
 @pytest.mark.usefixtures("qapp")
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge/GUI integration tests")
 class TestMemoryPatchStringControlsWiring:
-    """L3 gates for the Patch Code / Allocate String controls (previously NO-CONTROL)."""
+    """L3 gates for the Patch Code / Allocate String controls."""
 
     @staticmethod
     def test_patch_button_calls_patch_code_and_writes_real_bytes(
@@ -735,7 +732,7 @@ class TestMemoryPatchStringControlsWiring:
 @pytest.mark.usefixtures("qapp")
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge/GUI integration tests")
 class TestSymbolLookupControlsWiring:
-    """L3 gates for the module-symbols / reverse-lookup / glob-search controls (previously NO-CONTROL)."""
+    """L3 gates for the module-symbols / reverse-lookup / glob-search controls."""
 
     @staticmethod
     def test_enumerate_symbols_button_calls_enumerate_symbols_with_real_module(
@@ -830,7 +827,7 @@ class TestSymbolLookupControlsWiring:
 @pytest.mark.usefixtures("qapp")
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge/GUI integration tests")
 class TestSystemFunctionCallControlsWiring:
-    """L3 gate for the errno/GetLastError call-path control (previously NO-CONTROL)."""
+    """L3 gate for the errno/GetLastError call-path control."""
 
     @staticmethod
     def test_call_button_calls_call_system_function_and_captures_last_error(

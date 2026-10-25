@@ -4,10 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for the hex editor base conversion calculator mixin.
 
-The audit (shard 13, ``calculator.py`` listed under ``NOT TESTED``) flagged the
-binary calculator as untested real functionality: base conversions, signed/
-unsigned integer reinterpretation across every fixed width, IEEE-754 float
-decoding, and endianness handling.
+Covers the binary calculator: base conversions, signed/unsigned integer
+reinterpretation across every fixed width, IEEE-754 float decoding, and
+endianness handling.
 
 These tests drive the real :class:`CalculatorMixin` against a real Qt widget
 tree. They assert the actual computed representations - decimal/hex/octal/

@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for D36: hardcoded ``Consolas`` fonts replaced by the shared stack.
+"""Gate: hardcoded ``Consolas`` fonts are replaced by the shared stack.
 
-Pre-fix, five sites constructed a monospace font by hardcoding the literal
+Five sites must not construct a monospace font by hardcoding the literal
 family name ``"Consolas"`` directly:
 
 * ``intellicrack.ui.panels.hex_editor.disassembly.DisassemblyMixin._create_disassembly_tab``
@@ -22,10 +22,10 @@ A hardcoded family name silently diverges from whatever the rest of the
 application actually renders code in (``FontManager`` loads a bundled
 JetBrains Mono and only falls back toward ``Consolas``/``monospace`` when no
 bundled or configured family is available), and gives users no way to have a
-custom monospace preference honoured consistently across the hex editor and
+custom monospace preference honored consistently across the hex editor and
 log viewer.
 
-The fix routes every site through the shared
+Every site must route through the shared
 ``intellicrack.ui.resources.font_manager.FontManager`` singleton instead.
 This module drives each real, unmocked widget-construction method under an
 offscreen ``QApplication`` and asserts the constructed widget's font family is
@@ -72,7 +72,7 @@ class _DisassemblyHarness(DisassemblyMixin):
     """Minimal object exposing only the attributes ``_create_disassembly_tab`` touches."""
 
     def __init__(self) -> None:
-        """Initialise empty mixin state matching the panel's declared attributes."""
+        """Initialize empty mixin state matching the panel's declared attributes."""
         self._document: Any | None = None
         self.document: Any | None = None
         self._hex_widget: Any | None = None
@@ -92,7 +92,7 @@ class _SandboxHarness(SandboxMixin):
     """Minimal object exposing only the attributes ``_create_sandbox_tab`` touches."""
 
     def __init__(self) -> None:
-        """Initialise empty mixin state matching the panel's declared attributes."""
+        """Initialize empty mixin state matching the panel's declared attributes."""
         self.document: Any | None = None
         self.file_path = None
         self._bridge: Any | None = None
@@ -109,7 +109,7 @@ class _YaraHarness(YaraMixin):
     """Minimal object exposing only the attributes ``_create_yara_tab`` touches."""
 
     def __init__(self) -> None:
-        """Initialise empty mixin state matching the panel's declared attributes."""
+        """Initialize empty mixin state matching the panel's declared attributes."""
         self._document: Any | None = None
         self.document: Any | None = None
         self._hex_widget: Any | None = None
@@ -124,7 +124,7 @@ class _ScriptingHarness(ScriptingMixin):
     """Minimal object exposing only the attributes ``_create_scripting_tab`` touches."""
 
     def __init__(self) -> None:
-        """Initialise empty mixin state matching the panel's declared attributes."""
+        """Initialize empty mixin state matching the panel's declared attributes."""
         self.document: Any | None = None
         self._hex_widget: Any | None = None
         self.file_path = None

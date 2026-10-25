@@ -3,30 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for the live 6F x64dbg re-drive findings.
+"""Regression gates for the live x64dbg re-drive findings.
 
-Two defects surfaced when the never-exercised 6F items were driven against
-a real x64dbg process and a real ``notepad.exe`` debuggee:
+Two defects surfaced when the annotation and patch paths were driven against a real x64dbg process and a real ``notepad.exe`` debuggee:
 
-* **Annotation whitespace loss (F6-13).** ``set_label`` / ``set_comment``
-  handed the annotation text to the ``lblset`` / ``cmtset`` console
-  commands *unquoted*. x64dbg's command tokenizer strips internal
-  whitespace from an unquoted argument, so ``"IC audit comment"`` was
-  stored as ``ICauditcomment`` and the bridge's own read-back
-  verification (correctly) raised. The live probe confirmed a *quoted*
-  argument survives intact.
+* **Annotation whitespace loss.** ``set_label`` and ``set_comment`` handed the annotation text to the ``lblset`` and ``cmtset`` console commands *unquoted*. x64dbg's command tokenizer strips internal whitespace from an unquoted argument, so ``"IC audit comment"`` is stored as ``ICauditcomment`` and the bridge's read-back verification raises. A *quoted* argument survives intact.
+* **Patch verification race.** ``patch_instruction`` reads memory back exactly once, immediately after the ``assemble`` RPC returns. The RPC only queues an asynchronous ``DbgCmdExec("asm ...")``, so that single read races the write: the pre-patch bytes are observed on the first read, and the ``mov eax, 1`` encoding appears a poll later.
 
-* **Patch verification race (F6-14).** ``patch_instruction`` read memory
-  back exactly once, immediately after the ``assemble`` RPC returned. The
-  RPC only queues an asynchronous ``DbgCmdExec("asm ...")``, so that
-  single read raced the write: the live probe observed the pre-patch
-  bytes on the first read and the ``mov eax, 1`` encoding present a poll
-  later, at a real code address where the patch genuinely succeeded.
-
-Both doubles below are *derived from that observed x64dbg behaviour* - the
-tokenizer's space collapsing and the delayed reveal of the assembled
-bytes - rather than restating the bridge's own logic, so each test fails
-when its fix is reverted.
+Both doubles below are derived from that observed x64dbg behaviour (the tokenizer's space collapsing and the delayed reveal of the assembled bytes) rather than from the bridge's own logic, so each test fails if the behaviour it models is mishandled.
 """
 
 from __future__ import annotations
@@ -48,14 +32,10 @@ _MOV_EAX_1 = bytes.fromhex("b801000000")
 def _x64dbg_tokenize_annotation(rest: str) -> str:
     """Model x64dbg's console tokenizer for a single annotation argument.
 
-    Derived from the live 6F probe: an unquoted argument has *all* of its
-    internal whitespace stripped by the command parser, while a
-    double-quoted argument is preserved verbatim with the surrounding
-    quotes removed.
+    An unquoted argument has all of its internal whitespace stripped by the command parser, while a double-quoted argument is preserved verbatim with the surrounding quotes removed.
 
     Args:
-        rest: The raw argument text following ``lblset ADDR, `` /
-            ``cmtset ADDR, `` in the queued console command.
+        rest: The raw argument text following ``lblset ADDR, `` / ``cmtset ADDR, `` in the queued console command.
 
     Returns:
         str: The text x64dbg would actually store for that argument.
@@ -72,8 +52,7 @@ class _AnnotationTokenizerPipe:
     ``exec`` commands carrying ``lblset`` / ``cmtset`` are parsed through
     :func:`_x64dbg_tokenize_annotation` and stored per address; the
     matching ``lbl_list`` / ``cmt_list`` read-backs return whatever was
-    stored. A fix that quotes the text round-trips embedded spaces; the
-    unquoted (pre-fix) command loses them and trips the bridge's own
+    stored. Quoting the text round-trips embedded spaces; the unquoted command loses them and trips the bridge's own
     verification.
     """
 
@@ -238,7 +217,7 @@ def bridge() -> X64DbgBridge:
 
 @pytest.mark.asyncio
 class TestAnnotationWhitespaceSurvives:
-    """F6-13: spaced labels/comments must survive x64dbg's tokenizer."""
+    """Spaced labels and comments must survive x64dbg's tokenizer."""
 
     async def test_set_comment_preserves_internal_spaces(self, bridge: X64DbgBridge) -> None:
         """A spaced comment round-trips instead of collapsing to ``ICauditcomment``.
@@ -267,8 +246,7 @@ class TestAnnotationWhitespaceSurvives:
     async def test_tokenizer_double_would_strip_unquoted_spaces(self) -> None:
         """Guard that the derived tokenizer models the real space-stripping.
 
-        Without this the whitespace tests could pass vacuously (a
-        tokenizer that never strips spaces cannot detect the regression).
+        Without this the whitespace tests could pass vacuously (a tokenizer that never strips spaces cannot detect the whitespace defect).
         """
         assert _x64dbg_tokenize_annotation("IC audit comment") == "ICauditcomment"
         assert _x64dbg_tokenize_annotation('"IC audit comment"') == "IC audit comment"
@@ -276,7 +254,7 @@ class TestAnnotationWhitespaceSurvives:
 
 @pytest.mark.asyncio
 class TestPatchInstructionRace:
-    """F6-14: patch verification must not race the async assemble write."""
+    """Patch verification must not race the async assemble write."""
 
     async def test_patch_succeeds_when_write_lands_after_first_read(self, bridge: X64DbgBridge) -> None:
         """A patch visible only on a later poll is verified, not misreported.

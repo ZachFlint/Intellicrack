@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the concurrent-run admission governor.
+"""Gates for the concurrent-run admission governor.
 
 The host driver may be launched by several agents at once. Without a governor
 each launch would start a Windows container unconditionally, and oversubscribing

@@ -2,27 +2,24 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D68: a QEMU that dies must be noticed, not waited on.
+"""Gate: a QEMU that dies must be noticed, not waited on.
 
 On Windows the virtual machine is a long-lived foreground child spawned with
-piped stdout and stderr, and nothing read either pipe for the life of the
-guest. Two consequences were measured live on 2026-08-08, in a session that had
-been running for three minutes:
+piped stdout and stderr, and nothing reads either pipe for the life of the
+guest. Two consequences follow:
 
-* Both the Intellicrack agent channel and the qemu-guest-agent channel failed
+* Both the Intellicrack agent channel and the qemu-guest-agent channel fail
   with ``[WinError 64]`` at the same instant. Two unrelated clients cannot lose
-  their sockets together because of a client bug - the peer had gone. The
-  teardown that followed confirmed it: ``qemu_already_exited_before_shutdown``.
-  The QEMU process had died and nothing in the sandbox had noticed.
-* Nothing said why. The exit status and everything QEMU wrote on its way out
-  went into a pipe no one ever read, so the only account of the death was
-  discarded. That is the same evidence S17-D39 has been waiting on.
+  their sockets together because of a client bug - the peer has gone. The QEMU
+  process has died and nothing in the sandbox notices.
+* Nothing says why. The exit status and everything QEMU wrote on its way out
+  go into a pipe no one reads, so the only account of the death is discarded.
 
-Each misdiagnosis that followed was worse than silence. ``run_command`` sat out
-its full ninety-second deadline and reported "command timed out", as if the
-guest were merely slow. The channel-recovery path spent its reconnect budget
-dialling a socket with no listener and then reported that the guest "may
-already be running" the command - of a machine that no longer existed.
+Each misdiagnosis that follows is worse than silence. ``run_command`` sits out
+its full ninety-second deadline and reports "command timed out", as if the
+guest were merely slow. The channel-recovery path spends its reconnect budget
+dialling a socket with no listener and then reports that the guest "may
+already be running" the command - of a machine that no longer exists.
 
 Four properties are gated, each against a real process or a real socket:
 
@@ -83,8 +80,7 @@ _LAST_FLOOD_LINE: Final[str] = f"qemu warning {_FLOOD_LINES - 1:05d}"
 _FLOOD_EXIT_CODE: Final[int] = 7
 _RETAINED_TAIL_LINES: Final[int] = 8
 
-# Real QEMU output. The stderr line is verbatim the death S17-D39 has been
-# chasing, and is exactly what the unread pipe was throwing away.
+# Real QEMU output. The stderr line is exactly what an unread pipe would throw away.
 _QEMU_STDOUT_LINE: Final[str] = "char device redirected to COM1"
 _QEMU_STDERR_LINE: Final[str] = "qemu-system-x86_64: WHPX: Unexpected VP exit code 4"
 _CRASH_EXIT_CODE: Final[int] = 3

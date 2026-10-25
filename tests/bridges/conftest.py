@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 
-"""Shared fixtures for audit1 hex_editor regression tests.
+"""Shared fixtures for hex_editor regression tests.
 
 Provides reusable ``HexEditorBridge`` and minimal-binary fixtures that
-mirror the ones in ``tests/test_hexcore_e2e/conftest.py`` so the audit1
-suite can run as an independent pytest target. All fixtures depending
+mirror the ones in ``tests/test_hexcore_e2e/conftest.py`` so the suite can run as an independent pytest target. All fixtures depending
 on the Rust native module use ``importorskip`` so the suite is skipped
 when ``intellicrack_hexcore`` is not built.
 """
@@ -208,7 +207,7 @@ def _assert_open_read_write_round_trip(
 def test_bridge_fixture_yields_usable_connected_bridge(bridge: HexEditorBridge, pe_binary: Path) -> None:
     """The ``bridge`` fixture yields a real, connected, usable ``HexEditorBridge``.
 
-    This is the gate for the audit finding that questioned whether the fixture
+    This gate checks that the fixture
     returns a real bridge instance (vs. ``None``/an unusable object). The test
     proves the yielded object is a fully wired ``HexEditorBridge`` connected to the
     native ``intellicrack_hexcore`` backend by driving a genuine open/read/write/read

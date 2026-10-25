@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D06: the GUI must be able to configure and launch QEMU.
+"""Gates for the GUI's ability to configure and launch QEMU.
 
-Before this fix the sandbox configuration dialog had no QEMU controls at all,
-so there was no way to tell the application which qcow2 disk image to boot, and
-the sandbox panel never built a ``QEMUConfig`` to pass to the bridge. The QEMU
-backend was therefore unreachable from the GUI on every host.
+The sandbox configuration dialog must expose QEMU controls so the user can tell the
+application which qcow2 disk image to boot, and the sandbox panel must build a
+``QEMUConfig`` to pass to the bridge. Without both, the QEMU backend is unreachable
+from the GUI on every host.
 
 These tests drive the real dialog and the real panel helper against a real
 settings file on disk: the dialog writes the settings document, and the panel

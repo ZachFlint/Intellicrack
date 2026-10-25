@@ -1152,7 +1152,7 @@ class ESILConsoleTab(QWidget):
         self._add_watchpoint_btn.clicked.connect(self._on_add_watchpoint)
 
     def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
-        """Store bridge reference, emit a welcome banner and auto-initialise ESIL memory.
+        """Store bridge reference, emit a welcome banner and auto-initialize ESIL memory.
 
         Args:
             bridge: CutterBridge instance.
@@ -1173,10 +1173,10 @@ class ESILConsoleTab(QWidget):
             )
 
     def reset_esil_state(self) -> None:
-        """Clear the ESIL initialisation latch for a newly loaded binary.
+        """Clear the ESIL initialization latch for a newly loaded binary.
 
-        The next :meth:`refresh` call re-runs ``aeim`` so ESIL memory is initialised against the new binary's layout instead of reusing the
-        previous binary's initialised state.
+        The next :meth:`refresh` call re-runs ``aeim`` so ESIL memory is initialized against the new binary's layout instead of reusing the
+        previous binary's initialized state.
         """
         self._esil_initialised = False
         _logger.info("esil_state_reset", reason="new_binary_loaded")

@@ -2,13 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression test for the YARA goto finding: double-click must select the match range.
+"""Double-clicking a YARA match must select the matched byte range.
 
-Pre-fix, ``YaraMixin.goto_offset`` was an empty stub and the match byte length
-was not stored, so double-clicking a YARA result performed no selection of the
-matched bytes. The fix (1) stores each match's byte length on the result item's
-user data, (2) has ``_on_yara_result_double_clicked`` pass that length through,
-and (3) makes ``goto_offset`` move the cursor and select the ``length``-byte
+Selecting the match requires (1) storing each match's byte length on the result
+item's user data, (2) ``_on_yara_result_double_clicked`` passing that length
+through, and (3) ``goto_offset`` moving the cursor and selecting the ``length``-byte
 span. This test exercises all three: the panel ``goto_offset`` selection call,
 the double-click dispatch of ``(offset, length)``, and the length storage.
 """

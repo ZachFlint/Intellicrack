@@ -4,22 +4,20 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for ``hex_editor.sections`` extraction helpers.
 
-The audit (shard 13) flagged ``sections.py`` as having no dedicated test
-coverage for section/import/export/string parsing. The mixin's UI dispatch
-routes through the bridge, but the pure data path it relies on,
+``sections.py`` has no dedicated test coverage for section/import/export/string parsing.
+The mixin's UI dispatch routes through the bridge, but the pure data path it relies on,
 :func:`execute_strings_extraction`, can be driven directly against a REAL
 ``intellicrack_hexcore.HexDocument`` opened on a genuine Windows PE binary.
-These tests assert that real, recognisable ASCII strings (the DOS stub banner
+These tests assert that real, recognizable ASCII strings (the DOS stub banner
 that every PE carries) are extracted at their true file offsets, and that the
 format detection that drives template auto-selection identifies real PE/ELF
 binaries correctly.
 
-Finding [08-F20] required that ``test_min_length_is_enforced`` assert the
-EXACT minimum-length threshold, not a vacuous lower bound. The fix imports the
-production constant ``_STRINGS_MIN_LENGTH`` from ``sections.py``, gates its
-value against the independently-known expected constant (4), and drives the
-real extraction call with that exact threshold so that any regression in the
-constant or in the parameter-forwarding path causes the test to go red.
+The ``test_min_length_is_enforced`` test asserts the EXACT minimum-length threshold, not a
+vacuous lower bound. It imports the production constant ``_STRINGS_MIN_LENGTH`` from
+``sections.py``, gates its value against the independently-known expected constant (4),
+and drives the real extraction call with that exact threshold so that any regression in
+the constant or in the parameter-forwarding path causes the test to go red.
 """
 
 from __future__ import annotations
@@ -116,7 +114,7 @@ class TestProductionConstantValue:
     """Gate the exact value of the production ``_STRINGS_MIN_LENGTH`` constant.
 
     This class exists solely to catch any unilateral change to the constant
-    that would alter the application's string-filtering behaviour. The expected
+    that would alter the application's string-filtering behavior. The expected
     value ``_EXPECTED_STRINGS_MIN_LENGTH`` is an independently-recorded oracle.
     """
 
@@ -176,7 +174,7 @@ class TestStringExtractionRealPe:
         assert checked > 0, "No ASCII-encoded records with valid offsets found in real PE"
 
     def test_min_length_is_enforced(self, real_pe_dll: Path) -> None:
-        """Verify all returned strings honour the exact production minimum-length threshold.
+        """Verify all returned strings honor the exact production minimum-length threshold.
 
         ``execute_strings_extraction`` is invoked with the PRODUCTION constant
         ``_STRINGS_MIN_LENGTH`` (4) so this test mirrors exactly what

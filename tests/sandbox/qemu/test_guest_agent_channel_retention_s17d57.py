@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D57: retrying the agent handshake must not spend the channel.
+"""Retrying the agent handshake must not spend the channel.
 
 QEMU hands out the ``org.qemu.guest_agent.0`` chardev socket **once**. It
 accepts a single connection and refuses every later one with a reset for the
@@ -19,7 +19,7 @@ socket is bound by QEMU on the host side before the guest leaves firmware, so
 the guest's readiness says nothing about it, and reconnecting cannot make the
 guest readier while it does cost the only connection there is.
 
-Measured on a cold ``windows11-intellicrack-v4`` boot: connect at 10:46:55, two
+On a cold boot of ``windows11-intellicrack-v4``, connect at 10:46:55, two
 expected sync failures while the guest booted, then from 10:47:59 every attempt
 answered ``[WinError 1225] The remote computer refused the network connection``
 once every three seconds until the budget ran out. QEMU was alive and still
@@ -251,7 +251,7 @@ class TestATimedOutCommandDoesNotForfeitTheChannel:
 
         The recovery path used to close the channel on any failure "so the next
         call opens a fresh one" - and on this channel there is no fresh one to
-        open, which is the most likely mechanism behind S17-D55.
+        open, which is the most likely mechanism behind the reconnect defect.
         """
         server = GuestAgentProtocolServer(stall_command=_STALL_COMMAND, stall_seconds=_STALL_SECONDS)
         await server.start()

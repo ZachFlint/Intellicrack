@@ -3,13 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit6 CORE-D regression tests for ``intellicrack.core.tools``.
+"""Regression tests for ``intellicrack.core.tools``.
 
 Exercises:
-    * F-0017 - ``CutterBridge`` is auto-initialised in ``ToolRegistry.initialize``.
-    * F-0018 - ``tool_status_check_failed`` log uses non-clashing keys and
+    * ``CutterBridge`` is auto-initialised in ``ToolRegistry.initialize``.
+    * ``tool_status_check_failed`` log uses non-clashing keys and
       serialises the enum value.
-    * F-0023 - ``ToolRegistry.shutdown`` clears ``self._bridges``.
+    * ``ToolRegistry.shutdown`` clears ``self._bridges``.
 """
 
 from __future__ import annotations
@@ -268,7 +268,7 @@ class TestF0018ToolStatusLogging:
         """Log payload must not pass bare ``name=`` (clashes with LogRecord.name).
 
         Using ``tool_name`` (instead of ``name``) avoids ruff G101 and the
-        stdlib ``LogRecord.name`` attribute clash flagged in CLAUDE.md memory.
+        stdlib ``LogRecord.name`` attribute clash.
 
         Args:
             tmp_path: pytest temporary directory.

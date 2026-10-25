@@ -2,21 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for ProcessPanel attach-time auto-population.
+"""Gates for ProcessPanel attach-time auto-population.
 
-Covers three Phase 3 P2 findings, all driven against a real, live
+Covers three attach-time behaviors, all driven against a real, live
 ``ProcessBridge`` attached to the running test process itself
 (``os.getpid()``) so the assertions exercise genuine Win32 calls
 (``ReadProcessMemory``, ``CreateToolhelp32Snapshot``) rather than mocked
 bridge output:
 
-* Memory content read: the Read sub-tab's address field defaulted to empty
-  text, so pressing Read before typing an address failed against an
-  unreadable target. ``MemoryTab.set_attached_pid`` now prefills the field
-  with the attached process's main-module base address (always a committed,
-  readable region), and a Read against that default must return real bytes.
-* Threads/Modules required a manual Refresh click after attach before they
-  showed any rows. ``ProcessPanel._on_process_attached`` now triggers
+* Memory content read: ``MemoryTab.set_attached_pid`` prefills the Read sub-tab's
+  address field with the attached process's main-module base address (always a
+  committed, readable region), and a Read against that default must return real bytes.
+* Threads/Modules populate on attach: ``ProcessPanel._on_process_attached`` triggers
   ``ThreadsTab.refresh()`` / ``ModulesTab.refresh()`` immediately, and
   ``ProcessPanel._on_tab_widget_changed`` triggers the same refresh when the
   Threads/Modules tab becomes the active tab while attached.
@@ -135,11 +132,10 @@ class TestMemoryDefaultReadAddressIsReadable:
     def test_attach_prefills_read_address_with_module_base(self, attached_panel: ProcessPanel, qapp: QApplication) -> None:
         """Attaching must populate the Read address field without user input.
 
-        Pre-fix ``_read_addr`` stayed empty until the user typed something,
-        so pressing Read immediately after attach either failed to parse
-        (empty string) or -- if some other default were used -- could target
-        an unreadable address. This asserts a real hex address string lands
-        in the field once ``get_modules`` resolves.
+        The ``_read_addr`` field must not stay empty until the user types something, since
+        pressing Read right after attach would fail to parse the empty string, or target an
+        unreadable address if some other default were used. This asserts a real hex address
+        string lands in the field once ``get_modules`` resolves.
 
         Args:
             attached_panel: ProcessPanel already attached to the live test process.

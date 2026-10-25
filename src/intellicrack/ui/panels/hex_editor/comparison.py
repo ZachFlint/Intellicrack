@@ -119,6 +119,31 @@ def diff_region_rows(regions: Sequence[Mapping[str, Any]]) -> list[DiffRow]:
     return rows
 
 
+def diff_summary(result: Mapping[str, Any], shown: int) -> str:
+    """Describe an engine diff result in one line for the summary label.
+
+    The engine lists at most ``max_regions`` regions and counts the rest, so
+    the number of rows in the tree can be smaller than the number of regions
+    that differ. When it is, the line says how many of them are shown.
+
+    Args:
+        result: A ``diff_files``/``diff_bytes`` result.
+        shown: Number of differing regions that are in the tree.
+
+    Returns:
+        str: ``Files are identical``, or the region and byte counts, worded as
+            ``showing N of M regions`` when differing regions were left out.
+    """
+    if bool(result.get("files_identical")):
+        return "Files are identical"
+    total = result.get("total_differences", 0)
+    sizes = f"[{result.get('size_a', 0)} vs {result.get('size_b', 0)} bytes]"
+    differing = int(result.get("change_count", shown))
+    if differing > shown:
+        return f"showing {shown} of {differing} regions, {total} byte(s) differ  {sizes}"
+    return f"{shown} region(s), {total} byte(s) differ  {sizes}"
+
+
 def execute_diff(bridge: HexEditorBridge, path_a: str, path_b: str) -> dict[str, Any]:
     """Run a byte-level file comparison through the hex-editor bridge.
 
@@ -328,19 +353,19 @@ class ComparisonMixin:
         rows = [] if identical else diff_region_rows(regions)
 
         if self._diff_summary_label is not None:
-            if identical:
-                self._diff_summary_label.setText("Files are identical")
-            else:
-                self._diff_summary_label.setText(
-                    f"{len(rows)} region(s), {total} byte(s) differ  [{result.get('size_a', 0)} vs {result.get('size_b', 0)} bytes]",
-                )
+            self._diff_summary_label.setText(diff_summary(result, len(rows)))
 
         for row in rows:
             item = QTreeWidgetItem([row.offset, row.length, row.diff_type, row.details])
             item.setData(0, Qt.ItemDataRole.UserRole, row.navigate_offset)
             self._diff_results_tree.addTopLevelItem(item)
 
-        _logger.info("diff_complete", regions=len(rows), total_diffs=total)
+        _logger.info(
+            "diff_complete",
+            regions=len(rows),
+            total_diffs=total,
+            truncated=bool(result.get("truncated")),
+        )
 
     def _on_diff_error(self, error: str) -> None:
         """Handle diff computation failure.

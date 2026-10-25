@@ -7,7 +7,7 @@
 
 These tests ensure that internal-only names which have no consumers via
 ``intellicrack.providers.<name>`` are not re-exported from the package's
-``__init__``. The audit identified three such dead re-exports
+``__init__``. Three such dead re-exports
 (``DiscoveryEvent``, ``DtypeOption``, ``ModelConfig``) which leak
 implementation details and inflate the documented public API. Callers must
 import these directly from the submodule that owns them

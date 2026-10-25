@@ -24,9 +24,7 @@ pytest.importorskip(
     reason="intellicrack_hexcore native module not built",
 )
 
-# ---------------------------------------------------------------------------
 # Independent oracle constants
-# ---------------------------------------------------------------------------
 # PE oracle values are derived from the conftest._build_pe_binary_full() layout
 # without re-implementing the production mapping algorithm.
 #

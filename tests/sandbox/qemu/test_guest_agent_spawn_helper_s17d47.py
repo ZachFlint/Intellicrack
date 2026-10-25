@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S17-D47: the guest agent cannot spawn without GLib's helper.
+r"""The guest agent cannot spawn without GLib's helper.
 
 ``guest-exec`` is the only way Intellicrack runs anything inside a Windows
 guest - :meth:`~intellicrack.sandbox.qemu.QEMUSandbox._mount_guest_shared_volume`
@@ -15,7 +15,7 @@ staged from that build alone answers **every** command with
 ``Failed to execute helper program (No such file or directory)`` while still
 advertising ``guest-exec`` as enabled.
 
-That was measured on a live guest, and injecting the two helpers over the
+Measured on a live guest, injecting the two helpers over the
 agent's own file commands flipped the identical probe from refused to
 ``exitcode=0`` with nothing else changed. The helpers come from the virtio-win
 medium's guest agent package, which the provisioner already locates and mounts.
@@ -24,7 +24,7 @@ These gates therefore judge the staged tree the way GLib does - by what sits
 beside the library that performs the lookup - rather than by the presence of a
 file name somewhere.
 
-Staging an answer tree is now a Windows-host operation end to end:
+Staging an answer tree is a Windows-host operation end to end:
 :func:`stage_answer_tree` stages the boot-critical WinPE drivers first, which
 mounts the virtio-win medium, so the gates that drive it run against the real
 ISO in ``tools/qemu/images`` and are host-native. That directory is outside

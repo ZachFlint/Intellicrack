@@ -5,11 +5,7 @@
 """Gates on ``$ref`` inlining: bounded work on recursive schemas, and property names left alone.
 
 ``inline_refs`` feeds output-schema validation and the Responses and Gemini
-reductions. It used to expand every reference to a fixed depth, so a
-definition that referred to itself twice doubled at every level and never
-finished; and it dropped every key named ``definitions`` or ``$defs`` wherever
-it appeared, including in a ``properties`` map, where those are the names of
-real arguments.
+reductions. Expansion of a self-referencing definition must stay bounded instead of doubling at each level, and keys named ``definitions`` or ``$defs`` are containers only as schema keywords, not when they name a property.
 
 The time-bound gates run each expansion in a child interpreter under a hard
 timeout, so a regression fails the test rather than hanging the run.

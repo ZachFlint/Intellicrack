@@ -257,30 +257,15 @@ def process_orphan_killer() -> Generator[None]:
 def no_leaked_background_threads() -> Generator[None]:
     """Fail the session when a test leaks a background thread that blocks shutdown.
 
-    A non-daemon thread left running by a test or fixture blocks
-    ``threading._shutdown`` at interpreter exit, which is exactly the failure
-    that made the non-UI sandbox suite print its summary and then hang until the
-    container's hard timeout killed it (exit 124). The canonical instance was a
-    ``NamedPipeClient`` reader whose ``asyncio`` default-executor worker was
-    orphaned because the client was never closed, which then left
-    ``loop.shutdown_default_executor``'s non-daemon ``_do_shutdown`` thread
-    joining that worker forever.
+    A non-daemon thread left running by a test or fixture blocks ``threading._shutdown`` at interpreter exit. That is the failure mode behind exit-124 hangs in the non-UI sandbox suite, which prints its summary and then hangs until the container's hard timeout kills it. A typical cause is a ``NamedPipeClient`` reader whose ``asyncio`` default-executor worker is orphaned because the client was never closed, which leaves ``loop.shutdown_default_executor``'s non-daemon ``_do_shutdown`` thread joining that worker forever.
 
-    The guard records the threads alive at session start and, once every test
-    has finished, waits a bounded grace period for stragglers to exit before
-    asserting that no new non-daemon thread is still running. It only
-    *enumerates* threads and never joins them, so the guard itself can never
-    hang. Daemon workers are deliberately ignored: they cannot block interpreter
-    shutdown, so they are not the cause of the exit-124 hang this guard exists to
-    prevent (a per-module guard covers the ``session-autosave`` daemon worker
-    where a fixture is expected to stop it).
+    The guard records the threads alive at session start and, once every test has finished, waits a bounded grace period for stragglers to exit before asserting that no new non-daemon thread is still running. It only *enumerates* threads and never joins them, so the guard itself can never hang. Daemon workers are deliberately ignored: they cannot block interpreter shutdown, so they are not the cause of the exit-124 hang this guard exists to prevent (a per-module guard covers the ``session-autosave`` daemon worker where a fixture is expected to stop it).
 
     Yields:
         None: Yields control to the whole test session.
 
     Raises:
-        AssertionError: If any thread started during the session is still alive
-            after the grace period and is non-daemon or a managed daemon worker.
+        AssertionError: If any thread started during the session is still alive after the grace period and is non-daemon or a managed daemon worker.
     """
     baseline = frozenset(thread.ident for thread in threading.enumerate() if thread.ident is not None)
     yield

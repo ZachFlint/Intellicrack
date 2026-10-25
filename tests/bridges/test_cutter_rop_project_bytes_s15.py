@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-backend regression tests for CutterBridge defects S15-D03/D04/D05.
+"""Real-backend regression tests for CutterBridge ROP, project and byte-search defects.
 
 These tests drive a genuine rizin/radare2 backend against a real, on-disk
 System32 PE binary -- never a mocked or recorded ``rzpipe``/``r2pipe``
@@ -13,16 +13,16 @@ output, matching the idiom established by ``test_realcov_03c_cutter.py`` and
 
 The three defects covered:
 
-* S15-D03: ``search_rop_gadgets`` returned every hit with ``address == 0``
+* ``search_rop_gadgets`` returned every hit with ``address == 0``
   and an empty ``instructions`` string because it read rizin's ``/Rj``
   response using the wrong top-level keys (``addr``/``opcodes`` treated as
   a flat string) instead of the real nested ``opcodes`` instruction-object
   array.
-* S15-D04: ``save_project`` reported success unconditionally while
+* ``save_project`` reported success unconditionally while
   ``list_projects`` always returned an empty list -- rizin 0.9.1 has no
   ``Pl`` project-listing command at all, and its ``Ps`` command does not
   consult ``dir.projects`` to resolve a bare project name.
-* S15-D05: ``search_bytes`` returned a correct hit count with every address
+* ``search_bytes`` returned a correct hit count with every address
   reported as ``0`` because rizin's ``/xj`` byte-search hits are keyed
   ``address``, not ``offset``.
 
@@ -104,7 +104,7 @@ async def pe_bridge() -> AsyncIterator[CutterBridge]:
 
 
 class TestSearchRopGadgetsS15D03:
-    """S15-D03: ROP gadget search must report a real address and instructions."""
+    """ROP gadget search must report a real address and instructions."""
 
     async def test_gadget_address_and_instructions_are_real(self, pe_bridge: CutterBridge) -> None:
         """A known-present gadget reports a nonzero address and real instructions.
@@ -147,7 +147,7 @@ class TestSearchRopGadgetsS15D03:
 
 
 class TestSearchBytesS15D05:
-    """S15-D05: byte search hits must report their real match address."""
+    """Byte search hits must report their real match address."""
 
     async def test_search_bytes_addresses_are_real(self, pe_bridge: CutterBridge) -> None:
         """Every ``search_bytes`` hit reports a nonzero, independently-confirmed address.
@@ -176,7 +176,7 @@ class TestSearchBytesS15D05:
 
 
 class TestProjectRoundTripS15D04:
-    """S15-D04: a saved project must actually be discoverable by list_projects."""
+    """A saved project must actually be discoverable by list_projects."""
 
     async def test_save_then_list_round_trips(self, pe_bridge: CutterBridge, tmp_path: Path) -> None:
         """A project saved under a ``tmp_path`` projects directory is listed back.

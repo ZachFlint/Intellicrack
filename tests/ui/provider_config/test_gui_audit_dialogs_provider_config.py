@@ -2,19 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for GUI audit findings in provider_config.
+"""Regression tests for the provider configuration dialogs.
 
-Covers two fixes:
+Covers two behaviours:
 
 * Discovery status label object name. ``ModelSelectionDialog`` set
   ``setObjectName("discovery_status_label")`` and then immediately overwrote it
   with ``setObjectName("hint_label")``, so any QSS targeting
-  ``#discovery_status_label`` could never apply. The fix removes the erroneous
-  second call so the intended object name survives.
+  ``#discovery_status_label`` could never apply. The intended object name must survive.
 * Worker guards. The manual ``_test_connection`` and ``_refresh_models``
-  triggers reassigned their worker attribute without checking whether the
-  previous worker was still running, orphaning a live ``QThread``. The fix
-  returns early while a worker is running, mirroring the auto-refresh path.
+  triggers must not reassign their worker attribute while the previous worker is
+  still running, which would orphan a live ``QThread``. Both return early while a
+  worker is running, mirroring the auto-refresh path.
 """
 
 from __future__ import annotations

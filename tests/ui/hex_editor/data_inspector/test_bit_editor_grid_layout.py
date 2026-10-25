@@ -2,20 +2,19 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the R07 bit-editor 2x4 grid layout fix.
+"""Falsifiable gate for the bit-editor 2x4 grid layout.
 
-``DataInspectorMixin._create_bit_editor_group`` used to lay its 8 bit-toggle
-buttons out in a single ``QHBoxLayout`` row. Each button is sized by the
+``DataInspectorMixin._create_bit_editor_group`` lays its 8 bit-toggle
+buttons out in a 2-row by 4-column ``QGridLayout`` (MSB to LSB, left to right,
+top to bottom). Each button is sized by the
 live :func:`~intellicrack.ui.panels.hex_editor.data_inspector.DataInspectorMixin._compute_bit_button_width`
-probe (which reflects the real stylesheet's padding/border), so the row's
-minimum width (8 buttons plus spacing) ran to roughly 350px -- well past the
-``_HSPLIT_SIDE_MIN_WIDTH = 200`` floor the hex editor's side pane is allowed
-to shrink to. Dragging the horizontal splitter toward that floor clipped the
-three lowest-order bit buttons out of the visible pane.
-
-The fix rearranges the same 8 buttons into a 2-row by 4-column
-``QGridLayout`` (MSB to LSB, left to right, top to bottom), so the group's
-minimum width is only 4 buttons wide and fits inside the 200px pane.
+probe (which reflects the real stylesheet's padding/border). A single
+``QHBoxLayout`` row of 8 buttons plus spacing would need roughly 350px -- well
+past the ``_HSPLIT_SIDE_MIN_WIDTH = 200`` floor the hex editor's side pane is
+allowed to shrink to, clipping the three lowest-order bit buttons out of the
+visible pane when the horizontal splitter is dragged toward that floor. The
+grid keeps the group's minimum width at only 4 buttons wide, which fits inside
+the 200px pane.
 
 Both gates below build the real :class:`HexEditorPanel` headlessly under the
 real bundled ``dark_theme.qss`` and assert on live Qt geometry:
@@ -28,7 +27,7 @@ real bundled ``dark_theme.qss`` and assert on live Qt geometry:
   button in ``panel._bit_buttons`` still reports a non-empty
   ``visibleRegion()`` -- i.e. no button is clipped out of the pane.
 
-Reverting ``_create_bit_editor_group`` to its original single-row
+Reverting ``_create_bit_editor_group`` to a single-row
 ``QHBoxLayout`` turns both gates RED: the group's minimum width jumps back
 above 200px, and the three lowest-order buttons (bits 2, 1, 0) lose their
 visible region once the pane is dragged down to the floor.

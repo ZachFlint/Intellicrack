@@ -3,40 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for S20-D06: the Grok/xAI API key never reached the provider config.
+"""Grok/xAI API key resolution in the provider settings widget.
 
-``ProviderSettingsWidget._load_settings`` used to resolve each provider's API
-key from a hand-maintained, six-entry ``env_vars`` dict local to that method.
-That dict simply had no ``"grok"`` entry, so the Grok/xAI provider's API-key
-field was always left empty on load -- regardless of what ``.env`` or
-``os.environ`` contained -- even though ``CredentialSourceDetector`` (the
-component that drives the "Source:" label) and
-:class:`~intellicrack.credentials.store.CredentialStore` both already
-resolved Grok's environment variable correctly via the canonical
-``CredentialLoader.PROVIDER_MAPPINGS`` (``provider_ids.GROK`` ->
-``XAI_API_KEY``). The result was the reported bug: Source shows ".env file"
-/ ENV_FILE, but the API Key field and Test Connection see nothing.
+The widget's resolved API key must agree with the source that ``CredentialStore.get_source`` reports. ``ProviderSettingsWidget._resolve_env_api_key`` looks the key up through ``get_credential_loader().get_credentials(...)``, the same environment-variable mapping (``CredentialLoader.PROVIDER_MAPPINGS``) the other credential consumers use, so the value path and the source path name the same variable for every provider.
 
-The fix replaces the local dict with
-``ProviderSettingsWidget._resolve_env_api_key``, which delegates to
-``get_credential_loader().get_credentials(normalize_provider_id(self.provider_id))`` --
-the exact same environment-variable mapping every other credential-source
-consumer in the codebase uses -- so the value path and the source path can
-never disagree again about which variable a provider reads from.
-
-These tests drive the real, unmodified ``_resolve_env_api_key`` method
-(extracted via ``vars()`` per the existing project pattern in
-``tests/providers/test_provider_refresh_toolbar_bugfixes.py``, so no live
-``QApplication`` is required) against a real temporary ``.env`` file, and
-cross-check the result against the real ``CredentialStore.get_source``/
-``CredentialStore.get`` path so the two can be asserted to agree.
-
-Every placeholder credential below is assembled from a repeated filler
-character rather than written as one literal. The tests only need opaque,
-distinct, correctly sized strings - they are written into a ``.env`` file and
-compared back for equality, and nothing parses their contents - while a
-whole ``xai-``/``sk-`` literal of the real length is indistinguishable from a
-live key to secret scanners and is rejected by GitHub push protection.
+These tests drive the real, unmodified ``_resolve_env_api_key`` method (extracted via ``vars()`` per the project pattern in ``tests/providers/test_provider_refresh_toolbar_bugfixes.py``, so no live ``QApplication`` is required) against a real temporary ``.env`` file, and cross-check the result against the real ``CredentialStore.get_source``/``CredentialStore.get`` path so the two can be asserted to agree.
 """
 
 from __future__ import annotations
@@ -197,24 +168,9 @@ def test_resolve_env_api_key_grok_matches_store_get_source_env_file(
 ) -> None:
     """The widget's resolved Grok API key agrees with ``CredentialStore.get_source``.
 
-    Before the fix, ``CredentialStore.get_source`` correctly reported
-    ``CredentialSource.ENV_FILE`` for Grok (it always used the canonical
-    ``CredentialLoader.PROVIDER_MAPPINGS``) while the widget's resolved value
-    was empty -- exactly the "Source: .env file, but API Key field is empty"
-    defect from the audit finding. This test drives the real
-    ``CredentialStore`` (keyring disabled) and the real, fixed
-    ``_resolve_env_api_key`` against the same temporary ``.env`` file and
-    asserts they now agree: source is ENV_FILE AND the resolved value is
-    non-empty and correct.
+    ``CredentialStore.get_source`` reports ``CredentialSource.ENV_FILE`` for Grok, and the widget's resolved value must be the non-empty key from that same file. This test drives the real ``CredentialStore`` (keyring disabled) and the real ``_resolve_env_api_key`` against one temporary ``.env`` file and asserts both agree: source is ENV_FILE and the resolved value is non-empty and correct.
 
-    Revert target: same as
-    ``test_resolve_env_api_key_grok_reads_xai_api_key_value`` -- restoring
-    the original grok-less ``env_vars`` dict in ``_load_settings`` (and
-    removing ``_resolve_env_api_key``) makes ``resolved_key`` empty while
-    ``source`` still reports ``CredentialSource.ENV_FILE``, so the
-    ``resolved_key == _FAKE_XAI_TOKEN`` assertion in this test fails (and,
-    with the method removed entirely, the earlier ``vars()`` lookup raises
-    ``KeyError`` first).
+    Revert target: restoring the grok-less ``env_vars`` dict in ``_load_settings`` (and removing ``_resolve_env_api_key``) makes ``resolved_key`` empty while ``source`` still reports ``CredentialSource.ENV_FILE``, so the ``resolved_key == _FAKE_XAI_TOKEN`` assertion fails.
     """
     env_path = _write_env_file(tmp_path, f"XAI_API_KEY={_FAKE_XAI_TOKEN}\n")
     monkeypatch.setattr(
@@ -236,19 +192,11 @@ def test_resolve_env_api_key_openai_unaffected_by_grok_fix(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """OpenAI's API key still resolves correctly after removing the local dict.
+    """OpenAI's API key still resolves correctly through the canonical lookup.
 
-    Guards against a regression in the other direction: replacing the
-    hand-rolled ``env_vars`` dict with the canonical
-    ``CredentialLoader``-backed lookup must not break the providers that
-    already worked (OpenAI, Anthropic, Google, OpenRouter, HuggingFace,
-    Local Transformers).
+    Guards the providers that already worked (OpenAI, Anthropic, Google, OpenRouter, HuggingFace, Local Transformers) against a regression in the shared mapping.
 
-    Revert target: this test is not expected to fail from the S20-D06
-    revert described above (OpenAI's mapping was already present in the old
-    dict), so it is a pure non-regression guard rather than the fix's
-    falsifiable gate; the two Grok-specific tests above are the ones whose
-    revert recipe applies.
+    This is a non-regression guard rather than a falsifiable gate for the Grok change: the Grok revert recipe above does not touch OpenAI's mapping.
     """
     env_path = _write_env_file(tmp_path, f"OPENAI_API_KEY={_FAKE_OPENAI_TOKEN}\n")
     monkeypatch.setattr(

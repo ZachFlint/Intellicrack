@@ -5,29 +5,24 @@
 
 """Regression tests for the orphaned-child-process shutdown bug.
 
-Reproduces the exact mechanism by which Intellicrack was leaving tracked
-subprocesses (e.g. the Ghidra headless ``python.exe`` bridge process) running
-after ``MainWindow.closeEvent`` closed the application:
+Covers the shutdown path that left tracked subprocesses (e.g. the Ghidra headless
+``python.exe`` bridge process) running after ``MainWindow.closeEvent`` closed the
+application. Two constraints must hold:
 
-1. ``ProcessManager.cleanup_all_async`` treated its own ``shutdown_event``
-   flag as an abort signal: the moment the flag was set, its per-pid
-   termination loop ``break``-ed on the very first iteration instead of
-   proceeding, so every tracked ``Popen``-based subprocess was skipped.
-2. ``MainWindow.closeEvent`` called ``ProcessManager.request_shutdown()``,
-   whose entire implementation was ``self.shutdown_event.set()`` -- it never
-   terminated anything, yet it set the exact flag that (1) treated as
-   "abort cleanup".
+1. ``ProcessManager.cleanup_all_async`` must not treat its own ``shutdown_event``
+   flag as an abort signal: a set flag must not ``break`` the per-pid termination
+   loop on its first iteration, or every tracked ``Popen``-based subprocess is skipped.
+   2. ``request_shutdown()`` must terminate tracked processes, not only set the flag.
 
-Because ``closeEvent`` called ``request_shutdown()`` and the flag was never
-cleared before the application's final ``cleanup_all_async()`` sweep ran (see
-``_finalize_shutdown`` in ``main.py``), every tracked subprocess whose owning
-bridge did not already tear itself down (a timed-out or silently-failed
-bridge ``shutdown()``/``stop()``, or an abandoned prior bridge instance) was
-left running indefinitely -- a genuine, reproducible process leak.
+``closeEvent`` calls ``request_shutdown()``, and the flag is not cleared before
+the application's final ``cleanup_all_async()`` sweep (see ``_finalize_shutdown``
+in ``main.py``). A tracked subprocess whose owning bridge did not tear itself down
+(a timed-out or silently failed bridge ``shutdown()``/``stop()``, or an abandoned
+prior bridge instance) would otherwise keep running: a process leak.
 
 Each test below spawns a real, long-lived Python subprocess (never a mock)
 and asserts via ``psutil.pid_exists`` that it is genuinely dead afterward.
-Reverting either fix independently makes the corresponding test fail.
+Removing either behaviour makes the corresponding test fail.
 """
 
 from __future__ import annotations
@@ -137,11 +132,10 @@ class TestCleanupAllAsyncIgnoresShutdownFlag:
         This is the exact sequence the real application hits: ``closeEvent``
         calls ``request_shutdown()`` (which sets ``shutdown_event``) before the
         application's final ``cleanup_all_async()`` sweep runs, and the flag is
-        never cleared in between. Before the fix, ``cleanup_all_async`` treated
-        an already-set ``shutdown_event`` as a reason to ``break`` out of its
-        per-pid termination loop on the very first iteration, silently skipping
-        every tracked subprocess -- reverting the fix makes this test fail
-        because the spawned process would still be alive after the call.
+        never cleared in between. ``cleanup_all_async`` must not treat an already-set ``shutdown_event`` as a
+        reason to ``break`` out of its per-pid termination loop on the very first
+        iteration; doing so silently skips every tracked subprocess, and the spawned
+        process would still be alive after the call.
 
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
@@ -152,9 +146,8 @@ class TestCleanupAllAsyncIgnoresShutdownFlag:
 
         assert psutil.pid_exists(pid), "Sanity check: process must be running before cleanup"
 
-        # Reproduce the real closeEvent ordering bug: the shutdown flag is
-        # already set (as request_shutdown() used to do) by the time the
-        # final async sweep runs.
+        # Reproduce the closeEvent ordering: the shutdown flag is already set by the
+        # time the final async sweep runs.
         process_manager.shutdown_event.set()
 
         await process_manager.cleanup_all_async()
@@ -174,10 +167,9 @@ class TestRequestShutdownActuallyCleansUp:
     ) -> None:
         """request_shutdown() terminates a real tracked subprocess synchronously.
 
-        Before the fix, ``request_shutdown()`` only called
-        ``self.shutdown_event.set()`` and returned -- nothing downstream ever
-        reacted to that flag by killing anything. Reverting the fix leaves the
-        spawned process alive after this call, failing the assertion below.
+        ``request_shutdown()`` must terminate tracked processes synchronously. Merely
+        setting ``shutdown_event`` leaves the spawned process alive after this call,
+        failing the assertion below.
 
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
@@ -202,8 +194,8 @@ class TestRequestShutdownActuallyCleansUp:
     ) -> None:
         """request_shutdown() reaps descendant processes, mirroring the Ghidra headless shape.
 
-        The real orphan-leak report involved a bridge (Ghidra headless) whose
-        root process was tracked by ProcessManager. This test spawns a
+        The orphan-leak case involves a bridge (Ghidra headless) whose root process
+        is tracked by ProcessManager. This test spawns a
         genuine parent/child process pair and verifies request_shutdown()'s
         synchronous sweep kills both, not just the tracked root PID.
 

@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the shared S20-D14/D16 scroll-wrapper contract in ``base_panel``.
+"""Gate for the shared scroll-wrapper contract in ``base_panel``.
 
-Every other S20 domain's panel leans on :func:`make_scrollable` and
+Every other panel leans on :func:`make_scrollable` and
 :meth:`AnalysisPanelBase._wrap_content` to turn clipping into scrolling. The
 guarantee those helpers must hold is that when wrapped content's real
 minimum width exceeds the viewport, the wrapper grows a *horizontal*
@@ -84,9 +84,8 @@ def test_make_control_row_keeps_full_button_labels_instead_of_eliding_them(
 ) -> None:
     """A dense control row wrapped by ``make_control_row`` must keep buttons at their natural width.
 
-    Before this contract, a plain ``QHBoxLayout`` let Qt shrink every control
-    below its natural width in a narrow panel, eliding button captions down
-    to unreadable fragments.
+    A plain ``QHBoxLayout`` lets Qt shrink every control below its natural width in a narrow
+    panel, eliding button captions down to unreadable fragments.
 
     Args:
         qapp: Shared QApplication fixture required for Qt widget construction.

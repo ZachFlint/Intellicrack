@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit4 C11 regression tests."""
+"""Regression tests for hex process memory routing."""

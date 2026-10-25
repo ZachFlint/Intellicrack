@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Fourth-pass coverage tests for ``CutterBridge`` helpers and debug listings.
+"""Coverage tests for ``CutterBridge`` helpers and debug listings.
 
 The module-level helper ``_mapped_images`` is called directly with real values
 and checked against independent expectations: the ``psutil`` view of a spawned
@@ -408,7 +408,7 @@ class TestRadare2DebugSession:
         """Address zero is not readable, so the read returns no bytes or raises.
 
         Measured: radare2's ``p8 4 @ 0`` prints ``ffffffff`` and the bridge
-        returns those four bytes, as it did for rizin before PD-092 was fixed.
+        returns those four bytes.
 
         Args:
             radare2_debug: Bridge attached to the debuggee, and its pid.

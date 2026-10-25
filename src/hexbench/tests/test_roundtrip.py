@@ -23,9 +23,8 @@ rather than bypassed.
 
 Two failure modes are pinned deliberately. An offset at or past the end of the
 document must raise :class:`IndexError` from ``read_byte``, ``get_bit``,
-``set_bit`` and ``toggle_bit`` -- that was recently fixed in the crate, and a
-regression to a panic, a silent clamp or a plain :class:`ValueError` would make
-the grid's end-of-document handling wrong. A bit index above seven must stay a
+``set_bit`` and ``toggle_bit``. A regression to a panic, a silent clamp or a plain
+:class:`ValueError` would make the grid's end-of-document handling wrong. A bit index above seven must stay a
 :class:`ValueError`, because the two conditions mean different things to a
 client and are reported with different HTTP statuses.
 

@@ -3,24 +3,21 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 U5 tests for ``api_trace.ps1`` remediation.
+"""Tests for ``api_trace.ps1`` behavior.
 
-Validates the four fixes applied to
+Validates the following behavior of
 ``src/intellicrack/sandbox/scripts/api_trace.ps1``:
 
-* F-0011 - missing TraceEvent.dll now exits with a non-zero status and
-  writes a structured ``ERROR|unavailable|...`` line to ``api_trace.log``
-  so the bridge consumer can detect setup failure.
-* F-0012 - the file-mode logman ETL session that was created but never
-  harvested is removed; only the realtime ``TraceEventSession`` callback
-  path remains and emits per-event records inline.
-* F-0013 - the per-event handler now uses the real
-  ``Microsoft-Windows-Kernel-Audit-API-Calls`` provider field names
-  (``TargetProcessId``, ``ReturnCode``, ``DesiredAccess`` ...) plus the
-  per-event-id API-name table so records carry meaningful API names.
-* F-0014 - the cleanup path no longer mixes ``logman.exe stop`` against
-  the managed session. The script disposes the ``TraceEventSession``
-  cleanly via ``StopOnDispose`` and never invokes ``logman``.
+* Missing TraceEvent.dll exits with a non-zero status and writes a structured
+  ``ERROR|unavailable|...`` line to ``api_trace.log`` so the bridge consumer can
+  detect setup failure.
+* Only the realtime ``TraceEventSession`` callback path remains. No file-mode
+  logman ETL session is created, and per-event records are emitted inline.
+* The per-event handler uses the real ``Microsoft-Windows-Kernel-Audit-API-Calls``
+  provider field names (``TargetProcessId``, ``ReturnCode``, ``DesiredAccess`` ...)
+  plus the per-event-id API-name table so records carry meaningful API names.
+* The cleanup path does not invoke ``logman.exe``. The script disposes the
+  ``TraceEventSession`` cleanly via ``StopOnDispose``.
 
 Tests run the real script under ``pwsh`` against the live filesystem and
 Windows ETW subsystem. They are skipped on non-Windows platforms because
@@ -434,18 +431,16 @@ def _read_log(log_dir: Path) -> str:
 
 
 def test_script_file_exists() -> None:
-    """The remediated script must exist on disk."""
+    """The script must exist on disk."""
     assert _SCRIPT_PATH.is_file(), f"missing script: {_SCRIPT_PATH}"
 
 
 def test_f0014_no_logman_invocations_anywhere() -> None:
-    """F-0014: the script must not call ``logman.exe`` at all.
+    """The script must not call ``logman.exe`` at all.
 
-    The previous implementation mixed a managed ``TraceEventSession``
-    with cleanup commands like ``logman.exe stop IntApiTrace``, which
-    targeted the wrong session entirely. The remediated script uses a
-    single TraceEventSession abstraction; no ``logman`` invocations
-    must remain.
+    The script uses a single TraceEventSession abstraction for cleanup. A
+    ``logman stop`` on the managed session name would target the wrong session,
+    so no ``logman`` invocations may remain.
     """
     text = _SCRIPT_PATH.read_text(encoding="utf-8")
     lowered = text.lower()
@@ -453,12 +448,12 @@ def test_f0014_no_logman_invocations_anywhere() -> None:
 
 
 def test_f0014_no_logman_stop_against_managed_session_name() -> None:
-    """F-0014: ensure the managed session name is never stopped via logman.
+    """The managed session name is never stopped via logman.
 
-    Belt-and-braces around ``test_f0014_no_logman_invocations_anywhere``:
+    Complements ``test_f0014_no_logman_invocations_anywhere``:
     explicitly verify the managed session name does not appear next to
-    any ``stop``/``delete`` token, which would indicate the deleted
-    cleanup path crept back in.
+    any ``stop``/``delete`` token, which would indicate a cleanup path that
+    bypasses the managed session.
     """
     text = _SCRIPT_PATH.read_text(encoding="utf-8")
     forbidden_pairs = (
@@ -472,12 +467,10 @@ def test_f0014_no_logman_stop_against_managed_session_name() -> None:
 
 
 def test_f0012_no_etl_file_creation_or_unharvested_session() -> None:
-    """F-0012: no on-disk ETL file should be created and never read.
+    """No on-disk ETL file should be created or read.
 
-    The previous implementation wrote ``IntApiTrace.etl`` via
-    ``logman create trace ... -o <etl>`` and never harvested it. The
-    remediated script must not reference an ``.etl`` output path -
-    realtime callbacks emit each event inline.
+    The script must not reference an ``.etl`` output path, because realtime
+    callbacks emit each event inline.
     """
     text = _SCRIPT_PATH.read_text(encoding="utf-8")
     lowered = text.lower()
@@ -489,16 +482,14 @@ def test_f0012_no_etl_file_creation_or_unharvested_session() -> None:
 
 
 def test_f0013_handler_uses_real_audit_api_field_names() -> None:
-    """F-0013: handler must reference the real provider field names.
+    """The handler must reference the real provider field names.
 
     The Kernel-Audit-API-Calls provider exposes templates with fields
     like ``TargetProcessId``, ``ReturnCode``, ``DesiredAccess``,
     ``LinkSourceName``, ``LinkTargetName``, ``DriverName``,
-    ``NotifyRoutineAddress``, ``TargetThreatId``. The previous handler
-    referenced ``ReturnValue`` (which the provider does not expose) and
-    relied entirely on ``OpcodeName`` for the API name (which is just
-    ``Info`` for every event). The remediated handler must use the
-    correct field names and the per-event-id API-name table.
+    ``NotifyRoutineAddress``, ``TargetThreatId``. The provider does not
+    expose ``ReturnValue``, and ``OpcodeName`` is just ``Info`` for every
+    event, so the API name comes from the per-event-id API-name table.
     """
     text = _SCRIPT_PATH.read_text(encoding="utf-8")
 
@@ -518,17 +509,16 @@ def test_f0013_handler_uses_real_audit_api_field_names() -> None:
     ):
         assert api_name in text, f"F-0013: expected event-id API mapping for {api_name}"
 
-    # The bogus 'ReturnValue' field name from the previous implementation must be gone.
+    # The 'ReturnValue' field name must not appear.
     assert "PayloadByName('ReturnValue')" not in text, "F-0013 regression: handler must not query the non-existent 'ReturnValue' field"
 
 
 def test_f0011_missing_dll_exits_nonzero_with_structured_error(tmp_path: Path) -> None:
-    """F-0011: missing TraceEvent.dll must exit non-zero and log a structured error.
+    """Missing TraceEvent.dll must exit non-zero and log a structured error.
 
-    The previous implementation called ``exit 0`` when the assembly was
-    missing, telling the bridge consumer the monitor started cleanly.
-    The remediated script must exit with a non-zero status and write a
-    pipe-delimited ``ERROR|unavailable|...`` record to ``api_trace.log``.
+    The script must exit with a non-zero status and write a pipe-delimited
+    ``ERROR|unavailable|...`` record to ``api_trace.log``. Exiting 0 would tell
+    the bridge consumer that the monitor started cleanly.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir`` and
@@ -573,12 +563,12 @@ def test_f0011_missing_dll_exits_nonzero_with_structured_error(tmp_path: Path) -
 
 
 def test_f0011_stop_record_carries_actual_exit_code(tmp_path: Path) -> None:
-    """F-0011 belt-and-braces: the trailing STOP record must echo the real exit code.
+    """The trailing STOP record must echo the real exit code.
 
-    The remediated script writes a final ``tracer|0|STOP|<sess>||<rc>``
-    line whose return-value field carries the script-level
-    ``$ExitCode``. This guards against silent regressions where a future
-    change might make the script exit non-zero but report ``STOP||0``.
+    The script writes a final ``tracer|0|STOP|<sess>||<rc>`` line whose
+    return-value field carries the script-level ``$ExitCode``. This guards
+    against a change that makes the script exit non-zero while reporting
+    ``STOP||0``.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir`` and
@@ -609,7 +599,7 @@ def test_f0011_stop_record_carries_actual_exit_code(tmp_path: Path) -> None:
 
 
 def test_f0013_get_audit_api_name_resolves_each_event_id(tmp_path: Path) -> None:
-    """F-0013: ``Get-AuditApiName`` must resolve every documented event ID.
+    """``Get-AuditApiName`` must resolve every documented event ID.
 
     Dot-source the script and call ``Get-AuditApiName`` for each event
     ID 1..8 to verify the mapping is complete and returns
@@ -693,7 +683,7 @@ def test_f0013_get_audit_api_name_resolves_each_event_id(tmp_path: Path) -> None
 
 
 def test_f0013_handler_extracts_target_process_id_and_return_code(tmp_path: Path) -> None:
-    """F-0013: ``Resolve-PayloadField`` must read the real provider fields.
+    """``Resolve-PayloadField`` must read the real provider fields.
 
     Build a synthetic event-like object whose ``PayloadByName`` mirrors
     the Kernel-Audit-API-Calls templates (e.g. event ID 5 carries
@@ -864,7 +854,7 @@ def test_smoke_script_emits_start_record_when_dll_available(tmp_path: Path) -> N
 
 
 def test_smoke_script_emits_event_records_under_admin(tmp_path: Path) -> None:
-    """F-0012 smoke under admin: realtime path must produce at least one event line.
+    """Under admin, the realtime path must produce at least one event line.
 
     Skip when not elevated. When elevated, spawn a helper that performs
     repeated ``OpenProcess(self)`` calls (event ID 5 on the AuditAPI

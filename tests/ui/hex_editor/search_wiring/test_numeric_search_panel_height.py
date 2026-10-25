@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the R01 numeric/pattern splitter-pane drag-collapse fix.
+"""Falsifiable gate for the numeric and pattern splitter-pane drag-collapse fix.
 
 ``HexEditorPanel._create_content`` builds ``_main_vsplit`` as a
 ``QSplitter(Vertical)`` holding the hex/side-panel split (index
@@ -14,19 +14,14 @@ numeric pane down to 0px -- below its own ``minimumSizeHint()`` -- making the
 pattern editor or the Value/Size/Type/Endian/Search/Replace controls
 unreachable even though the pane is technically still "visible".
 
-Empirical probing of the real ``QSplitter``/``QSplitterHandle`` drag path
-(``moveSplitter``) on this Qt build confirms this is the one concrete,
-reproducible defect in this area: showing a hidden pane via ``setVisible``
-alone already receives a correct, non-zero, ``sizeHint``-based size from
-Qt's own layout pass (verified directly against the real widget tree), so a
-gate built around "does the pane get *some* height after ``setVisible``"
-cannot distinguish fixed code from reverted code. Only a real drag toward
-the pane (``QSplitter.moveSplitter``, the same primitive a mouse-drag on the
-handle drives) proves the difference: with the default collapsible splitter
-panes, the drag drives the target pane's stored size to 0; with
-``setCollapsible(..., False)`` applied (the actual fix, in
-``HexEditorPanel._create_content``), Qt clamps the drag at the pane's
-``minimumSizeHint()`` and the pane never collapses below it.
+Showing a hidden pane via ``setVisible`` alone already gets a non-zero,
+``sizeHint``-based size from Qt's layout pass, so a check that the pane has
+*some* height after ``setVisible`` cannot distinguish fixed code from reverted
+code. Only a real drag toward the pane (``QSplitter.moveSplitter``, the same
+primitive a mouse drag on the handle drives) separates them: with the default
+collapsible splitter panes, the drag drives the target pane's stored size to 0;
+with ``setCollapsible(..., False)`` applied in ``HexEditorPanel._create_content``,
+Qt clamps the drag at the pane's ``minimumSizeHint()``.
 
 Both gates below build the real :class:`HexEditorPanel` headlessly, drive
 its real ``_search_mode_combo`` / ``_toggle_pattern_editor`` and real

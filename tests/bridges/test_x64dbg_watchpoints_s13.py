@@ -3,30 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for S13-D03 in the x64dbg bridge.
+"""Regression gate for ``get_watchpoints`` reporting hardware watchpoints.
 
-S13-D03: ``get_watchpoints`` always raised ``ToolError("Failed to get
-watchpoint list")`` on both Load and Attach, so the Watchpoints tab never
-populated. The plugin's dedicated ``wp_list`` pipe command is backed by
-``DbgGetBpList(bp_hardware, &bpmap)``, whose C++ SDK signature returns the
-matching hardware-breakpoint *count* (an ``int``), not a success flag,
-so the deployed plugin binary's ``if (!DbgGetBpList(...))`` check treats
-every empty result - the overwhelmingly common case right after a fresh
-Load/Attach - as a hard failure and reports the error string reproduced
-above.
+``get_watchpoints`` raised ``ToolError("Failed to get watchpoint list")`` on both Load and Attach, so the Watchpoints tab never populated. The plugin's dedicated ``wp_list`` pipe command is backed by ``DbgGetBpList(bp_hardware, &bpmap)``, whose C++ SDK signature returns the matching hardware-breakpoint *count* (an ``int``), not a success flag. The deployed plugin's ``if (!DbgGetBpList(...))`` check therefore treats every empty result, the overwhelmingly common case right after a fresh Load or Attach, as a hard failure.
 
-``get_breakpoints`` already enumerates the very same hardware-breakpoint
-table via the plugin's ``bp_list`` command (filtering ``bp_hardware``
-among other types) without that defect - it is relied on elsewhere in
-this bridge for breakpoint-verification polling - so the fix switches
-``get_watchpoints`` to issue ``bp_list`` and filter the response down to
-``type == "hardware"`` entries instead of the broken dedicated command.
+``get_breakpoints`` enumerates the same hardware-breakpoint table via the plugin's ``bp_list`` command (filtering ``bp_hardware`` among other types) without that defect, and this bridge already relies on it for breakpoint-verification polling. ``get_watchpoints`` therefore issues ``bp_list`` and filters the response to ``type == "hardware"`` entries.
 
-:class:`TestGetWatchpointsListsAddedHardwareWatchpoint` drives the real
-``X64DbgBridge`` against a real host x64dbg installation and a real
-System32 debuggee: it sets a hardware watchpoint via ``set_watchpoint``
-and then asserts ``get_watchpoints`` actually reports it, which the
-pre-fix implementation could never do.
+:class:`TestGetWatchpointsListsAddedHardwareWatchpoint` drives the real ``X64DbgBridge`` against a real host x64dbg installation and a real System32 debuggee. It sets a hardware watchpoint via ``set_watchpoint`` and then asserts that ``get_watchpoints`` reports it.
 """
 
 from __future__ import annotations
@@ -62,19 +45,12 @@ def _x64dbg_release_exists() -> bool:
 @pytest.mark.skipif(not _x64dbg_release_exists(), reason="vendored x64dbg install not present on this host")
 @pytest.mark.asyncio
 class TestGetWatchpointsListsAddedHardwareWatchpoint:
-    """S13-D03: ``get_watchpoints`` must report a watchpoint it just set."""
+    """``get_watchpoints`` must report a watchpoint it just set."""
 
     async def test_get_watchpoints_after_set_watchpoint_includes_the_new_address(self) -> None:
         """Set a hardware watchpoint on a loaded debuggee, then list it back.
 
-        Falsifiable: before the fix, ``get_watchpoints`` unconditionally
-        raised ``ToolError("Failed to get watchpoint list")`` as soon as
-        the plugin's ``wp_list`` handler observed zero *or more* hardware
-        breakpoints (the ``DbgGetBpList`` return value is a count, not a
-        boolean, so its C++ ``!`` check misfires on the near-universal
-        empty/any-count case). This test would fail with that
-        ``ToolError`` even after ``set_watchpoint`` genuinely installed
-        the hardware breakpoint in the debuggee.
+        Falsifiable: if ``get_watchpoints`` relied on the dedicated ``wp_list`` command, it would raise ``ToolError("Failed to get watchpoint list")`` once the plugin's handler observed zero or more hardware breakpoints. The ``DbgGetBpList`` return value is a count rather than a boolean, so its C++ ``!`` check misfires on the near-universal empty or any-count case. This test would fail with that ``ToolError`` even after ``set_watchpoint`` genuinely installed the hardware breakpoint in the debuggee.
         """
         if not _TARGET_EXE.exists():
             pytest.skip(f"debuggee target not present on this host: {_TARGET_EXE}")
@@ -113,19 +89,9 @@ class TestGetWatchpointsListsAddedHardwareWatchpoint:
             await bridge.shutdown()
 
     async def test_get_watchpoints_on_fresh_debuggee_returns_empty_without_raising(self) -> None:
-        """A freshly loaded debuggee with no watchpoints must list an empty set, not raise.
+        """A freshly loaded debuggee with no watchpoints lists an empty set rather than raising.
 
-        This is the actual S13-D03 symptom and the strongest falsifiable
-        gate for the fix: the plugin's ``wp_list`` is backed by
-        ``DbgGetBpList(bp_hardware, ...)``, whose return value is the
-        hardware-breakpoint *count*, and the deployed plugin's
-        ``if (!DbgGetBpList(...))`` check misreads the near-universal
-        zero-count case as a hard failure -- so ``get_watchpoints`` raised
-        ``ToolError`` on every fresh Load/Attach before any watchpoint was
-        set (unlike the set-then-list case above, where a non-zero count
-        happens to keep the broken command's return value truthy). The
-        ``bp_list``-based fix returns an empty list for zero hardware
-        breakpoints instead of raising.
+        This is the strongest falsifiable gate for this behaviour. The plugin's ``wp_list`` command is backed by ``DbgGetBpList(bp_hardware, ...)``, whose return value is the hardware-breakpoint count. The deployed plugin's ``if (!DbgGetBpList(...))`` check misreads the near-universal zero-count case as a hard failure, so ``get_watchpoints`` raised ``ToolError`` on every fresh Load or Attach before any watchpoint was set. The set-then-list test does not catch this, because a non-zero count keeps the broken command's return value truthy. The ``bp_list``-based implementation returns an empty list for zero hardware breakpoints instead of raising.
         """
         if not _TARGET_EXE.exists():
             pytest.skip(f"debuggee target not present on this host: {_TARGET_EXE}")

@@ -4,12 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gate: a change to a locked JSON document waits for the lock for as long as another process holds it.
 
-On Windows the cross-process lock was taken with the C runtime's ``LK_LOCK``,
+On Windows the cross-process lock is taken with the C runtime's ``LK_LOCK``,
 which looks for the lock once a second and after ten looks gives up with
 ``EDEADLOCK``. Several processes writing one approvals file back to back could
 keep a queued writer looking and missing for those ten seconds, and its change
-was then refused with "Resource deadlock avoided" though nothing was
-deadlocked; on a loaded CI runner that failed the concurrent-writers gate.
+would then be refused with "Resource deadlock avoided" though nothing was
+deadlocked.
 
 The gate below makes the wait exceed that window on purpose: a real second
 process holds the lock for longer than ten seconds while this one changes the

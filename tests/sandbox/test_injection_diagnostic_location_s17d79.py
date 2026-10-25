@@ -3,11 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for S17-D79: the injection monitor's diagnostic can be located.
+"""The injection monitor's diagnostic can be located.
 
 When ``injection_monitor.ps1`` sets up its ETW trace session and one of the
 statements calls a method on a null receiver, PowerShell raises "You cannot
-call a method on a null-valued expression." The monitor used to record that
+call a method on a null-valued expression." The monitor must record that
 message alone (``Write-InjectionDiagnostic -Detail $_.Exception.Message``),
 which names neither the failing statement nor its line, so a live Windows run
 that died there left a diagnostic that could not be located.

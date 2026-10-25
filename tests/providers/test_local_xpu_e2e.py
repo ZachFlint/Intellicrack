@@ -1217,8 +1217,8 @@ class TestTemperatureAndSampling:
         regardless of the seed; with ``temperature=1.0`` decoding samples from
         the softmax, so distinct seeds yield distinct outputs. If sampling were
         broken (always greedy) the high-temperature outputs would collapse to a
-        single value and this test would fail. Seeding removes flakiness while
-        the greedy/sampled contrast keeps the gate falsifiable.
+        single value and this test would fail. Seeding keeps sampled runs reproducible while
+        the greedy/sampled contrast still checks that sampling is active.
 
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
@@ -1761,7 +1761,7 @@ class TestErrorRecovery:
         which the ``chat()`` method's ``except (RuntimeError, ImportError,
         ValueError, OSError)`` block wraps into ``ProviderError``.  Any other
         exception type (e.g. ``IndexError``) propagating to the caller is
-        itself a test failure, ensuring this gate is falsifiable.
+        itself a test failure.
 
         Args:
             loaded_xpu_provider: XPU provider with model loaded.

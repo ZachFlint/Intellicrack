@@ -60,7 +60,7 @@ _DELAYED_WRITE_DELAY = 0.05
 _IS_WINDOWS = sys.platform == "win32"
 
 
-# ─── 1. Process termination (sandbox_config.py finally-block pattern) ────────
+# Process termination (sandbox_config.py finally-block pattern)
 
 
 def _spawn_sleeper() -> Popen[bytes]:
@@ -82,7 +82,7 @@ async def test_terminate_tree_kills_running_process() -> None:
 
     This validates the finally-block in SandboxTestWorker.run() that calls
     terminate_tree + unregister when the sandbox process is still alive.
-    Reverting the fix (removing finally block) would leave the process running.
+    Without the finally block the process would keep running.
     """
     process = await asyncio.to_thread(_spawn_sleeper)
     pid = process.pid
@@ -196,7 +196,7 @@ def test_sandbox_temp_wsb_file_cleaned_up() -> None:
     assert not created.exists(), "SandboxTestWorker.run() finally block must unlink the .wsb file"
 
 
-# ─── 2. Cutter command timeout (cutter.py) ───────────────────────────────────
+# Cutter command timeout (cutter.py)
 
 
 class _BlockingR2:
@@ -275,7 +275,7 @@ def _install_r2(bridge: CutterBridge, r2_like: _BlockingR2 | _FastR2 | _NoneR2) 
 async def test_r2_cmd_timeout_raises_tool_error() -> None:
     """_r2_cmd raises ToolError when r2 command blocks past the timeout.
 
-    Before the fix, _r2_cmd had no timeout wrapper and would block forever.
+    Without a timeout wrapper, _r2_cmd would block forever.
     This test would HANG INDEFINITELY if the asyncio.wait_for wrapper
     were removed.
     """
@@ -338,7 +338,7 @@ async def test_r2_cmd_no_binary_raises_tool_error() -> None:
         _ = await bridge.r2_cmd("aaa")
 
 
-# ─── 3. QEMU pidfile retry logic (qemu.py) ──────────────────────────────────
+# QEMU pidfile retry logic (qemu.py)
 
 
 def _make_qemu_sandbox(pidfile: Path) -> QEMUSandbox:
@@ -534,7 +534,7 @@ async def test_qemu_pidfile_retry_handles_corrupt_content(
     assert qemu_pid == _EXPECTED_PID_CORRUPT, "Retry should recover after corrupt content is corrected"
 
 
-# ─── 4. Ghidra bridge script cleanup (ghidra.py) ────────────────────────────
+# Ghidra bridge script cleanup (ghidra.py)
 
 
 def test_ghidra_create_bridge_script_writes_real_file() -> None:
@@ -564,8 +564,8 @@ def test_ghidra_create_bridge_script_writes_real_file() -> None:
 async def test_ghidra_shutdown_deletes_bridge_script() -> None:
     """GhidraBridge.shutdown() deletes the temp bridge script.
 
-    Before the fix, the script in tempdir/intellicrack_ghidra/ was never
-    cleaned up. Now shutdown() calls unlink() on it.
+    shutdown() calls unlink() on the script in tempdir/intellicrack_ghidra/,
+    which would otherwise be left behind.
     """
     bridge = GhidraBridge()
     script_path = bridge.create_bridge_script()
@@ -619,15 +619,15 @@ async def test_ghidra_shutdown_preserves_nonempty_parent_directory() -> None:
         parent_dir.rmdir()
 
 
-# ─── 5. Windows Sandbox PID-based kill (windows.py) ─────────────────────────
+# Windows Sandbox PID-based kill (windows.py)
 
 
 @pytest.mark.asyncio
 async def test_pid_based_kill_targets_specific_process() -> None:
     """PID-based taskkill targets a specific process, not all with same name.
 
-    Before the fix, `taskkill /F /IM WindowsSandbox.exe` killed ALL sandbox
-    instances. Now it uses `/PID` to target just the managed process.
+    `taskkill /F /IM WindowsSandbox.exe` would kill ALL sandbox instances, so the
+    managed process must be targeted with `/PID`.
 
     This test spawns two processes with the same Python executable, kills
     one by PID, and verifies the other survives.
@@ -668,7 +668,7 @@ async def _assert_only_target_killed(
 def test_process_manager_unregister_after_terminate() -> None:
     """ProcessManager.unregister removes the process from tracking.
 
-    The Windows Sandbox stop() method now calls unregister(pid) after
+    The Windows Sandbox stop() method calls unregister(pid) after
     terminate. This ensures the process is fully cleaned from the registry.
     """
     process = Popen(

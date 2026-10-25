@@ -319,6 +319,8 @@ _ERR_INVALID_IPS: Final[str] = "invalid IPS patch header"
 _READ_BYTES_MAX_LENGTH: Final[int] = 1 << 20
 _AI_CONTEXT_BOOKMARK_LIMIT: Final[int] = 64
 _SEARCH_RESULTS_UNLIMITED: Final[int] = (1 << 31) - 1
+_DIFF_MIN_MATCH_DEFAULT: Final[int] = 1
+_DIFF_MAX_REGIONS_DEFAULT: Final[int] = 100_000
 _BOOKMARK_SIDECAR_SUFFIX: Final[str] = ".icbm.json"
 
 _COPY_AS_FORMATS: Final[frozenset[str]] = frozenset(
@@ -758,8 +760,22 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                     parameters=[
                         ToolParameter(name="path_a", type="string", description="First file path."),
                         ToolParameter(name="path_b", type="string", description="Second file path."),
+                        ToolParameter(
+                            name="min_match",
+                            type="integer",
+                            description="An equal run shorter than this between two changes is folded into one change region.",
+                            required=False,
+                            default=_DIFF_MIN_MATCH_DEFAULT,
+                        ),
+                        ToolParameter(
+                            name="max_regions",
+                            type="integer",
+                            description="Most regions to return; the rest are counted in region_count but not listed.",
+                            required=False,
+                            default=_DIFF_MAX_REGIONS_DEFAULT,
+                        ),
                     ],
-                    returns="Diff result with regions and statistics",
+                    returns="Diff result with regions, region_count, truncated and statistics",
                 ),
                 ToolFunction(
                     name="hex_editor.add_bookmark",
@@ -1010,7 +1026,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                     parameters=[
                         ToolParameter(name="block_size", type="integer", description="Block size in bytes.", required=False, default=4096),
                     ],
-                    returns="List of ints: 0=null, 1=plaintext, 2=structured, 3=encrypted, 4=code",
+                    returns="List of ints: 0=null, 1=plaintext, 2=structured, 3=high entropy (>7.0 bits/byte), 4=mixed entropy (4.5-7.0 bits/byte)",
                 ),
                 ToolFunction(
                     name="hex_editor.disassemble",
@@ -2319,7 +2335,8 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         records or a missing terminator raise
         :class:`RuntimeError` rather than being silently ignored, so
         callers see corrupt patch blobs as failures instead of partial
-        applies.
+        applies. A record that runs past the end of the document is cut at
+        it, since an overwrite never grows the document.
 
         Args:
             raw: Raw IPS or IPS32 binary data.
@@ -2397,6 +2414,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                 patch_data = raw[pos : pos + size]
                 pos += size
             if self.document is not None:
+                patch_data = patch_data[: max(self.document.length() - offset, 0)]
                 _logger.info("ips_patch_record_write", offset=hex(offset), length=len(patch_data))
                 self.document.write_bytes(offset, patch_data)
             count += 1
@@ -3931,7 +3949,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
         The returned object supports the buffer protocol and Python
         sequence semantics (``len``, ``obj[i]``, ``obj[i:j]``), so it
-        can be passed directly to consumers that previously required
+        can be passed directly to consumers that expect
         ``bytes`` without first copying the full file onto the Python
         heap. Empty files yield an empty ``bytes`` literal because
         :func:`mmap.mmap` rejects zero-length mappings on Windows.
@@ -4133,7 +4151,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         and target offset hash tables index the longest match starting
         at each ``_BPS_HASH_WORD``-byte word, so the encoder finds
         non-trivial repeats in ``O(target_len * _BPS_HASH_WORD)`` time
-        rather than the previous best-effort sequential scan.
+        rather than a best-effort sequential scan.
 
         Either buffer may be an :class:`mmap.mmap` view rather than a
         ``bytes`` value; the encoder accesses both via the buffer
@@ -4902,27 +4920,47 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
         self._publish_tool_state()
         _logger.info("bridge_document_adopted", path=str(path))
 
-    async def compare_files(self, path_a: str, path_b: str) -> dict[str, Any]:
+    async def compare_files(
+        self,
+        path_a: str,
+        path_b: str,
+        min_match: int = _DIFF_MIN_MATCH_DEFAULT,
+        max_regions: int = _DIFF_MAX_REGIONS_DEFAULT,
+    ) -> dict[str, Any]:
         """Compare two files byte-by-byte.
 
         Args:
             path_a: Path to the first file.
             path_b: Path to the second file.
+            min_match: An equal run shorter than this that sits between two
+                changes is folded into one change region covering both sides.
+                ``0`` and ``1`` fold nothing.
+            max_regions: Most regions listed in the result. Regions past it are
+                still counted but not kept, so a comparison of two very
+                different files cannot exhaust memory; ``0`` lists none.
 
         Returns:
-            dict[str, Any]: Dict with regions, total_differences, files_identical,
-                and the compared byte counts as size_a and size_b.
+            dict[str, Any]: Dict with the listed regions, ``region_count`` (every
+                region, listed or not), ``change_count`` (the differing ones),
+                ``truncated`` (whether any region was left out),
+                total_differences, files_identical, and the compared byte
+                counts as size_a and size_b.
 
         Raises:
             RuntimeError: If the Rust core is not available.
+            ValueError: If ``min_match`` or ``max_regions`` is negative.
         """
         if not self._hexcore_available or _hexcore_mod is None:
             _logger.error("compare_files_failed_hexcore_unavailable", path_a=path_a, path_b=path_b)
             msg = "intellicrack_hexcore not installed"
             raise RuntimeError(msg)
+        if min_match < 0 or max_regions < 0:
+            _logger.error("compare_files_invalid_limits", min_match=min_match, max_regions=max_regions)
+            msg = f"min_match and max_regions must not be negative, got {min_match} and {max_regions}"
+            raise ValueError(msg)
 
-        _logger.debug("file_comparison_starting", path_a=path_a, path_b=path_b)
-        result = _hexcore_mod.diff_files(path_a, path_b)
+        _logger.debug("file_comparison_starting", path_a=path_a, path_b=path_b, min_match=min_match, max_regions=max_regions)
+        result = _hexcore_mod.diff_files(path_a, path_b, min_match, max_regions)
         return cast("dict[str, Any]", result)
 
     async def save(self, path: str | None = None) -> bool:
@@ -5113,7 +5151,7 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             _logger.debug("save_to_sandbox_temp_file_creating")
             tmp_fd, tmp_path = tempfile.mkstemp(suffix=".bin")
             os.close(tmp_fd)
-            self.document.save(tmp_path)
+            await asyncio.to_thread(self.document.save_copy, tmp_path)
             _logger.info("save_to_sandbox_temp_file_written", path=tmp_path)
             file_path_str = tmp_path
 
@@ -5148,8 +5186,6 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
                             instance_id=instance_id,
                         )
             if tmp_path is not None:
-                if self.document is not None:
-                    self.document.close()
                 try:
                     await asyncio.to_thread(Path(tmp_path).unlink)
                 except OSError:
@@ -5303,6 +5339,10 @@ class HexEditorEditMixin(HexEditorFileMixin):
 
         Raises:
             RuntimeError: If no document is open.
+            ValueError: If the bytes would run past the end of the document. An
+                overwrite never grows a document, so the engine would silently
+                drop the excess; the caller is told instead and can use
+                ``insert_bytes`` to grow it.
         """
         if self.document is None:
             _logger.error("write_bytes_failed_no_document", offset=hex(offset))
@@ -5310,6 +5350,11 @@ class HexEditorEditMixin(HexEditorFileMixin):
             raise RuntimeError(msg)
 
         data = bytes.fromhex(data_hex.replace(" ", ""))
+        doc_len: int = self.document.length()
+        if offset + len(data) > doc_len:
+            _logger.error("write_bytes_failed_past_end", offset=hex(offset), length=len(data), document_length=doc_len)
+            msg = f"write of {len(data)} bytes at offset {offset:#x} runs past the end of the {doc_len}-byte document; use insert_bytes to grow it"
+            raise ValueError(msg)
         _logger.info("bytes_write_started", offset=hex(offset), length=len(data))
         self.document.write_bytes(offset, data)
         _logger.info("bytes_written", offset=hex(offset), length=len(data))
@@ -5377,8 +5422,8 @@ class HexEditorEditMixin(HexEditorFileMixin):
         backend's ``search_bytes`` (when available) so the shared
         ``HexDocumentState`` (when attached) receives a precise
         ``data_modified`` event for each affected byte range instead
-        of the wholesale "0..document_length" event the legacy bridge
-        used to emit. The narrow events let observers (the GUI byte
+        of a wholesale "0..document_length" event. The narrow events
+        let observers (the GUI byte
         view in particular) avoid a full repaint after every find/
         replace operation.
 
@@ -5396,6 +5441,8 @@ class HexEditorEditMixin(HexEditorFileMixin):
 
         Raises:
             RuntimeError: If no document is open.
+            ValueError: If either argument is not valid hex, or the pattern is
+                empty, since an empty pattern has no meaningful match.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
@@ -5404,9 +5451,13 @@ class HexEditorEditMixin(HexEditorFileMixin):
 
         pattern_bytes = bytes.fromhex(pattern_hex.replace(" ", ""))
         replacement_bytes = bytes.fromhex(replacement_hex.replace(" ", ""))
+        if not pattern_bytes:
+            _logger.error("replace_bytes_failed_empty_pattern")
+            msg = "pattern cannot be empty"
+            raise ValueError(msg)
 
         pre_match_offsets: list[int] = []
-        if pattern_bytes and hasattr(self.document, "search_bytes"):
+        if hasattr(self.document, "search_bytes"):
             search_results = self.document.search_bytes(pattern_bytes, _SEARCH_RESULTS_UNLIMITED)
             pre_match_offsets = [int(r) if isinstance(r, int) else int(r[0]) for r in search_results]
 
@@ -5468,13 +5519,12 @@ class HexEditorEditMixin(HexEditorFileMixin):
     async def copy_as(self, fmt: str = "hex") -> str:
         """Format bytes at the cursor position or selection.
 
-        Requires an active selection. Previously the bridge silently
-        copied a single byte at the cursor when no selection was set,
-        which produced a meaningless one-byte payload that callers had
-        no way to distinguish from a deliberate single-byte selection.
-        The bridge now raises :class:`ToolError` when there is no
-        selection so the caller can surface a clear error to the user
-        or LLM rather than receive bogus data.
+        Requires an active selection. The bridge raises
+        :class:`ToolError` when there is no selection, rather than
+        copying a single byte at the cursor, which callers could not
+        distinguish from a deliberate single-byte selection, so the
+        caller can surface a clear error to the user or LLM instead of
+        receiving bogus data.
 
         Args:
             fmt: Output format - "hex", "c_array", "python", "base64",
@@ -6074,12 +6124,12 @@ class HexEditorSearchMixin(HexEditorSelectionMixin):
         """Search for text with encoding support.
 
         Always dispatches to the native ``search_text_encoded`` method
-        on the underlying Rust document. The bridge no longer falls
+        on the underlying Rust document. The bridge does not fall
         back silently to ``search_text`` when ``search_text_encoded``
-        is missing or raises, because the legacy ``search_text`` does
+        is missing or raises, because ``search_text`` does
         not implement the same encoding-aware search and produces
         different results for the same input. A missing or failing
-        encoded search now raises so callers cannot mistake "encoding
+        encoded search raises so callers cannot mistake "encoding
         unsupported by backend" or "encoding name typo" for "no
         matches".
 
@@ -6601,7 +6651,7 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
 
         Returns:
             list[int]: List of classification ints per block:
-                0=null, 1=plaintext, 2=structured, 3=encrypted, 4=code.
+                0=null, 1=plaintext, 2=structured, 3=high entropy (>7.0 bits/byte), 4=mixed entropy (4.5-7.0 bits/byte).
 
         Raises:
             RuntimeError: If no document is open.
@@ -6723,8 +6773,8 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        raw_bytes: list[int] = self.document.encode_text_to_bytes(text, encoding)
-        result = bytes(raw_bytes).hex()
+        raw_bytes: bytes = self.document.encode_text_to_bytes(text, encoding)
+        result = raw_bytes.hex()
         _logger.debug("text_encoded", encoding=encoding, length=len(raw_bytes), backend="rust")
         return result
 
@@ -7791,30 +7841,9 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
                 _logger.exception("import_patches_ips_native_failed")
                 msg = f"{_ERR_INVALID_IPS}: {exc}"
                 raise ToolError(msg) from exc
-        elif magic4 == _BPS_MAGIC:
+        elif magic4 in {_BPS_MAGIC, _UPS_MAGIC}:
             source = await self._resolve_patch_source(original_path)
-            try:
-                target = self._apply_bps_patch(raw, source)
-            except (struct.error, ValueError, IndexError) as exc:
-                _logger.exception("import_patches_bps_failed")
-                msg = f"invalid BPS patch: {exc}"
-                raise ToolError(msg) from exc
-            _logger.info("bps_patch_write_started", target_size=len(target))
-            self.document.write_bytes(0, target)
-            _logger.info("file_written", path="document", size=len(target), patch_format="bps")
-            count = 1
-        elif magic4 == _UPS_MAGIC:
-            source = await self._resolve_patch_source(original_path)
-            try:
-                target = self._apply_ups_patch(raw, source)
-            except (struct.error, ValueError, IndexError) as exc:
-                _logger.exception("import_patches_ups_failed")
-                msg = f"invalid UPS patch: {exc}"
-                raise ToolError(msg) from exc
-            _logger.info("ups_patch_write_started", target_size=len(target))
-            self.document.write_bytes(0, target)
-            _logger.info("file_written", path="document", size=len(target), patch_format="ups")
-            count = 1
+            count = self._apply_whole_document_patch(raw, source, is_bps=magic4 == _BPS_MAGIC)
         else:
             head_hex = raw[: min(len(raw), _IPS_MAGIC_LEN)].hex()
             _logger.error("import_patches_failed_unknown_magic", head_hex=head_hex)
@@ -7855,6 +7884,54 @@ class HexEditorPatchMixin(HexEditorTransformMixin):
 
         _logger.info("bps_patch_exported", size=len(raw))
         return base64.b64encode(raw).decode("ascii")
+
+    def _apply_whole_document_patch(self, raw: bytes, source: bytes, *, is_bps: bool) -> int:
+        """Apply a BPS or UPS patch as a whole-document replacement.
+
+        The pure-Python decoder validates the patch and computes the expected
+        target independently; the native importer then replaces the document
+        with its own decode, which sets the target length (an overwrite would
+        keep the old length, silently dropping or keeping a tail) and records
+        the import as one undoable edit. The two decodes must agree.
+
+        Args:
+            raw: The complete BPS or UPS patch bytes.
+            source: The source bytes the patch was built against.
+            is_bps: True for BPS, False for UPS.
+
+        Returns:
+            int: Always ``1``: one patch applied.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ToolError: If either decoder rejects the patch, or if the native
+                and Python decodes disagree.
+        """
+        if self.document is None:
+            raise RuntimeError(_ERR_NO_DOCUMENT)
+        patch_format = "bps" if is_bps else "ups"
+        try:
+            expected = self._apply_bps_patch(raw, source) if is_bps else self._apply_ups_patch(raw, source)
+            if is_bps:
+                self.document.import_patches_bps(raw, source)
+            else:
+                self.document.import_patches_ups(raw, source)
+        except (struct.error, ValueError, IndexError) as exc:
+            _logger.exception("import_patches_whole_document_failed", patch_format=patch_format)
+            msg = f"invalid {patch_format.upper()} patch: {exc}"
+            raise ToolError(msg) from exc
+        target_size: int = self.document.length()
+        if target_size != len(expected) or self.document.read(0, target_size) != expected:
+            _logger.error(
+                "import_patches_decoder_disagreement",
+                patch_format=patch_format,
+                native_size=target_size,
+                python_size=len(expected),
+            )
+            msg = f"invalid {patch_format.upper()} patch: native and reference decodes disagree"
+            raise ToolError(msg)
+        _logger.info("file_written", path="document", size=target_size, patch_format=patch_format)
+        return 1
 
     async def import_patches_bps(self, patch_b64: str, original_path: str) -> dict[str, int]:
         """Import and apply a BPS patch.
@@ -8203,8 +8280,7 @@ class HexEditorExportMixin(HexEditorVAMixin):
         both element text and attribute values; colours are validated
         against ``#RRGGBB`` / ``#RRGGBBAA`` and any violator is replaced
         with the neutral fallback ``#888888``. Combined this prevents
-        the trivial XSS available previously through a crafted
-        bookmark colour or label.
+        trivial XSS through a crafted bookmark colour or label.
 
         Args:
             start: Start offset.
@@ -9026,17 +9102,17 @@ class HexEditorScriptMixin(HexEditorScanMixin):
 
     @staticmethod
     async def run_python_script(source: str) -> dict[str, Any]:
-        """Reject Python script execution; the in-process sandbox was unsafe.
+        """Reject Python script execution; an in-process sandbox cannot be made safe.
 
-        The previous implementation attempted to execute arbitrary Python
-        source in the host process behind a hand-rolled denylist of
-        builtins. That denylist did not block ``object``, ``type``,
+        Executing arbitrary Python source in the host process behind a
+        hand-rolled denylist of builtins is unsafe: such a denylist
+        does not block ``object``, ``type``,
         ``getattr``, ``vars``, ``setattr``, ``__build_class__`` or
         ``globals``, so any caller could escape via
         ``().__class__.__base__.__subclasses__()`` and reach
         :class:`subprocess.Popen` / :func:`os.system`. Because this
-        method is registered as an LLM-callable tool, that was a remote
-        code execution path on the host. The feature has been disabled
+        method is registered as an LLM-callable tool, that would be a remote
+        code execution path on the host. The feature is disabled
         outright; callers receive a typed :class:`ToolError` and the
         host process is never invited to compile or execute their input.
         The method binding is preserved so downstream tool dispatch

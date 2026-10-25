@@ -430,7 +430,7 @@ def _build_early_splash_pixmap(splash_asset: Path, width: int, height: int) -> Q
     The full splash image is loaded and scaled up (preserving aspect ratio) to
     *cover* ``width`` x ``height`` entirely, then center-cropped to exactly
     that size, so the art reaches every edge instead of leaving pillarbox or
-    letterbox bars around a smaller, aspect-fit copy (D27). When the asset is
+    letterbox bars around a smaller, aspect-fit copy. When the asset is
     missing or fails to decode, a background filled with :data:`_EARLY_SPLASH_BG`
     is returned instead so the early splash still appears.
 
@@ -476,7 +476,7 @@ def _ensure_per_monitor_dpi_awareness() -> None:
     Qt's Windows platform plugin requests per-monitor-v2 awareness on its own during ``QApplication`` construction unless the process has
     already declared an awareness context (for example via an application manifest embedded by the installer), in which case Qt honours that
     declaration instead. Setting the context explicitly here -- before any window or device context exists, which is the only point Windows
-    accepts it -- guarantees the per-monitor-v2 behaviour this application needs (D28) regardless of what any bundling manifest declares.
+    accepts it -- guarantees the per-monitor-v2 behaviour this application needs regardless of what any bundling manifest declares.
 
     A no-op on non-Windows platforms, on Windows versions older than the Creators Update (which lack ``SetProcessDpiAwarenessContext``), and
     when the process has already set an incompatible awareness context.

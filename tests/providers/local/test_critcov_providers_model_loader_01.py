@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Critical-coverage tests for ``intellicrack.providers.model_loader``.
+"""Tests for ``intellicrack.providers.model_loader``.
 
 These tests drive the guard, fallback and dependency-unavailable paths of the model loader: the local sharded-checkpoint validator's
 tolerance of malformed index documents, the empty model identifier short-circuit, the ``ImportError`` raised by every loader entry point

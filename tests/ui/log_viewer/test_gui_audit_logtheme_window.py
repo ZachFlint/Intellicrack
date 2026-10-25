@@ -2,17 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for two low-severity Log Viewer GUI audit findings.
+"""Tests for Log Viewer column sizing and reload reader cleanup.
 
 Covers:
 
-- Column sizing: the Time and Level header sections previously kept their
-  default width and clipped their contents until the user dragged them. They
-  must now use content-fitting resize modes so they render legibly on first
-  open.
-- Reload reader leak: :meth:`LogViewerWindow._on_reload_from_disk` stopped the
-  old tail reader but never deleted it, so dead readers accumulated for the
-  window's lifetime. The old reader must now be scheduled for deletion.
+- Column sizing: the Time and Level header sections must use content-fitting
+  resize modes so they render legibly on first open instead of clipping their
+  contents until the user drags them.
+- Reload reader cleanup: :meth:`LogViewerWindow._on_reload_from_disk` stops the
+  old tail reader and must also schedule it for deletion, so dead readers do
+  not accumulate for the window's lifetime.
 """
 
 from __future__ import annotations
@@ -87,8 +86,7 @@ def _seed_log_file(path: Path, count: int) -> None:
 def test_time_and_level_columns_fit_contents_on_open(qtbot: QtBot, tmp_path: Path) -> None:
     """The Time and Level columns use content-fitting resize modes on first open.
 
-    On the pre-fix code both sections used the default Interactive mode and
-    clipped until dragged.
+    The default Interactive mode would clip both sections until dragged.
 
     Args:
         qtbot: pytest-qt bot fixture.
@@ -113,8 +111,8 @@ def test_time_and_level_columns_fit_contents_on_open(qtbot: QtBot, tmp_path: Pat
 def test_reload_from_disk_deletes_old_reader(qtbot: QtBot, tmp_path: Path) -> None:
     """Reloading from disk schedules the previous tail reader for deletion.
 
-    On the pre-fix code the old reader was stopped but never deleted, so it
-    survived (parented to the window) and accumulated across reloads.
+    A reader that is only stopped, never deleted, survives (parented to the
+    window) and accumulates across reloads.
 
     Args:
         qtbot: pytest-qt bot fixture.

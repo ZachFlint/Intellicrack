@@ -387,8 +387,7 @@ class TestDeployX64dbgPlugin:
         The x64 source must arrive in ``release/x64/plugins`` as an AMD64 PE and
         the x32 source in ``release/x32/plugins`` as an I386 PE, each
         byte-identical to its source. This catches a deployment that crossed the
-        architectures or corrupted the bytes, which the previous existence-only
-        assertion could not.
+        architectures or corrupted the bytes, which an existence-only assertion could not.
 
         Args:
             tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
@@ -505,8 +504,7 @@ class TestDefaultSourceRootResolution:
         base directory), or if a built binary carries the wrong
         ``IMAGE_FILE_MACHINE``.
 
-        The plugin binaries are compiled build artifacts (no longer tracked in
-        git); CI builds them from the committed C++ source before running this
+        The plugin binaries are compiled build artifacts that are not tracked in git; CI builds them from the committed C++ source before running this
         suite. When neither architecture's binary is present the environment
         lacks the MSVC toolchain output, so the gate is skipped rather than
         asserting against an artifact that cannot exist here.

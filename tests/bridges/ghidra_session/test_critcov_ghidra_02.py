@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-object coverage for the second slice of ``intellicrack.bridges.ghidra``.
+"""Real-object coverage for ``intellicrack.bridges.ghidra``.
 
 The slice is the error handling and not-connected guarding of the label,
 bookmark, function, structure, memory-block, register, reference, namespace and

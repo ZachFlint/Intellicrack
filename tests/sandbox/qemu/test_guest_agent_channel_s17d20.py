@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D20: qemu-guest-agent commands must not travel over QMP.
+"""qemu-guest-agent commands must not travel over QMP.
 
 ``guest-ping``/``guest-exec``/``guest-exec-status`` are qemu-guest-agent (QGA)
 commands. QEMU's QMP monitor does not implement them and answers
@@ -263,7 +263,7 @@ async def _settle_socket_state(server: SilentGuestAgentServer) -> None:
     """Give the server time to observe a close, so an open socket means one.
 
     Waiting for the close event and finding it never fires is the expected
-    outcome under the S17-D57 contract: a failed handshake keeps the channel.
+    outcome: a failed handshake keeps the channel.
     The wait exists so that "still open" is a settled observation rather than a
     race against a close that simply had not been processed yet.
 
@@ -282,8 +282,7 @@ def _launcher_exec_records(
 ) -> list[GuestExecRecord]:
     """Return the recorded guest-execs that are not the readiness probe.
 
-    Readiness costs one ``guest-exec`` of its own before any real work runs
-    (S17-D65). ``probe`` is taken from the sandbox under test rather than
+    Readiness costs one ``guest-exec`` of its own before any real work runs. ``probe`` is taken from the sandbox under test rather than
     restated here, so a change to the probe cannot leave this filter quietly
     matching the wrong invocation.
 
@@ -915,7 +914,7 @@ class TestChannelFailureModes:
     async def test_agent_that_never_answers_sync_raises_sandbox_error(self) -> None:
         """A silent agent fails the sync, and the channel it was reached on survives.
 
-        Keeping the socket is the S17-D57 contract: QEMU accepts the
+        Keeping the socket is the contract: QEMU accepts the
         ``org.qemu.guest_agent.0`` chardev once for the life of the VM, so a
         client that closes it on a failed handshake has thrown away the only
         channel there is. A guest that has not started its agent yet is exactly
@@ -947,7 +946,7 @@ class TestChannelFailureModes:
         """A channel whose sync fails must hold the connection it already has.
 
         The sandbox keeps the client instance so a later call can retry, and
-        under S17-D57 that retry must reuse the open socket rather than opening
+        under this contract that retry must reuse the open socket rather than opening
         a fresh one: QEMU accepts the guest-agent chardev a single time per VM
         and refuses every reconnection with a reset, so dropping it here ends
         all guest communication for the life of the guest.

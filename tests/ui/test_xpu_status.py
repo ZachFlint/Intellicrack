@@ -483,7 +483,7 @@ class TestXPUStatusDialogDeviceInfo:
         the same string independently from the raw device flags and asserts exact
         equality.  A regression that swaps the separator, omits INT8, or uses a
         different fallback will go red even on hardware where both fp16 and bf16
-        are False (previously those asserts were silently skipped).
+        are False.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.

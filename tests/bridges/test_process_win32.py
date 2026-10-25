@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Phase 1 Win32 expansion tests for ProcessBridge.
+"""Win32 tests for ProcessBridge.
 
-Exercises the new methods added in Phase 1 - kernel-debugger detection,
+Exercises kernel-debugger detection,
 mitigation/extension policy, system process enumeration, handle
 enumeration, token duplication / privilege removal, service enumeration,
 heap walking with block details, virtual-memory decommit, typed registry
@@ -469,8 +469,7 @@ _ROUND_TRIP_PAYLOAD = b"INTELLICRACK_PTR"
 class _OracleMemoryBasicInformation(ctypes.Structure):
     """Independent x64 ``MEMORY_BASIC_INFORMATION`` mirror for the oracle.
 
-    Declared separately from the bridge's own structure so the regression
-    test verifies the bridge's returned address against a wholly
+    Declared separately from the bridge's own structure so the test verifies the bridge's returned address against a wholly
     independent, correctly-typed ``VirtualQueryEx`` path.
     """
 
@@ -593,7 +592,7 @@ def _assert_round_trip(oracle: ctypes.WinDLL, handle: int, address: int) -> None
 async def test_allocate_returns_full_width_untruncated_pointer(bridge: ProcessBridge) -> None:
     """Return value of allocate is a full-width pointer that round-trips exactly.
 
-    Regression gate for the ``VirtualAllocEx`` restype defect: without an
+    Gate for the ``VirtualAllocEx`` restype: without an
     explicit ``restype = c_void_p`` the LPVOID return defaulted to a 32-bit
     signed ``c_int``, so a real >2 GiB base was sign-extended to a negative
     Python int (or had its high 32 bits dropped). Large bottom-up
@@ -601,7 +600,7 @@ async def test_allocate_returns_full_width_untruncated_pointer(bridge: ProcessBr
     the returned address is validated as positive, canonical, page-aligned,
     matched to an independent ``VirtualQueryEx`` region, and byte-for-byte
     round-trippable via ``Write``/``ReadProcessMemory``; ``free`` must then
-    succeed, exercising the companion ``VirtualFreeEx`` argument fix.
+    succeed, exercising the ``VirtualFreeEx`` argument handling.
 
     Args:
         bridge: ProcessBridge fixture.

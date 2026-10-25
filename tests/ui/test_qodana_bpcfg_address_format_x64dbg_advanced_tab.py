@@ -3,10 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for the breakpoint-config address plumbing in ``x64dbg_advanced_tab``.
+"""Gates for the breakpoint-config address plumbing in ``x64dbg_advanced_tab``.
 
-Covers the 2026-09-20 Qodana ``PyStringFormatInspection`` findings: each of
-``X64DbgAdvancedTab``'s eight breakpoint-config handlers (
+Covers each of ``X64DbgAdvancedTab``'s eight breakpoint-config handlers (
 ``_on_configure_breakpoint``, ``_on_set_logging_breakpoint``,
 ``_on_set_breakpoint_log_condition``, ``_on_set_breakpoint_command_condition``,
 ``_on_set_breakpoint_singleshot``, ``_on_set_breakpoint_silent``,
@@ -15,7 +14,7 @@ address field once via ``_bpcfg_address() -> int | None``, guards it with
 ``if address is None: return``, then reads it again inside an
 ``on_success=lambda ...`` closure handed to ``run_bridge_coroutine_logged``.
 Static analysis cannot prove the guard survives into the closure, so each
-handler now rebinds the narrowed value to an explicitly ``int``-typed local
+handler rebinds the narrowed value to an explicitly ``int``-typed local
 (``addr``) before building the closure and the bridge call. These tests drive
 each handler end-to-end -- real widget, real bridge double, real lambda
 execution -- and assert on the exact rendered status text and the exact
@@ -52,7 +51,7 @@ class _RecordingX64DbgBridge:
     """Stand-in bridge recording exactly which arguments each call forwarded."""
 
     def __init__(self) -> None:
-        """Initialise an empty call log per method name."""
+        """Initialize an empty call log per method name."""
         self.calls: dict[str, tuple[object, ...]] = {}
 
     async def configure_breakpoint(

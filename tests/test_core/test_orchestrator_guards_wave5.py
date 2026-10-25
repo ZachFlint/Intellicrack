@@ -2,17 +2,17 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-gate tests for Orchestrator agent-loop guards (Group 06 Wave 5).
+"""Real-gate tests for Orchestrator agent-loop guards.
 
 Covers:
-  S7-04 — max_iterations guard: scripted provider runs to exhaustion;
+  max_iterations guard: scripted provider runs to exhaustion;
            assert ``stats.total_tool_calls == max_iterations``.
-  S7-05 — timeout_seconds guard (PD-009): the agent loop enforces an explicit
+  timeout_seconds guard: the agent loop enforces an explicit
            ``time.monotonic()`` deadline each iteration in addition to the
            ``asyncio.wait_for`` wrapper around the whole turn; assert
            ``asyncio.TimeoutError`` propagates for a workload whose measured
            wall-clock cost genuinely crosses the configured budget.
-  S7-06 — Confirmation gate: ``ConfirmationLevel.DESTRUCTIVE`` + callback
+  Confirmation gate: ``ConfirmationLevel.DESTRUCTIVE`` + callback
            returns False → bridge never executed → ``stats.total_tool_calls == 0``.
 """
 
@@ -540,7 +540,7 @@ def _build_orch(
 
 
 class TestMaxIterationsGuard:
-    """Gate for S7-04: agent loop terminates after exactly max_iterations tool calls."""
+    """Gate for the agent loop terminating after exactly max_iterations tool calls."""
 
     def test_agent_loop_terminates_at_max_iterations(self, tmp_path: Path) -> None:
         """max_iterations=3 with always-probe provider yields exactly 3 tool calls.
@@ -575,24 +575,20 @@ class TestMaxIterationsGuard:
 
 
 class TestTimeoutGuard:
-    """Gate for S7-05: timeout_seconds enforcement (PD-009).
+    """Gate for timeout_seconds enforcement.
 
     ``_run_agent_loop`` enforces ``OrchestratorConfig.timeout_seconds`` via an
     explicit ``time.monotonic()`` deadline check at the top of every
     iteration, in addition to the ``asyncio.wait_for`` wrapper
     :meth:`Orchestrator._run_user_turn` applies around the whole loop
-    coroutine. Both layers are required: real in-container timing measurement
-    showed that a bare ``asyncio.wait_for`` wrapper alone does *not* enforce
-    the timeout when every provider/bridge call in the loop resolves without
-    ever suspending on a genuine asyncio primitive (no real socket I/O, no
-    ``asyncio.sleep``) — a 5000-iteration run of the zero-latency
-    ``_ProbeProvider``/``_ProbeBridge`` pair ran for 8.27 real seconds past a
-    ``timeout_seconds=1`` budget without ``wait_for`` ever cancelling it,
-    because the whole coroutine chain executed as one uninterruptible step of
-    the event loop and the ``call_later`` timeout callback never got a chance
-    to run. The explicit in-loop deadline check closes that gap.
+    coroutine. Both layers are required: a bare ``asyncio.wait_for`` wrapper does
+    *not* enforce the timeout when every provider/bridge call in the loop resolves
+    without ever suspending on a genuine asyncio primitive (no real socket I/O, no
+    ``asyncio.sleep``), because the whole coroutine chain runs as one uninterruptible
+    step of the event loop and the ``call_later`` timeout callback never gets to run.
+    The explicit in-loop deadline check closes that gap.
 
-    This gate asserts the CORRECT contract: ``process_user_input`` must raise
+    This gate asserts the contract: ``process_user_input`` must raise
     ``asyncio.TimeoutError`` when elapsed time exceeds ``timeout_seconds``.
     ``max_iterations=5000`` is required (not a smaller value) so the
     zero-latency probe workload's genuine, measured wall-clock cost actually
@@ -600,8 +596,7 @@ class TestTimeoutGuard:
     ``max_iterations``; the growing per-turn message history makes later
     iterations more expensive than earlier ones (each iteration re-scans the
     full session history for context-window trimming), so 5000 iterations
-    gives comfortable headroom over the ~1700 iterations measurement implied
-    are needed to cross one second.
+    gives comfortable headroom over the ~1700 iterations needed to cross one second.
     """
 
     def test_timeout_seconds_not_enforced_red_by_design(
@@ -651,7 +646,7 @@ class TestTimeoutGuard:
 
 
 class TestConfirmationGate:
-    """Gate for S7-06: ConfirmationLevel.DESTRUCTIVE + denied callback → total_tool_calls==0."""
+    """Gate for ConfirmationLevel.DESTRUCTIVE + denied callback → total_tool_calls==0."""
 
     def test_destructive_call_denied_skips_bridge_execution(self, tmp_path: Path) -> None:
         """Destructive tool call denied by confirmation callback leaves total_tool_calls at 0.

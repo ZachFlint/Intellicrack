@@ -1648,9 +1648,7 @@ def bridge_no_reports() -> SandboxBridge:
 def test_local_process_sandbox_reports_real_execution(local_process_sandbox: LocalProcessSandbox) -> None:
     """The real sandbox captures genuinely observed exit code, output, and file changes.
 
-    This is the gate for the audit finding that sandbox tests only ran against the
-    fabricated :class:`InMemorySandbox`. Here the *real* :class:`LocalProcessSandbox`
-    launches the current Python interpreter as a genuine OS subprocess. The program
+    The *real* :class:`LocalProcessSandbox` launches the current Python interpreter as a genuine OS subprocess. The program
     prints a deterministic marker to stdout and stderr and creates one real file in
     the sandbox work directory. The returned :class:`ExecutionReport` is then asserted
     field-by-field against the independently-known behaviour of that program:

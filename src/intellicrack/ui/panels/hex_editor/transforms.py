@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import enum
 import hashlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -109,6 +110,108 @@ try:
     _pipeline_available = True
 except ImportError:
     _logger.debug("transform_pipeline_class_import_unavailable")
+
+
+class EngineParamKind(enum.Enum):
+    """How a text field is turned into the raw bytes a hexcore transform expects."""
+
+    BYTE = "byte"
+    HEX = "hex"
+    CHOICE = "choice"
+
+
+_PADDING_MODES: Final[tuple[str, ...]] = ("pkcs7", "none", "zero", "iso10126")
+
+ENGINE_TRANSFORM_PARAMS: Final[dict[str, tuple[tuple[str, EngineParamKind], ...]]] = {
+    "xor_single": (("key", EngineParamKind.BYTE),),
+    "xor_repeating": (("key", EngineParamKind.HEX),),
+    "xor_rolling": (("key", EngineParamKind.BYTE), ("increment", EngineParamKind.BYTE)),
+    "rot_n": (("shift", EngineParamKind.BYTE),),
+    "aes_ecb_encrypt": (("key", EngineParamKind.HEX), ("padding", EngineParamKind.CHOICE)),
+    "aes_ecb_decrypt": (("key", EngineParamKind.HEX), ("padding", EngineParamKind.CHOICE)),
+    "bit_shift_left": (("count", EngineParamKind.BYTE),),
+    "bit_shift_right": (("count", EngineParamKind.BYTE),),
+    "bit_rotate_left": (("count", EngineParamKind.BYTE),),
+    "bit_rotate_right": (("count", EngineParamKind.BYTE),),
+    "mask_and": (("pattern", EngineParamKind.HEX),),
+    "mask_or": (("pattern", EngineParamKind.HEX),),
+    "mask_xor": (("pattern", EngineParamKind.HEX),),
+}
+"""Parameters of each hexcore transform that takes any, with their encoding."""
+
+
+def encode_engine_param(name: str, kind: EngineParamKind, text: str) -> bytes:
+    """Encode one transform-parameter field as the bytes hexcore expects.
+
+    A one-byte parameter (a key byte, a rotation or bit count) is written as a
+    number, decimal or ``0x``-prefixed hex, and encoded as that single byte;
+    sending the field's text instead would hand the engine ``b"13"``, whose
+    first byte is ``0x31``. Byte-string parameters are hex (separators allowed)
+    and enumerated ones are the literal mode name.
+
+    Args:
+        name: Parameter name, used in error messages.
+        kind: How the parameter is encoded.
+        text: The text the user entered.
+
+    Returns:
+        bytes: The encoded parameter value.
+
+    Raises:
+        ValueError: If the text is empty, not a number 0-255, not valid hex,
+            or not one of the accepted choices.
+    """
+    stripped = text.strip()
+    if not stripped:
+        msg = f"{name} must not be empty"
+        raise ValueError(msg)
+    if kind is EngineParamKind.BYTE:
+        try:
+            value = int(stripped, 0)
+        except ValueError as exc:
+            msg = f"{name} must be a number 0-255, got {stripped!r}"
+            raise ValueError(msg) from exc
+        if not 0 <= value <= _BYTE_MASK:
+            msg = f"{name} must be 0-255, got {value}"
+            raise ValueError(msg)
+        return bytes((value,))
+    if kind is EngineParamKind.HEX:
+        cleaned = "".join(ch for ch in stripped if ch not in " _:-,")
+        cleaned = cleaned.removeprefix("0x").removeprefix("0X")
+        try:
+            return bytes.fromhex(cleaned)
+        except ValueError as exc:
+            msg = f"{name} must be hex bytes, got {stripped!r}"
+            raise ValueError(msg) from exc
+    lowered = stripped.lower()
+    if lowered not in _PADDING_MODES:
+        msg = f"{name} must be one of {', '.join(_PADDING_MODES)}, got {stripped!r}"
+        raise ValueError(msg)
+    return lowered.encode("ascii")
+
+
+def encode_engine_params(transform: str, fields: dict[str, str]) -> dict[str, bytes]:
+    """Encode the parameter fields of one hexcore transform.
+
+    Fields left blank are omitted, so optional parameters (``increment``,
+    ``padding``) fall back to the engine's defaults.
+
+    Args:
+        transform: The hexcore transform name.
+        fields: Field text keyed by parameter name.
+
+    Returns:
+        dict[str, bytes]: Encoded parameters for ``transform_data``.
+
+    Raises:
+        ValueError: If a non-blank field cannot be encoded.
+    """
+    encoded: dict[str, bytes] = {}
+    for name, kind in ENGINE_TRANSFORM_PARAMS.get(transform, ()):
+        text = fields.get(name, "")
+        if text.strip():
+            encoded[name] = encode_engine_param(name, kind, text)
+    return encoded
 
 
 @dataclass(frozen=True)
@@ -447,7 +550,8 @@ class TransformsMixin:
             "pad": ["length", "byte"],
         }
 
-        param_names = node_param_specs.get(node.name, [])
+        engine_params = ENGINE_TRANSFORM_PARAMS.get(node.name)
+        param_names = [name for name, _ in engine_params] if engine_params is not None else node_param_specs.get(node.name, [])
 
         if not param_names and node.description:
             self._transform_params_form.addRow(
@@ -553,8 +657,12 @@ class TransformsMixin:
         node_name = self._resolve_selected_node_name()
         if node_name is None:
             return self._read_identity_region(offset, length)
-        raw_params = self._collect_transform_params()
-        encoded_params: dict[str, bytes] = {key: str(value).encode("utf-8") for key, value in raw_params.items()}
+        try:
+            encoded_params = encode_engine_params(node_name, self._collect_transform_params())
+        except ValueError as exc:
+            _logger.warning("transform_single_invalid_params", node_name=node_name, error=str(exc))
+            QMessageBox.warning(self if isinstance(self, QWidget) else None, "Transform", f"Invalid parameter: {exc}")
+            return None
         _logger.info("transform_single_started", node_name=node_name, offset=offset, length=length, param_count=len(encoded_params))
         try:
             result = self.document.transform_data(node_name, offset, length, encoded_params)

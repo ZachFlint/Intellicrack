@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 26: the built-in OpenAI Responses stream keeps tool-search items for replay and hangs up when cancelled.
+"""The built-in OpenAI Responses stream keeps tool-search items for replay and hangs up when cancelled.
 
 Both gates drive the real :class:`OpenAIProvider` through the real ``openai`` SDK. The first streams a turn in which the model searched
 its deferred tools and reads what the provider kept for the next request. The second serves the stream from a bare socket, cancels

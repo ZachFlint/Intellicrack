@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate: the main window must be freely shrinkable, not pinned to launch size.
+"""Gate: the main window must be freely shrinkable, not pinned to launch size.
 
 A ``QMainWindow`` can never shrink below its central layout's aggregate minimum
 size. If any embedded child advertises an oversized ``minimumSizeHint`` the whole
@@ -67,7 +67,7 @@ def window(
 
 
 def _diagnostic(window: MainWindow) -> str:
-    """Summarise the min-size drivers of the window for a failure message.
+    """Summarize the min-size drivers of the window for a failure message.
 
     Args:
         window: The main window under inspection.

@@ -87,9 +87,8 @@ _TOP_SPLIT_RIGHT: Final[int] = 400
 # The bottom tabbed section (Breakpoints/Memory/Console/...) hosts a
 # labelled toolbar row plus a table and needs a materially larger share
 # than the disassembly/inspect pane above it to keep its Add-Breakpoint
-# row inside the viewport at normal window sizes (D09) - so it gets the
-# larger of the two default splitter shares, not the smaller one the
-# previous 450/250 split gave it.
+# row inside the viewport at normal window sizes - so it gets the larger of
+# the two default splitter shares.
 _MAIN_SPLIT_TOP: Final[int] = 320
 _MAIN_SPLIT_BOTTOM: Final[int] = 360
 _ADDR_INPUT_MAX_WIDTH: Final[int] = 160
@@ -157,8 +156,8 @@ _MIN_PANE_HEIGHT: Final[int] = 80
 # Sane floor for the bottom tabbed section: tall enough that its tab bar,
 # a labelled toolbar row (address/type/condition inputs plus buttons), and
 # a couple of table rows all stay inside the viewport without scrolling
-# (D09) - the generic _MIN_PANE_HEIGHT (80px) is too small to guarantee
-# that and let the splitter squeeze the Add-Breakpoint row out of view.
+# - the generic _MIN_PANE_HEIGHT (80px) is too small to guarantee that and
+# lets the splitter squeeze the Add-Breakpoint row out of view.
 _MIN_BOTTOM_TABS_HEIGHT: Final[int] = 220
 
 _IS_WIN32: Final[bool] = sys.platform == "win32"
@@ -559,8 +558,8 @@ class X64DbgPanel(AnalysisPanelBase):
         # The splitter's real per-pane minimums (top + bottom) - not the
         # larger "comfortable default" split sizes above - bound how far
         # the draggable splitter lets this area shrink. Forcing the outer
-        # scroll viewport down to the comfortable sizes (D09's regression)
-        # pushed the bottom tabs, and its Add-Breakpoint row, below the
+        # scroll viewport down to the comfortable sizes would
+        # push the bottom tabs, and their Add-Breakpoint row, below the
         # visible window at normal sizes; this floor keeps both panes'
         # essential controls in view while still growing to fill more
         # room, and only a genuinely undersized window falls back to the
@@ -1635,8 +1634,8 @@ class X64DbgPanel(AnalysisPanelBase):
         spawned it itself. ``SetParent`` always fails with
         ``ERROR_INVALID_PARAMETER`` when the child and new-parent windows
         belong to different desktops, so :func:`embed_window` can never
-        succeed for that window no matter how many times it is retried
-        (S20-D01) - retrying it just burns the whole poll budget and leaves
+        succeed for that window no matter how many times it is retried;
+        retrying it just burns the whole poll budget and leaves
         the "x64dbg Window" tab empty. Once the window is found on a
         registered hidden desktop, this switches straight to a live
         ``PrintWindow``-based mirror via :func:`_start_mirror_capture`
@@ -1676,7 +1675,7 @@ class X64DbgPanel(AnalysisPanelBase):
         x64dbg's window is deliberately kept on a hidden desktop that is
         never made the input desktop, so it can be located via
         ``EnumDesktopWindows`` but never reparented into this process's Qt
-        hierarchy via ``SetParent`` (S20-D01). ``PrintWindow`` is not
+        hierarchy via ``SetParent``. ``PrintWindow`` is not
         desktop-scoped, so this periodically renders the window's live
         content into a ``QImage`` via
         :func:`intellicrack.ui.win32_embed.capture_window_image` and paints
@@ -3058,7 +3057,7 @@ class X64DbgPanel(AnalysisPanelBase):
         """Handle a failed Registers/Breakpoints/Stack refresh from the bridge.
 
         A refresh failure that leaves the bridge's named pipe disconnected
-        means the x64dbg session has died (D19): the underlying view would
+        means the x64dbg session has died: the underlying view would
         otherwise keep showing whatever values it last held, letting the
         operator mistake a dead debugger for a live one. When the bridge
         confirms the pipe is down, the stale view is cleared and a "Session

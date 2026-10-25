@@ -3,29 +3,26 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for S20-D02 and S20-D20 in :mod:`intellicrack.ui.panels.frida_panel`.
+"""Falsifiable gates for the Frida panel layout in :mod:`intellicrack.ui.panels.frida_panel`.
 
-S20-D02 traced the Frida panel's Modules/Stalker sub-tab clipping to the
-right-hand ``QTabWidget`` reporting a combined minimum width driven by its
-*widest* page (the unwrapped Hooks header row alone forced a ~523px floor),
-which in turn forced the whole three-pane splitter past any reasonable
-docked-panel width and left only a whole-panel horizontal scrollbar as the
-way to reach a clipped button or table column. The fix wraps every right-tab
-page in the same ``_make_scrollable`` viewport ``AnalysisPanelBase`` already
-uses for the Advanced tab, and hardens the sub-tab strip's overflow behaviour
-explicitly instead of relying on a style-dependent default.
+The Frida panel's Modules/Stalker sub-tab strip must not clip. The right-hand
+``QTabWidget`` reports a combined minimum width driven by its widest page (the
+unwrapped Hooks header row alone forces a ~523px floor), which would push the whole
+three-pane splitter past any reasonable docked-panel width. Each right-tab page is
+therefore wrapped in the same ``_make_scrollable`` viewport ``AnalysisPanelBase``
+uses for the Advanced tab, and the sub-tab strip's overflow behaviour is set
+explicitly rather than left to a style-dependent default.
 
-S20-D20 traced the Console Output pane being squeezed off the visible area to
-a plain ``QPlainTextEdit`` carrying no real minimum height, so the taller
-top splitter above it consumed all available room first. The fix gives it a
-deliberate, font-derived minimum height, and mirrors ``[error]`` script
-messages into the structured application log so an agent-side script
-exception is never silent even if the console itself is scrolled out of view.
+The Console Output pane must not be squeezed off the visible area. A plain
+``QPlainTextEdit`` carries no real minimum height, so the taller top splitter above
+it consumes all available room first. The pane therefore gets a deliberate,
+font-derived minimum height, and ``[error]`` script messages are mirrored into the
+structured application log so an agent-side script exception is never silent even if
+the console itself is scrolled out of view.
 
-Each test targets one concrete, reproduced-before-fixing behavioural
-difference: real reported minimum sizes, a real wrapped-widget type, real
-post-layout geometry under a squeeze, and a real captured log record - never
-a stubbed return value.
+Each test targets one concrete behavioural property: real reported minimum sizes, a
+real wrapped-widget type, real post-layout geometry under a squeeze, and a real
+captured log record, never a stubbed return value.
 """
 
 from __future__ import annotations
@@ -82,7 +79,7 @@ class TestRightTabsOverflow:
 
     @staticmethod
     def test_frida_panel_minimum_width_recovers_from_tab_bloat() -> None:
-        """The panel's reported minimum width must stay well below the pre-fix ~991px floor driven by the Hooks tab."""
+        """The panel's reported minimum width must stay well below the ~991px floor the Hooks tab would otherwise drive."""
         panel = FridaPanel()
         min_width = panel.minimumSizeHint().width()
         assert min_width < _MAX_PANEL_MIN_WIDTH, (

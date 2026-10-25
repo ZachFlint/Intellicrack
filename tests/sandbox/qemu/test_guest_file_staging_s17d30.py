@@ -2,15 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D30: a file staged after boot must reach the running guest.
+"""A file staged after boot must reach the running guest.
 
 ``QEMUSandbox.copy_to_sandbox`` wrote only into the host-side shared directory.
 On a Windows host that directory reaches the guest as a QEMU **vvfat** block
 device, because virtio-9p is compiled out of every Windows QEMU build (the
-S17-D17 host-side fix). vvfat presents the directory as it was **when QEMU
+host-side staging fix). vvfat presents the directory as it was **when QEMU
 started**, so nothing the host writes afterwards ever appears inside the guest.
 
-Measured live on 2026-08-05 against a booted Debian 13 guest: the host staged
+Measured live against a booted Debian 13 guest: the host staged
 ``input/true_x86_64`` and the run came back
 ``Command not found: /mnt/shared/input/true_x86_64``, while ``ls -la
 /mnt/shared/input`` inside that guest returned ``total 24`` with only ``.`` and
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 _GUEST_SHARED_ROOT: Final[str] = "/mnt/shared"
 _WINDOWS_SHARED_ROOT: Final[str] = "E:\\"
 _STAGED_RELATIVE: Final[str] = "input/true_x86_64"
-# Since S17-D69 the share is read-only to the guest - vvfat's write-back path
+# The share is read-only to the guest - vvfat's write-back path
 # aborts the machine - so a file staged into a running guest lands on the
 # guest's own disk under the work root, which the in-guest allowlist trusts for
 # exactly the same reason it trusts the share root.
@@ -128,7 +128,7 @@ class TestStagedFileReachesTheRunningGuest:
         """The staged file appears inside the guest with the source's bytes.
 
         The host-side copy was never the point: writing it is exactly what
-        S17-D30 proved insufficient, and since S17-D69 writing into a directory
+        That fix proved insufficient, and since writing into a directory
         vvfat is actively mapping is the hazard that took the machine down. So
         the gate is both halves - the bytes crossed the agent channel into the
         guest, and nothing was written onto the share to get them there.

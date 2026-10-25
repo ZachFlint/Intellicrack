@@ -132,11 +132,7 @@ class TestParsePpmP6:
             _parse_ppm_p6(bad_data)
 
     def test_truncated_pixel_data_raises_value_error(self) -> None:
-        """Truncated pixel data raises ValueError.
-
-        Oracle: a 2x2 image needs 12 pixel bytes; providing only 3 is truncation.
-        Mutation: allowing short pixel buffers silently returns incomplete data.
-        """
+        """Truncated pixel data raises ValueError."""
         ppm_data = _make_ppm_p6(2, 2, b"\xff\x00\x80")
         with pytest.raises(ValueError, match=r"(?i)(truncat|short|pixel|data)"):
             _parse_ppm_p6(ppm_data)
@@ -178,9 +174,6 @@ class TestPpmP6ToPng:
 
         Args:
             tmp_path: Pytest temporary directory.
-
-        Oracle: struct.unpack('>II', png_bytes[16:24]) gives (2, 2) per PNG spec.
-        Mutation: computing width*3 instead of width in the IHDR pack produces wrong values.
         """
         ppm_path = tmp_path / "test2.ppm"
         png_path = tmp_path / "output2.png"

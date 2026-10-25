@@ -148,9 +148,9 @@ export function parseColor(text) {
 
    A canvas cannot read a custom property, so each colour has to arrive through
    getComputedStyle - and a property that is not declared arrives as an empty
-   string rather than as an error. Written as a literal at each call site, that
-   silence painted a mid grey, a blue and a pink belonging to no palette in
-   either theme, with a renamed token producing no complaint anywhere. Here the
+   string rather than as an error. Written as a literal at each call site, a missing
+   declaration would paint a colour belonging to no palette in either theme, with
+   a renamed token producing no complaint anywhere. Here the
    fallback is at least the light theme's own value for the token being asked
    for, the only case that produces one is the chart suites' bare-node DOM, and
    the map doubles as the list this file's tokens are audited against on first
@@ -1184,7 +1184,7 @@ export const DIFF_HIGHLIGHT_TOKENS = new Map([
  * single offset axis, with the caret overhanging the strip by
  * {@link DIFF_TRACK_OVERHANG} pixels top and bottom.
  *
- * Each band carries the A-8 shape mark for its kind on top of its colour, so
+ * Each band carries the shape mark for its kind on top of its colour, so
  * the map is not colour-only: a left bar for an addition, a strike through
  * the middle for a removal, a double line along the bottom for a
  * modification - the same vocabulary the byte grid itself uses.

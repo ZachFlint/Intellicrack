@@ -125,7 +125,7 @@ for (const [token, name] of outside) {
 
 /* ------------------------------------------------ no off-palette literals left */
 
-/* The values DS-4 found hardcoded at the call sites. None belongs to either
+/* The values hardcoded at the call sites. None belongs to either
    theme, and a fallback is exactly where such a colour survives unnoticed. */
 const OFF_PALETTE = ['#808080', '#4c9df0', '#ef5f8c', '#101010', '#202020', 'rgba(128,128,128,0.2)', 'rgba(76,157,240,0.24)'];
 for (const literal of OFF_PALETTE) {

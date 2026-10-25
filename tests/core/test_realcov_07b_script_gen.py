@@ -4,10 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for :mod:`intellicrack.core.script_gen`.
 
-Addresses the audit findings for ``script_gen.py``:
+Covers ``script_gen.py``:
 
-* The synthetic ``_make_script`` factory finding is answered by a real
-  create -> save -> reload -> execute lifecycle test driven through
+* A real create -> save -> reload -> execute lifecycle, driven through
   :class:`ScriptManager` and the active Python interpreter.
 * JavaScript validation is exercised with the real ``node`` runtime for both
   a clean parse and an actual syntax error (not just the "node missing"

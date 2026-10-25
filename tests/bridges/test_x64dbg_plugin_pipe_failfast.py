@@ -2,22 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the x64dbg bridge plugin deploy/build path and fail-fast load (F16).
+"""Falsifiable gates for the x64dbg bridge plugin deploy/build path and fail-fast load.
 
-These tests exercise the real behaviour that keeps x64dbg control from
-silently going inert when the bridge plugin never comes up:
+These tests exercise the real behaviour that keeps x64dbg control from silently going inert when the bridge plugin never comes up:
 
-* the arch-to-filename-to-``plugins`` directory mapping used to deploy the
-  first-party bridge plugin, driven against a real on-disk x64dbg tree with
-  real file copies (no mocks);
-* the resolution of the installed x64dbg plugin SDK directory that the source
-  rebuild must target;
-* the CMake configure invocation passing the SDK path through the variable the
-  plugin's ``CMakeLists.txt`` actually reads (``X64DBG_SDK_PATH``);
+* the arch-to-filename-to-``plugins`` directory mapping that deploys the first-party bridge plugin, driven against a real on-disk x64dbg tree with real file copies (no mocks);
+* the resolution of the installed x64dbg plugin SDK directory that the source rebuild must target;
+* the CMake configure invocation passing the SDK path through the variable the plugin's ``CMakeLists.txt`` actually reads (``X64DBG_SDK_PATH``);
 * the named-pipe client being pointed at the fixed pipe the C++ plugin serves;
-* :meth:`X64DbgBridge.load` surfacing the actionable remediation error at load
-  time when the bridge pipe never becomes usable, instead of deferring the
-  failure to the first debugger RPC such as ``step_into``.
+* :meth:`X64DbgBridge.load` surfacing the actionable remediation error at load time when the bridge pipe never becomes usable, instead of deferring the failure to the first debugger RPC such as ``step_into``.
 """
 
 from __future__ import annotations
@@ -186,10 +179,7 @@ class TestBuildInvocationSdkVariable:
     ) -> None:
         """CMake configure carries ``-DX64DBG_SDK_PATH`` and never ``-DX64DBG_PATH``.
 
-        The plugin's ``CMakeLists.txt`` reads ``X64DBG_SDK_PATH``; the old
-        invocation passed the dead ``X64DBG_PATH`` flag, so the installed
-        build's SDK was silently ignored. This gate captures the real
-        argument list handed to the cmake step.
+        The plugin's ``CMakeLists.txt`` reads ``X64DBG_SDK_PATH``. Passing ``X64DBG_PATH`` would be silently ignored, so the installed SDK would never be used. This gate captures the real argument list handed to the cmake step.
 
         Args:
             monkeypatch: pytest monkeypatch fixture.
@@ -375,9 +365,7 @@ class _FakeExternalProcessManager:
     The real ``register_external_pid`` verifies the PID corresponds to a
     live OS process before recording it, which the synthetic PID from
     :func:`unique_pid` cannot satisfy. This fake mirrors the
-    ``register_external_pid``/``unregister_external_pid`` surface
-    :class:`X64DbgBridge` now calls after its migration from
-    ``subprocess.Popen`` to ``spawn_on_hidden_desktop`` so ``load`` can run
+    ``register_external_pid``/``unregister_external_pid`` surface that :class:`X64DbgBridge` calls, which launches x64dbg through ``spawn_on_hidden_desktop`` rather than ``subprocess.Popen``, so ``load`` can run
     its real launch path without touching the real singleton.
     """
 

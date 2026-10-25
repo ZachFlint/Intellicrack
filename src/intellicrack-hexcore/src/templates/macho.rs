@@ -5,6 +5,7 @@
 
 use super::{Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry};
 
+/// Registers the built-in Mach-O structure templates into `registry`.
 pub fn register_templates(registry: &mut TemplateRegistry) {
     registry.register(mach_header());
     registry.register(mach_header_be());
@@ -34,6 +35,7 @@ pub fn register_templates(registry: &mut TemplateRegistry) {
 
 fn fd(name: &str, field_type: FieldType, description: &str) -> FieldDefinition {
     FieldDefinition {
+        at: None,
         name: name.to_string(),
         field_type,
         endianness: None,
@@ -552,19 +554,22 @@ fn dylib_command_fields() -> Vec<FieldDefinition> {
         fd(
             "name_size",
             FieldType::Computed {
-                expression: "cmdsize - 24".to_string(),
+                expression: "cmdsize - name_offset".to_string(),
                 display_type: Box::new(FieldType::UInt32),
             },
-            "Remaining bytes in this command holding the name string (NUL-padded)",
+            "Bytes from the name string to the end of this command (NUL-padded)",
         ),
-        fd(
-            "name",
-            FieldType::DynamicArray {
-                element_type: Box::new(FieldType::UInt8),
-                count_field: "name_size".to_string(),
-            },
-            "Null-terminated library name string, NUL-padded to the pointer-size boundary",
-        ),
+        FieldDefinition {
+            at: Some("name_offset".to_string()),
+            ..fd(
+                "name",
+                FieldType::DynamicArray {
+                    element_type: Box::new(FieldType::UInt8),
+                    count_field: "name_size".to_string(),
+                },
+                "Null-terminated library name string, read at name_offset from the start of this command and NUL-padded to the pointer-size boundary",
+            )
+        },
     ]
 }
 
@@ -726,6 +731,7 @@ fn main_command_be() -> StructTemplate {
 #[cfg(test)]
 mod tests {
     use super::super::TemplateRegistry;
+    use super::{fd, Endianness, FieldType, StructTemplate};
 
     #[test]
     fn test_mach_header_registered() {
@@ -947,10 +953,6 @@ mod tests {
         assert!(fields[3].display_value.contains("0000000000100000"));
     }
 
-    /// Gate for finding #53: every load-command-family template must have a
-    /// `_BE` counterpart registered, so genuinely big-endian Mach-O files
-    /// (identified via `MACH_HEADER_BE`/`MACH_HEADER_64_BE`) can have their
-    /// load commands parsed without byte-swapping every multi-byte value.
     #[test]
     fn test_load_command_family_be_variants_registered() {
         let reg = TemplateRegistry::new();
@@ -973,13 +975,6 @@ mod tests {
         }
     }
 
-    /// Gate for finding #53: `LOAD_COMMAND_BE` must decode multi-byte fields
-    /// as big-endian. `LC_SEGMENT_64` (0x19) stored as big-endian bytes
-    /// `00 00 00 19` must decode to 25 (0x19), not 0x19000000.
-    ///
-    /// Mutation caught: if `load_command_be()` used `Endianness::Little` (or
-    /// were unregistered), this would either read 419430400 (0x19000000) or
-    /// fail with `TemplateError::NotFound`.
     #[test]
     fn test_load_command_be_decodes_big_endian_values() {
         let reg = TemplateRegistry::new();
@@ -987,21 +982,11 @@ mod tests {
         let fields = reg.apply("LOAD_COMMAND_BE", &data, 0).unwrap();
         assert_eq!(fields.len(), 2);
         assert_eq!(fields[0].name, "cmd");
-        // Independent oracle: u32::from_be_bytes([0,0,0,0x19]) = 25
         assert_eq!(fields[0].display_value, "25 (0x00000019)");
         assert_eq!(fields[1].name, "cmdsize");
-        // Independent oracle: u32::from_be_bytes([0,0,0,0x38]) = 56
         assert_eq!(fields[1].display_value, "56 (0x00000038)");
     }
 
-    /// Gate for finding #25: `DYLIB_COMMAND.name` must read the full
-    /// variable-length, NUL-padded library name driven by `cmdsize - 24`,
-    /// not a single fixed byte.
-    ///
-    /// Mutation caught: reverting `name` to `FixedString(1)` makes the
-    /// `name` field's `size` become 1 (and `raw_bytes` a single byte)
-    /// instead of the full 28-byte padded string, and `total_size` falls
-    /// from `cmdsize` (52) to 25.
     #[test]
     fn test_dylib_command_reads_full_variable_length_name() {
         let reg = TemplateRegistry::new();
@@ -1038,13 +1023,6 @@ mod tests {
         assert_eq!(total_size, cmdsize_usize);
     }
 
-    /// Gate for finding #76: `FAT_ARCH.cputype`/`cpusubtype` must be signed
-    /// (`Int32`), matching `mach_header`'s treatment of the same
-    /// `cpu_type_t`/`cpu_subtype_t` fields, so a sentinel like
-    /// `CPU_TYPE_ANY` (-1) displays as negative rather than as `u32::MAX`.
-    ///
-    /// Mutation caught: reverting `cputype` to `UInt32` makes the display
-    /// value read "4294967295 (0xFFFFFFFF)" instead of "-1 (0xFFFFFFFF)".
     #[test]
     fn test_fat_arch_cputype_is_signed() {
         let reg = TemplateRegistry::new();
@@ -1055,5 +1033,70 @@ mod tests {
         let fields = reg.apply("FAT_ARCH", &data, 0).unwrap();
         assert_eq!(fields[0].name, "cputype");
         assert_eq!(fields[0].display_value, "-1 (0xFFFFFFFF)");
+    }
+
+    #[test]
+    fn test_dylib_command_reads_name_at_name_offset() {
+        let mut name = b"/usr/lib/libz.1.dylib\0".to_vec();
+        while name.len() != 24 {
+            name.push(0);
+        }
+
+        let mut data = Vec::new();
+        data.extend_from_slice(&0x0000_000Cu32.to_le_bytes());
+        data.extend_from_slice(&56u32.to_le_bytes());
+        data.extend_from_slice(&0x20u32.to_le_bytes());
+        data.extend_from_slice(&0u32.to_le_bytes());
+        data.extend_from_slice(&0x0001_0000u32.to_le_bytes());
+        data.extend_from_slice(&0x0001_0000u32.to_le_bytes());
+        data.extend_from_slice(&[0xEE; 8]);
+        data.extend_from_slice(&name);
+        data.push(0x99);
+        assert_eq!(data.len(), 57);
+
+        let outer = StructTemplate {
+            name: "DYLIB_THEN_BYTE".to_string(),
+            description: String::new(),
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+            fields: vec![
+                fd(
+                    "command",
+                    FieldType::StructRef("DYLIB_COMMAND".to_string()),
+                    "",
+                ),
+                fd("after", FieldType::UInt8, ""),
+            ],
+        };
+        let mut reg = TemplateRegistry::new();
+        reg.register(outer);
+        let fields = reg.apply("DYLIB_THEN_BYTE", &data, 0).unwrap();
+
+        let command = &fields[0];
+        let name_field = command
+            .children
+            .iter()
+            .find(|f| f.name == "name")
+            .expect("name field must be present");
+        assert_eq!(name_field.offset, 0x20);
+        assert_eq!(name_field.size, 24);
+        assert_eq!(name_field.raw_bytes, name);
+        assert_eq!(name_field.children.len(), 24);
+        assert_eq!(name_field.children[0].display_value, "47 (0x2F)");
+
+        let name_size = command
+            .children
+            .iter()
+            .find(|f| f.name == "name_size")
+            .expect("name_size field must be present");
+        assert_eq!(name_size.display_value, "24 (0x18) = cmdsize - name_offset");
+
+        assert_eq!(command.size, 56);
+        assert_eq!(fields[1].name, "after");
+        assert_eq!(fields[1].offset, 56);
+        assert_eq!(fields[1].display_value, "153 (0x99)");
     }
 }

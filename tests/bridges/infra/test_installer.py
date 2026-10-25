@@ -3,11 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 U1 regression tests for ``intellicrack.bridges.installer``.
+"""Regression tests for ``intellicrack.bridges.installer``.
 
-Each test corresponds to one or more findings (F-####) in audit3.md
-under "Findings: bridges-installer". Each test is written so it would
-FAIL on the pre-fix code in installer.py. Tests use real filesystem
+Each test fails on the unfixed code in installer.py. Tests use real filesystem
 trees and the real ToolInstaller state machine; isolated unit-level
 substitutions (``monkeypatch``) are used only at the boundary
 (subprocess / network) and never to fabricate end-state behaviour.
@@ -75,9 +73,7 @@ _INNER_VALUE_MSG = "root cause goes here"
 _NO_OUTCOMES_MSG = "_install_pm_substitute: no more pre-built outcomes"
 
 
-# --------------------------------------------------------------------------
 # Helpers
-# --------------------------------------------------------------------------
 
 
 def _system_pe_for_version_probe() -> Path | None:
@@ -325,17 +321,15 @@ def _install_pm_substitute(
     return captured
 
 
-# --------------------------------------------------------------------------
-# F-0001 / F-0002 - kind discriminator instead of sentinel paths
-# --------------------------------------------------------------------------
+# kind discriminator instead of sentinel paths
 
 
 class TestKindDiscriminator:
-    """F-0001 (PROCESS) and F-0002 (FRIDA) - typed availability mechanism."""
+    """PROCESS and FRIDA kinds: typed availability mechanism."""
 
     @staticmethod
     def test_install_tool_process_returns_builtin_kind(tmp_path: Path) -> None:
-        """install_tool(PROCESS) returns kind=builtin and path=None (F-0001)."""
+        """install_tool(PROCESS) returns kind=builtin and path=None."""
         ti = ToolInstaller(tmp_path)
         result = _run(ti.install_tool(ToolName.PROCESS))
         assert isinstance(result, InstallResult)
@@ -345,7 +339,7 @@ class TestKindDiscriminator:
 
     @staticmethod
     def test_install_tool_process_does_not_return_sentinel_path(tmp_path: Path) -> None:
-        """The PROCESS install_tool result MUST NOT be Path('builtin') (F-0001)."""
+        """The PROCESS install_tool result MUST NOT be Path('builtin')."""
         ti = ToolInstaller(tmp_path)
         result = _run(ti.install_tool(ToolName.PROCESS))
         assert isinstance(result, InstallResult)
@@ -353,7 +347,7 @@ class TestKindDiscriminator:
 
     @staticmethod
     def test_find_tool_process_returns_none_for_path(tmp_path: Path) -> None:
-        """find_tool(PROCESS) no longer returns Path('builtin') (F-0001)."""
+        """find_tool(PROCESS) no longer returns Path('builtin')."""
         ti = ToolInstaller(tmp_path)
         path = _run(ti.find_tool(ToolName.PROCESS))
         assert path != Path("builtin")
@@ -361,7 +355,7 @@ class TestKindDiscriminator:
 
     @staticmethod
     def test_find_tool_detailed_process_reports_builtin(tmp_path: Path) -> None:
-        """find_tool_detailed(PROCESS) returns FoundTool(kind='builtin') (F-0001)."""
+        """find_tool_detailed(PROCESS) returns FoundTool(kind='builtin')."""
         ti = ToolInstaller(tmp_path)
         ft = _run(ti.find_tool_detailed(ToolName.PROCESS))
         assert isinstance(ft, FoundTool)
@@ -370,14 +364,14 @@ class TestKindDiscriminator:
 
     @staticmethod
     def test_verify_tool_process_accepts_none_path(tmp_path: Path) -> None:
-        """verify_tool(PROCESS, None) returns True (no synthetic path needed) (F-0001)."""
+        """verify_tool(PROCESS, None) returns True (no synthetic path needed)."""
         ti = ToolInstaller(tmp_path)
         ok = _run(ti.verify_tool(ToolName.PROCESS, None))
         assert ok is True
 
     @staticmethod
     def test_get_all_tool_status_process_path_is_none(tmp_path: Path) -> None:
-        """get_all_tool_status reports PROCESS with path=None (F-0001)."""
+        """get_all_tool_status reports PROCESS with path=None."""
         ti = ToolInstaller(tmp_path)
         status = _run(ti.get_all_tool_status())
         assert isinstance(status, dict)
@@ -386,29 +380,27 @@ class TestKindDiscriminator:
 
     @staticmethod
     def test_frida_registry_kind_is_python_package() -> None:
-        """The Frida registry entry is kind='python_package' (F-0002)."""
+        """The Frida registry entry is kind='python_package'."""
         assert TOOL_REGISTRY[ToolName.FRIDA].kind == "python_package"
 
     @staticmethod
     def test_process_registry_kind_is_builtin() -> None:
-        """The PROCESS registry entry is kind='builtin' (F-0001)."""
+        """The PROCESS registry entry is kind='builtin'."""
         assert TOOL_REGISTRY[ToolName.PROCESS].kind == "builtin"
 
 
-# --------------------------------------------------------------------------
-# F-0003 - install_tool verifies post-install version
-# --------------------------------------------------------------------------
+# install_tool verifies post-install version
 
 
 class TestInstallVerifiesPostInstall:
-    """F-0003 - install_tool reports failure when version cannot be confirmed."""
+    """install_tool reports failure when version cannot be confirmed."""
 
     @staticmethod
     def test_install_tool_returns_failure_when_no_executable(
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """install_tool returns success=False when the extracted tree has no exe (F-0003)."""
+        """install_tool returns success=False when the extracted tree has no exe."""
         ti = ToolInstaller(tmp_path)
 
         async def _stub_url(_self: ToolInstaller, _tool: ToolName) -> str | None:
@@ -432,20 +424,18 @@ class TestInstallVerifiesPostInstall:
         assert marker_present
 
 
-# --------------------------------------------------------------------------
-# F-0004 - _install_frida checks the version subprocess returncode
-# --------------------------------------------------------------------------
+# _install_frida checks the version subprocess returncode
 
 
 class TestFridaInstallChecksVersionRC:
-    """F-0004 - _install_frida treats nonzero version probe rc as failure."""
+    """_install_frida treats nonzero version probe rc as failure."""
 
     @staticmethod
     def test_frida_install_failure_when_version_probe_nonzero(
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """_install_frida returns success=False when version probe rc != 0 (F-0004)."""
+        """_install_frida returns success=False when version probe rc != 0."""
         ti = ToolInstaller(tmp_path)
 
         def _handler(cmd: list[str]) -> _ProcResult:
@@ -463,29 +453,27 @@ class TestFridaInstallChecksVersionRC:
         assert "rc=1" in result.error or "version probe" in result.error
 
 
-# --------------------------------------------------------------------------
-# F-0005 / F-0006 / F-0034 / F-0041 - x64dbg/Cutter version via PE, no GUI
-# --------------------------------------------------------------------------
+# x64dbg/Cutter version via PE, no GUI
 
 
 class TestPEVersionForGUITools:
-    """F-0005/F-0006/F-0034/F-0041 - x64dbg/Cutter version probe via PE."""
+    """x64dbg/Cutter version probe via PE."""
 
     @staticmethod
     def test_x64dbg_registry_has_no_version_command_subprocess() -> None:
-        """x64dbg version_command is empty - no subprocess invocation (F-0005/F-0034/F-0041)."""
+        """x64dbg version_command is empty - no subprocess invocation."""
         info = TOOL_REGISTRY[ToolName.X64DBG]
         assert info.version_command == []
 
     @staticmethod
     def test_cutter_registry_has_no_version_command_subprocess() -> None:
-        """Cutter version_command is empty - no subprocess invocation (F-0006)."""
+        """Cutter version_command is empty - no subprocess invocation."""
         info = TOOL_REGISTRY[ToolName.CUTTER]
         assert info.version_command == []
 
     @staticmethod
     def test_get_version_x64dbg_uses_pe_when_available(tmp_path: Path) -> None:
-        """get_version(X64DBG) returns the exact version read from the PE VERSIONINFO (F-0034).
+        """get_version(X64DBG) returns the exact version read from the PE VERSIONINFO.
 
         An independent pefile oracle reads the same binary and resolves the
         expected version triple.  The assertion is falsifiable: a regression
@@ -518,17 +506,15 @@ class TestPEVersionForGUITools:
         )
 
 
-# --------------------------------------------------------------------------
-# F-0007 - find_tool deep search & cached iterdir
-# --------------------------------------------------------------------------
+# find_tool deep search & cached iterdir
 
 
 class TestNestedToolDirSearch:
-    """F-0007 - two-level deep nesting (Ghidra archive layout)."""
+    """two-level deep nesting (Ghidra archive layout)."""
 
     @staticmethod
     def test_find_tool_walks_two_levels_for_ghidra_layout(tmp_path: Path) -> None:
-        """ToolInstaller.search_tool_dir walks two levels deep (F-0007)."""
+        """ToolInstaller.search_tool_dir walks two levels deep."""
         ToolInstaller(tmp_path)
         tool_dir = tmp_path / "ghidra"
         deep = tool_dir / "ghidra_11.1_PUBLIC" / "ghidra_11.1_PUBLIC"
@@ -544,17 +530,15 @@ class TestNestedToolDirSearch:
         assert path == deep
 
 
-# --------------------------------------------------------------------------
-# F-0008 - GitHub asset selection respects host arch
-# --------------------------------------------------------------------------
+# GitHub asset selection respects host arch
 
 
 class TestArchAwareAssetSelection:
-    """F-0008 - GitHub asset selection picks host-arch matching asset."""
+    """GitHub asset selection picks host-arch matching asset."""
 
     @staticmethod
     def test_matches_arch_token_boundaries() -> None:
-        """``matches_arch`` requires word-boundary token matches (F-0008)."""
+        """``matches_arch`` requires word-boundary token matches."""
         assert matches_arch("cutter-x86_64-windows.zip", {"x86_64"}) is True
         assert matches_arch("cutter-i686-windows.zip", {"x86_64"}) is False
         assert matches_arch("readme-x64.zip", {"x64"}) is True
@@ -562,7 +546,7 @@ class TestArchAwareAssetSelection:
 
     @staticmethod
     def test_host_arch_aliases_returns_canonical_set() -> None:
-        """``host_arch_aliases`` returns a known alias group (F-0008)."""
+        """``host_arch_aliases`` returns a known alias group."""
         aliases = host_arch_aliases()
         possible_groups = [
             frozenset({"x86_64", "amd64", "x64", "win64"}),
@@ -572,17 +556,15 @@ class TestArchAwareAssetSelection:
         assert aliases in possible_groups
 
 
-# --------------------------------------------------------------------------
-# F-0009 - sys.executable for python/pip
-# --------------------------------------------------------------------------
+# sys.executable for python/pip
 
 
 class TestPipUsesSysExecutable:
-    """F-0009 - bare ``python`` / ``pip`` replaced with ``[sys.executable, ...]``."""
+    """bare ``python`` / ``pip`` replaced with ``[sys.executable, ...]``."""
 
     @staticmethod
     def test_frida_version_command_uses_sys_executable() -> None:
-        """Frida's registered version_command uses sys.executable (F-0009)."""
+        """Frida's registered version_command uses sys.executable."""
         cmd = TOOL_REGISTRY[ToolName.FRIDA].version_command
         assert cmd[0] == sys.executable
         assert cmd[1] == "-c"
@@ -592,7 +574,7 @@ class TestPipUsesSysExecutable:
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """_install_frida calls ``[sys.executable, '-m', 'pip', ...]`` (F-0009)."""
+        """_install_frida calls ``[sys.executable, '-m', 'pip', ...]``."""
         captured = _install_pm_substitute(
             monkeypatch,
             handler=lambda _cmd: _ProcResult(0, "16.5.0", ""),
@@ -608,20 +590,18 @@ class TestPipUsesSysExecutable:
         assert pip_cmd[2] == "pip"
 
 
-# --------------------------------------------------------------------------
-# F-0011 - ensure_tool propagates install error
-# --------------------------------------------------------------------------
+# ensure_tool propagates install error
 
 
 class TestEnsureToolPropagatesError:
-    """F-0011 - ensure_tool raises with the actual install error string."""
+    """ensure_tool raises with the actual install error string."""
 
     @staticmethod
     def test_ensure_tool_includes_install_error(
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """ensure_tool's ToolError message contains the underlying install error (F-0011)."""
+        """ensure_tool's ToolError message contains the underlying install error."""
         ti = ToolInstaller(tmp_path)
 
         async def _stub_find(_self: ToolInstaller, _tool: ToolName) -> Path | None:
@@ -643,19 +623,17 @@ class TestEnsureToolPropagatesError:
         assert "precise reason: download server returned 502" in str(excinfo.value)
 
 
-# --------------------------------------------------------------------------
-# F-0012 - _find_frida distinguishes timeout from absence
-# --------------------------------------------------------------------------
+# _find_frida distinguishes timeout from absence
 
 
 class TestFridaProbeDistinguishesTimeout:
-    """F-0012 - probe surfaces timeout via ToolProbeTimeoutError, not None."""
+    """probe surfaces timeout via ToolProbeTimeoutError, not None."""
 
     @staticmethod
     def test_probe_python_package_raises_on_timeout(
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """_probe_python_package raises ToolProbeTimeoutError on TimeoutExpired (F-0012)."""
+        """_probe_python_package raises ToolProbeTimeoutError on TimeoutExpired."""
 
         def _raise_timeout(cmd: list[str]) -> _ProcResult:
             raise sp_mod.TimeoutExpired(cmd=cmd, timeout=10)
@@ -679,9 +657,7 @@ class TestFridaProbeDistinguishesTimeout:
         assert result is None
 
 
-# --------------------------------------------------------------------------
-# F-0018 - download partial cleanup
-# --------------------------------------------------------------------------
+# download partial cleanup
 
 
 class _FailingStreamCtx:
@@ -729,14 +705,14 @@ class _FailingClient:
 
 
 class TestDownloadCleansPartials:
-    """F-0018 - failed downloads remove the partial temp file."""
+    """failed downloads remove the partial temp file."""
 
     @staticmethod
     def test_download_failure_removes_partial(
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """A failed _download_file removes the partial output (F-0018)."""
+        """A failed _download_file removes the partial output."""
         ti = ToolInstaller(tmp_path)
 
         url = "https://example.invalid/some/file.zip"
@@ -754,9 +730,7 @@ class TestDownloadCleansPartials:
         assert not partial_path.exists()
 
 
-# --------------------------------------------------------------------------
-# F-0022 - download progress logs every full MB, not on modulo
-# --------------------------------------------------------------------------
+# download progress logs every full MB, not on modulo
 
 
 class _FixedResp:
@@ -856,14 +830,14 @@ class _FixedClient:
 
 
 class TestProgressLoggingPerMB:
-    """F-0022 - progress logging fires once per MB, deterministically."""
+    """progress logging fires once per MB, deterministically."""
 
     @staticmethod
     def test_progress_threshold_is_per_megabyte(
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """Progress logging fires exactly once per full MB crossed (F-0022).
+        """Progress logging fires exactly once per full MB crossed.
 
         With 300 chunks of 8192 bytes (= 2,457,600 bytes total) and a 1 MiB
         (1,048,576-byte) threshold, the counter crosses 1 MiB after chunk 128
@@ -915,17 +889,15 @@ class TestProgressLoggingPerMB:
         assert all(0.0 < p <= 100.0 for p in log_events), f"all percent values must be in (0, 100]; got {log_events}"
 
 
-# --------------------------------------------------------------------------
-# F-0025 / F-0043 - admin check + per-arch aggregation
-# --------------------------------------------------------------------------
+# admin check + per-arch aggregation
 
 
 class TestDeployPluginAggregation:
-    """F-0025 - admin check; F-0043 - per-arch aggregation."""
+    """Admin check and per-arch aggregation."""
 
     @staticmethod
     def test_path_requires_admin_detects_program_files() -> None:
-        """path_requires_admin returns True for Program Files paths on Windows (F-0025)."""
+        """path_requires_admin returns True for Program Files paths on Windows."""
         if sys.platform != "win32":
             pytest.skip("Windows-only check")
         pf = os.environ.get("PROGRAMFILES")
@@ -936,7 +908,7 @@ class TestDeployPluginAggregation:
 
     @staticmethod
     def test_path_requires_admin_false_for_user_dir(tmp_path: Path) -> None:
-        """path_requires_admin is False for user-writable paths (F-0025)."""
+        """path_requires_admin is False for user-writable paths."""
         assert path_requires_admin(tmp_path) is False
 
     @staticmethod
@@ -981,7 +953,7 @@ class TestDeployPluginAggregation:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """deploy_x64dbg_plugin returns False when one arch fails even if other is up-to-date (F-0043)."""
+        """deploy_x64dbg_plugin returns False when one arch fails even if other is up-to-date."""
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", b"\x01" * 64)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x32.dp32", b"\x02" * 64)
@@ -1014,7 +986,7 @@ class TestDeployPluginAggregation:
 
     @staticmethod
     def test_deploy_success_only_when_all_present_arches_clean(tmp_path: Path) -> None:
-        """deploy_x64dbg_plugin returns True only when all sourced arches deploy (F-0043)."""
+        """deploy_x64dbg_plugin returns True only when all sourced arches deploy."""
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", b"\x10" * 64)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x32.dp32", b"\x20" * 64)
@@ -1025,17 +997,15 @@ class TestDeployPluginAggregation:
         assert statuses["x32"] == "deployed"
 
 
-# --------------------------------------------------------------------------
-# F-0026 / F-0027 / F-0028 - cmake build feedback / timeout / vswhere errors
-# --------------------------------------------------------------------------
+# cmake build feedback / timeout / vswhere errors
 
 
 class TestBuildSubprocessHandling:
-    """F-0026, F-0027, F-0028."""
+    """."""
 
     @staticmethod
     def test_cmake_timeout_default_is_at_least_600(monkeypatch: pytest.MonkeyPatch) -> None:
-        """Default cmake configure timeout is >= 600s and overridable via env (F-0027)."""
+        """Default cmake configure timeout is >= 600s and overridable via env."""
         monkeypatch.delenv("INTELLICRACK_CMAKE_TIMEOUT", raising=False)
         assert installer_mod.cmake_timeout("INTELLICRACK_CMAKE_TIMEOUT", 600) == 600
         monkeypatch.setenv("INTELLICRACK_CMAKE_TIMEOUT", "1200")
@@ -1048,7 +1018,7 @@ class TestBuildSubprocessHandling:
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """_run_cmake_step surfaces stdout and stderr on CalledProcessError (F-0026)."""
+        """_run_cmake_step surfaces stdout and stderr on CalledProcessError."""
         warnings: list[dict[str, object]] = []
 
         def stub_run(cmd: list[str], **_kw: object) -> object:
@@ -1088,7 +1058,7 @@ class TestBuildSubprocessHandling:
     def test_find_cmake_logs_warning_on_vswhere_failure(
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """_find_cmake logs a warning on vswhere errors instead of swallowing (F-0028)."""
+        """_find_cmake logs a warning on vswhere errors instead of swallowing."""
 
         def _which_none(_name: str) -> str | None:
             return None
@@ -1118,9 +1088,7 @@ class TestBuildSubprocessHandling:
         assert "vswhere_failed" in warnings
 
 
-# --------------------------------------------------------------------------
-# F-0030 - install error captures full traceback
-# --------------------------------------------------------------------------
+# install error captures full traceback
 
 
 def _raise_value_error_for_traceback() -> None:
@@ -1133,11 +1101,11 @@ def _raise_value_error_for_traceback() -> None:
 
 
 class TestInstallErrorCapturesTraceback:
-    """F-0030 - InstallResult.error contains traceback on exceptions."""
+    """InstallResult.error contains traceback on exceptions."""
 
     @staticmethod
     def test_format_exception_includes_traceback() -> None:
-        """format_exception returns a multi-line traceback string (F-0030)."""
+        """format_exception returns a multi-line traceback string."""
         text = ""
         try:
             _raise_value_error_for_traceback()
@@ -1152,7 +1120,7 @@ class TestInstallErrorCapturesTraceback:
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """install_tool failure paths capture traceback context (F-0030)."""
+        """install_tool failure paths capture traceback context."""
         ti = ToolInstaller(tmp_path)
 
         async def _stub_url(_self: ToolInstaller, _tool: ToolName) -> str | None:
@@ -1168,17 +1136,15 @@ class TestInstallErrorCapturesTraceback:
         assert _INNER_RUNTIME_MSG in result.error
 
 
-# --------------------------------------------------------------------------
-# F-0031 - Ghidra analyzeHeadless suffix is platform-aware
-# --------------------------------------------------------------------------
+# Ghidra analyzeHeadless suffix is platform-aware
 
 
 class TestGhidraExecutableIsPlatformAware:
-    """F-0031 - drop POSIX entry on win32 and vice versa."""
+    """drop POSIX entry on win32 and vice versa."""
 
     @staticmethod
     def test_ghidra_executables_match_platform() -> None:
-        """Ghidra executables list reflects current sys.platform (F-0031)."""
+        """Ghidra executables list reflects current sys.platform."""
         info = TOOL_REGISTRY[ToolName.GHIDRA]
         if sys.platform == "win32":
             assert info.executables == ["support/analyzeHeadless.bat"]
@@ -1186,17 +1152,15 @@ class TestGhidraExecutableIsPlatformAware:
             assert info.executables == ["support/analyzeHeadless"]
 
 
-# --------------------------------------------------------------------------
-# F-0033 - vswhere uses ProgramFiles(x86) env var with fallback
-# --------------------------------------------------------------------------
+# vswhere uses ProgramFiles(x86) env var with fallback
 
 
 class TestProgramFilesX86Resolution:
-    """F-0033 - resolve ProgramFiles(x86) from env, not literal English."""
+    """resolve ProgramFiles(x86) from env, not literal English."""
 
     @staticmethod
     def test_program_files_x86_prefers_env(monkeypatch: pytest.MonkeyPatch) -> None:
-        """_program_files_x86 prefers the PROGRAMFILES(X86) env var (F-0033)."""
+        """_program_files_x86 prefers the PROGRAMFILES(X86) env var."""
         monkeypatch.setenv("PROGRAMFILES(X86)", r"D:\Custom Program Files (x86)")
         assert installer_mod.program_files_x86() == Path(r"D:\Custom Program Files (x86)")
 
@@ -1204,46 +1168,42 @@ class TestProgramFilesX86Resolution:
     def test_program_files_x86_falls_back_to_program_files(
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """_program_files_x86 falls back to PROGRAMFILES when (X86) is unset (F-0033)."""
+        """_program_files_x86 falls back to PROGRAMFILES when (X86) is unset."""
         monkeypatch.delenv("PROGRAMFILES(X86)", raising=False)
         monkeypatch.setenv("PROGRAMFILES", r"D:\Custom Program Files")
         assert installer_mod.program_files_x86() == Path(r"D:\Custom Program Files")
 
 
-# --------------------------------------------------------------------------
-# F-0035 - _parse_version returns None for unparseable input
-# --------------------------------------------------------------------------
+# _parse_version returns None for unparseable input
 
 
 class TestParseVersionRejectsUnparseable:
-    """F-0035 - _parse_version returns None instead of ToolVersion(0, 0, 0)."""
+    """_parse_version returns None instead of ToolVersion(0, 0, 0)."""
 
     @staticmethod
     def test_parse_version_none_on_garbage() -> None:
-        """_parse_version returns None for unparseable input (F-0035)."""
+        """_parse_version returns None for unparseable input."""
         assert ToolInstallerVersion.parse("not a version") is None
         assert ToolInstallerVersion.parse("") is None
         assert ToolInstaller.parse_version("not a version") is None
 
     @staticmethod
     def test_parse_version_returns_tool_version_for_semver() -> None:
-        """_parse_version returns a ToolVersion for semver input (F-0035)."""
+        """_parse_version returns a ToolVersion for semver input."""
         v = ToolInstallerVersion.parse("11.1.2")
         assert v is not None
         assert (v.major, v.minor, v.patch) == (11, 1, 2)
 
 
-# --------------------------------------------------------------------------
-# F-0036 - x64dbg date-format versions parse and compare correctly
-# --------------------------------------------------------------------------
+# x64dbg date-format versions parse and compare correctly
 
 
 class TestDateStyleVersionParsing:
-    """F-0036 - YYYY.MM.DD versions are parsed and compared correctly."""
+    """YYYY.MM.DD versions are parsed and compared correctly."""
 
     @staticmethod
     def test_parse_date_version() -> None:
-        """YYYY.MM.DD parses as a date-style ToolVersion (F-0036)."""
+        """YYYY.MM.DD parses as a date-style ToolVersion."""
         v = ToolInstallerVersion.parse("2024.06.15")
         assert v is not None
         assert v.is_date is True
@@ -1251,7 +1211,7 @@ class TestDateStyleVersionParsing:
 
     @staticmethod
     def test_date_versions_compare_correctly() -> None:
-        """Date versions compare ordinally (F-0036)."""
+        """Date versions compare ordinally."""
         older = ToolInstallerVersion.parse("2024.01.01")
         newer = ToolInstallerVersion.parse("2024.06.15")
         assert older is not None
@@ -1261,7 +1221,7 @@ class TestDateStyleVersionParsing:
 
     @staticmethod
     def test_x64dbg_min_version_is_date_format() -> None:
-        """x64dbg's min_version is treated as a date (F-0036)."""
+        """x64dbg's min_version is treated as a date."""
         info = TOOL_REGISTRY[ToolName.X64DBG]
         assert re.match(r"^\d{4}\.\d{2}\.\d{2}$", info.min_version)
         v = ToolInstallerVersion.parse(info.min_version)
@@ -1269,17 +1229,15 @@ class TestDateStyleVersionParsing:
         assert v.is_date is True
 
 
-# --------------------------------------------------------------------------
-# F-0037 - registry includes SANDBOX and HEX_EDITOR
-# --------------------------------------------------------------------------
+# registry includes SANDBOX and HEX_EDITOR
 
 
 class TestRegistryCoversAllEnumMembers:
-    """F-0037 - SANDBOX and HEX_EDITOR are in TOOL_REGISTRY."""
+    """SANDBOX and HEX_EDITOR are in TOOL_REGISTRY."""
 
     @staticmethod
     def test_all_tool_names_in_registry() -> None:
-        """Every installable ToolName enum member has a registry entry (F-0037).
+        """Every installable ToolName enum member has a registry entry.
 
         ``ToolName.TOOLS`` is the synthetic orchestrator-built meta-tool that
         names no installable bridge (no filesystem footprint, no installer, no
@@ -1295,14 +1253,14 @@ class TestRegistryCoversAllEnumMembers:
 
     @staticmethod
     def test_sandbox_has_executables() -> None:
-        """SANDBOX entry lists qemu/docker executables (F-0037)."""
+        """SANDBOX entry lists qemu/docker executables."""
         info = TOOL_REGISTRY[ToolName.SANDBOX]
         assert info.executables
         assert any("qemu" in exe.lower() or "docker" in exe.lower() for exe in info.executables)
 
     @staticmethod
     def test_hex_editor_is_builtin() -> None:
-        """HEX_EDITOR is a builtin tool with no HxD executables (F-0037)."""
+        """HEX_EDITOR is a builtin tool with no HxD executables."""
         info = TOOL_REGISTRY[ToolName.HEX_EDITOR]
         assert info.kind == "builtin"
         assert info.executables == []
@@ -1310,24 +1268,22 @@ class TestRegistryCoversAllEnumMembers:
         assert all("hxd" not in exe.lower() for exe in info.executables)
 
 
-# --------------------------------------------------------------------------
-# F-0038 - PLUGIN_ARCHS third field is consumed
-# --------------------------------------------------------------------------
+# PLUGIN_ARCHS third field is consumed
 
 
 class TestPluginArchsThirdFieldUsed:
-    """F-0038 - third tuple field is consumed (post-deploy verification subdir)."""
+    """third tuple field is consumed (post-deploy verification subdir)."""
 
     @staticmethod
     def test_plugin_archs_third_field_is_subdir() -> None:
-        """Third field is now the verification subdir (F-0038)."""
+        """Third field is now the verification subdir."""
         for arch, _filename, subdir in PLUGIN_ARCHS:
             assert subdir.startswith("release/")
             assert arch in subdir
 
     @staticmethod
     def test_deploy_uses_subdir_field(tmp_path: Path) -> None:
-        """deploy_x64dbg_plugin_detailed targets path computed from the third tuple field (F-0038)."""
+        """deploy_x64dbg_plugin_detailed targets path computed from the third tuple field."""
         x64dbg = _make_x64dbg_tree(tmp_path)
         _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", b"x" * 64)
 
@@ -1339,17 +1295,15 @@ class TestPluginArchsThirdFieldUsed:
         assert "x64" in x64_arch.target.parts
 
 
-# --------------------------------------------------------------------------
-# F-0044 - empty extraction raises / returns failure
-# --------------------------------------------------------------------------
+# empty extraction raises / returns failure
 
 
 class TestEmptyArchiveIsFailure:
-    """F-0044 - extracting an archive with no usable directory is failure."""
+    """extracting an archive with no usable directory is failure."""
 
     @staticmethod
     def test_extract_archive_returns_none_when_empty(tmp_path: Path) -> None:
-        """_extract_archive returns None when the zip yields nothing (F-0044)."""
+        """_extract_archive returns None when the zip yields nothing."""
         ti = ToolInstaller(tmp_path / "fresh")
         zp = tmp_path / "truly_empty.zip"
         _build_zip(zp, {})
@@ -1357,9 +1311,7 @@ class TestEmptyArchiveIsFailure:
         assert result is None
 
 
-# --------------------------------------------------------------------------
 # Misc dataclasses sanity tests
-# --------------------------------------------------------------------------
 
 
 class TestTypeDataclassesSanity:
@@ -1436,13 +1388,11 @@ class TestTypeDataclassesSanity:
             assert result is True, f"is_user_admin() must return True on non-Windows; got {result!r}"
 
 
-# --------------------------------------------------------------------------
 # ToolKind alias is what we expect
-# --------------------------------------------------------------------------
 
 
 def test_tool_kind_alias_values() -> None:
-    """ToolKind alias resolves to the three documented values (F-0001/F-0002)."""
+    """ToolKind alias resolves to the three documented values."""
     assert set(get_args(ToolKind)) == {"filesystem", "builtin", "python_package"}
 
 

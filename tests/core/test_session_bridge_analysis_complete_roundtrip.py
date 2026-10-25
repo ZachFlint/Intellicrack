@@ -6,12 +6,10 @@
 
 ``BridgeAnalysisSummary.complete`` is the authoritative "a real analysis
 bridge contributed data" signal, and Full Analysis relies on it to decide
-whether to tell the user that no disassembler backend is connected. Both
-halves of ``SessionStore``'s bridge-analysis codec omitted the field: the
-serializer never wrote it and the deserializer never read it, so the
-dataclass default (``False``) silently replaced the real value on every load.
-A session saved with a genuinely complete analysis therefore came back
-claiming no bridge had contributed.
+whether to tell the user that no disassembler backend is connected. The codec must carry the field both ways: the serializer writes it and the
+deserializer reads it. Without that, the dataclass default (``False``)
+silently replaces the real value on every load, so a session saved with a
+genuinely complete analysis would come back claiming no bridge had contributed.
 
 Both persistence routes are gated here against a real on-disk SQLite store
 and a real JSON export, with no doubles anywhere: the flag is written by the
@@ -123,9 +121,9 @@ def test_complete_flag_survives_a_json_export_and_import(tmp_path: Path) -> None
 def test_an_incomplete_analysis_stays_incomplete(tmp_path: Path) -> None:
     """The flag must round-trip its false value too, not merely default to it.
 
-    Without this the fix could be faked by defaulting ``complete`` to ``True``
-    on read, which would be a worse bug: an empty analysis would then claim a
-    backend contributed.
+    Without this, defaulting ``complete`` to ``True`` on read would go unnoticed,
+    which would be a worse bug: an empty analysis would then claim a backend
+    contributed.
 
     Args:
         tmp_path: Pytest temporary directory fixture.

@@ -3,9 +3,9 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates the wiring halves of BE-1 (the Diff panel's grid marking, region
- * table and footer) and UX-1 (the four spatial analyses living in the bottom
- * dock instead of a modal, and the modal staying for one-shot text answers).
+ * Gates the wiring halves of the Diff panel (grid marking, region table and
+ * footer) and of the four spatial analyses, which live in the bottom dock
+ * instead of a modal, with the modal staying for one-shot text answers.
  *
  * `diffHighlightClass` is exercised for real, against the real
  * `DIFF_HIGHLIGHT_TOKENS` map `charts.js` exports for the mini-map, so the two
@@ -45,7 +45,7 @@ const shellSource = (await readFile(`${staticDir}shell.js`, 'utf8')).replace(/\r
 const { diffHighlightClass } = await import('../static/panels.js');
 const { DIFF_HIGHLIGHT_TOKENS } = await import('../static/charts.js');
 
-/* --------------------------------------------------------- BE-1: the mapping */
+/* --------------------------------------------------------- the mapping */
 
 check(
   'DIFF_HIGHLIGHT_TOKENS names exactly the three diff_bytes kinds the grid and the mini-map both mark',
@@ -83,7 +83,7 @@ for (const className of mappedClasses) {
   );
 }
 
-/* ---------------------------------------------------- BE-1: the panel wiring */
+/* ---------------------------------------------------- the panel wiring */
 
 const diffPanelMatch = /function diffPanel\(env\) \{[\s\S]*?\n\}\n/.exec(panelsSource);
 check('diffPanel could be located in panels.js for inspection', diffPanelMatch !== null, 'function diffPanel(env) { ... } was not found as a single top-level block');
@@ -130,7 +130,7 @@ check(
   'panels.diff no longer declares dock: \'bottom\'',
 );
 
-/* --------------------------------------------------- UX-1: the four analyses */
+/* --------------------------------------------------- the four analyses */
 
 for (const [name, chartCall] of [['entropyPanel', 'entropyStripChart('], ['byteTypesPanel', 'byteTypeChart('], ['classificationPanel', 'classificationChart('], ['digramPanel', 'digramChart(']]) {
   const match = new RegExp(`function ${name}\\(env\\) \\{[\\s\\S]*?\\n\\}\\n`).exec(panelsSource);
@@ -174,7 +174,7 @@ check(
   'entropyPanel no longer offers a recompute action',
 );
 
-/* ------------------------------------------------- UX-1: shell command routing */
+/* ------------------------------------------------- shell command routing */
 
 const focusBottomCalls = new Map([...shellSource.matchAll(/this\.#define\('(analyze\.\w+)', '[^']*', '[^']*', \(\) => this\.#focusBottomPanel\('([\w.]+)'\)/g)].map(([, command, panelId]) => [command, panelId]));
 

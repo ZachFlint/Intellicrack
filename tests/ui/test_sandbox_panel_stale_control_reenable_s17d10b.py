@@ -2,20 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for the S17-D10 follow-on found by driving the real panel.
+"""Gates for sandbox controls re-enabled by stale operation completions.
 
-S17-D10 gates the QEMU-only controls in ``_apply_backend_capability_gating``,
-and ``_set_sandbox_controls_active`` disables every sandbox-active control when
-the instance goes away. Both were bypassed afterwards: each operation handler
-re-enabled its own control with a bare ``setEnabled(True)`` when its bridge call
-completed, and that completion can land *after* the state it was gated against
-has changed.
+``_apply_backend_capability_gating`` gates the QEMU-only controls, and
+``_set_sandbox_controls_active`` disables every sandbox-active control when the instance goes
+away. Neither may be bypassed afterwards: an operation handler must not re-enable its own
+control with a bare ``setEnabled(True)`` when its bridge call completes, because that
+completion can land *after* the state it was gated against has changed.
 
-The sequence needs no VM: press Destroy, then press a sandbox operation before
-the destroy lands. Driven live on 2026-08-15 through the real bridge that left
-``screenshot_btn`` enabled with ``sandbox_id is None`` - a control offered with
-no sandbox behind it, where pressing it produced nothing at all, because
-``_on_screenshot`` returns at its own ``sandbox_id`` guard.
+The sequence needs no VM: press Destroy, then press a sandbox operation before the destroy lands.
+Without the gate, ``screenshot_btn`` stays enabled with ``sandbox_id is None``: a control
+offered with no sandbox behind it, where pressing it does nothing because ``_on_screenshot``
+returns at its own ``sandbox_id`` guard.
 
 Which of the two in-flight calls finishes first is decided by the order two
 ``QThread`` instances happen to reach the shared event loop, so these tests do
@@ -347,12 +345,11 @@ def test_windows_backend_keeps_the_qemu_controls_gated_after_a_shared_failure(
     """A failure on a Windows instance must not reinstate the QEMU-only controls.
 
     Memory Dump on Windows Sandbox first enumerates guest processes via
-    ``SandboxBridge.list_guest_processes`` so the user can pick a
-    ``target_pid`` (S17-D10b). The real ``LocalProcessSandbox`` test double
-    behind this panel does not override ``list_processes``, so it inherits
-    ``SandboxBase``'s "not implemented" failure - a genuine backend error,
-    surfaced through the same ``Memory Dump Failed`` dialog and console path
-    the pre-picker code used for a direct ``memory_dump`` failure.
+    ``SandboxBridge.list_guest_processes`` so the user can pick a ``target_pid``. The real
+    ``LocalProcessSandbox`` test double behind this panel does not override ``list_processes``,
+    so it inherits ``SandboxBase``'s "not implemented" failure. That is a genuine backend error,
+    surfaced through the same ``Memory Dump Failed`` dialog and console path as a direct
+    ``memory_dump`` failure.
 
     Args:
         qapp: Session ``QApplication``.

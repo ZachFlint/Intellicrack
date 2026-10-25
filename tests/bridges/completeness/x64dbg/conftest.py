@@ -79,7 +79,7 @@ class FakePipeClient:
     Records every ``(command, params)`` pair sent by the bridge and returns
     a canned response produced by a caller-supplied responder callable. This
     is the same test-double shape already established for this bridge in
-    ``tests/test_bridges/test_x64dbg_wave2b_breakpoints.py``; it substitutes
+    the x64dbg breakpoint tests; it substitutes
     only the pipe transport, never the bridge method whose behavior a test
     is gating.
     """

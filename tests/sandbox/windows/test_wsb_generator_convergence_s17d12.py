@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D12 (backend half): one ``.wsb`` generator, one element spelling.
+"""Gates for the backend: one ``.wsb`` generator, one element spelling.
 
 Intellicrack shipped two independent ``.wsb`` XML generators that disagreed.
 The backend built its document with ``ElementTree`` and emitted ``<vGPU>``; the

@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate for the Cutter/rizin bridge analysis-timeout defect (D16).
+"""Falsifiable gate for the Cutter/rizin bridge analysis-timeout defect.
 
 :meth:`CutterBridge.analyze` used to dispatch ``aa``/``aaa``/``aaaa`` through
 ``_r2_cmd`` with no explicit ``command_timeout``, so the call inherited the
@@ -19,8 +19,8 @@ without raising, and that :meth:`CutterBridge.get_functions` subsequently
 reports a non-empty function list. Reverting the level-scaled
 ``command_timeout`` fix (back to the bare 5.0 s default) reliably reproduces
 the timeout on any target large enough to need more than a few seconds of
-``aaa`` analysis, which real executables always are, so this test goes RED
-against the pre-fix code.
+``aaa`` analysis, which real executables always are, so this test fails
+against the unfixed code.
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ async def _make_bridge_or_skip() -> CutterBridge:
 def _resolve_analysis_target() -> Path:
     """Resolve a real, sizeable PE executable to drive full analysis against.
 
-    Prefers the committed S19 live-audit target (``ida_9.4.exe``), a large
+    Prefers the committed live-audit target (``ida_9.4.exe``), a large
     real-world executable whose ``aaa`` analysis pass reliably exceeds the
     old 5-second default. Falls back to a real System32 executable when the
     audit target is not present on this machine, so the gate is never
@@ -103,7 +103,7 @@ async def analysis_bridge() -> AsyncIterator[CutterBridge]:
 
 
 class TestAnalyzeTimeout:
-    """Gate D16: ``analyze()`` must not inherit the bare 5 s command timeout."""
+    """``analyze()`` must not inherit the bare 5 s command timeout."""
 
     async def test_normal_analysis_completes_and_finds_functions(
         self,
@@ -113,7 +113,7 @@ class TestAnalyzeTimeout:
 
         Drives the real ``load_binary`` -> ``analyze`` -> ``get_functions``
         pipeline against a real PE target through the genuine rizin/radare2
-        backend. With the pre-fix bare 5 s ``command_timeout``, ``analyze``
+        backend. With the bare 5 s ``command_timeout``, ``analyze``
         would raise ``ToolError`` on any target this large well before rizin
         finished; with the level-scaled timeout in place, analysis completes
         and ``get_functions`` reports a real, non-empty function list.

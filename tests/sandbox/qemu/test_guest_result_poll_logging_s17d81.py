@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D81: an idle poll slice is control flow, not an incident.
+"""An idle poll slice is control flow, not an incident.
 
 ``GuestAgentClient._await_guest_result`` reads the message queue in one-second
 slices so a channel that dies under a waiting command is noticed within a slice
@@ -11,7 +11,7 @@ ordinary continue path while the guest is still working - was logged with
 ``exc_info=True``, so the rendered log grew a full traceback per second of
 guest-side work: ``asyncio/tasks.py`` in ``wait_for``, ``asyncio/queues.py`` in
 ``get``, a ``CancelledError`` chained into a ``TimeoutError``, and a table of
-locals. Measured driving live Windows guests on 2026-08-09, several such blocks
+locals. Measured driving live Windows guests, several such blocks
 appeared per run - including during an ordinary ``destroy`` - on runs that
 finished with ``qemu_process_exited returncode=0``.
 

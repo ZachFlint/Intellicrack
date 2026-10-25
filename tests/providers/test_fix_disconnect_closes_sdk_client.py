@@ -10,8 +10,7 @@ and each SDK's finalizer closes a pool nobody closed by scheduling a task on
 whichever event loop is running when the garbage collector reaches it. That
 task then fails against connections belonging to a loop that closed long ago,
 and asyncio reports the failure in the middle of whatever unrelated work the
-running loop is doing: one such report landed in another test's log on CI and
-failed it.
+running loop is doing, so an unclosed client can fail an unrelated test.
 
 Every gate drives the real SDK client against a loopback server speaking the
 provider's own model-listing dialect, so the client under test holds a real

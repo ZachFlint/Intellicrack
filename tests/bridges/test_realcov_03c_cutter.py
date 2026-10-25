@@ -605,8 +605,7 @@ async def _gather_concurrent_panel_refresh(bridge: CutterBridge) -> _ConcurrentR
     command the bridge exposes (a full-binary gadget scan), and under host
     CPU contention its own execution time -- not queueing behind the lock,
     which does not count against a command's timeout -- can independently
-    exceed the per-command timeout regardless of concurrency. That is a
-    pre-existing performance characteristic of ``/Rj`` orthogonal to the
+    exceed the per-command timeout regardless of concurrency. That is a performance characteristic of ``/Rj`` independent of the
     pipe-corruption behaviour this suite targets. ``asyncio.gather``'s
     typeshed stub only exposes a precisely-typed tuple overload up to a
     fixed arity; beyond that it widens to ``list[<union of result types>]``,
@@ -651,7 +650,7 @@ async def _gather_concurrent_panel_refresh(bridge: CutterBridge) -> _ConcurrentR
 
 
 class TestRealConcurrentCommands:
-    """Validate concurrent command dispatch never hangs or corrupts the single analysis pipe (F7).
+    """Validate concurrent command dispatch never hangs or corrupts the single analysis pipe.
 
     Opening the Cutter panel with a binary already loaded app-wide chains
     ``analyze()`` straight into ``_on_analysis_complete`` -> ``_refresh_new_tabs``,
@@ -903,7 +902,7 @@ def _as_r2(pipe: _RawUnlockedR2Pipe) -> r2pipe.open:
 
 
 class TestRealPipeSerializationGate:
-    """Falsifiable gate for ``CutterBridge._r2_lock`` using a real, lock-free backend adapter (F7).
+    """Falsifiable gate for ``CutterBridge._r2_lock`` using a real, lock-free backend adapter.
 
     ``r2pipe``/``rzpipe`` each carry their own internal synchronization,
     which independently prevents pipe corruption and would mask a missing

@@ -3,4 +3,4 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for audit5 U7 ui-providerconfig fix (F-0022)."""
+"""Tests for the provider configuration dialog."""

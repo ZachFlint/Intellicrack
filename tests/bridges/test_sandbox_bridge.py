@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for sandbox_bridge.py — F-0001 through F-0016 audit findings."""
+"""Tests for sandbox_bridge.py."""
 
 from __future__ import annotations
 
@@ -187,8 +187,7 @@ class _ScriptedSandbox(InMemorySandbox):
     ``InMemorySandbox`` behaviour, so a single scripted failure exercises
     the bridge's error-wrapping path while every other call runs for real.
     Also records ``yara_scan`` call arguments and allows overriding
-    ``vnc_port``, replacing the ``MagicMock``/``AsyncMock`` doubles the
-    equivalent tests previously relied on.
+    ``vnc_port``.
     """
 
     def __init__(
@@ -533,7 +532,7 @@ class _CountingAnalysisModule:
 
 
 class TestF0001ContBroadException:
-    """F-0001: cont() catches broad Exception and wraps as ToolError."""
+    """Verify cont() catches broad Exception and wraps it as ToolError."""
 
     def test_cont_wraps_general_exception(self) -> None:
         """cont() raises ToolError with exact prefix when qmp.cont() throws RuntimeError.
@@ -626,7 +625,7 @@ class TestF0001ContBroadException:
 
 
 class TestF0002NarrowExceptionHandling:
-    """F-0002: Exception handling sites wrap unexpected exceptions as ToolError.
+    """Verify exception handling sites wrap unexpected exceptions as ToolError.
 
     These tests use real ``ExecutionReport`` objects with malformed fields that
     cause genuine ``KeyError`` or ``TypeError`` exceptions inside the real
@@ -820,7 +819,7 @@ class TestF0002NarrowExceptionHandling:
 
 
 class TestF0003DetectBehaviorsYAML:
-    """F-0003: detect_behaviors validates path, raises on JSONDecodeError/wrong shape, uses yaml.safe_load."""
+    """Verify detect_behaviors validates path, raises on JSONDecodeError/wrong shape, uses yaml.safe_load."""
 
     def test_raises_when_rules_file_not_found(self, tmp_path: Path) -> None:
         """detect_behaviors raises ToolError whose message contains the missing file path.
@@ -995,8 +994,7 @@ class TestF0003DetectBehaviorsYAML:
         This confirms the rule engine does not produce false positives when the
         condition predicate is false, and that the YAML was forwarded intact (a
         silently-dropped rules list would also produce zero matches and would be
-        indistinguishable — so this test must be run together with the positive-match
-        test above to provide a real gate).
+        indistinguishable — so it is paired with the positive-match test above).
         """
         bridge = SandboxBridge()
 
@@ -1138,7 +1136,7 @@ class TestF0003DetectBehaviorsYAML:
 
 
 class TestF0004YaraScanModeValidation:
-    """F-0004: yara_scan validates mode in ('files', 'memory'); raises ToolError on invalid."""
+    """Verify yara_scan validates mode in ('files', 'memory'); raises ToolError on invalid."""
 
     def test_raises_on_invalid_scan_target(self) -> None:
         """yara_scan raises ToolError with the exact validation message for invalid scan_target.
@@ -1262,7 +1260,7 @@ class TestF0004YaraScanModeValidation:
 
 
 class TestF0005PublicQMPAgentAccessors:
-    """F-0005: Uses public qmp/agent accessors instead of private _qmp/_agent."""
+    """Verify the bridge uses public qmp/agent accessors instead of private _qmp/_agent."""
 
     def test_qemu_sandbox_qmp_returns_none_when_not_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """QEMUSandbox.qmp returns None when no QMP client has been attached.
@@ -1343,7 +1341,7 @@ class TestF0005PublicQMPAgentAccessors:
 
 
 class TestF0006NoHotPathInfoLogs:
-    """F-0006: No *_started info logs in hot paths (is_available, status, list)."""
+    """Verify no *_started info logs in hot paths (is_available, status, list)."""
 
     def test_is_available_no_info_log(self) -> None:
         """is_available() does not emit an info-level 'started' log and returns a bool.
@@ -1440,7 +1438,7 @@ class TestF0006NoHotPathInfoLogs:
 
 
 class TestF0007GetVNCPort:
-    """F-0007: get_vnc_port gates on QEMU type and raises ToolError for non-QEMU or no VNC."""
+    """Verify get_vnc_port gates on QEMU type and raises ToolError for non-QEMU or no VNC."""
 
     def test_raises_on_non_qemu_sandbox(self) -> None:
         """get_vnc_port raises ToolError with the exact "requires QEMU sandbox" message.
@@ -1524,10 +1522,10 @@ class TestF0007GetVNCPort:
 
 
 class TestF0008QEMUGatedMethods:
-    """F-0008: pcap_start/screenshot/extract_dropped_files/anti_evasion raise on non-QEMU.
+    """Verify pcap_start/screenshot/extract_dropped_files/anti_evasion raise on non-QEMU.
 
-    ``memory_dump`` is no longer QEMU-only (audit7 F-0021): the Windows sandbox
-    implementation now supports per-process minidumps via ``MiniDumpWriteDump``
+    ``memory_dump`` is not QEMU-only: the Windows sandbox
+    implementation supports per-process minidumps via ``MiniDumpWriteDump``
     with a required ``target_pid`` argument. ``memory_dump`` therefore raises a
     different error (``target_pid is required for Windows Sandbox memory_dump``)
     when invoked against a Windows instance without ``target_pid``, which is
@@ -1569,7 +1567,7 @@ class TestF0008QEMUGatedMethods:
 
 
 class TestF0009EnsureManagerDestroyed:
-    """F-0009: ensure_manager raises ToolError when manager was shut down."""
+    """Verify ensure_manager raises ToolError when manager was shut down."""
 
     def test_raises_after_shutdown(self) -> None:
         """ensure_manager raises ToolError with "manager was shut down" after shutdown().
@@ -1624,7 +1622,7 @@ class TestF0009EnsureManagerDestroyed:
 
 
 class TestF0010BridgeStateUpdates:
-    """F-0010: BridgeState updated through state-changing methods; error paths set last_error."""
+    """Verify BridgeState is updated through state-changing methods; error paths set last_error."""
 
     def test_create_updates_state_on_success(self) -> None:
         """create() sets BridgeState.last_error to None on success."""
@@ -1675,14 +1673,10 @@ class TestF0010BridgeStateUpdates:
 
 
 class TestF0010LastErrorLifecycleSymmetric:
-    """F-0010: last_error must be cleared on success across every wrapped method.
+    """Verify last_error is cleared on success across every wrapped method.
 
-    Regression suite covering the asymmetric ``BridgeState.last_error``
-    defect. For each public bridge method listed in the audit finding,
-    the suite drives a failing call (which should set ``last_error``),
-    then a passing call (which should clear it). On main the second
-    assertion fails because ``last_error`` is never reset; on the branch
-    introducing the state tracker both assertions pass.
+    For each public bridge method, the suite drives a failing call (which should set ``last_error``),
+    then a passing call (which should clear it). The second assertion checks that ``last_error`` is reset.
     """
 
     @staticmethod
@@ -2208,7 +2202,7 @@ class TestF0010LastErrorLifecycleSymmetric:
 
 
 class TestF0011ToolDefDefaults:
-    """F-0011: Tool definitions declare defaults for time_limit, output_path, args, categories that match the methods."""
+    """Verify tool definitions declare defaults for time_limit, output_path, args, categories that match the methods."""
 
     def _get_param(self, fn_name: str, param_name: str) -> object:
         """Return parameter from tool definition by function and parameter name.
@@ -2283,7 +2277,7 @@ class TestF0011ToolDefDefaults:
 
 
 class TestF0012AnalysisModuleCache:
-    """F-0012: _get_analysis_module() is cached via lru_cache."""
+    """Verify _get_analysis_module() is cached via lru_cache."""
 
     def test_analysis_module_called_once_for_multiple_bridge_calls(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """_get_analysis_module is called at most once for multiple analysis calls."""
@@ -2329,7 +2323,7 @@ class TestF0012AnalysisModuleCache:
 
 
 class TestF0013ContQMPFailureHandling:
-    """F-0013: cont() raises ToolError on QMP failure; vm_resumed not logged unconditionally."""
+    """Verify cont() raises ToolError on QMP failure; vm_resumed is not logged unconditionally."""
 
     def test_no_vm_resumed_log_on_qmp_error(self) -> None:
         """vm_resumed is not logged when QMP returns failure."""
@@ -2365,7 +2359,7 @@ class TestF0013ContQMPFailureHandling:
 
 
 class TestF0014GetPendingMessagesAttributeSafety:
-    """F-0014: get_pending_messages builds message dicts inside try block; catches AttributeError."""
+    """Verify get_pending_messages builds message dicts inside try block; catches AttributeError."""
 
     def test_catches_attribute_error_during_message_build(self) -> None:
         """get_pending_messages falls back to type='unknown' when message has no message_type.
@@ -2453,7 +2447,7 @@ class TestF0014GetPendingMessagesAttributeSafety:
 
 
 class TestF0015DataclassToDict:
-    """F-0015: dataclass_to_dict uses dataclasses.asdict; converts datetime/Path; JSON round-trip."""
+    """Verify dataclass_to_dict uses dataclasses.asdict; converts datetime/Path; JSON round-trip."""
 
     @dataclasses.dataclass
     class _SimpleReport:
@@ -2540,7 +2534,7 @@ class TestF0015DataclassToDict:
 
 
 class TestF0016UTCTimestamps:
-    """F-0016: Timestamps emitted as UTC ISO-8601."""
+    """Verify timestamps are emitted as UTC ISO-8601."""
 
     def test_json_safe_converts_naive_datetime_to_utc(self) -> None:
         """json_safe adds UTC tzinfo to naive datetime."""
@@ -2604,7 +2598,7 @@ class TestF0016UTCTimestamps:
 
 
 class TestMV3RealSeamGates:
-    """MV-3: pcap/cont/snapshot/screenshot drive real InMemoryQEMUSandbox seam bodies.
+    """Verify pcap/cont/snapshot/screenshot drive real InMemoryQEMUSandbox seam bodies.
 
     Every gate wires the real bridge body to ``InMemoryQEMUSandbox`` (backed
     by ``StubQMP``) via ``StubManager``.  No ``AsyncMock`` or ``MagicMock``

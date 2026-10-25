@@ -2,18 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit4 B3 ThreadsTab fixes (F-0011, F-0019).
+"""Regression tests for ThreadsTab register and TLS thread selection.
 
-Each test exercises one finding and would fail without the corresponding
-remediation in ``intellicrack.ui.panels.process_panel.threads_tab``.
+Each test exercises one behaviour and would fail without the corresponding fix in
+``intellicrack.ui.panels.process_panel.threads_tab``.
 
-F-0011: ``_on_tls`` was reading the TID from the Fiber combo instead of
-its own TLS-specific selector.  The fix adds ``_tls_thread_combo`` and wires
-``_on_tls`` to read from it.
+``_on_tls`` must read the TID from its own ``_tls_thread_combo``, not from the Fiber combo.
 
-F-0019: ``_on_write_registers`` only ever parsed the Hex column.  Decimal
-edits were silently discarded.  The fix tracks the last-edited column per
-row and reads from it, syncing the other column on each edit.
+``_on_write_registers`` must honour the last-edited column per row, so Decimal edits are
+written rather than discarded, and the other column is synced on each edit.
 """
 
 from __future__ import annotations
@@ -266,13 +263,11 @@ def _add_reg_row(tab: ThreadsTab, reg: str, hex_val: str, dec_val: str) -> None:
     reg_table.blockSignals(block_off)
 
 
-# ---------------------------------------------------------------------------
-# F-0011: _on_tls must read from _tls_thread_combo, not _fiber_combo
-# ---------------------------------------------------------------------------
+# _on_tls must read from _tls_thread_combo, not _fiber_combo
 
 
 class TestF0011TlsUsesOwnSelector:
-    """F-0011: ``_on_tls`` must read TID from ``_tls_thread_combo``, not ``_fiber_combo``."""
+    """``_on_tls`` must read TID from ``_tls_thread_combo``, not ``_fiber_combo``."""
 
     def test_tls_uses_its_own_selector(
         self,
@@ -378,13 +373,11 @@ class TestF0011TlsUsesOwnSelector:
         assert received_tid != 777, "_on_tls read from _fiber_combo (got 777) instead of _tls_thread_combo"
 
 
-# ---------------------------------------------------------------------------
-# F-0019: _on_write_registers must honour the last-edited column
-# ---------------------------------------------------------------------------
+# _on_write_registers must honour the last-edited column
 
 
 class TestF0019WriteRegistersReadsLastEditedColumn:
-    """F-0019: ``_on_write_registers`` must read from the last-edited column."""
+    """``_on_write_registers`` must read from the last-edited column."""
 
     def test_write_registers_reads_decimal_column(
         self,

@@ -104,7 +104,7 @@ def test_app_icon_is_crisp_multiframe_ico() -> None:
     """The app icon must carry all expected frames with a real 256px PNG master.
 
     A regression to a single frame, a missing size, or an upscaled/blurred
-    master (the earlier 64px-fallback bug) changes the frame set or the master
+    master (such as a 64px fallback) changes the frame set or the master
     frame's format and fails this gate.
     """
     data = _app_icon_path().read_bytes()

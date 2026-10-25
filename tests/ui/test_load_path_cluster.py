@@ -2,21 +2,21 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-05 binary-load-path audit cluster.
+"""Gates for the binary-load-path behavior.
 
 Covers:
 
-* **N1 / F11** -- optimistic load UI (enabling tool buttons, the status label)
+* **Deferred load UI** -- optimistic load UI (enabling tool buttons, the status label)
   is deferred until the async load succeeds and the format is supported; a
   failed or unsupported load leaves tools disabled and no phantom "loaded"
   label, clearing any stale analysis.
-* **F8 / N4** -- a real ``BridgeAnalysisSummary`` populates the Strings and
+* **Summary tables** -- a real ``BridgeAnalysisSummary`` populates the Strings and
   Functions tables (rather than being stringified away).
-* **N3** -- the intermediate "Loaded - not analyzed" header state.
-* **F1** -- a section virtual address maps to the correct raw file offset, and
-  the analysis panel's ``address_navigate`` signal is wired into the shared
-  address chain (it was emitted but never connected before).
-* **duplicate-tab** -- exactly one "Analysis" tab per binary.
+* **Header state** -- the intermediate "Loaded - not analyzed" header state.
+* **Section address mapping** -- a section virtual address maps to the correct raw
+  file offset, and the analysis panel's ``address_navigate`` signal is wired into
+  the shared address chain.
+* **Single analysis tab** -- exactly one "Analysis" tab per binary.
 
 Every test drives real widgets (``ToolOutputPanel`` / ``BridgeAnalysisPanel`` /
 ``MainWindow``) with real ``BridgeAnalysisSummary`` data; modal dialogs are
@@ -166,11 +166,11 @@ def main_window(
 
 @pytest.mark.usefixtures("qapp")
 class TestAnalysisPanelPopulation:
-    """F8/N4, N3 and F1-mapping behaviours on the real analysis panel."""
+    """Table population, header state, and section mapping on the real analysis panel."""
 
     @staticmethod
     def test_update_bridge_analysis_populates_strings_and_functions() -> None:
-        """A real summary must fill the Strings and Functions tables (F8 / N4)."""
+        """A real summary must fill the Strings and Functions tables."""
         panel = ToolOutputPanel()
         try:
             summary = _make_summary()
@@ -184,7 +184,7 @@ class TestAnalysisPanelPopulation:
 
     @staticmethod
     def test_mark_loaded_shows_intermediate_state_then_analysis_name() -> None:
-        """N3: header distinguishes "loaded, not analyzed" from analyzed."""
+        """Header distinguishes "loaded, not analyzed" from analyzed."""
         panel = BridgeAnalysisPanel()
         try:
             panel.mark_loaded("sample.exe")
@@ -201,7 +201,7 @@ class TestAnalysisPanelPopulation:
 
     @staticmethod
     def test_va_maps_to_raw_file_offset() -> None:
-        """F1: a VA inside a section maps to ``raw_offset + (va - vaddr)``."""
+        """A VA inside a section maps to ``raw_offset + (va - vaddr)``."""
         panel = ToolOutputPanel()
         try:
             panel.update_bridge_analysis(_make_summary())
@@ -213,10 +213,10 @@ class TestAnalysisPanelPopulation:
 
     @staticmethod
     def test_address_navigate_is_wired_into_address_chain(qapp: QApplication) -> None:
-        """F1: the panel's ``address_navigate`` reaches the shared address signal.
+        """The panel's ``address_navigate`` reaches the shared address signal.
 
-        Before the fix this signal was emitted but never connected, so Section
-        VA links were dead. Emitting it must now re-emit ``address_clicked``.
+        Emitting ``address_navigate`` must re-emit ``address_clicked``, so Section
+        VA links reach the shared address chain.
 
         Args:
             qapp: QApplication fixture used to dispatch the signal.
@@ -236,7 +236,7 @@ class TestAnalysisPanelPopulation:
 
 @pytest.mark.usefixtures("qapp")
 class TestLoadPathMainWindow:
-    """N1/F11/duplicate-tab behaviours on the real MainWindow."""
+    """Deferred load UI and single analysis tab on the real MainWindow."""
 
     @staticmethod
     def test_failed_load_leaves_tools_disabled(
@@ -244,7 +244,7 @@ class TestLoadPathMainWindow:
         main_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """N1: a failing async load must not leave tool buttons enabled.
+        """A failing async load must not leave tool buttons enabled.
 
         Args:
             qapp: QApplication fixture used to pump queued signals.
@@ -280,7 +280,7 @@ class TestLoadPathMainWindow:
         main_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """F11: an unknown-format result disables tools and clears stale analysis.
+        """An unknown-format result disables tools and clears stale analysis.
 
         Args:
             main_window: Real MainWindow under test.
@@ -320,7 +320,7 @@ class TestLoadPathMainWindow:
 
     @staticmethod
     def test_single_analysis_tab_after_bridge_analysis(qapp: QApplication, main_window: MainWindow) -> None:
-        """duplicate-tab: routing a real summary must yield exactly one Analysis tab.
+        """Routing a real summary must yield exactly one Analysis tab.
 
         Args:
             qapp: QApplication fixture used to pump queued signals.

@@ -3,51 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for S16-D09: Ollama discovery loop-rebind after Set-Active + Pull.
+"""Ollama discovery and pull stay correct when another loop rebinds the clients.
 
-After Set-Active(Ollama) followed by a model Pull, background model discovery
-would intermittently drop a model from the list and log ``discovery_failed
-provider=ollama`` immediately after an ``ollama_local_client_rebound`` /
-``ollama_cloud_client_rebound`` debug line, with the underlying cause being
-``RuntimeError: <asyncio.locks.Event object at ...> is bound to a different
-event loop``.
+After Set-Active(Ollama) and a model pull, background discovery could drop a model from the list and log ``discovery_failed provider=ollama`` right after an ``ollama_local_client_rebound`` or ``ollama_cloud_client_rebound`` debug line. The cause was ``RuntimeError: <asyncio.locks.Event object at ...> is bound to a different event loop``.
 
-The root cause was a check-then-use race in
-:meth:`~intellicrack.providers.ollama.OllamaProvider._ensure_clients_on_loop`.
-Ollama's bootstrap connect, a long-running ``pull_model`` stream, and
-background model discovery each run on their own event loop (and often their
-own OS thread: bootstrap loop, persistent bridge loop, dedicated pull
-stream). The old implementation rebuilt ``self._local_client`` /
-``self._cloud_client`` in place and returned nothing; every call site then
-re-read those instance attributes *after* calling
-``_ensure_clients_on_loop()``. Because that second read was not protected by
-anything, a concurrent caller on a different loop could rebind the shared
-attributes in between, leaving the first caller to issue its request through
-an ``httpx.AsyncClient`` whose connection-pool internals (including an
-``asyncio.Event`` used by httpcore to signal an acquired connection) were
-never established for its own loop.
+The race was a check-then-use window in ``OllamaProvider._ensure_clients_on_loop``. Bootstrap connect, a long-running ``pull_model`` stream, and background model discovery each run on their own event loop, and often on their own OS thread. ``_ensure_clients_on_loop`` rebuilt ``self._local_client`` and ``self._cloud_client`` in place and returned nothing. Each call site then re-read those attributes after the call, so a concurrent caller on another loop could swap them in between. The first caller then issued its request through an ``httpx.AsyncClient`` whose connection-pool internals, including an ``asyncio.Event``, were never established for its own loop.
 
-The fix makes ``_ensure_clients_on_loop`` return the exact client references
-valid for the *calling* coroutine's loop, computed under
-``self._client_rebind_lock`` (a :class:`threading.Lock`, since the racing
-callers can be on different OS threads and ``asyncio.Lock`` is itself
-loop-bound), and updates every call site (``list_models``, ``_fetch_local_models``,
-``_fetch_cloud_models``, ``_get_source_client``, ``_get_client_and_model``,
-``pull_model``, ``_iter_pull_progress``) to thread that returned reference
-through rather than re-reading the mutable instance attributes.
+``_ensure_clients_on_loop`` now returns the client references valid for the calling coroutine's loop, computed under ``self._client_rebind_lock`` (a ``threading.Lock``, because racing callers can be on different OS threads and ``asyncio.Lock`` is loop-bound). Every call site threads that returned reference through instead of re-reading the mutable instance attributes.
 
-These tests reproduce the vulnerable window deterministically (no timing-
-dependent thread races, which proved unreliable against real httpcore
-internals during investigation) by simulating the worst case a concurrent
-rebind can produce: another caller nukes ``self._local_client`` /
-``self._cloud_client`` to ``None`` immediately after
-``_ensure_clients_on_loop`` returns a value to the current caller. Against
-the pre-fix implementation (verified against the pre-fix source during
-investigation) this reproduces the exact failure class -- ``pull_model``
-raises ``ProviderError`` and ``list_models`` returns an incomplete result --
-because those call sites re-read the now-``None`` attribute. Against the
-fixed implementation both complete successfully because they use the value
-``_ensure_clients_on_loop`` returned to them.
+The tests reproduce the window deterministically rather than through timing-dependent thread races. They simulate its worst case: another caller sets ``self._local_client`` and ``self._cloud_client`` to ``None`` right after ``_ensure_clients_on_loop`` returns. A call site that re-reads the attributes then fails, and a call site that uses the returned references still completes.
 """
 
 from __future__ import annotations
@@ -233,11 +197,9 @@ def _install_concurrent_rebind_wipe(provider: OllamaProvider) -> None:
     under the current caller between the ``_ensure_clients_on_loop()`` call
     and the point where its result is actually used.
 
-    A caller that (per the fix) uses the tuple returned from
-    ``_ensure_clients_on_loop()`` is unaffected. A caller that (per the
-    pre-fix implementation) re-reads ``self._local_client`` /
-    ``self._cloud_client`` afterward will find ``None`` and fail. Verified
-    directly against the pre-fix implementation during investigation.
+    A caller that uses the tuple returned from ``_ensure_clients_on_loop()`` is
+    unaffected. A caller that re-reads ``self._local_client`` and
+    ``self._cloud_client`` afterward will find ``None`` and fail.
 
     Args:
         provider: The connected :class:`OllamaProvider` instance to patch.
@@ -262,8 +224,8 @@ class TestRawEventCrossLoopFailureClass:
     def test_event_created_and_awaited_on_one_loop_raises_when_awaited_on_another() -> None:
         """An asyncio.Event bound to loop A raises when awaited from loop B.
 
-        This is the literal failure captured in the ``discovery_failed
-        provider=ollama`` incident: ``RuntimeError: <asyncio.locks.Event
+        This is the failure reported as ``discovery_failed
+        provider=ollama``: ``RuntimeError: <asyncio.locks.Event
         object at ...> is bound to a different event loop``. An
         ``asyncio.Event`` binds to whichever running loop first calls
         ``.wait()`` on it (construction alone does not bind it); httpcore's
@@ -297,7 +259,7 @@ class TestRawEventCrossLoopFailureClass:
 
 
 class TestEnsureClientsOnLoopStableAcrossConcurrentRebind:
-    """The fixed ``_ensure_clients_on_loop`` returns a stable, usable reference."""
+    """``_ensure_clients_on_loop`` returns a stable, usable reference."""
 
     @staticmethod
     def test_returned_local_client_remains_usable_after_concurrent_rebind() -> None:
@@ -357,12 +319,9 @@ class TestPullModelSurvivesConcurrentDiscoveryRebind:
         Installs :func:`_install_concurrent_rebind_wipe`, which -- immediately
         after ``pull_model``'s own ``_ensure_clients_on_loop()`` call returns
         -- sets ``self._local_client`` to ``None``, modeling a concurrent
-        discovery caller stealing the attribute away. Verified during
-        investigation that this exact scenario raises ``ProviderError:
-        Local Ollama not available for model pull`` against the pre-fix
-        implementation (which re-read ``self._local_client`` inside
-        ``_iter_pull_progress``) and completes successfully against the fix
-        (which threads the captured client through as a parameter).
+        discovery caller stealing the attribute away. The call must still
+        succeed, because it uses the captured client rather than re-reading
+        the attribute.
         """
         routes: dict[tuple[str, str], _Route] = {("GET", "/api/tags"): (200, _OLLAMA_TAGS)}
         with _StubServer(routes) as server, _TempEventLoop() as connect_loop, _TempEventLoop() as pull_loop:
@@ -384,9 +343,8 @@ class TestPullModelSurvivesConcurrentDiscoveryRebind:
     def test_list_models_completes_despite_concurrent_attribute_wipe() -> None:
         """list_models uses the client _ensure_clients_on_loop returned to it.
 
-        Mirrors the pull_model regression for the discovery path itself --
-        the exact call that logged ``discovery_failed provider=ollama`` and
-        dropped a model from the 8/8 result set in the field incident.
+        Covers the discovery path, the call that logs ``discovery_failed``
+        when the client is rebound mid-call.
         """
         routes: dict[tuple[str, str], _Route] = {
             ("GET", "/api/tags"): (200, _OLLAMA_TAGS),

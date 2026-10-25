@@ -300,7 +300,7 @@ class TestPeMachineConstants:
 
 
 class TestConsumersUseCanonicalConstants:
-    """Verify Win32 constant consumers import from ``win32_types`` (audit Group 1)."""
+    """Verify Win32 constant consumers import from ``win32_types``."""
 
     def test_x64dbg_imports_canonical_invalid_handle_value(self) -> None:
         """Verify x64dbg's INVALID_HANDLE_VALUE equals the canonical value."""

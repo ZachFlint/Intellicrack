@@ -2,32 +2,23 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""GUI-audit regression gates for :mod:`intellicrack.ui.panels.stack_viewer`.
+"""Gates for :mod:`intellicrack.ui.panels.stack_viewer` bridge attachment and theme repaints.
 
-Covers the 2026-07-02 audit findings for ``stack_viewer.py``:
+Covers the ``stack_viewer.py`` panel:
 
-* M30 -- ``set_x64dbg_bridge``/``set_frida_bridge`` attached a bridge to the
-  underlying data source but never re-evaluated the status label or
-  refreshed the panel. A Stack Viewer opened before a debugger/Frida session
-  attached kept showing the construction-time "Not connected" label even
-  after the bridge went live, until the user manually clicked Refresh,
-  toggled Auto, or reselected the source combo. The fix calls
-  ``self.refresh()`` (which internally calls ``_update_status()``) whenever
-  the bridge being attached belongs to the currently active source.
-* M36 -- ``StackFrameTable`` painted row colors directly via
-  ``QTableWidgetItem.setForeground(QColor(...))`` from ``_get_stack_colors()``,
-  which is only invoked inside ``set_frames()``. Nothing connected to
-  ``ThemeManager.theme_changed``, so already-rendered rows kept stale colors
-  (e.g. a dark-theme "function_unknown" grey with inadequate contrast) after
-  a live theme switch, until the user forced a fresh ``set_frames()`` call.
-  The fix caches the last-rendered frames and reconnects
-  ``ThemeManager.theme_changed`` to a slot that re-invokes ``set_frames()``.
+* Attaching a bridge via ``set_x64dbg_bridge``/``set_frida_bridge`` must re-evaluate the status label and refresh the panel.
+  Attaching only to the underlying data source would keep the construction-time "Not connected" label after the bridge goes live
+  until the user clicks Refresh, toggles Auto, or reselects the source combo. The panel calls ``self.refresh()`` (which internally
+  calls ``_update_status()``) whenever the bridge being attached belongs to the currently active source.
+* ``StackFrameTable`` row colours (from ``_get_stack_colors()``, invoked only inside ``set_frames()``) must follow live theme
+  switches. Nothing may leave already-rendered rows with stale colours after ``ThemeManager.theme_changed``: the table caches the
+  last-rendered frames and reconnects ``ThemeManager.theme_changed`` to a slot that re-invokes ``set_frames()``.
 
 All tests drive real :class:`StackViewerPanel` / :class:`StackFrameTable`
 instances under an offscreen ``QApplication``. Bridge-backed call sites use
 lightweight stand-in bridges exposing only the attributes the stack sources
 read (``state`` plus the coroutine-returning fetch method), following the
-pattern used by the sibling ``x64dbg_panel`` / ``frida_panel`` GUI-audit gate
+pattern used by the sibling ``x64dbg_panel`` / ``frida_panel`` gate
 files, so the real dispatch/status logic runs deterministically without a
 live debugger or Frida session.
 """
@@ -167,11 +158,11 @@ def panel(qapp: QApplication) -> Iterator[StackViewerPanel]:
 
 
 def test_m30_set_x64dbg_bridge_refreshes_stale_status(panel: StackViewerPanel, monkeypatch: pytest.MonkeyPatch) -> None:
-    """M30: attaching a ready x64dbg bridge while it is active refreshes the stale status label.
+    """Attaching a ready x64dbg bridge while it is active refreshes the stale status label.
 
-    Pre-fix, ``set_x64dbg_bridge`` only called ``source.set_bridge(bridge)``
-    and never touched ``_update_status()``/``refresh()``, so the panel kept
-    showing its construction-time "Not connected" label. Post-fix it calls
+    ``set_x64dbg_bridge`` must not only call ``source.set_bridge(bridge)``
+    and never touch ``_update_status()``/``refresh()``, otherwise the panel keeps
+    showing its construction-time "Not connected" label. It calls
     ``self.refresh()`` (which calls ``_update_status()``) whenever the newly
     attached bridge belongs to the active source.
 
@@ -196,9 +187,9 @@ def test_m30_set_x64dbg_bridge_refreshes_stale_status(panel: StackViewerPanel, m
 
 
 def test_m30_set_frida_bridge_refreshes_stale_status(panel: StackViewerPanel, monkeypatch: pytest.MonkeyPatch) -> None:
-    """M30: attaching an attached Frida bridge while it is active refreshes the stale status label.
+    """Attaching an attached Frida bridge while it is active refreshes the stale status label.
 
-    Mirrors the x64dbg case for ``set_frida_bridge``, which was fixed by the
+    Mirrors the x64dbg case for ``set_frida_bridge``, which follows the
     same pattern. The Frida source is made active first (via the source
     combo, exercising the real selection wiring), confirming the label reads
     "Not connected" before any bridge is attached.
@@ -224,9 +215,9 @@ def test_m30_set_frida_bridge_refreshes_stale_status(panel: StackViewerPanel, mo
 
 
 def test_m30_set_x64dbg_bridge_does_not_refresh_inactive_source(panel: StackViewerPanel, monkeypatch: pytest.MonkeyPatch) -> None:
-    """M30: attaching an x64dbg bridge while Frida is active does not spuriously dispatch a refresh.
+    """Attaching an x64dbg bridge while Frida is active does not spuriously dispatch a refresh.
 
-    The fix guards the follow-up refresh with ``self._active_source == "x64dbg"``. This asserts that
+    The follow-up refresh is guarded by ``self._active_source == "x64dbg"``. This asserts that
     guard is genuinely conditional rather than an unconditional refresh call.
 
     Args:
@@ -245,13 +236,11 @@ def test_m30_set_x64dbg_bridge_does_not_refresh_inactive_source(panel: StackView
 
 
 def test_m36_theme_switch_repaints_existing_stack_frame_colors(qapp: QApplication) -> None:
-    """M36: switching the live theme re-paints already-rendered stack frame colors.
+    """Switching the live theme re-paints already-rendered stack frame colors.
 
-    Pre-fix, ``StackFrameTable`` never connected to ``ThemeManager.theme_changed``,
-    so a row rendered once under dark theme kept its dark-theme
-    ``QTableWidgetItem`` foreground colors after switching to light theme,
-    until something forced a fresh ``set_frames()`` call. Post-fix the table
-    caches the last frames and reconnects the signal to re-render them.
+    ``StackFrameTable`` must connect to ``ThemeManager.theme_changed``. Otherwise a row rendered once under dark theme keeps its
+    dark-theme ``QTableWidgetItem`` foreground colors after switching to light theme, until something forces a fresh ``set_frames()``
+    call. The table caches the last frames and reconnects the signal to re-render them.
 
     Args:
         qapp: Session QApplication fixture; ``ThemeManager.apply_theme``
@@ -328,7 +317,7 @@ def test_m36_theme_switch_repaints_existing_stack_frame_colors(qapp: QApplicatio
 
 
 def test_m36_theme_switch_round_trip_restores_dark_colors_each_time(qapp: QApplication) -> None:
-    """M36: the re-render slot fires on every theme change, not just once.
+    """The re-render slot fires on every theme change, not just once.
 
     Confirms the ``theme_changed`` connection is a durable subscription (not
     a one-shot) by switching dark -> light -> dark and checking the rendered

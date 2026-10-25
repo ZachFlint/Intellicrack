@@ -84,10 +84,6 @@ class TestBridgeInstantiation:
         against independently typed expected constants ensures that any
         refactor that drops, adds, or renames an architecture or format
         entry is caught immediately.
-
-        Falsifying mutation: change ``supported_architectures=["x86", "x86_64"]``
-        to ``supported_architectures=["arm"]`` in ``SandboxBridge.__init__`` —
-        ``sorted(caps.supported_architectures) == expected_archs`` fails.
         """
         expected_archs: list[str] = sorted(["x86", "x86_64"])
         expected_fmts: list[str] = sorted(["pe", "elf"])
@@ -158,9 +154,9 @@ class TestToolDefinition:
         the fixture (the known instance IDs, the ``InMemorySandbox`` constant return
         values, the ``StubManager`` advertised types, and a real on-disk source file).
 
-        This replaces the previous existence-only ``hasattr``/``callable`` smoke check:
+        This is stricter than an existence-only ``hasattr``/``callable`` smoke check:
         a method that exists but returns wrong data, drops the documented key, or relays
-        the wrong instance id now fails. The set of names exercised is asserted to equal
+        the wrong instance id fails. The set of names exercised is asserted to equal
         the full set of definition function names, so adding a tool without a real
         dispatch assertion also fails.
 
@@ -1458,8 +1454,8 @@ def _write_driver_script(directory: Path, *, artifact_name: str, payload: bytes,
 class TestBridgeRealSandboxLifecycle:
     """Drive the bridge against a genuine subprocess-executing sandbox.
 
-    These tests replace the fixture-heavy in-memory paths with a real
-    ``LocalProcessSandbox`` so a regression in how the bridge starts execution,
+    These tests use a real ``LocalProcessSandbox`` rather than the
+    fixture-heavy in-memory paths so a regression in how the bridge starts execution,
     surfaces process output, or relays observed artefacts is actually caught.
     """
 

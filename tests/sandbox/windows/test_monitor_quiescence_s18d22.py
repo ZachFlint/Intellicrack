@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S18-D22: the tabs were read before the collectors had written.
+r"""The tabs were read before the collectors had written.
 
 Measured live on a Windows Sandbox run that genuinely made registry changes and
 genuinely touched the clipboard: the Registry Changes and Clipboard tabs came

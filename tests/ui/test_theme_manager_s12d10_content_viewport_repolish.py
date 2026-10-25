@@ -3,14 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for defect A4/S12-D10.
+"""Gate for content viewports repolishing on a live theme toggle.
 
-The light-theme toggle used to restyle window chrome (menu bar, toolbar) but
-left content viewports -- the disassembly table, the chat scroll area, and
-the chat message bubbles' markdown text browsers -- rendering with the
-background they were first polished with, because none of them subscribe to
-``ThemeManager.theme_changed`` and instead depend entirely on the global
-stylesheet restyling an already-polished widget.
+A light-theme toggle restyles window chrome (menu bar, toolbar), but content viewports must also
+repolish: the disassembly table, the chat scroll area, and the chat message bubbles' markdown
+text browsers. None of them subscribe to ``ThemeManager.theme_changed``; they depend entirely on
+the global stylesheet restyling an already-polished widget, so they would keep the background
+they were first polished with.
 
 A direct pixel or ``QPalette`` comparison cannot distinguish a fixed build
 from a broken one under Qt's offscreen platform plugin (used by this test
@@ -18,7 +17,7 @@ suite's sandbox): under that platform, re-querying a widget's resolved
 palette or rendering it to an image both already reflect the live
 application stylesheet regardless of whether the widget was ever
 unpolished/repolished, so such an assertion stays green even with the fix
-reverted. This module instead asserts the fix's actual mechanism -- that
+reverted. This module instead asserts the required mechanism -- that
 ``ThemeManager._repolish_chrome`` calls ``style().unpolish()`` then
 ``style().polish()`` on the live content-viewport widgets during a runtime
 toggle -- via a duck-typed recording stand-in installed as
@@ -119,12 +118,11 @@ def _build_disassembly_style_table() -> QTableWidget:
 
 
 class TestContentViewportRuntimeRepolish:
-    """Regression gate: a live theme toggle must repolish content viewports.
+    """A live theme toggle must repolish content viewports.
 
-    Reproduces defect A4/S12-D10, where Settings -> Toggle Theme left the
-    disassembly table, the chat scroll area, and chat message bubbles'
-    markdown text browsers rendering the previous theme's colors after a
-    runtime dark -> light toggle.
+    Settings -> Toggle Theme must not leave the disassembly table, the chat scroll area, and chat
+    message bubbles' markdown text browsers rendering the previous theme's colors after a runtime
+    dark -> light toggle.
     """
 
     @staticmethod
@@ -147,8 +145,7 @@ class TestContentViewportRuntimeRepolish:
         assertion below failing: none of the content-viewport widgets, nor
         their viewports, ever appear in ``stand_in.unpolished`` /
         ``stand_in.polished``, because the stand-in style is never consulted
-        for them at all without that code path (confirmed by reverting it
-        locally and rerunning this test).
+        for them at all without that code path.
 
         Args:
             theme_manager: Fresh ThemeManager fixture instance.

@@ -3,16 +3,14 @@
 
 """E2E tests for sharing one HexDocument across threads, and for the buffer API.
 
-``HexDocument`` used to be a plain ``#[pyclass]`` whose 28 mutating methods took
-``&mut self``, so PyO3 held an exclusive borrow for the length of every call.
-The long analyses keep that borrow across ``Python::detach``, which meant a
-second thread touching the same document raised
-``RuntimeError: Already borrowed``. Callers papered over it by serialising every
-call behind a lock of their own, which also serialised the read-only analyses
-that could safely have overlapped.
+A plain ``#[pyclass]`` whose mutating methods take ``&mut self`` makes PyO3 hold an
+exclusive borrow for the length of every call. The long analyses keep that borrow across
+``Python::detach``, so a second thread touching the same document raises
+``RuntimeError: Already borrowed``. Callers that serialise every call behind a lock of their
+own also serialise the read-only analyses that could safely overlap.
 
-The class is now ``frozen`` with a ``RwLock`` inside, so these tests assert both
-halves of that claim: that concurrent access no longer raises, and that reads
+The class is ``frozen`` with a ``RwLock`` inside, so these tests assert both
+halves of that claim: that concurrent access does not raise, and that reads
 genuinely run at the same time rather than merely queueing politely.
 
 The remaining tests cover the accessors added alongside it -- the little-endian
@@ -60,7 +58,7 @@ _JOIN_TIMEOUT: Final = 120.0
 """Seconds to wait for a thread. Exceeding it means the run deadlocked."""
 
 _PARALLEL_THREADS: Final = 4
-"""Threads used to show that reads overlap."""
+"""Threads that show that reads overlap."""
 
 _PARALLEL_ITERATIONS: Final = 20
 """Calls the overlap test starts calibrating from, doubling until timeable."""
@@ -107,8 +105,13 @@ _SKEW_SAMPLE_CAP: Final = 200_000
 _SKEW_WRITE_CAP: Final = _SKEW_SAMPLE_CAP * 4
 """Writes the flipping thread may make before giving up on being stopped."""
 
-_SKEW_MARKS: Final = (0x00, 0xFF)
-"""The two values the writer alternates, distinct so a skew is visible."""
+_SKEW_MARKS: Final = (0xFF, 0x00)
+"""The two values the writer alternates, distinct so a skew is visible.
+
+The first differs from the payload's first byte (``0x00``), so every write
+changes the byte. A write that leaves the byte as it was does not advance the
+generation, and would shift every later generation off the writer's count.
+"""
 
 _ONE_WRITER: Final = 1
 """Threads flipping the byte."""
@@ -210,7 +213,7 @@ def test_concurrent_readers_and_writers_share_one_document(
 ) -> None:
     """Eight threads share one document without a borrow conflict or a deadlock.
 
-    This is the regression the ``frozen`` rewrite exists for. Against the old
+    This is the regression the ``frozen`` design prevents. Against a non-frozen
     class this raised ``RuntimeError: Already borrowed`` as soon as a reader
     overlapped a writer.
 
@@ -407,7 +410,7 @@ def test_generation_advances_only_when_the_bytes_change(
     hexcore: types.ModuleType,
     sample_bytes: bytes,
 ) -> None:
-    """Content edits move the counter; reads and metadata leave it alone.
+    """Content edits move the counter; reads, metadata and no-op writes leave it alone.
 
     Args:
         hexcore: The imported native module.
@@ -415,6 +418,8 @@ def test_generation_advances_only_when_the_bytes_change(
     """
     doc = hexcore.HexDocument.open_bytes(sample_bytes)
     start = doc.generation()
+    unchanged = bytes((sample_bytes[0],))
+    changed = bytes((sample_bytes[0] ^ 0xFF,))
 
     doc.entropy()
     doc.byte_statistics()
@@ -426,11 +431,18 @@ def test_generation_advances_only_when_the_bytes_change(
     doc.add_va_mapping(0, 0x400000, 16)
     assert doc.generation() == start, "annotating the document advanced the generation"
 
-    doc.write_bytes(0, b"\x00")
+    doc.write_bytes(0, unchanged)
+    assert doc.generation() == start, "rewriting a byte with its own value advanced the generation"
+    assert doc.can_undo() is False, "rewriting a byte with its own value recorded an undo entry"
+
+    doc.write_bytes(0, changed)
     after_write = doc.generation()
     assert after_write > start, "a write did not advance the generation"
 
-    doc.set_bit(1, 0, value=True)
+    doc.set_bit(1, 0, value=bool(sample_bytes[1] & 0x01))
+    assert doc.generation() == after_write, "setting a bit to its current value advanced the generation"
+
+    doc.set_bit(1, 1, value=not sample_bytes[1] & 0x02)
     assert doc.generation() > after_write, "a bit edit did not advance the generation"
 
     before_undo = doc.generation()
@@ -486,8 +498,9 @@ def _flip_until(doc: HexDocument, stop: threading.Event, sampling: threading.Eve
 def _skew_of(generation: int, value: int) -> str | None:
     """Describe how a sample's byte disagrees with the byte its generation implies.
 
-    The writer alternates deterministically and every write advances the counter
-    by one, so the byte standing at a given generation is fixed: the write that
+    The writer alternates deterministically and every write changes the byte, so
+    every write advances the counter by one and the byte standing at a given
+    generation is fixed: the write that
     produced generation ``g`` was the ``g``-th, and wrote ``_SKEW_MARKS[(g - 1)
     % 2]``. That makes the expected value derived from the writer's own rule
     rather than restated here.
@@ -574,7 +587,7 @@ def _sample_paired(doc: HexDocument, stop: threading.Event, sampling: threading.
 
 
 def _sample_unpaired(doc: HexDocument, stop: threading.Event, sampling: threading.Event) -> list[tuple[int, int]]:
-    """Sample the same two facts the way the window route used to, in two calls.
+    """Sample the same two facts in two separate calls, without one locked snapshot.
 
     Sampling stops at the first sample whose byte disagrees with its generation,
     or after :data:`_SKEW_SAMPLE_CAP` samples.

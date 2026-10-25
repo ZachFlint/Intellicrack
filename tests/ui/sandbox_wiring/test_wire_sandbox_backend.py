@@ -2,14 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit7 F-0021: ``wire_sandbox_backend`` injection path.
+"""Regression tests for the ``wire_sandbox_backend`` injection path.
 
-The original defect: :meth:`ToolOutputPanel.wire_sandbox_backend` was fully
-implemented but had no production caller, leaving the plugin / CLI sandbox
-injection surface dead. The fix added :meth:`MainWindow.wire_sandbox_backend`
-as the public injection entry point and a startup helper
-:func:`intellicrack.main._wire_preregistered_sandbox` that walks the
-orchestrator's tool registry on construction.
+The plugin and CLI sandbox injection surface must reach :meth:`ToolOutputPanel.wire_sandbox_backend`
+through the public entry point :meth:`MainWindow.wire_sandbox_backend` and a startup helper,
+:func:`intellicrack.main._wire_preregistered_sandbox`, which walks the orchestrator's tool registry
+on construction.
 
 These tests exercise both the public ``MainWindow.wire_sandbox_backend``
 method (the plugin-facing surface) and the startup helper (the CLI/bootstrap

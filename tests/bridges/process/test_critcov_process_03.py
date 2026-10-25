@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Critical-coverage tests for the ProcessBridge I/O mixin, job queries and runtime helpers.
+"""Coverage tests for the ProcessBridge I/O mixin, job queries and runtime helpers.
 
 The tests drive the real Win32 APIs. Anything that needs a live process uses a child
 that the test starts itself (a Python interpreter, or Windows PowerShell for the managed

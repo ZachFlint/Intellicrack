@@ -5,7 +5,7 @@
 """The HuggingFace preset points at the Inference Providers router.
 
 Hugging Face serves chat through ``https://router.huggingface.co`` (OpenAI
-compatible under ``/v1``); the old ``api-inference.huggingface.co`` host is
+compatible under ``/v1``); the ``api-inference.huggingface.co`` host is
 deprecated. The preset's default base URL is what the settings page shows in
 the base-URL field when nothing is saved, and saving the page writes that
 field to ``HUGGINGFACE_API_BASE`` in ``.env`` -- so a stale preset value is

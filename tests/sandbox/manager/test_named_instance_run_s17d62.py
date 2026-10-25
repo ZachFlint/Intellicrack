@@ -2,15 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D62: a run must be directable at a named sandbox instance.
+"""A run must be directable at a named sandbox instance.
 
-``SandboxManager.run_binary`` could only say "make me a new sandbox" or
-"reuse an idle one". The reuse branch resolves through ``_find_idle_instance``,
-which is a ``next()`` over the instance registry, so with several sandboxes
-running every reuse request landed on the first-inserted one. A caller holding
-a specific instance - the sandbox panel, which runs the binary in the sandbox
-the operator is watching, or the Compare workflow, which needs two runs in two
-different instances - had no way to express that.
+``SandboxManager.run_binary`` can create a new sandbox, reuse an idle one, or
+run in a named instance. The reuse branch resolves through
+``_find_idle_instance``, which is a ``next()`` over the instance registry, so
+with several sandboxes running every reuse request lands on the first-inserted
+one. A caller holding a specific instance - the sandbox panel, which runs the
+binary in the sandbox the operator is watching, or the Compare workflow, which
+needs two runs in two different instances - must be able to name it.
 
 These tests drive the real :class:`SandboxManager` against the real
 :class:`~tests.sandbox.conftest.LocalProcessSandbox` backend. Each managed
@@ -174,9 +174,9 @@ def test_a_named_instance_outranks_idle_reuse() -> None:
 
 
 def test_reuse_without_a_name_still_collapses_onto_one_instance() -> None:
-    """The undirected reuse path is unchanged, which is exactly why naming is needed.
+    """The undirected reuse path takes the first idle instance, which is why naming is needed.
 
-    This pins the behaviour the fix routes around: with no ``instance_id`` the
+    This pins that behavior: with no ``instance_id`` the
     manager keeps taking the first idle instance, so two reuse runs cannot
     produce two comparable reports.
     """

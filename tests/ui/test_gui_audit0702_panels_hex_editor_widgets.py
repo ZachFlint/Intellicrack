@@ -2,16 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the GUI audit finding M55 in ``hex_editor.widgets``.
+"""Gate for the CRC dialog result label wrapping and tooltips in ``hex_editor.widgets``.
 
-``M55`` — ``CustomCrcDialog._result_label`` is a plain ``QLabel`` that is
-repeatedly set to unbounded, variable-length text (parse-error messages,
-worker exceptions, streaming I/O errors). Pre-fix the label had no
-``setWordWrap(True)`` and no tooltip, so a long message either forced the
-360px-minimum dialog to grow wide or was clipped, with no way to recover the
-full text. The fix enables word wrap on the label and mirrors every text
-update into the label's tooltip so the complete message is always
-accessible regardless of the dialog's rendered width.
+``CustomCrcDialog._result_label`` is a plain ``QLabel`` that is repeatedly set to unbounded, variable-length text (parse-error
+messages, worker exceptions, streaming I/O errors). The label must enable word wrap, otherwise a long message either forces the
+360px-minimum dialog to grow wide or is clipped, with no way to recover the full text. The label enables word wrap and mirrors every
+text update into its tooltip so the complete message is always accessible regardless of the dialog's rendered width.
 
 All tests drive a real :class:`CustomCrcDialog` under an offscreen
 ``QApplication`` (no mocks); each asserts the concrete Qt layout mechanism
@@ -53,9 +49,9 @@ def _make_dialog() -> CustomCrcDialog:
 def test_m55_result_label_has_word_wrap_enabled(qapp: QApplication) -> None:
     """The result label must have word wrap enabled at construction time.
 
-    Pre-fix, ``QLabel`` defaults to ``wordWrap() is False`` and
+    ``QLabel`` defaults to ``wordWrap() is False`` and
     ``hasHeightForWidth() is False`` since ``setWordWrap`` was never called
-    anywhere in the file. The fix calls ``setWordWrap(True)`` in
+    anywhere in the file. The label must call ``setWordWrap(True)`` in
     ``CustomCrcDialog.__init__``, which flips both properties.
 
     Args:
@@ -74,9 +70,9 @@ def test_m55_result_label_has_word_wrap_enabled(qapp: QApplication) -> None:
 def test_m55_long_error_text_wraps_within_bounded_width(qapp: QApplication) -> None:
     """A long message must wrap into multiple lines instead of a single wide line.
 
-    Exercises the real Qt layout mechanism enabled by the fix: with word
+    Exercises the real Qt layout mechanism that word wrap enables: with word
     wrap on, ``heightForWidth`` for a width narrower than the unwrapped text
-    reports several line-heights; pre-fix (``wordWrap`` unset) a ``QLabel``
+    reports several line-heights; without ``wordWrap`` a ``QLabel``
     is not height-for-width aware and the dialog could only grow wider or
     clip the text. ``QLabel`` word wrap breaks at word boundaries, so the
     message is built from words the way real error messages are.
@@ -108,10 +104,9 @@ def test_m55_invalid_input_mirrors_full_message_into_tooltip(qapp: QApplication)
     """A parse error from user input must set the full message as the tooltip too.
 
     Drives the real ``_calculate`` -> ``_read_crc_inputs`` failure path with
-    a non-hex polynomial, matching the ``int(..., 16)`` ``ValueError`` this
-    finding calls out. Pre-fix, ``_result_label.setToolTip`` was never
-    called anywhere in the file, so the tooltip stayed at Qt's default
-    empty string no matter what error text was shown.
+    a non-hex polynomial, matching the ``int(..., 16)`` ``ValueError`` that
+    raises. ``_result_label.setToolTip`` must be called, or the tooltip stays at Qt's default
+    empty string no matter what error text is shown.
 
     Args:
         qapp: The shared offscreen QApplication fixture.
@@ -137,8 +132,8 @@ def test_m55_worker_error_mirrors_message_into_tooltip(qapp: QApplication) -> No
 
     Calls the real ``_on_worker_error`` handler with a long, path-bearing
     ``OSError`` (representative of the streaming CRC read failures this
-    finding describes). Pre-fix the label text carried the message but the
-    tooltip was never populated.
+    path describes). The label text carries the message, but the
+    tooltip must be populated as well.
 
     Args:
         qapp: The shared offscreen QApplication fixture.
@@ -165,7 +160,7 @@ def test_m55_non_integer_result_mirrors_message_into_tooltip(qapp: QApplication)
 
     Calls the real ``_on_worker_finished`` handler with a non-``int``
     payload, exercising the ``isinstance`` guard's fixed error string.
-    Pre-fix that string reached ``setText`` only; the tooltip stayed empty.
+    That string must reach the tooltip as well as ``setText``.
 
     Args:
         qapp: The shared offscreen QApplication fixture.
@@ -185,7 +180,7 @@ def test_m55_non_integer_result_mirrors_message_into_tooltip(qapp: QApplication)
 def test_m55_successful_result_mirrors_message_into_tooltip(qapp: QApplication) -> None:
     """A successful CRC result must also mirror its text into the tooltip.
 
-    Confirms the fix applies uniformly to the success path, not just error
+    Confirms the tooltip applies uniformly to the success path, not just error
     paths: ``_on_worker_finished`` with a real integer result must set the
     same tooltip text as label text, and still emit ``crc_computed``.
 

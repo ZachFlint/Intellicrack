@@ -5,10 +5,9 @@
 
 """Falsifiable gate: x64dbg option combos show capitalized labels but keep bridge-token values.
 
-The Breakpoints/Watchpoints/Console/Memory-Map combos previously listed their
-options in lowercase (``software``/``hardware``/``memory``), which doubled as
-both the display text and the exact token handed to the x64dbg bridge enums.
-This gate pins the fix: each item must render a capitalized caption while
+The Breakpoints/Watchpoints/Console/Memory-Map combos must not list their options in lowercase
+(``software``/``hardware``/``memory``), because those strings would double as both the display text
+and the exact token handed to the x64dbg bridge enums. Each item must render a capitalized caption while
 carrying the original lowercase token as its item data, so the bridge still
 receives ``software``/``hardware``/``memory`` etc. even though the user sees
 ``Software``/``Hardware``/``Memory``.

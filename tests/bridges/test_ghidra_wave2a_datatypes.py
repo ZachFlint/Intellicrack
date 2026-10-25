@@ -3,27 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GHIDRA-D wave-2a real gates: datatypes, structures, bookmarks, equates, comments.
+"""Connected-state gates for GhidraBridge datatype, structure, bookmark, equate and comment methods.
 
-Converts disconnected-state-only gates into REAL functional gates for the
-GhidraBridge connected path. Each test injects a deterministic fake transport,
-calls the real production method, and asserts BOTH the exact parsed return
-structure AND the correct Ghidra API framing in the emitted script.
+Each test injects a deterministic fake transport, calls the real production method, and asserts BOTH the exact parsed return structure AND the correct Ghidra API framing in the emitted script.
 
-Methods with existing REAL gates that are NOT duplicated here:
-  define_structure   - test_ghidra_f11_audit.py
-  set_label          - test_ghidra_audit6.py (F-0020)
-  get_labels         - test_ghidra_panel.py
-  create_bookmark    - test_ghidra_audit6.py (F-0020)
-  create_equate      - test_ghidra_audit6.py (F-0020)
-  add_comment        - test_ghidra_audit6.py (F-0020)
-  set_color          - test_ghidra_audit6.py (F-0024)
+Methods already gated elsewhere (define_structure, set_label, get_labels, create_bookmark, create_equate, add_comment, set_color) are not repeated here.
 
-Production defects revealed and fixed as part of this gate:
-  set_data_type      - trailing if-block blocked sentinel detection; always returned False
-  apply_structure_at - trailing if-block blocked sentinel detection; always raised ToolError
-  create_data_type   - trailing if-else dict literals blocked sentinel; always returned failure dict
-  create_data        - trailing if-else dict literals blocked sentinel; always returned failure dict
+Sentinel capture must not be blocked by trailing control flow. The gates cover set_data_type and apply_structure_at (trailing if-block) and create_data_type and create_data (trailing if-else dict literals).
 """
 
 from __future__ import annotations
@@ -334,9 +320,7 @@ def _make_executing_bridge(data_types: list[SimpleNamespace]) -> tuple[GhidraBri
     return bridge, transport, program
 
 
-# ---------------------------------------------------------------------------
 # get_data_type - parse DataTypeInfo from the script's result dict
-# ---------------------------------------------------------------------------
 
 
 def test_get_data_type_parses_name_and_size_from_script_result() -> None:
@@ -430,9 +414,7 @@ def test_get_data_type_emits_getdataat_api_call() -> None:
     assert str(_TEST_ADDRESS) in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # set_data_type - returns True on success via top-level sentinel expression
-# ---------------------------------------------------------------------------
 
 
 def test_set_data_type_returns_true_on_success() -> None:
@@ -478,9 +460,7 @@ def test_set_data_type_returns_false_when_parse_fails() -> None:
 def test_set_data_type_resolves_and_applies_requested_type() -> None:
     """set_data_type must resolve the requested type and replace existing data.
 
-    ``DataTypeParser`` was replaced by the headless-safe
-    ``_ic_resolve_data_type`` helper because it pulls in Swing, which a
-    headless PyGhidra process cannot import. With both ``dword`` and ``qword``
+    The script resolves types with the headless-safe ``_ic_resolve_data_type`` helper, because ``DataTypeParser`` pulls in Swing, which a headless PyGhidra process cannot import. With both ``dword`` and ``qword``
     registered and a byte already defined at the address, the script must
     resolve ``qword`` (not any other registered type), clear the existing code
     unit, and create the resolved type there.
@@ -502,9 +482,7 @@ def test_set_data_type_resolves_and_applies_requested_type() -> None:
     assert program.listing.created == [(_TEST_ADDRESS, qword)]
 
 
-# ---------------------------------------------------------------------------
 # create_data_type - top-level _cdt_result sentinel returns creation dict
-# ---------------------------------------------------------------------------
 
 
 def test_create_data_type_enum_returns_success_dict() -> None:
@@ -564,9 +542,7 @@ def test_create_data_type_returns_failure_when_created_is_none() -> None:
     assert result["name"] == "Bad"
 
 
-# ---------------------------------------------------------------------------
 # create_data - top-level _cd_result sentinel returns data creation dict
-# ---------------------------------------------------------------------------
 
 
 def test_create_data_returns_success_dict_with_address_and_size() -> None:
@@ -633,9 +609,7 @@ def test_create_data_returns_failure_dict_when_type_not_found() -> None:
     assert result["size"] == 0
 
 
-# ---------------------------------------------------------------------------
 # get_structures - parse list of structure dicts
-# ---------------------------------------------------------------------------
 
 
 def test_get_structures_parses_name_size_field_count() -> None:
@@ -706,9 +680,7 @@ def test_get_structures_emits_getdatatypemanager_call() -> None:
     assert "getAllStructures" in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # apply_structure_at - returns success dict via top-level _apply_ok sentinel
-# ---------------------------------------------------------------------------
 
 
 def test_apply_structure_at_returns_success_dict_when_struct_found() -> None:
@@ -760,9 +732,7 @@ def test_apply_structure_at_embeds_struct_name_in_script() -> None:
     assert "createData" in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # get_bookmarks - parse list of bookmark dicts
-# ---------------------------------------------------------------------------
 
 
 def test_get_bookmarks_parses_address_category_comment_type() -> None:
@@ -823,9 +793,7 @@ def test_get_bookmarks_returns_empty_list_when_none() -> None:
     assert result == []
 
 
-# ---------------------------------------------------------------------------
 # get_equates - parse list of equate dicts
-# ---------------------------------------------------------------------------
 
 
 def test_get_equates_parses_name_value_references() -> None:
@@ -880,9 +848,7 @@ def test_get_equates_emits_equate_table_iteration() -> None:
     assert "getEquateTable" in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # get_comments - parse list of comment dicts for an address range
-# ---------------------------------------------------------------------------
 
 
 def test_get_comments_parses_address_type_comment_fields() -> None:
@@ -958,9 +924,7 @@ def test_get_comments_returns_empty_list_when_none() -> None:
     assert result == []
 
 
-# ---------------------------------------------------------------------------
 # get_all_comments - parse list of comment dicts for the entire program
-# ---------------------------------------------------------------------------
 
 
 def test_get_all_comments_parses_address_type_comment() -> None:
@@ -1036,9 +1000,7 @@ def test_get_all_comments_returns_empty_list_when_none() -> None:
     assert result == []
 
 
-# ---------------------------------------------------------------------------
 # Disconnected guards - connection check must still raise ToolError
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -1057,7 +1019,7 @@ def test_get_all_comments_returns_empty_list_when_none() -> None:
     ],
 )
 def test_disconnected_raises_tool_error(method_name: str, args: tuple[object, ...]) -> None:
-    """Each GHIDRA-D method raises ToolError when the bridge is not connected.
+    """Each method in this module raises ToolError when the bridge is not connected.
 
     Args:
         method_name: Bridge method to call.

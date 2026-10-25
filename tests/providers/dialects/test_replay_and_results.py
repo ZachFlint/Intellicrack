@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates on reasoning replay, multi-part tool results and external dispatch.
 
-Three contracts arrived together and none of them fails loudly.
+Three contracts, none of which fails loudly when broken.
 
 A reasoning block carries a provider-opaque payload -- an Anthropic
 ``signature``, a Responses item id, an encrypted body -- that has to come back
@@ -12,7 +12,7 @@ byte-for-byte on the next tool-use turn or the provider rejects the turn or
 silently drops the chain. Losing it across a session save looks like nothing
 at all until a reloaded conversation calls a tool.
 
-A tool result may now carry image, resource and structured parts. A dialect
+A tool result can carry image, resource and structured parts. A dialect
 that cannot render a part natively has to degrade through the one shared text
 fallback, so the model sees the same information everywhere rather than an
 empty block on three dialects out of four.
@@ -117,8 +117,7 @@ def test_reasoning_survives_a_session_round_trip(tmp_path: Path) -> None:
 def test_thinking_content_is_empty_rather_than_none_for_a_blank_list() -> None:
     """An empty reasoning list must not be mistaken for unset reasoning.
 
-    Guarding on ``is None`` where ``[]`` means the same thing is what dropped
-    thinking text once already.
+    Guarding on ``is None`` where ``[]`` means the same thing drops thinking text.
     """
     assert Message(role="assistant", content="x", reasoning=None).thinking_content is None
     assert Message(role="assistant", content="x", reasoning=[]).thinking_content is None

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D55: a dropped agent channel must be recoverable, not terminal.
+"""A dropped agent channel must be recoverable, not terminal.
 
 The in-guest Intellicrack agent is reached over a QEMU SLIRP ``hostfwd``. That
 forwarded connection can be reset while the guest itself is perfectly healthy -

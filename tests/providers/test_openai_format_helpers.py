@@ -5,13 +5,12 @@
 
 """Tests for shared OpenAI-format helpers on LLMProviderBase.
 
-Covers consolidated helpers introduced as part of the audit Group
-4/5/6/8 consolidation:
+Covers these consolidated helpers:
 
-* ``_build_usage_from_openai_completion`` (Group 4)
-* ``_build_usage_from_openai_chunk`` (Group 5)
-* ``_extract_system_messages`` (Group 6)
-* ``_translate_openai_errors`` (Group 8)
+* ``_build_usage_from_openai_completion``
+* ``_build_usage_from_openai_chunk``
+* ``_extract_system_messages``
+* ``_translate_openai_errors``
 
 Tests use real :class:`Message` objects, real :class:`UsageInfo`
 results, and real ``openai`` SDK exception types - no mocks, no

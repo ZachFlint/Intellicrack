@@ -2,10 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for F-0022 ``CompiledYaraRules`` Protocol convention.
+"""Tests for the ``CompiledYaraRules`` Protocol convention.
 
 Asserts that the ``CompiledYaraRules.match`` body is ``...`` (the
-Protocol convention) rather than the previous fake
+Protocol convention) rather than a fake
 ``_ = (self, ...); return []`` placeholder. The check is performed both
 structurally and at runtime: ``CompiledYaraRules`` must be a
 ``typing.Protocol`` and any concrete implementer must be able to
@@ -69,8 +69,8 @@ def test_compiled_yara_match_body_is_ellipsis() -> None:
 def test_compiled_yara_concrete_implementation_overrides_protocol() -> None:
     """Protocol body is the ``...`` sentinel, not a fake placeholder that shadows overrides.
 
-    The original defect was a Protocol body of ``_ = (self, ...); return []`` instead of
-    the correct ``...`` sentinel.  Two independent gates catch any regression:
+    A Protocol body of ``_ = (self, ...); return []`` instead of the ``...``
+    sentinel is the defect.  Two independent gates catch any regression:
 
     Gate 1 — direct Protocol call returns ``None``, not ``[]``:
       When the Protocol method body is ``...`` (bare Ellipsis), Python executes the
@@ -123,7 +123,7 @@ def test_compiled_yara_concrete_implementation_overrides_protocol() -> None:
 
 
 def test_compiled_yara_protocol_type_hints_preserved() -> None:
-    """Type hints on ``match`` must remain intact after the fix."""
+    """Type hints on ``match`` must remain intact."""
     hints = get_type_hints(CompiledYaraRules.match)
     assert "return" in hints
     assert hints["return"] == list[object]

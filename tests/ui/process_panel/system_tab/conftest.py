@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Shared fixtures for audit4 b6 SystemTab tests.
+"""Shared fixtures for SystemTab tests.
 
-Exposes a real GUI harness that lets the user-visible warning paths introduced
-for F-0022 and F-0023 run the genuine ``QMessageBox.warning`` modal dialog while
-still keeping the suite non-blocking.
+Exposes a real GUI harness that lets the user-visible warning paths run the genuine
+``QMessageBox.warning`` modal dialog while still keeping the suite non-blocking.
 
 Rather than replacing ``QMessageBox.warning`` with a fake (which would mask
 whether the production warning mechanism actually fires and with what content),
@@ -112,8 +111,8 @@ def warning_recorder() -> Iterator[WarningRecorder]:
 def test_warning_recorder_captures_real_qmessagebox_warning(warning_recorder: WarningRecorder) -> None:
     """The recorder captures the genuine ``QMessageBox.warning`` modal, not a fake.
 
-    This is the gate for the audit finding that the prior ``silence_qmessagebox``
-    fixture mocked ``QMessageBox.warning``. Here the *real* blocking static method
+    This gate forbids replacing ``QMessageBox.warning`` with a fake. Here the *real*
+    blocking static method
     is invoked: it opens an actual modal ``QMessageBox`` that Qt creates and runs in
     a nested event loop. The autouse recorder's live ``QTimer`` must find that real
     modal, read its real ``windowTitle()``/``text()``, and dismiss it so the blocking

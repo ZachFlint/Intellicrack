@@ -3,15 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L3 regression gates for the hex-editor sandbox reroute (rows #92-93).
+"""L3 gates for the hex-editor sandbox reroute.
 
-Covers ``audit/bridge-completeness/agent-09-hex-editor.md`` rows #92-93:
+Covers
 ``ui/panels/hex_editor/sandbox.py``'s "Save to Sandbox"/"Test in Sandbox"
-buttons previously called a generic ``SandboxBridge.copy_to``/``.execute``
+buttons call a generic ``SandboxBridge.copy_to``/``.execute``
 directly, bypassing the hex-editor-specific ``HexEditorBridge.save_to_sandbox``/
 ``test_in_sandbox`` methods that auto-provision a sandbox instance, clean up
 an orphaned instance on failure, and transparently handle unsaved/in-memory
-documents. The remediation rewires both handlers to call
+documents. Both handlers call
 ``run_bridge_coroutine_logged(bridge.save_to_sandbox(...))`` /
 ``bridge.test_in_sandbox(...)`` against the hex-editor's own bridge.
 
@@ -101,7 +101,7 @@ class TestSaveToSandboxRoutesThroughHexEditorBridge:
 
         Falsifiable: if ``_on_save_to_sandbox`` were reverted to call
         ``SandboxBridge.copy_to`` directly against a pre-selected instance
-        (the pre-remediation behaviour), the fake's ``create_calls`` list
+        (the unrouted behaviour), the fake's ``create_calls`` list
         would stay empty (no auto-provisioning) while a ``copy_calls`` entry
         would appear referencing an instance ID the test never provided.
         Broken production line: ``run_bridge_coroutine_logged(
@@ -145,8 +145,7 @@ class TestSaveToSandboxRoutesThroughHexEditorBridge:
         """A failed copy must trigger ``sandbox_bridge.destroy`` on the auto-created instance.
 
         This orphan-cleanup behaviour only exists in
-        ``HexEditorBridge.save_to_sandbox``'s ``finally`` block, never in
-        the old raw ``SandboxBridge.copy_to`` GUI path. Falsifiable: if the
+        ``HexEditorBridge.save_to_sandbox``'s ``finally`` block, never in a raw ``SandboxBridge.copy_to`` GUI path. Falsifiable: if the
         GUI reverted to the raw-copy path, ``destroy_calls`` would stay
         empty since no instance was ever auto-created to clean up.
 

@@ -591,8 +591,8 @@ class TestProcessListing:
         ``struct.calcsize("P") * 8`` is the independent oracle: 64 on a 64-bit
         interpreter, 32 on a 32-bit one.  The bridge must return the matching
         string ("x86_64" or "x86") for the current process, not merely any value
-        from an allowed set.  A bridge that always returns "x86_64" would still
-        pass the old check on a 64-bit host but fail here on a 32-bit host, and
+        from an allowed set.  A bridge that always returns "x86_64" would pass on a
+        64-bit host but fail here on a 32-bit host, and
         a bridge that swaps the strings would fail immediately.
 
         Args:
@@ -826,7 +826,7 @@ class TestMemoryOperations:
 
 
 class TestThreadEnumeration:
-    """Verify thread listing and bug-fix fields (start_address, state)."""
+    """Verify thread listing and the start_address and state fields."""
 
     async def test_get_threads_non_empty(self, attached_bridge: ProcessBridge) -> None:
         """Verify thread list is non-empty.
@@ -847,7 +847,7 @@ class TestThreadEnumeration:
         assert all(t.tid > 0 for t in threads)
 
     async def test_get_threads_start_address_nonzero(self, attached_bridge: ProcessBridge) -> None:
-        """Verify at least one thread has a non-zero start address (bug fix).
+        """Verify at least one thread has a non-zero start address.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
@@ -856,7 +856,7 @@ class TestThreadEnumeration:
         assert any(t.start_address != 0 for t in threads)
 
     async def test_get_threads_state_not_unknown(self, attached_bridge: ProcessBridge) -> None:
-        """Verify at least one thread has a known state (bug fix).
+        """Verify at least one thread has a known state.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
@@ -1600,7 +1600,7 @@ class TestSehFiberTls:
         ``next`` fields are all integers with positive ``address`` and
         ``handler_address`` values.
 
-        Mutation caught (x64): restoring the old ToolError raise, or breaking the
+        Mutation caught (x64): raising ToolError instead of enumerating the exception directory, or breaking the
         exception-directory parse, yields an empty/raised result and the
         non-empty structural assertions fail. Mutation caught (WOW64): returning
         an empty list or omitting required entry keys fails the structural checks.
@@ -1645,10 +1645,8 @@ class TestSehFiberTls:
         for ordinary threads, so ``has_fiber`` must be derived from the TEB
         ``HasFiberData`` flag, never from ``fiber_data != 0``.
 
-        Mutation caught: deriving ``has_fiber`` from ``fiber_data != 0`` (the
-        current production behaviour) misclassifies every ordinary thread as a
-        fiber and turns this gate red - this is the documented defect PD-005 in
-        audit/PRODUCTION-DEFECTS.md.
+        Mutation caught: deriving ``has_fiber`` from ``fiber_data != 0`` misclassifies
+        every ordinary thread as a fiber and turns this gate red.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
@@ -1813,15 +1811,14 @@ class TestErrorConditions:
 
 
 class TestF0004TerminateFailure:
-    """Verify F-0004: terminate() leaves _process_handle intact on TerminateProcess failure."""
+    """Verify terminate() leaves _process_handle intact on TerminateProcess failure."""
 
     async def test_handle_preserved_after_terminate_access_denied(self, process_bridge: ProcessBridge) -> None:
         """Verify _process_handle is not cleared when TerminateProcess fails.
 
         Open the current process with query-only rights (PROCESS_QUERY_INFORMATION),
         which lacks PROCESS_TERMINATE.  TerminateProcess will return 0 (ERROR_ACCESS_DENIED).
-        Before the fix, the finally-block called self.close() which wiped the handle;
-        after the fix the handle must still be present.
+        The handle must still be present after the failed call.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
@@ -1853,7 +1850,7 @@ class TestF0004TerminateFailure:
 
 
 class TestF0005SuspendResumeReportsFailure:
-    """Verify F-0005: suspend/resume raise ToolError with failed TIDs on thread API failures."""
+    """Verify suspend/resume raise ToolError with failed TIDs on thread API failures."""
 
     async def test_suspend_raises_for_protected_process_threads(self, process_bridge: ProcessBridge) -> None:
         """Verify suspend raises ToolError when OpenThread fails due to insufficient rights.
@@ -1913,7 +1910,7 @@ class TestF0005SuspendResumeReportsFailure:
 
 
 class TestF0023ServiceParseUnicode:
-    """Verify F-0023: list_services() returns entries with str name and display_name fields."""
+    """Verify list_services() returns entries with str name and display_name fields."""
 
     async def test_service_name_fields_are_str(self, process_bridge: ProcessBridge) -> None:
         """Verify that each service entry contains str-typed name and display_name values.
@@ -1955,7 +1952,7 @@ class TestF0023ServiceParseUnicode:
 
 
 class TestF0026NoFakeSuccess:
-    """Verify F-0026: pipe_close and device_close return False/raise on internal failure."""
+    """Verify pipe_close and device_close return False/raise on internal failure."""
 
     async def test_pipe_close_raises_without_kernel32(self, process_bridge: ProcessBridge) -> None:
         """Verify pipe_close raises ToolError when kernel32 is None.
@@ -2102,10 +2099,9 @@ class TestF0007PatternScanContinues:
         do not need to extend the bridge's ``_prot_from_string`` map for
         a test-only protection mode) so the kernel's
         ``ReadProcessMemory`` will return an error for that chunk.
-        Pre-fix, the region scanner broke out of the region on the
-        first ``ToolError`` and the pattern in the readable second
-        chunk was never reached. Post-fix, the scanner logs the chunk
-        failure, observes the surrounding region is still committed
+        A scanner that breaks out of the region on the first ``ToolError`` never reaches
+        the pattern in the readable second chunk. The scanner logs the chunk failure,
+        observes the surrounding region is still committed
         via ``VirtualQueryEx``, and continues to the next chunk so the
         match is found.
 
@@ -2601,7 +2597,7 @@ class TestF0037DeviceIoctlOutputHex:
 
 
 class TestF0002SnapshotHandleType:
-    """F-0002: CreateToolhelp32Snapshot.restype must be wintypes.HANDLE."""
+    """Verify CreateToolhelp32Snapshot.restype is wintypes.HANDLE."""
 
     async def test_list_returns_current_process(self, process_bridge: ProcessBridge) -> None:
         """list() must include the current Python process.
@@ -2638,7 +2634,7 @@ class TestF0002SnapshotHandleType:
 
 
 class TestF0003Process32FirstFailure:
-    """F-0003: Process32First failure must raise ToolError with error code."""
+    """Verify Process32First failure raises ToolError with the error code."""
 
     async def test_list_processes_succeeds_normally(self, process_bridge: ProcessBridge) -> None:
         """Baseline: list_processes returns at least the current process.
@@ -2677,7 +2673,7 @@ class TestF0003Process32FirstFailure:
 
 
 class TestF0019HandleTypeNames:
-    """F-0019: enum_handles must return type_name strings, never ints."""
+    """Verify enum_handles returns type_name strings, never ints."""
 
     async def test_enum_handles_returns_string_type_names(self, process_bridge: ProcessBridge) -> None:
         """enum_handles for the current PID returns entries with string type_name.
@@ -2729,7 +2725,7 @@ class TestF0019HandleTypeNames:
 
 
 class TestF0040HandleBufferBounds:
-    """F-0040: Buffer bounds must be validated before iterating handles."""
+    """Verify buffer bounds are validated before iterating handles."""
 
     async def test_buffer_bounds_validated_on_overflow(self) -> None:
         """NtQuerySystemInformation returning a buffer with 1M handles in 4 KiB must raise ToolError.
@@ -2800,7 +2796,7 @@ _RUNTIME_LOAD_POLL_S = 0.05
 
 
 class TestF0036AdvApi32MissingRaises:
-    """F-0036: enumerate_com_servers must raise ToolError when advapi32 is unavailable."""
+    """Verify enumerate_com_servers raises ToolError when advapi32 is unavailable."""
 
     async def test_raises_when_advapi32_is_none(self, process_bridge: ProcessBridge) -> None:
         """Verify enumerate_com_servers raises ToolError when advapi32 is not loaded.
@@ -2821,7 +2817,7 @@ class TestF0036AdvApi32MissingRaises:
 
 
 class TestF0014ComEnumNonBlocking:
-    """F-0014: enumerate_com_servers must not block the event loop (uses asyncio.to_thread)."""
+    """Verify enumerate_com_servers does not block the event loop (it uses asyncio.to_thread)."""
 
     async def test_concurrent_task_advances_during_enum(self, process_bridge: ProcessBridge) -> None:
         """Verify a concurrent task makes progress while enumerate_com_servers runs.
@@ -2854,7 +2850,7 @@ class TestF0014ComEnumNonBlocking:
 
 
 class TestF0032AllInprocServerKeys:
-    r"""F-0032: _check_inproc_server must walk all InprocServer* AND LocalServer* keys."""
+    r"""Verify _check_inproc_server walks all InprocServer* and LocalServer* keys."""
 
     async def test_returns_inprocserver32_and_localserver32(self, process_bridge: ProcessBridge) -> None:
         r"""Verify both InprocServer32 and LocalServer32 are returned for a test CLSID.
@@ -2943,7 +2939,7 @@ class TestF0032AllInprocServerKeys:
 
 
 class TestF0015DotnetByCor20Header:
-    """F-0015: detect_dotnet must use PE COR20 header for managed detection."""
+    """Verify detect_dotnet uses the PE COR20 header for managed detection."""
 
     async def test_python_process_managed_false(self, process_bridge: ProcessBridge) -> None:
         """Verify the Python interpreter itself is not reported as a managed process.
@@ -3002,10 +2998,9 @@ class TestF0015DotnetByCor20Header:
     ) -> None:
         """Assert detect_dotnet reports the spawned process as managed.
 
-        The host is inspected repeatedly until its runtime shows up rather
-        than once after a fixed pause: a host that is still starting has only
-        its first few modules loaded, and on a loaded machine it was caught in
-        exactly that state and reported, correctly, as not yet managed.
+        The host is inspected repeatedly until its runtime shows up rather than once
+        after a fixed pause, because a host that is still starting has
+        only its first few modules loaded and is correctly reported as not yet managed.
 
         Args:
             process_bridge: ProcessBridge used to invoke ``detect_dotnet``.
@@ -3039,7 +3034,7 @@ class _BridgeNoWow64Apis(ProcessBridge):
     """ProcessBridge subclass where _call_iswow64process2 always returns None.
 
     Also installs a kernel32 stub that lacks IsWow64Process so that both
-    API paths are absent.  Used to test the ToolError raise path for F-0034.
+    API paths are absent.  Used to test the ToolError raise path.
     """
 
     def __init__(self) -> None:
@@ -3061,7 +3056,7 @@ class _BridgeNoWow64Apis(ProcessBridge):
 
 
 class TestF0034NoSilentWow64Fallback:
-    """F-0034: _target_is_64bit must raise ToolError when both WOW64 APIs are absent."""
+    """Verify _target_is_64bit raises ToolError when both WOW64 APIs are absent."""
 
     def test_raises_when_kernel32_is_none(self) -> None:
         """Verify ToolError is raised when kernel32 handle is None.
@@ -3088,7 +3083,7 @@ class TestF0034NoSilentWow64Fallback:
 
 
 class TestF0011PEBSize:
-    """F-0011: read_peb uses ctypes.sizeof(PEB) buffer, not fixed 0x100."""
+    """Verify read_peb uses a ctypes.sizeof(PEB) buffer, not a fixed 0x100 buffer."""
 
     async def test_peb_raw_length_matches_struct_size(self, process_bridge: ProcessBridge) -> None:
         """Verify PEB raw bytes length equals ctypes.sizeof(PEB64) on x64.
@@ -3126,7 +3121,7 @@ class TestF0011PEBSize:
 
 
 class TestF0028ReadTEBPerTid:
-    """F-0028: read_teb opens its own process handle per thread ID."""
+    """Verify read_teb opens its own process handle per thread ID."""
 
     async def test_teb_base_differs_between_threads(self, process_bridge: ProcessBridge) -> None:
         """Verify main thread and spawned thread have different TEB base addresses.
@@ -3191,7 +3186,7 @@ class TestF0028ReadTEBPerTid:
 
 
 class TestF0022TLSArrayPointer:
-    """F-0022: tls_array_base in TEB dict reflects correct static TLS array offset."""
+    """Verify tls_array_base in the TEB dict reflects the correct static TLS array offset."""
 
     async def test_tls_array_base_at_correct_offset(self, process_bridge: ProcessBridge) -> None:
         """Verify tls_array_base equals teb_address + architecture-correct offset.
@@ -3223,7 +3218,7 @@ class TestF0022TLSArrayPointer:
         self,
         process_bridge: ProcessBridge,
     ) -> None:
-        """Verify dict has tls_array_base key and not the old tls_expansion_slots key.
+        """Verify dict has tls_array_base key and not the tls_expansion_slots key.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
@@ -3239,7 +3234,7 @@ class TestF0022TLSArrayPointer:
 
 
 class TestF0021StaticTLSSlots:
-    """F-0021: get_tls_values reads static TLS array at correct TEB offset."""
+    """Verify get_tls_values reads the static TLS array at the correct TEB offset."""
 
     async def test_tls_slot_value_readable(self, attached_bridge: ProcessBridge) -> None:
         """Verify a TLS slot value set by TlsSetValue is returned by get_tls_values.
@@ -3314,7 +3309,7 @@ class TestF0021StaticTLSSlots:
 
 
 class TestF0033FullEnvironmentBlock:
-    """F-0033: read_environment reads the full env block without a 64 KiB cap."""
+    """Verify read_environment reads the full env block without a 64 KiB cap."""
 
     async def test_large_env_block_no_cap(self, process_bridge: ProcessBridge) -> None:
         """Verify environment variables totalling >64 KiB are all readable.
@@ -3323,10 +3318,9 @@ class TestF0033FullEnvironmentBlock:
         (via a single large env var) and verifies the bridge reads the full
         block including the large variable.
 
-        The child is inspected only once it has reported that its script is
-        running. A process that has just been created is still being set up by
-        the loader, and on a loaded machine it was read in that state and its
-        environment came back empty.
+        The child is inspected only once it reports that its script is running, because
+        a freshly created process may still be set up by the loader and show an empty
+        environment.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
@@ -3377,7 +3371,7 @@ class TestF0033FullEnvironmentBlock:
 
 
 class TestF0012EnvOffsets:
-    """F-0012/F-0046: _extract_env_pointer uses correct offsets and types."""
+    """Verify _extract_env_pointer uses correct offsets and types."""
 
     async def test_env_offsets_child_known_vars(self, process_bridge: ProcessBridge) -> None:
         """Verify known env vars are readable from a child process on x64.
@@ -3503,7 +3497,7 @@ class TestF0012EnvOffsets:
 
 
 class TestF0047ModuleEntryPoint:
-    """F-0047: get_modules must populate entry_point from MODULEINFO."""
+    """Verify get_modules populates entry_point from MODULEINFO."""
 
     async def test_entry_point_field_exists(self, attached_bridge: ProcessBridge) -> None:
         """Verify every ModuleInfo has an entry_point attribute.
@@ -3539,7 +3533,7 @@ class TestF0047ModuleEntryPoint:
 
 
 class TestF0048ThreadCurrentPC:
-    """F-0048: get_threads must populate current_pc via GetThreadContext."""
+    """Verify get_threads populates current_pc via GetThreadContext."""
 
     async def test_current_pc_field_exists(self, attached_bridge: ProcessBridge) -> None:
         """Verify every ThreadInfo has a current_pc attribute.
@@ -3583,7 +3577,7 @@ class TestF0048ThreadCurrentPC:
 
 
 class TestF0020ThreadStateNoStuckSuspend:
-    """F-0020: _query_thread_state must not leave thread suspended on probe failure."""
+    """Verify _query_thread_state does not leave the thread suspended on probe failure."""
 
     async def test_resume_always_called_on_exception(self, process_bridge: ProcessBridge) -> None:
         """Force _query_thread_state to raise mid-probe; assert thread NOT left suspended.
@@ -3646,7 +3640,7 @@ class TestF0020ThreadStateNoStuckSuspend:
 
 
 class TestF0010InjectDllUnicode:
-    """F-0010: inject_dll must use LoadLibraryW (UTF-16) path encoding."""
+    """Verify inject_dll uses LoadLibraryW (UTF-16) path encoding."""
 
     async def test_inject_dll_nonexistent_raises_tool_error(self, attached_bridge: ProcessBridge) -> None:
         """Verify inject_dll raises ToolError when DLL does not exist.
@@ -3669,7 +3663,7 @@ class TestF0010InjectDllUnicode:
 
 
 class TestF0010InjectDllExitCodeChecked:
-    """F-0010: inject_dll must check GetExitCodeThread and raise on failure."""
+    """Verify inject_dll checks GetExitCodeThread and raises on failure."""
 
     async def test_inject_dll_kernel32_raises_on_failure(self, process_bridge: ProcessBridge) -> None:
         """Verify injecting a path that LoadLibraryW cannot load raises ToolError.
@@ -3718,7 +3712,7 @@ class TestF0010InjectDllExitCodeChecked:
 
 
 class TestF0009ContextWow64:
-    """F-0009: get_thread_context selects context type from target WOW64 status."""
+    """Verify get_thread_context selects the context type from the target WOW64 status."""
 
     async def test_context_64bit_target_returns_rip(
         self,
@@ -3807,7 +3801,7 @@ class TestF0009ContextWow64:
 
 
 class TestF0008SehChainX64Handlers:
-    """F-0008: get_seh_chain enumerates table-based exception handlers on x64."""
+    """Verify get_seh_chain enumerates table-based exception handlers on x64."""
 
     async def test_seh_chain_x64_enumerates_handlers(
         self,
@@ -3846,7 +3840,7 @@ class TestF0008SehChainX64Handlers:
 
 
 class TestF0024SymbolInfoSizeOfStruct:
-    """F-0024: SYMBOL_INFO.SizeOfStruct uses proper header-only size formula."""
+    """Verify SYMBOL_INFO.SizeOfStruct uses the proper header-only size formula."""
 
     def test_sizeofsruct_equals_header_size(self) -> None:
         """Verify computed SizeOfStruct matches the SYMBOL_INFO header size.
@@ -3914,7 +3908,7 @@ class TestF0024SymbolInfoSizeOfStruct:
 
 
 class TestF0025ImageHlpModuleStruct:
-    """F-0025: _resolve_module uses IMAGEHLP_MODULE64 structure (not raw buffer)."""
+    """Verify _resolve_module uses the IMAGEHLP_MODULE64 structure, not a raw buffer."""
 
     def test_imagehlp_module64_struct_has_module_name(self) -> None:
         """Verify IMAGEHLP_MODULE64 structure can be instantiated and SizeOfStruct set.
@@ -3980,7 +3974,7 @@ class TestF0025ImageHlpModuleStruct:
 
 
 class TestF0041BoolReturnChecked:
-    """F-0041: SuspendThread and SymInitialize BOOL returns are checked."""
+    """Verify SuspendThread and SymInitialize BOOL returns are checked."""
 
     async def test_suspend_thread_failure_raises_tool_error(
         self,
@@ -4026,7 +4020,7 @@ class TestF0041BoolReturnChecked:
 
 
 class TestF0042SymbolBufferAllocation:
-    """F-0042: SYMBOL_INFO name buffer supports names up to MAX_SYM_NAME chars."""
+    """Verify the SYMBOL_INFO name buffer supports names up to MAX_SYM_NAME chars."""
 
     async def test_resolve_symbol_no_truncation_on_long_name(
         self,
@@ -4103,7 +4097,7 @@ class TestF0042SymbolBufferAllocation:
 
 
 class TestF0038SectionCreateFileMappingHandle:
-    """F-0038: CreateFileMappingW must return a non-truncated handle and detect collisions."""
+    """Verify CreateFileMappingW returns a non-truncated handle and detects collisions."""
 
     async def test_create_section_returns_positive_handle(
         self,
@@ -4159,7 +4153,7 @@ class TestF0038SectionCreateFileMappingHandle:
 
 
 class TestF0030RegistryHives:
-    """F-0030: _parse_registry_path supports HKU and HKCC."""
+    """Verify _parse_registry_path supports HKU and HKCC."""
 
     def test_parse_hku_short(self) -> None:
         """Verify HKU short form resolves to HKEY_USERS."""
@@ -4187,7 +4181,7 @@ class TestF0030RegistryHives:
 
 
 class TestF0031RegReadValueGrows:
-    """F-0031: reg_read_value grows the buffer on ERROR_MORE_DATA."""
+    """Verify reg_read_value grows the buffer on ERROR_MORE_DATA."""
 
     async def test_reg_read_large_value_succeeds(
         self,
@@ -4196,8 +4190,7 @@ class TestF0031RegReadValueGrows:
         r"""Verify a value larger than 4096 bytes is read in full.
 
         Creates a HKCU\\Software key with a 24 KiB REG_BINARY value and
-        verifies reg_read_value returns all 24 KiB instead of failing
-        with the legacy fixed-buffer behavior.
+        verifies reg_read_value returns all 24 KiB rather than truncating it at a fixed buffer size.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture.
@@ -4222,7 +4215,7 @@ class TestF0031RegReadValueGrows:
 
 
 class TestF0043QuerySystemInfoRetries:
-    """F-0043: query_system_info auto-grows on STATUS_BUFFER_OVERFLOW/TOO_SMALL."""
+    """Verify query_system_info auto-grows on STATUS_BUFFER_OVERFLOW/TOO_SMALL."""
 
     async def test_query_handles_with_small_initial_buffer(
         self,
@@ -4252,7 +4245,7 @@ class TestF0043QuerySystemInfoRetries:
 
 
 class TestF0027MitigationBitfields:
-    """F-0027: Each policy decodes its specific bitfield, not blanket bool(flags & 1)."""
+    """Verify each policy decodes its specific bitfield, not a blanket bool(flags & 1)."""
 
     async def test_dep_policy_has_named_fields(
         self,
@@ -4310,7 +4303,7 @@ class TestF0027MitigationBitfields:
 
 
 class TestF0035HandleEnumNonBlocking:
-    """F-0035: get_handles and enum_handles offload iteration to asyncio.to_thread."""
+    """Verify get_handles and enum_handles offload iteration to asyncio.to_thread."""
 
     async def test_get_handles_yields_event_loop(
         self,
@@ -4363,7 +4356,7 @@ class TestF0035HandleEnumNonBlocking:
 
 
 class TestF0013JobHandleEnumeration:
-    """F-0013: _acquire_queryable_job_handle returns a real handle from the system handle table."""
+    """Verify _acquire_queryable_job_handle returns a real handle from the system handle table."""
 
     async def test_get_job_info_returns_in_job_when_assigned(
         self,
@@ -4372,9 +4365,8 @@ class TestF0013JobHandleEnumeration:
         """Verify get_job_info reports in_job=True when the target is in a job.
 
         Creates a CreateJobObjectW handle, assigns the current process,
-        then asks get_job_info(current_pid) to confirm in_job=True. The
-        F-0013 fix must locate the job via the system handle table
-        rather than relying on OpenJobObjectW(NULL).
+        then asks get_job_info(current_pid) to confirm in_job=True. The job must be
+        located via the system handle table rather than OpenJobObjectW(NULL).
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture.
@@ -4410,7 +4402,7 @@ class TestF0013JobHandleEnumeration:
 
 
 class TestF0044ShutdownReleasesResources:
-    """F-0044: shutdown() unmaps sections and closes pipe/device handles."""
+    """Verify shutdown() unmaps sections and closes pipe/device handles."""
 
     @staticmethod
     async def _assert_shutdown_clears_tracking(bridge: ProcessBridge) -> None:
@@ -4458,14 +4450,12 @@ class TestF0044ShutdownReleasesResources:
 
 
 class TestF0029NoStartedInfoLogs:
-    """F-0029: No public method emits *_started events at info level."""
+    """Verify no public method emits *_started events at info level."""
 
     def test_no_started_info_logs_in_module(self) -> None:
         """Verify process.py contains zero ``_logger.info("..._started"`` events.
 
-        Greps the module text for the pattern audit2 forbade. The fix
-        must demote every per-call ``_started`` info log to debug or
-        remove it.
+        Greps the module text for the forbidden info-level pattern. Each per-call ``_started`` log must be demoted to debug or removed.
         """
         process_py = Path(__file__).resolve().parents[2] / "src" / "intellicrack" / "bridges" / "process.py"
         text = process_py.read_text(encoding="utf-8")
@@ -4474,7 +4464,7 @@ class TestF0029NoStartedInfoLogs:
 
 
 class TestF0045DispatchShimsNoDuplicateEvents:
-    """F-0045: list/list_detailed/open dispatch shims do not emit their own _started events."""
+    """Verify the list/list_detailed/open dispatch shims do not emit their own _started events."""
 
     def test_list_shim_emits_no_started_event(self) -> None:
         """Verify the ``list`` dispatch shim has no ``_started`` log emit.

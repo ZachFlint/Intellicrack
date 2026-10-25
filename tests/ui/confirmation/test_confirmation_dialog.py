@@ -2,27 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit5 U9 ToolConfirmationDialog fix (F-0020).
+"""Tests for the "Remember for similar operations this session" checkbox of ``ToolConfirmationDialog``.
 
-F-0020: ``ToolConfirmationDialog.remember_similar`` was captured but never
-read by callers. The dialog had no observable side effect for the
-"Remember for similar operations this session" checkbox, leaving the
-state effectively dead.
-
-The remediation:
-
-1. Adds a Qt ``decision_made(approved: bool, remember_similar: bool)``
+1. The dialog emits a Qt ``decision_made(approved: bool, remember_similar: bool)``
    signal so the captured preference is exposed as part of the decision
    event rather than only via post-``exec()`` property polling.
 
-2. Maintains a class-level remembered-decisions cache keyed by
+2. It keeps a class-level remembered-decisions cache keyed by
    ``(tool_name, function_name)`` and overrides ``exec()`` to short-circuit
    when a cached decision exists. This makes the captured preference
    functionally observable inside the dialog's own scope.
-
-Each test below would fail against the unfixed code: the signal did not
-exist and ``exec()`` was inherited unchanged so cached decisions had no
-effect.
 """
 
 from __future__ import annotations
@@ -75,8 +64,7 @@ def reset_remembered_decisions() -> Iterator[None]:
 class _DecisionRecorder:
     """Recording slot that captures ``decision_made`` signal payloads.
 
-    Replaces ``unittest.mock.Mock`` to comply with the audit test policy of
-    avoiding mock objects in regression tests.
+    Stands in for ``unittest.mock.Mock`` so the tests use no mock objects.
     """
 
     events: list[tuple[bool, bool]]

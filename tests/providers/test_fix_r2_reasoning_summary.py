@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 23: thinking keeps working for an organization OpenAI will not give reasoning summaries to.
+"""Thinking keeps working for an organization OpenAI will not give reasoning summaries to.
 
 A loopback server answers ``POST /v1/responses`` the way OpenAI answers an unverified organization's thinking-enabled request: ``400``
 ``invalid_request_error`` with ``param: reasoning.summary``. The gates drive the real built-in :class:`OpenAIProvider` through the real

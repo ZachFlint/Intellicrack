@@ -5,9 +5,7 @@
 
 """L3 gate tests for the x64dbg Advanced tab's resource / TLS-callback controls.
 
-Finding T2-8a: ``X64DbgBridge.get_resources``, ``get_tls_callbacks``, and
-``break_on_tls_callbacks`` were fully implemented and registered tool
-functions with no reachable GUI control in either ``x64dbg_panel.py`` or
+``X64DbgBridge.get_resources``, ``get_tls_callbacks``, and ``break_on_tls_callbacks`` are registered tool functions that the panels must expose. This module gates their GUI controls in either ``x64dbg_panel.py`` or
 ``x64dbg_advanced_tab.py``. This module gates the three controls added to
 the Advanced tab's "Module Info" sub-tab.
 
@@ -244,7 +242,7 @@ class TestResourcesButtonDispatch:
     ) -> None:
         """The Resources button must call ``get_resources`` with the entered module.
 
-        Falsifiable: before this fix nothing in either panel file called
+        Falsifiable: if nothing in either panel file called
         ``get_resources`` at all, so ``capture.calls`` would stay empty and
         this assertion would fail; rewiring the button to a different
         bridge method makes the captured coroutine no longer
@@ -309,7 +307,7 @@ class TestTlsCallbacksButtonDispatch:
     ) -> None:
         """The TLS Callbacks button must call ``get_tls_callbacks`` with the entered module.
 
-        Falsifiable: before this fix nothing in either panel file called
+        Falsifiable: if nothing in either panel file called
         ``get_tls_callbacks``; rewiring the button to a different bridge
         method makes the captured coroutine or call arguments wrong.
 
@@ -368,7 +366,7 @@ class TestBreakOnTlsCallbacksButtonDispatch:
     ) -> None:
         """The Break on TLS CBs button must call ``break_on_tls_callbacks`` with the entered module.
 
-        Falsifiable: before this fix nothing in either panel file called
+        Falsifiable: if nothing in either panel file called
         ``break_on_tls_callbacks``; rewiring the button to a different
         bridge method makes the captured coroutine or call arguments wrong.
 

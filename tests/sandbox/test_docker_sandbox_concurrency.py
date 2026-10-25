@@ -3,9 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for running two sandbox containers at the same time.
+"""Gates for running two sandbox containers at the same time.
 
-The host driver (:file:`scripts/sandbox/docker_sandbox.py`) used to key every
+The host driver (:file:`scripts/sandbox/docker_sandbox.py`) must key every
 piece of per-run state on the *test type* rather than on the individual run: a
 single ``intellicrack-sandbox-<type>`` container name, one
 ``reports/tests/_run_spec.json`` holding the pytest argv, one

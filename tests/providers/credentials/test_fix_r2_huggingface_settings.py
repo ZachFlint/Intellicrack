@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 27: HuggingFace base URLs saved for the retired inference host are migrated, and the default URL is never saved.
+"""HuggingFace base URLs saved for the retired inference host are migrated, and the default URL is never saved.
 
 The gates run the real credential loader over real ``.env`` files in a temporary directory, and the real settings panel over them. A
 ``HUGGINGFACE_API_BASE`` naming ``api-inference.huggingface.co`` is removed from the file when it is loaded, so the provider uses the router,

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 34: servers report progress on long requests, progress stretches deadlines within a limit, and calls can be cancelled.
+"""Servers report progress on long requests, progress stretches deadlines within a limit, and calls can be cancelled.
 
 The gates connect Intellicrack's real connection to a real ``MCPServer`` on 2026-07-28 over stdio and 2025-11-25 over SSE. Tool calls,
 resource reads and prompt fetches ask for progress and receive it attributed and cleaned. The deadline rule is pinned: each notice that

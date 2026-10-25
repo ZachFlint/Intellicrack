@@ -3,11 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit6 CORE-D regression tests for ``intellicrack.core.config``.
+"""Regression tests for ``intellicrack.core.config``.
 
 Exercises:
-    * F-0010 - ``_default_providers`` includes every ``provider id`` member.
-    * F-0021 - ``Config.parse_providers`` is round-trip safe and never drops
+    * ``_default_providers`` includes every ``provider id`` member.
+    * ``Config.parse_providers`` is round-trip safe and never drops
       user-defined providers.
 """
 

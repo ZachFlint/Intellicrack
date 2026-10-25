@@ -2,20 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""GUI-audit regression gates for :mod:`intellicrack.ui.panels.cutter_debugger_tab`.
+"""Gates for :mod:`intellicrack.ui.panels.cutter_debugger_tab` module tables and status label.
 
-* ``H34``: the modules table gave every column (including ``Path``) a uniform
-  ``QHeaderView.ResizeMode.Stretch``, dividing the table width equally among
-  five columns regardless of content, so long module paths were squeezed into
-  roughly a fifth of the table and never got a tooltip fallback. The fix
-  resizes the four short/fixed-format columns (``Name``, ``Base``, ``Size``,
-  ``Entry Point``) to their content and gives the remaining width to ``Path``
-  via ``Stretch``, and sets a tooltip on the path cell.
-* ``L5``: ``_status_label`` never called ``setWordWrap(True)`` and never set a
-  tooltip, so long bridge-exception text (attach/detach/step/breakpoint
-  failures) was silently clipped at the panel edge with no way to read it. The
-  fix wraps the label and mirrors every status update into its tooltip via a
-  new ``_set_status`` helper used at every call site.
+* Module table: the modules table must size the four short/fixed-format columns (``Name``, ``Base``, ``Size``,
+  ``Entry Point``) to their content and give the remaining width to ``Path`` via ``Stretch``. A uniform ``Stretch`` on
+  every column would divide the width equally among five columns, squeezing long module paths into roughly a fifth of
+  the table. The path cell also carries a tooltip with the full path.
+* Status label: ``_status_label`` must wrap and mirror every status update into its tooltip, so long bridge-exception
+  text (attach/detach/step/breakpoint failures) is not silently clipped at the panel edge. Every status update goes
+  through the ``_set_status`` helper.
 
 Both findings are pure layout/content defects exercised on a real
 :class:`DebuggerTab` under an offscreen ``QApplication`` -- no bridge network
@@ -111,14 +106,13 @@ def _sample_modules() -> list[ModuleInfo]:
 
 
 class TestH34ModulesTableColumnSizing:
-    """H34: the modules table must not divide width equally across columns."""
+    """The modules table must not divide width equally across columns."""
 
     def test_h34_short_columns_use_resize_to_contents_and_path_uses_stretch(self, debugger_tab: DebuggerTab) -> None:
         """The header must size Name/Base/Size/Entry Point to content and stretch Path.
 
-        Pre-fix every section (including Path) used uniform
-        ``QHeaderView.ResizeMode.Stretch``, so this structural check on the
-        first four sections fails against the pre-fix code.
+        Uniform ``QHeaderView.ResizeMode.Stretch`` on every section (including Path) would fail this
+        structural check on the first four sections.
 
         Args:
             debugger_tab: The debugger tab under test.
@@ -134,9 +128,9 @@ class TestH34ModulesTableColumnSizing:
     def test_h34_long_path_column_gets_majority_of_table_width(self, debugger_tab: DebuggerTab) -> None:
         """After population, the Path column must dominate each individual short column's width.
 
-        Pre-fix (uniform Stretch on all five columns) every section is forced
+        Uniform Stretch on all five columns would force every section
         to the same width regardless of content, so Path would be equal to
-        -- never exceeding -- each of Name/Base/Size/Entry Point. Post-fix the
+        -- never exceeding -- each of Name/Base/Size/Entry Point. With the sizing applied the
         four short columns shrink to their compact content and Path absorbs
         the entire remainder, so Path must strictly exceed each of them.
 
@@ -164,7 +158,7 @@ class TestH34ModulesTableColumnSizing:
     def test_h34_path_cell_carries_full_path_as_tooltip(self, debugger_tab: DebuggerTab) -> None:
         """The Path cell must expose the full, untruncated path via tooltip.
 
-        Pre-fix no ``setToolTip`` call existed anywhere in module population,
+        With no ``setToolTip`` call anywhere in module population,
         so the tooltip was always the empty string regardless of content.
 
         Args:
@@ -182,13 +176,13 @@ class TestH34ModulesTableColumnSizing:
 
 
 class TestL5StatusLabelWordWrap:
-    """L5: the status label must wrap and expose overflow text via tooltip."""
+    """The status label must wrap and expose overflow text via tooltip."""
 
     def test_l5_status_label_has_word_wrap_enabled(self, debugger_tab: DebuggerTab) -> None:
         """``_status_label`` must have word wrap enabled at construction time.
 
-        Pre-fix ``setWordWrap`` was never called, so this defaults to
-        ``False`` and this assertion fails against the pre-fix widget.
+        Without a ``setWordWrap`` call this defaults to
+        ``False``, and this assertion fails against that widget.
 
         Args:
             debugger_tab: The debugger tab under test.
@@ -199,10 +193,8 @@ class TestL5StatusLabelWordWrap:
         """A real attach failure must mirror its full text into the label tooltip.
 
         Drives the real ``_on_attach_error`` handler with a genuine
-        ``OSError`` whose ``str()`` is long, exactly the scenario the finding
-        describes (a long OS-level socket error). Pre-fix the label had no
-        tooltip mechanism, so ``toolTip()`` would remain the empty string
-        instead of mirroring the status text.
+        ``OSError`` whose ``str()`` is long, a realistic OS-level socket error. Without a tooltip mechanism on the label,
+        ``toolTip()`` would remain the empty string instead of mirroring the status text.
 
         Args:
             debugger_tab: The debugger tab under test.
@@ -222,12 +214,12 @@ class TestL5StatusLabelWordWrap:
         """Word wrap must make the label grow vertically instead of clipping horizontally.
 
         Constrains the label to a narrow width and compares
-        ``heightForWidth`` with word wrap on (the fixed behaviour) against
-        word wrap off (the pre-fix behaviour) for the same long status text.
+        ``heightForWidth`` with word wrap on (the wrapped behaviour) against
+        word wrap off (the defective behaviour) for the same long status text.
         Only the wrapped configuration reports a height tall enough for
         multiple text lines; the unwrapped configuration reports the same
         single-line height regardless of width, which is exactly how the
-        pre-fix label silently clipped long exception text.
+        unwrapped label silently clips long exception text.
 
         Args:
             debugger_tab: The debugger tab under test.

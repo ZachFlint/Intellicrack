@@ -2,18 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S20-D19: Frida/Process/Sandbox-panel must be reachable from the Tools menu.
+"""Gate for Frida, Process and Sandbox panel reachability from the Tools menu.
 
-Before the fix, ``_frida_btn``/``process_btn``/``_sandbox_tool_btn`` existed
-only on the toolbar -- with ``_frida_btn`` additionally disabled until a
-binary loads -- while the Tools -> Embedded Tools menu exposed only
-x64dbg/Cutter/Hex. Separately, the Sandbox menu's "Open Sandbox" action
-created a VM (``_on_open_sandbox``) rather than opening the Sandbox panel
-(``_on_open_sandbox_panel``), which had no menu entry at all (S20-D19).
-This test drives the real ``MainWindow`` menu construction and asserts the
-three missing entries now exist, are enabled with no binary loaded (matching
-the existing x64dbg/Cutter/Hex entries), and that the Sandbox-panel entry is
-wired to the panel opener rather than the VM-creating handler.
+The Frida, Process and Sandbox panels must be reachable from the Tools -> Embedded Tools
+menu, not only from the toolbar. The toolbar's ``_frida_btn`` is disabled until a binary
+loads, and the menu entries must not inherit that gating. The Sandbox-panel entry must
+call ``_on_open_sandbox_panel``, never the VM-creating ``_on_open_sandbox``. This test
+drives the real ``MainWindow`` menu construction and asserts the three entries exist and
+are enabled with no binary loaded, matching the existing x64dbg/Cutter/Hex entries.
 """
 
 from __future__ import annotations

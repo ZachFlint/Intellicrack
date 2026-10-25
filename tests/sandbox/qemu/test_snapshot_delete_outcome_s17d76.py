@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D76: deleting a snapshot that was never taken must not report success.
+"""Deleting a snapshot that was never taken must not report success.
 
-Measured live on 2026-08-09 through the GUI's own bridge,
+Measured live through the GUI's own bridge,
 ``snapshot_delete(instance, "audit-h07")`` returned ``{'success': True}``
 immediately after ``snapshot_list`` had returned ``[]`` for that instance.
 QEMU's job-based ``snapshot-delete`` is lenient where its siblings are not:
@@ -12,7 +12,7 @@ it concludes without error for a tag no disk holds, while ``snapshot-load``
 of the same missing tag fails loudly and the block-layer command refuses it
 outright (``Snapshot with id 'null' and name 'never-created' does not exist
 on device 'virtio0'``). So this was a leniency the app chose to pass on, not
-a QEMU limitation it had to accept - the same false-green family as S17-D59,
+a QEMU limitation it had to accept - the same false-green family,
 which fixed create and restore and left delete behind.
 
 These gates drive the real :meth:`QEMUSandbox.delete_snapshot` against a

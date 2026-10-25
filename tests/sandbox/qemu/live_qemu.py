@@ -131,7 +131,7 @@ def bindable_port() -> int:
     """Pick a host port by binding for real.
 
     ``connect_ex`` cannot answer "can I bind" on Windows, where reserved
-    ranges refuse a bind while nothing listens - the finding behind S17-D56.
+    ranges refuse a bind while nothing listens - a finding specific to Windows.
 
     Returns:
         int: A port this host will let QEMU bind.

@@ -3,13 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for the sandbox result-tree column-sizing audit finding.
+"""Tests for sandbox result-tree column sizing.
 
-Finding (LOW): the ~15 sandbox result trees (File/Registry changes, six-column
-API calls, DLL loads, ...) never sized their columns, so long paths, registry
-keys and argument blobs were clipped with no way to read them.
+The ~15 sandbox result trees (File/Registry changes, six-column API calls, DLL loads, ...)
+must size their columns, since otherwise long paths, registry keys and argument blobs
+are clipped with no way to read them.
 
-These tests assert the fix: every result tree configures its columns for
+These tests assert that every result tree configures its columns for
 ``ResizeToContents`` so content is shown in full, and the shared helper applies
 that mode to each column.
 """

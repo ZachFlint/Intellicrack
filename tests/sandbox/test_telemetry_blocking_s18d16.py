@@ -2,16 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S18-D16: "Block telemetry endpoints" has to reach the guest.
+r"""Gate: "Block telemetry endpoints" has to reach the guest.
 
-Sandbox Settings ships that checkbox **ticked**, and until this slice the answer reached
-nothing at all: no field carried it, no backend read it, and no command was ever issued
-inside the guest. Measured on a real Windows guest booted with the box ticked, the guest
-resolved ``v10.events.data.microsoft.com`` and completed a TCP connection to it on 443 -
-the vendor traffic an analyst ticks that box to be rid of, sitting in the capture beside
-the sample's own flows and indistinguishable from them.
+Sandbox Settings ships that checkbox **ticked**, so the answer has to be carried by a
+field, read by the backend, and turned into a command issued inside the guest. Otherwise
+a real Windows guest booted with the box ticked resolves ``v10.events.data.microsoft.com``
+and completes a TCP connection to it on 443 - the vendor traffic an analyst ticks that
+box to be rid of, sitting in the capture beside the sample's own flows and
+indistinguishable from them.
 
-The fix is a hosts-file sinkhole for the published telemetry FQDNs plus outbound firewall
+The mechanism is a hosts-file sinkhole for the published telemetry FQDNs plus outbound firewall
 rules for the telemetry executables, carried by ``SandboxConfig.block_telemetry``, filled
 in from the dialog key by ``MainWindow._build_sandbox_config``, and applied by
 ``WindowsSandbox._apply_telemetry_blocking`` at the end of the start sequence.

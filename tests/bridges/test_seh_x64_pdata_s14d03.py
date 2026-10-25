@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real x64 exception-handler enumeration tests for S14-D03.
+"""Real x64 exception-handler enumeration tests.
 
-``ProcessBridge.get_seh_chain`` used to raise ``ToolError`` for every native
-x64 target because x64 Windows has no per-thread SEH linked list. These
-tests prove the replacement behavior is genuine: the bridge now parses each
+On x64, ``ProcessBridge.get_seh_chain`` cannot walk a per-thread SEH linked list, because x64 Windows has none.
+These tests prove the bridge parses each
 loaded module's PE ``.pdata`` (``IMAGE_DIRECTORY_ENTRY_EXCEPTION``) directory
 straight out of remote process memory and returns the ``RUNTIME_FUNCTION``
 entries whose ``UNWIND_INFO`` carries a real ``EHANDLER``/``UHANDLER``.
@@ -101,13 +100,12 @@ async def test_seh_chain_x64_target_returns_nonempty_pdata_handlers(
 ) -> None:
     """``get_seh_chain`` on a native x64 target returns real ``.pdata`` handler entries.
 
-    Per S14-D03, the bridge must no longer raise ``ToolError("SEH chain not
+    The bridge must not raise ``ToolError("SEH chain not
     applicable to x64 target")`` on native x64 targets; it must instead
     return genuine handler-carrying ``RUNTIME_FUNCTION`` entries parsed from
     the target's own loaded-module exception directories.
 
-    Falsifiability: reverting ``get_seh_chain`` to raise on x64 (the old
-    S14-D03 defect) makes this ``await`` raise ``ToolError`` instead of
+    Falsifiability: a ``get_seh_chain`` that raises on x64 makes this ``await`` raise ``ToolError`` instead of
     returning a list, failing immediately. Returning an empty list (for
     example from a broken data-directory index, or reading the wrong
     ``RUNTIME_FUNCTION`` field as the unwind-info RVA) fails the
@@ -159,8 +157,7 @@ async def test_seh_chain_x64_addresses_resolve_within_loaded_modules(
     Falsifiability: breaking the RVA-to-VA math (for example adding the
     wrong module's base, or using a stale/incorrect exception-directory
     RVA) produces addresses outside every enumerated module's range,
-    failing the bounds assertions. Reverting to the old raise-on-x64
-    behavior fails at the initial ``await`` before any assertion runs.
+    failing the bounds assertions. A raise-on-x64 implementation fails at the initial ``await`` before any assertion runs.
 
     Args:
         attached_bridge: ProcessBridge fixture pre-attached to the current (native x64) process.

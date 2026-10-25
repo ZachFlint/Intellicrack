@@ -5,6 +5,7 @@
 
 use super::{Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry};
 
+/// Registers the built-in PE/COFF structure templates into `registry`.
 pub fn register_templates(registry: &mut TemplateRegistry) {
     registry.register(image_dos_header());
     registry.register(image_file_header());
@@ -530,6 +531,7 @@ fn image_export_directory() -> StructTemplate {
 
 fn fd(name: &str, field_type: FieldType, description: &str) -> FieldDefinition {
     FieldDefinition {
+        at: None,
         name: name.to_string(),
         field_type,
         endianness: None,
@@ -562,14 +564,6 @@ mod tests {
         "Reserved",
     ];
 
-    /// Gate for finding #27: `IMAGE_OPTIONAL_HEADER32` must expose the full
-    /// 16-entry `DataDirectory` array (128 bytes) after `NumberOfRvaAndSizes`,
-    /// wired to the existing `IMAGE_DATA_DIRECTORY` template via `StructRef`.
-    ///
-    /// Mutation caught: removing `fields.extend(image_data_directory_fields())`
-    /// from `image_optional_header32()` makes `.find(|f| f.name == "ExportTable")`
-    /// return `None` (panicking the `.expect`), and the byte total falls from
-    /// 224 to 96.
     #[test]
     fn test_image_optional_header32_includes_data_directories() {
         let reg = TemplateRegistry::new();
@@ -603,15 +597,10 @@ mod tests {
         }
 
         let export = fields.iter().find(|f| f.name == "ExportTable").unwrap();
-        // Independent oracle: u32::from_le_bytes([0x00,0x10,0x00,0x00]) = 4096
         assert!(export.children[0].display_value.contains("4096"));
-        // Independent oracle: u32::from_le_bytes([0x50,0x00,0x00,0x00]) = 80
         assert!(export.children[1].display_value.contains("80"));
     }
 
-    /// Gate for finding #27: `IMAGE_OPTIONAL_HEADER64` must expose the same
-    /// 16-entry `DataDirectory` array, starting after the 112-byte PE32+
-    /// standard fields.
     #[test]
     fn test_image_optional_header64_includes_data_directories() {
         let reg = TemplateRegistry::new();
@@ -642,9 +631,7 @@ mod tests {
         }
 
         let export = fields.iter().find(|f| f.name == "ExportTable").unwrap();
-        // Independent oracle: u32::from_le_bytes([0x00,0x20,0x00,0x00]) = 8192
         assert!(export.children[0].display_value.contains("8192"));
-        // Independent oracle: u32::from_le_bytes([0x60,0x00,0x00,0x00]) = 96
         assert!(export.children[1].display_value.contains("96"));
     }
 }

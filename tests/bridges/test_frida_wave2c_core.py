@@ -4,17 +4,14 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real, falsifiable gates for FridaBridge core instrumentation operations.
 
-Covers the operations that the section-03 audit flagged as NO COVERAGE or
-WEAK: spawn, resume, attach_by_name, rpc_call, patch_code, intercept_return,
+Covers spawn, resume, attach_by_name, rpc_call, patch_code, intercept_return,
 write_code, and allocate_string. Every test drives the real production method
 against a minimal offline fake device/session/script and asserts on
 exact output values derived from an independent oracle (known constants in the
 test itself, not values re-derived by the same production code under test).
 
-The fake frida transport is modelled after the proven pattern in
-test_frida_bridge_audit5.py: a _FakeDevice, _FakeSession, and _FakeScript
-that record calls and deliver scripted messages, letting the full bridge
-code path run up to the network boundary.
+The fake Frida transport consists of _FakeDevice, _FakeSession, and _FakeScript, which record calls and deliver scripted
+messages, so the full bridge code path runs up to the network boundary.
 """
 
 from __future__ import annotations
@@ -54,10 +51,9 @@ _INTERCEPT_RETURN_VALUE: int = 0x1234_5678
 def _own_pid_is_not_left_tracked() -> Generator[None]:
     """Take this process's PID back out of the process manager after each test.
 
-    The fake device reports this process as the one it spawned, since a spawn
-    must name a live PID, and ``FridaBridge.spawn`` registers what it spawned
-    so that a shutdown sweep ends it. Left registered, that entry named the
-    test worker itself to every later sweep in the same process.
+    The fake device reports this process as the one it spawned, since a spawn must name a live PID, and
+    ``FridaBridge.spawn`` registers what it spawned so that a shutdown sweep ends it. The entry is removed after each
+    test, so a later sweep in the same process does not end the test worker itself.
 
     Yields:
         None: Control passed to the test.

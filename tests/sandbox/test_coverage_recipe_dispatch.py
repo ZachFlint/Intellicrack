@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the ``just test-coverage`` dispatcher.
+"""Gates for the ``just test-coverage`` dispatcher.
 
 These tests exercise ``scripts/test-coverage.ps1`` in its ``-DryRun`` mode,
 which resolves and prints the exact Rust and Python coverage commands without

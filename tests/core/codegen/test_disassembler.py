@@ -2,19 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit3 U10 regression tests for ``intellicrack.core.disassembler``.
+"""Regression tests for ``intellicrack.core.disassembler``.
 
 Covers:
 
-- F-0002: ``HexDisassembler.auto_detect_arch`` must raise
+- ``HexDisassembler.auto_detect_arch`` must raise
   :class:`UnsupportedArchitectureError` instead of silently falling back
   to ``("x86_64", ...)`` when the canonical architecture string returned
   by the format detector has no capstone mapping.
-- F-0009: ``HexDisassembler.disassemble_to_lines`` must omit the
+- ``HexDisassembler.disassemble_to_lines`` must omit the
   ``binary_path`` log field when called with an in-memory buffer (no
-  on-disk path) -- the previous implementation logged the literal string
-  ``"<bytes-buffer>"`` which polluted log analytics with a synthetic
-  filename.
+  on-disk path). The literal string ``"<bytes-buffer>"`` would otherwise
+  pollute log analytics with a synthetic filename.
 """
 
 from __future__ import annotations
@@ -100,17 +99,14 @@ def _detector_reporting(detection: tuple[str, str, bool]) -> Callable[[bytes], t
     return _detect
 
 
-# ---------------------------------------------------------------------------
-# F-0002: auto_detect_arch must raise on unsupported architectures
-# ---------------------------------------------------------------------------
+# auto_detect_arch must raise on unsupported architectures
 
 
 def test_f0002_auto_detect_arch_unknown_raises_unsupported(monkeypatch: pytest.MonkeyPatch) -> None:
     """An unrecognised arch from the format detector must surface as an error.
 
-    The fix replaces the previous ``dict.get(arch, ("x86_64", ...))``
-    silent-fallback with a strict lookup that raises
-    :class:`UnsupportedArchitectureError`. The error must carry the
+    The lookup is strict and raises :class:`UnsupportedArchitectureError`
+    instead of falling back silently. The error must carry the
     offending architecture string on the ``arch`` attribute so callers
     can route it to diagnostic surfaces.
     """
@@ -210,11 +206,8 @@ def test_f0002_auto_detect_arch_x86_elf_resolves_to_32bit_capstone_mode() -> Non
 def test_f0002_auto_detect_arch_no_silent_x86_64_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     """The fallback must NOT produce ``("x86", "64")`` for unknown archs.
 
-    Regression guard: the pre-fix code unconditionally returned
-    ``("x86_64", "64")`` for any unrecognised architecture, which was
-    then mapped to ``("x86", "64")`` downstream. This test asserts the
-    new strict behaviour: an exception is raised before any fallback
-    pair is produced.
+    Guards against a silent fallback: an unknown architecture must raise
+    before any pair is produced, so ``("x86", "64")`` is never returned for it.
     """
     unsupported_detection: tuple[str, str, bool] = ("ELF", "garbage-arch-name", True)
     monkeypatch.setattr(disassembler_module, "detect_format_and_arch", _detector_reporting(unsupported_detection))
@@ -231,9 +224,7 @@ def test_f0002_unsupported_architecture_error_is_value_error_subclass() -> None:
     assert err.arch == "some-arch"
 
 
-# ---------------------------------------------------------------------------
-# F-0009: disassemble_to_lines must not log a placeholder path for buffers
-# ---------------------------------------------------------------------------
+# disassemble_to_lines must not log a placeholder path for buffers
 
 
 @pytest.fixture
@@ -257,9 +248,8 @@ def test_f0009_disassemble_to_lines_buffer_omits_binary_path(disasm: HexDisassem
     Args:
         disasm: Live :class:`HexDisassembler` from the fixture.
 
-    The pre-fix implementation logged ``binary_path="<bytes-buffer>"`` for
-    raw-buffer disassembly. The fix conditionally builds the log payload
-    so the field is dropped entirely when ``binary_path`` is ``None``.
+    Raw-buffer disassembly must not log ``binary_path="<bytes-buffer>"``.
+    The log payload is built conditionally, so the field is dropped entirely when ``binary_path`` is ``None``.
     """
     buffer = b"\x90\x90\x90\xc3"
     with structlog.testing.capture_logs() as captured:
@@ -278,8 +268,7 @@ def test_f0009_disassemble_to_lines_buffer_does_not_log_bytes_placeholder(
     Args:
         disasm: Live :class:`HexDisassembler` from the fixture.
 
-    Regression guard: the previous code formatted ``binary_path`` using a
-    placeholder string that aliased real on-disk paths in log analytics.
+    The placeholder string must not alias real on-disk paths in log analytics.
     """
     buffer = b"\x48\x31\xc0\xc3"
     with structlog.testing.capture_logs() as captured:

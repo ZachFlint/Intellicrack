@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 
-"""E2E tests for newly wired hexcore bridge capabilities.
+"""E2E tests for hexcore bridge capabilities.
 
 Covers encode_text, search_bytes, search_numeric_range, search_text_encoded
 preference, native numeric-search dispatch, and process memory bridge
@@ -591,7 +591,7 @@ class TestBuildNumericFormat:
 
 
 class TestDeadCodeRemoval:
-    """Test that the dead overwrite fallback was removed from _apply_ips_patches."""
+    """Test that _apply_ips_patches has no dead overwrite fallback."""
 
     def test_ips_patch_roundtrip(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """IPS export then import must faithfully reproduce edits via write_bytes only.

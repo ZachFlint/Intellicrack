@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression test for the HuggingFace model-dropdown fallback served-model gap (A8 / S16-D03 residual).
+"""Regression test for the HuggingFace model-dropdown fallback served-model gap.
 
 ``HuggingFaceProvider.list_models`` (``src/intellicrack/providers/huggingface.py``)
 already intersects the Hub text-generation catalog against the HuggingFace
@@ -15,10 +15,10 @@ connected provider instance -- queried only the general Hub search API and
 returned every Hub-tagged model regardless of whether any Inference Provider
 actually served it for chat completion.
 
-The fix factors the served-id fetch into one shared helper,
+The served-id fetch is factored into one shared helper,
 ``intellicrack.providers.huggingface.fetch_router_served_model_ids``, used by
 both ``HuggingFaceProvider._fetch_served_model_ids`` and this dialog fallback,
-and has the fallback intersect its Hub catalog against that shared helper's
+and the fallback intersects its Hub catalog against that shared helper's
 result before returning models to the dropdown.
 
 This test stands up a real local stdlib HTTP server that serves both the Hub

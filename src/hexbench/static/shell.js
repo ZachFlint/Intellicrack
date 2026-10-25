@@ -132,7 +132,7 @@ function perPixelSize(bytes) {
  * @param {{start: number, length: number}|null} state.selection The grid selection, or null.
  * @param {number|null} state.entropy The last entropy reading, or null when there is none.
  * @param {number|null} [state.va] The virtual address a mapping resolves the caret to, or null
- * when no mapping covers it (BE-2). Defaults to null so callers that predate VA mapping still work.
+ * when no mapping covers it Defaults to null when omitted.
  * @param {number} state.hits How many search hits are held.
  * @param {number} state.hitIndex Which hit is current, zero-based.
  * @param {boolean} state.insertMode Whether the grid inserts rather than overwrites.
@@ -1753,7 +1753,7 @@ export class Shell {
    * The entries are populated by the same {@link Shell#populateMenuEntries}
    * loop the menubar's own popups use, so label, shortcut and enabled state
    * can never disagree between the two surfaces. Keyboard movement inside it
-   * is A-3's own `bindMenubarKeys`, given a controller with no buttons of its
+   * is handled by `bindMenubarKeys`, given a controller with no buttons of its
    * own: every key that would normally route through a menu button falls
    * straight through to the entry-navigation half of that contract instead of
    * a second implementation of the same rules.
@@ -2109,7 +2109,7 @@ export class Shell {
     this.#applyDockLayout();
   }
 
-  /** The right-dock counterpart of {@link Shell#focusBottomPanel}, for the menu entries BE-5 gives Templates. */
+  /** The right-dock counterpart of {@link Shell#focusBottomPanel}, for the Templates menu entries. */
   #focusRightPanel(id) {
     this.#dockRight.setVisible(true);
     this.#dockRight.activate(id);
@@ -2456,6 +2456,10 @@ export class Shell {
   }
 
   #applyDocument(info) {
+    const known = this.#documents.find((entry) => entry.handle === info.handle);
+    if (known && info.generation < known.generation) {
+      return;
+    }
     this.#documents = this.#documents.map((entry) => (entry.handle === info.handle ? info : entry));
     if (this.#active && this.#active.handle === info.handle) {
       this.#active = info;
@@ -3221,7 +3225,7 @@ export class Shell {
    * Debounce a `file_offset_to_va` lookup for the caret's current offset.
    *
    * A mapping without any coverage is not an error - the engine reports it as
-   * `null` - so BE-2's status-bar item follows UX-3's rule for an unmeasured
+   * `null` - so the status-bar VA item follows the rule for an unmeasured
    * value: hidden rather than printed as a placeholder, via {@link nextVaState}
    * resetting `#va` to null on both "no mapping" and an outright failure.
    */

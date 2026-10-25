@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for audit4 C8 - F-0023: signature scan read offloaded from the UI thread.
+"""Tests for the signature scan read offloaded from the UI thread.
 
 Validates that:
 

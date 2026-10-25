@@ -2,33 +2,29 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Regression tests for audit7 F-0022 and F-0029.
+r"""Anti-evasion identity and dispatch tests.
 
-These two findings share :func:`QEMUSandbox.apply_anti_evasion` and must be
-verified together because each individual fix is meaningless without the
-other:
+The SMBIOS launch arguments and the registry writes must advertise the same
+identity, and every registry command must pass the in-guest allowlist. Each
+property is gated with the real production code:
 
-* **F-0022 (reg.exe allowlist miss).** ``apply_anti_evasion`` previously
-  dispatched ``reg.exe`` to the guest agent as a bare command name. The
-  Windows agent's ``Test-AllowedCommand`` allowlist accepts only entries in
-  its ``$allowedNames``, or absolute ``.exe`` paths under one of its
-  ``$allowedRoots`` - the share root the guest derived from the agent's own
-  location, and ``System32`` and ``SysWOW64`` below the ``%SystemRoot%`` the
-  guest reports. Bare ``reg.exe`` matched no rule, so every registry patch
-  silently failed with ``exit_code=-1``.
-
-  What those arrays hold is a property of the guest, not of the host, so the
-  allowlist these tests apply is not restated here: it is read out of the very
-  script :meth:`QEMUSandbox._windows_agent_script_content` generates, and
-  executed by :mod:`tests.sandbox.qemu.guest_agent_allowlist` against a
-  modelled guest whose share drive and ``%SystemRoot%`` are named below. A
-  change to the in-guest helper changes what these tests accept.
-* **F-0029 (profile vs hardcoded HP identity).** The SMBIOS launch arguments
-  switched manufacturer/product strings on the
-  ``QEMUConfig.anti_evasion_profile`` field, but the registry writes
-  unconditionally advertised ``"HP"`` and ``"HP EliteDesk 800 G6"``. With a
-  ``workstation`` profile the SMBIOS reported Dell while the registry (once
-  F-0022 is fixed) wrote HP, a trivially detectable inconsistency.
+* **reg.exe allowlist.** ``apply_anti_evasion`` dispatches ``reg.exe`` to the guest
+  agent by its absolute System32 path. The Windows agent's ``Test-AllowedCommand``
+  accepts only entries in its ``$allowedNames``, or absolute ``.exe`` paths under one
+  of its ``$allowedRoots`` - the share root the guest derives from the agent's own
+  location, and ``System32`` and ``SysWOW64`` below the ``%SystemRoot%`` the guest
+  reports. A bare ``reg.exe`` matches no rule, and every registry patch fails with
+  ``exit_code=-1``.
+  What those arrays hold is a property of the guest, not of the host, so the allowlist
+  these tests apply is not restated here: it is read out of the very script
+  :meth:`QEMUSandbox._windows_agent_script_content` generates, and executed by
+  :mod:`tests.sandbox.qemu.guest_agent_allowlist` against a modelled guest whose share
+  drive and ``%SystemRoot%`` are named below. A change to the in-guest helper changes
+  what these tests accept.
+* **Profile identity.** The SMBIOS launch arguments take their manufacturer and product
+  strings from the ``QEMUConfig.anti_evasion_profile`` field, and the registry writes
+  must use the same strings. A ``workstation`` profile must not report one vendor in
+  SMBIOS and another in the registry.
 
 The oracle for these tests is :data:`_EXPECTED_IDENTITY`, an independent,
 hand-maintained specification of the per-profile manufacturer/product strings
@@ -399,7 +395,7 @@ def _make_qemu_binary(tmp_path: Path) -> Path:
 
 
 class TestF0022RegExeAllowlistSafe:
-    """F-0022: every ``reg.exe`` invocation must satisfy ``Test-AllowedCommand``."""
+    """Every ``reg.exe`` invocation must satisfy ``Test-AllowedCommand``."""
 
     def test_production_reg_exe_constant_equals_canonical_system32_path(self) -> None:
         r"""Pin ``WINDOWS_REG_EXE_PATH`` to the exact canonical System32 ``reg.exe`` path.
@@ -472,7 +468,7 @@ class TestF0022RegExeAllowlistSafe:
         holds them, ``.exe`` accepted only under the script's own
         ``$allowedRoots``, non-``.exe`` files under a valid root rejected, and
         the whole decision case-insensitive. If any branch is dropped from the
-        helper, this test stops agreeing with it and fails, and the F-0022
+        helper, this test stops agreeing with it and fails, and the reg.exe
         gates below stop being able to detect an ``apply_anti_evasion``
         regression.
         """
@@ -589,7 +585,7 @@ class TestF0022RegExeAllowlistSafe:
         * exactly one ``mac_address_randomize``.
 
         These counts are not derived from any production helper; they reflect the
-        fixed F-0022 and F-0029 requirements. Multiple independent checks prevent
+        required identity and allowlist behavior. Multiple independent checks prevent
         a consistent-but-wrong implementation from passing:
 
         1. **Exact ordered list equality** against the immutable literal list
@@ -705,7 +701,7 @@ class TestF0022RegExeAllowlistSafe:
         failures are not silently dropped: an agent whose allowlist rejects
         every command returns ``-1`` for each dispatch, so no guest-side
         hardening actually ran. Reporting only the launch-time techniques as a
-        success was the S17-D77 defect; the call must now raise
+        success is the failure this guards against; the call must raise
         :class:`SandboxError` naming the profile, and it must still have
         attempted every command.
         """
@@ -744,7 +740,7 @@ class TestF0022RegExeAllowlistSafe:
 
 
 class TestF0029IdentityProfileConsistency:
-    """F-0029: SMBIOS and registry identity strings must agree per profile."""
+    """SMBIOS and registry identity strings must agree per profile."""
 
     @pytest.mark.parametrize(
         ("profile", "required_manufacturer", "required_product"),

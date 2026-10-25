@@ -3,20 +3,20 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for S13-D04: x64dbg embed must locate the debugger's real window.
+"""Falsifiable gates: x64dbg embed must locate the debugger's real window.
 
 x64dbg is launched on a dedicated, never-visible Win32 desktop (see
 ``intellicrack.core.win32_desktop_process.spawn_on_hidden_desktop``) so its
 window never flashes on screen before Intellicrack can embed it. The x64dbg
-panel's embed poll previously resolved the debugger window with
-``intellicrack.ui.win32_embed.find_window_by_pid``, which enumerates via
-``EnumWindows`` - an API that only ever sees windows belonging to the
-*calling thread's own current desktop*. Because x64dbg's real window lives on
-a different (hidden) desktop, that enumeration could never find it, so the
-"x64dbg Window" sub-tab stayed stuck on the "No debugger process active"
-placeholder even with a live, fully-connected debugging session.
+panel's embed poll cannot resolve the debugger window with
+``intellicrack.ui.win32_embed.find_window_by_pid``, which enumerates via ``EnumWindows``. That API
+only ever sees windows belonging to the *calling thread's own current desktop*. x64dbg's real
+window lives on a different (hidden) desktop, so that enumeration never finds it, and the
+"x64dbg Window" sub-tab would stay on the "No debugger process active" placeholder even with a
+live, fully-connected debugging session. The poll therefore needs the desktop-scoped lookup
+described below.
 
-The fix adds two pieces, both exercised directly here:
+The lookup uses two pieces, both exercised directly here:
 
 * ``intellicrack.core.win32_desktop_process.get_desktop_handle_for_pid`` - a
   registry, populated by ``spawn_on_hidden_desktop`` and cleared by
@@ -333,8 +333,8 @@ def test_get_desktop_handle_for_pid_cleared_after_close(
 ) -> None:
     """The pid->HDESK registry entry must be created on spawn and removed on close.
 
-    A regression that never registers the handle breaks embedding outright
-    (S13-D04 itself); a regression that never clears it on close leaks a
+    A regression that never registers the handle breaks embedding outright; a regression that never
+    clears it on close leaks a
     stale desktop handle association across process lifetimes and could
     misdirect a later, unrelated PID's embed lookup.
 

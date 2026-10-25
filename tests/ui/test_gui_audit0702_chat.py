@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the 2026-07-02 GUI audit fix in ``chat.py``.
+"""Gate for truncated tool-call and tool-result tooltips in ``chat.py``.
 
-* ``test_m39_*`` (M39): truncated tool-call arguments and tool-result text
+* Truncated tool-call arguments and tool-result text
   must expose the full untruncated value via ``QToolTip`` so users can
   recover content that was cut off by the ``_MAX_ARGS_DISPLAY_LEN`` /
   ``_MAX_RESULT_DISPLAY_LEN`` character caps. Short (non-truncated) values
@@ -53,9 +53,9 @@ def _find_label(bubble: MessageBubble, object_name: str) -> QLabel:
 def test_m39_truncated_tool_call_args_expose_full_text_via_tooltip(qapp: object) -> None:
     """Truncated tool-call argument text must carry the full value as a tooltip.
 
-    Before the fix, ``args_text`` was overwritten in place by the truncation
-    branch, so the only string available to the widget (and to
-    ``setToolTip``, which was never called) was the already-clipped
+    ``args_text`` must not be overwritten in place by the truncation
+    branch, or the only string available to the widget (and to
+    ``setToolTip``, which must be called) would be the already-clipped
     ellipsis-terminated string. This asserts the real ``QLabel`` built by
     ``MessageBubble`` displays the truncated text but exposes the complete,
     untruncated argument string through ``toolTip()``.
@@ -88,9 +88,9 @@ def test_m39_truncated_tool_call_args_expose_full_text_via_tooltip(qapp: object)
 def test_m39_short_tool_call_args_have_no_stray_tooltip(qapp: object) -> None:
     """Short (non-truncated) tool-call arguments must not gain a tooltip.
 
-    Guards against a naive fix that unconditionally calls ``setToolTip`` on
+    Guards against a naive change that unconditionally calls ``setToolTip`` on
     every args label -- doing so would attach a redundant tooltip that just
-    repeats visible text. The fix must only attach a tooltip when the
+    repeats visible text. A tooltip must only be attached when the
     displayed text differs from the full text.
 
     Args:
@@ -116,9 +116,9 @@ def test_m39_short_tool_call_args_have_no_stray_tooltip(qapp: object) -> None:
 def test_m39_truncated_tool_result_exposes_full_text_via_tooltip(qapp: object) -> None:
     """Truncated tool-result text must carry the full value as a tooltip.
 
-    Before the fix, ``result_text`` was overwritten by the truncation
-    branch, so the label held only the clipped string and no tooltip was
-    ever attached, permanently hiding the rest of a long decompiled
+    ``result_text`` must not be overwritten by the truncation
+    branch: the label would then hold only the clipped string and no tooltip would be
+    attached, permanently hiding the rest of a long decompiled
     snippet or string list. This drives the real
     ``_create_tool_result_widget`` path via ``MessageBubble`` and asserts
     the rendered label's ``toolTip()`` recovers the complete result text.
@@ -152,7 +152,7 @@ def test_m39_truncated_tool_result_exposes_full_text_via_tooltip(qapp: object) -
 def test_m39_short_tool_result_has_no_stray_tooltip(qapp: object) -> None:
     """Short (non-truncated) tool-result text must not gain a tooltip.
 
-    Guards against a naive fix that unconditionally calls ``setToolTip`` on
+    Guards against a naive change that unconditionally calls ``setToolTip`` on
     every result label regardless of whether truncation actually occurred.
 
     Args:

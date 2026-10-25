@@ -98,9 +98,9 @@ function Write-KernelLifecycle {
 #  * As a deterministic fallback we tighten the NtQuerySystemInformation
 #    poll loop to 250 ms (configurable via -PollIntervalMilliseconds). At
 #    250 ms the loop catches mutex/event/semaphore creations that close
-#    again within ~250 ms which the previous 3 s cadence missed entirely.
+#    again within ~250 ms, which a 3 s cadence would miss entirely.
 #  * The trade-off is CPU: a 250 ms full-system handle enumeration costs
-#    roughly 4x the previous load; this is acceptable because the monitor
+#    roughly 4x the load of the 3 s cadence; this is acceptable because the monitor
 #    runs only inside short-lived sandbox sessions.
 
 if ($PollIntervalMilliseconds -lt 50) {

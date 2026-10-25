@@ -5,9 +5,7 @@
 
 """Real-data coverage tests for GhidraBridge pure-logic capabilities.
 
-The audit (shard 03) flagged that every existing GhidraBridge test is a
-structural metadata check or a disconnected ``ToolError`` assertion: none
-exercises a real capability against a real artifact. A live Ghidra headless
+A live Ghidra headless
 JVM plus its ``ghidra_bridge`` RPC server is not available in the test
 container, so the RPC-dependent analysis methods are correctly gated behind
 connection state. However, a substantial part of the bridge's real behaviour

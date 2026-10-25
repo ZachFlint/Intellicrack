@@ -202,7 +202,7 @@ def _size_button_to_content(button: QPushButton) -> None:
     """Give a button a minimum width equal to its own size hint.
 
     Without this, a button packed two-per-row into a narrow column can be
-    squeezed below the width its label needs, and Qt centre-clips the text
+    squeezed below the width its label needs, and Qt center-clips the text
     instead of growing the column.
 
     Args:
@@ -456,7 +456,7 @@ def _provider_default_api_base(provider_id: str) -> str:
         provider_id: The provider identifier.
 
     The preset registry is the authority, so a user-defined instance created
-    from a preset gets the same default as the built-in it was modelled on.
+    from a preset gets the same default as the built-in it was modeled on.
 
     Args:
         provider_id: The provider identifier.
@@ -624,9 +624,9 @@ async def _revoke_credential(
     """Revoke the OAuth token for an OAuth-capable provider, else delete its API key.
 
     Providers that expose an OAuth flow (``oauth_provider is not None``)
-    keep the existing behaviour of revoking through the OAuth manager.
+    keep the existing behavior of revoking through the OAuth manager.
     Every other provider -- anything :class:`~intellicrack.credentials.oauth.OAuthProvider`
-    does not recognise, such as OpenAI, OpenRouter, Grok, Ollama, or local
+    does not recognize, such as OpenAI, OpenRouter, Grok, Ollama, or local
     Transformers -- has its stored API key deleted from the credential
     store instead, so "Revoke Token" never silently no-ops for API-key
     providers.
@@ -789,7 +789,7 @@ class CredentialSourceDetector:
             source: The credential source string.
 
         Returns:
-            _CredentialSourceKey: The theme key of the source, or ``"default"`` for a source the UI does not recognise.
+            _CredentialSourceKey: The theme key of the source, or ``"default"`` for a source the UI does not recognize.
         """
         source_key_map: dict[str, _CredentialSourceKey] = {
             CredentialSource.ENV_FILE: "env_file",
@@ -1414,7 +1414,7 @@ class ModelRefreshWorker(RetainedWorker):
         """Return locally loadable Transformers model identifiers.
 
         Local inference needs no API call or credentials: the curated
-        recommended-model catalogue is returned directly so the dropdown
+        recommended-model catalog is returned directly so the dropdown
         is populated even before any model is downloaded or the provider
         is connected. When a connected provider is present the caller has
         already preferred its richer ``list_models`` result; this method
@@ -3198,9 +3198,9 @@ class ProviderConfigDialog(QDialog):
         """Revoke the OAuth token for an OAuth-capable provider, else delete its API key.
 
         Providers that resolve to a valid :class:`OAuthProvider` keep the
-        existing behaviour of revoking through the OAuth manager. Every
+        existing behavior of revoking through the OAuth manager. Every
         other configured provider -- one :class:`OAuthProvider` does not
-        recognise, such as OpenAI, OpenRouter, Grok, Ollama, or local
+        recognize, such as OpenAI, OpenRouter, Grok, Ollama, or local
         Transformers -- has its stored API key deleted from the credential
         store instead, so the button never silently no-ops for API-key
         providers. When nothing is configured for the provider at all, the
@@ -4333,7 +4333,7 @@ class ProviderSettingsWidget(QFrame):
         """Resolve the text shown for a base URL or organization field.
 
         The ``.env`` file (or, failing that, the process environment) is
-        authoritative. A value an earlier release stored only in
+        authoritative. A value stored only in
         ``providers.json`` is shown when ``.env`` holds none, and a base URL
         falls back to the provider's default endpoint.
 

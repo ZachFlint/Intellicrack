@@ -5,21 +5,17 @@
 
 """L1/L2 gate tests for the Frida instrumentation bridge-completeness slice.
 
-Covers ``audit/bridge-completeness/agent-08-frida-instrumentation.md`` and its
-verifier. Every test drives a real, attached ``FridaBridge`` against the current
+Every test drives a real, attached ``FridaBridge`` against the current
 test process (self-attach) and/or dispatches through a real ``ToolRegistry`` so
 the exact production code path is what makes each assertion pass or fail.
 
-Regression coverage for row 11 (the confirmed MISSING gap): ``Stalker.exclude``,
+Coverage for the four Stalker primitives: ``Stalker.exclude``,
 ``Stalker.garbageCollect``, ``Stalker.invalidate``, and
-``Stalker.trustThreshold`` had no bridge method, no tool-def, and no GUI control
-at audit time. They are now real bridge methods (``stalker_exclude``,
+``Stalker.trustThreshold`` are real bridge methods (``stalker_exclude``,
 ``stalker_garbage_collect``, ``stalker_invalidate``,
 ``stalker_set_trust_threshold``) with registered tool-defs; these tests exercise
 L1 (the real Frida ``Stalker`` JS API round trip) and L2 (ToolRegistry
-dispatch). No GUI control exists yet for these four methods (verified absent by
-grepping ``frida_panel.py``/``frida_instrumentation_tab.py``), so -- per the
-falsifiable-gate rule -- no L3 test is written for them: a test asserting GUI
+dispatch). No GUI control exists for these four methods, so no L3 test is written for them: a test asserting GUI
 wiring that does not exist would either be vacuous or would have to fabricate
 the very control it claims to verify.
 """
@@ -188,7 +184,7 @@ def registry(tmp_path: Path, self_attached_bridge: FridaBridge) -> ToolRegistry:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestPreviouslyMissingStalkerMethods:
-    """L1/L2 gates for the four previously-MISSING Stalker primitives (row 11)."""
+    """L1/L2 gates for the four Stalker primitives."""
 
     @staticmethod
     def test_stalker_garbage_collect_dispatchable_via_registry(
@@ -196,8 +192,7 @@ class TestPreviouslyMissingStalkerMethods:
     ) -> None:
         """``frida.stalker_garbage_collect`` must dispatch and run ``Stalker.garbageCollect`` for real.
 
-        Falsifiable: if the ``ToolFunction`` entry were missing (pre-fix
-        state), ``execute_tool_call`` would raise ``ToolError`` for an
+        Falsifiable: if the ``ToolFunction`` entry were missing, ``execute_tool_call`` would raise ``ToolError`` for an
         unknown function before ``Stalker.garbageCollect()`` ever ran in the
         target process. If the method body were a stub, it would return
         without ever calling ``self._execute_script_and_wait`` and any
@@ -329,7 +324,7 @@ class TestPreviouslyMissingStalkerMethods:
         ],
     )
     def test_tool_def_registered(self_attached_bridge: FridaBridge, expected_name: str) -> None:
-        """Each previously MISSING Stalker method must have a real ToolFunction entry.
+        """Each Stalker method must have a real ToolFunction entry.
 
         Falsifiable: removing any of these four ``ToolFunction`` entries
         from ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes the
@@ -345,7 +340,7 @@ class TestPreviouslyMissingStalkerMethods:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestRevertHookAndFlushInterceptorL1:
-    """L1/L2 regression coverage for the previously-NO-CONTROL Interceptor lifecycle methods."""
+    """L1/L2 coverage for the Interceptor lifecycle methods."""
 
     @staticmethod
     def test_flush_interceptor_dispatchable_via_registry(registry: ToolRegistry) -> None:
@@ -400,8 +395,7 @@ class TestRevertHookAndFlushInterceptorL1:
         calls ``revert_hook`` on the exact same target string. Frida's
         ``Interceptor.revert`` is a real, successful no-op-safe call for an
         address that currently has an active interceptor -- so this must
-        return ``True`` rather than raising, which failed above for a
-        never-hooked target.
+        return ``True`` rather than raising, .
 
         Falsifiable: if ``revert_hook`` no longer executed
         ``Interceptor.revert(targetAddr)`` against the real Frida runtime
@@ -424,7 +418,7 @@ class TestRevertHookAndFlushInterceptorL1:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestCallProbeManagementL1:
-    """L1/L2 regression coverage for the previously-NO-CONTROL call-probe methods."""
+    """L1/L2 coverage for the call-probe methods."""
 
     @staticmethod
     def test_add_and_remove_call_probe_round_trip_via_registry(
@@ -469,7 +463,7 @@ class TestCallProbeManagementL1:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestMemoryPatchAndStringAllocationL1:
-    """L1/L2 regression coverage for the previously-NO-CONTROL memory patch/alloc methods."""
+    """L1/L2 coverage for the memory patch/alloc methods."""
 
     @staticmethod
     def test_patch_code_writes_exact_bytes_via_registry(
@@ -536,7 +530,7 @@ class TestMemoryPatchAndStringAllocationL1:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestSymbolAndModuleLookupL1:
-    """L1/L2 regression coverage for the previously-NO-CONTROL symbol/module lookup methods."""
+    """L1/L2 coverage for the symbol/module lookup methods."""
 
     @staticmethod
     def test_enumerate_symbols_returns_real_kernel32_symbols(
@@ -628,7 +622,7 @@ class TestSymbolAndModuleLookupL1:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestCallSystemFunctionL1:
-    """L1/L2 regression coverage for the previously-NO-CONTROL errno/GetLastError call path."""
+    """L1/L2 coverage for the errno/GetLastError call path."""
 
     @staticmethod
     def test_call_system_function_captures_get_last_error_for_invalid_handle(
@@ -875,7 +869,7 @@ class TestLoadModuleL1L2:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 class TestWriteMemoryHexCoercionRegression:
-    """Regression gate for the Phase-1 hex-string-to-bytes coercion infrastructure (``core/tools.py``).
+    """Regression gate for the hex-string-to-bytes coercion in ``core/tools.py``.
 
     ``frida.write_memory`` declares its ``data`` tool-def parameter as a
     JSON ``string`` (hex-encoded bytes) but the real bound bridge method

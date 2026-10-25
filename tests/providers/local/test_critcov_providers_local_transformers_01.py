@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Critical-coverage tests for ``intellicrack.providers.local_transformers``.
+"""Tests for ``intellicrack.providers.local_transformers``.
 
 These tests drive the provider's guard, failure, fallback, cancellation and bookkeeping paths against real objects. A single small model
 (``TinyLlama/TinyLlama-1.1B-Chat-v1.0``, the one baked into the container's Hugging Face cache) is loaded once per file on the CPU through the

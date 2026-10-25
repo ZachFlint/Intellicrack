@@ -8,7 +8,6 @@ from typing import Any, cast
 import yaml
 
 
-# Constant for split parsing magic number
 FRONTMATTER_SPLIT_PARTS: int = 3
 
 
@@ -74,11 +73,9 @@ def generate_agent_configs() -> None:
         err_msg: str = "Source agents directory not found"
         raise FileNotFoundError(err_msg)
 
-    # Ensure plugin directory exists
     if not plugin_dir.exists():
         plugin_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write plugin.json
     plugin_spec: dict[str, str] = {
         "$schema": "https://antigravity.google/schemas/v1/plugin.json",
         "name": "intellicrack-agents",

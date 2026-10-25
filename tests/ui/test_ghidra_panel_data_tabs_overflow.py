@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for the Ghidra panel's bottom data-tabs overflow defect.
+"""Tests for the Ghidra panel's bottom data-tabs overflow.
 
 ``GhidraPanel._create_data_tabs`` (src/intellicrack/ui/panels/ghidra_panel.py)
 builds ``self._data_tabs`` with 18 tabs (Strings through Analysis Extras) in a
@@ -13,7 +13,7 @@ instead of exposing the scroll-button chevrons, so tabs toward the end of
 the row (Memory, Data Types, Program Tree, Analysis Extras) become hard or
 impossible to reach.
 
-The fix mirrors the established idiom already used for the hex panel's side
+The configuration mirrors the established idiom already used for the hex panel's side
 tabs (``HexEditorPanel._create_content``,
 src/intellicrack/ui/panels/hex_editor/panel.py:400-404): the tab bar gets
 ``setElideMode(Qt.TextElideMode.ElideNone)`` so labels are never truncated and
@@ -22,10 +22,10 @@ to fill the bar, the tab widget gets ``setUsesScrollButtons(True)`` so
 overflow is always reachable via scroll chevrons, and the tab widget carries a
 minimum height so the bar cannot be squeezed away to nothing by the
 surrounding splitter. On the PyQt6 build this repo pins, ``usesScrollButtons``
-and ``elideMode`` already default to the values this fix sets (verified
-against both the native and ``Fusion`` styles), so ``expanding`` -- whose Qt
-default of ``True`` does differ from the fix -- is the assertion that
-actually falsifies on a revert; see
+and ``elideMode`` already default to the values set here (verified
+against both the native and ``Fusion`` styles), so ``expanding``, whose Qt
+default of ``True`` differs from the configured value, is the property that
+distinguishes the configuration from the defaults; see
 ``TestDataTabsOverflowIsReachable.test_data_tab_bar_is_configured_for_reachable_overflow``
 for the full explanation.
 
@@ -85,7 +85,7 @@ class TestDataTabsOverflowIsReachable:
     def test_every_data_tab_index_is_selectable(panel: GhidraPanel) -> None:
         """Every tab index 0..count-1 must be selectable and expose a non-empty widget.
 
-        Regression: with no overflow configuration, Qt's default tab-bar
+        Without an overflow configuration, Qt's default tab-bar
         elision can still leave every index individually selectable via
         ``setCurrentIndex`` (elision only affects the drawn label, not
         index validity), so this check alone would not catch the defect --
@@ -110,16 +110,16 @@ class TestDataTabsOverflowIsReachable:
     def test_data_tab_bar_is_configured_for_reachable_overflow(panel: GhidraPanel) -> None:
         """The data-tabs bar must use scroll buttons, never elide, and not auto-expand tabs.
 
-        Regression: reverting the ``setUsesScrollButtons(True)`` /
+        Without the ``setUsesScrollButtons(True)`` /
         ``setElideMode(Qt.TextElideMode.ElideNone)`` / ``setExpanding(False)``
-        block in ``GhidraPanel._create_data_tabs`` drops back to Qt's own
+        block in ``GhidraPanel._create_data_tabs``, the bar falls back to Qt's own
         ``QTabBar`` defaults. On this PyQt6 build (both the native and
         ``Fusion`` styles) ``usesScrollButtons`` and ``elideMode`` already
-        default to the fixed values this fix sets, so those two checks alone
-        would not fail on a revert -- ``expanding`` is the one property whose
+        default to the fixed values set here, so those two checks alone
+        would not detect that absence. ``expanding`` is the one property whose
         Qt default (``True``, letting tabs stretch to fill the bar instead of
-        keeping their natural width) actually differs from the fix and is
-        what falsifies this test when ``setExpanding(False)`` is removed.
+        keeping their natural width) actually differs from the configured value,
+        so it is what detects that absence when ``setExpanding(False)`` is missing.
         All three assertions stay in place to pin the full documented
         contract, matching the hex-panel side-tabs idiom this mirrors.
 
@@ -148,7 +148,7 @@ class TestDataTabsOverflowIsReachable:
     def test_data_tabs_widget_has_a_nonzero_minimum_height(panel: GhidraPanel) -> None:
         """The data-tabs widget must carry a minimum height so its bar cannot collapse to 0.
 
-        Regression: without an explicit minimum, the vertical splitter that
+        Without an explicit minimum, the vertical splitter that
         hosts ``_data_tabs`` can squeeze the whole pane toward zero height,
         hiding the tab bar (and its scroll buttons) entirely regardless of
         the elide/scroll-button configuration.

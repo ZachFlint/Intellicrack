@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the shared analysis-panel layout scaffolding.
+"""Gates for the shared analysis-panel layout scaffolding.
 
 Exercises the real widgets produced by :mod:`intellicrack.ui.panels.base_panel`
 and :mod:`intellicrack.ui.overflow_toolbar`: that panel toolbars are
@@ -146,7 +146,7 @@ class TestAddToolMenu:
 
     @staticmethod
     def test_entries_become_actions_with_initial_enabled_state() -> None:
-        """Each entry must produce a keyed QAction honouring its initial enabled flag."""
+        """Each entry must produce a keyed QAction honoring its initial enabled flag."""
         toolbar = QToolBar()
         actions = AnalysisPanelBase._add_tool_menu(
             toolbar,
@@ -224,7 +224,7 @@ class TestSplitterHandleGrabbable:
 
     @staticmethod
     def test_environment_honours_qss_handle_sizing() -> None:
-        """A deliberately 2px-styled handle must render thin, proving this gate can detect a regression."""
+        """A deliberately 2px-styled handle must render thin."""
         control = _rendered_vertical_handle_height(_UNGRABBABLE_HANDLE_QSS)
         assert control < _MIN_GRABBABLE_HANDLE, "environment must honour QSS handle sizing, else this gate cannot catch a 2px regression"
 

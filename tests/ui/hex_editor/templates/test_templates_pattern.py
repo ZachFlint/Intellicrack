@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit4 C5 regression tests for templates + pattern editor mixins.
+"""Regression tests for the templates and pattern editor mixins.
 
 These tests drive the real ``intellicrack_hexcore.HexDocument`` template
 engine and the real :class:`HexPatInterpreter` against real, valid PE / ELF
@@ -15,19 +15,16 @@ on the live document and (b) publish the matching
 layer, the AI tool registry) refresh after a GUI mutation instead of analysing
 stale state.
 
-The covered findings:
+The covered behaviour:
 
-* **F-0003** -- every byte / document mutation reachable from
-  ``TemplatesMixin`` (template apply / import / remove and the PE/ELF
-  auto-bookmark walk) publishes the matching ``HexDocumentState`` event.
+* Every byte / document mutation reachable from ``TemplatesMixin`` (template
+  apply / import / remove and the PE/ELF auto-bookmark walk) publishes the
+  matching ``HexDocumentState`` event.
 
-* **F-0012 / F-0017** -- both ``_on_pattern_apply`` branches (the HexPat
-  interpreter path and the compile-register-apply path) emit the appropriate
-  ``TEMPLATE_REGISTERED`` and ``PATTERN_EXECUTED`` notifications, and the
-  apply paths mirror the bridge's register-then-execute fan-out.
-
-All tests fail against pre-audit code: the recorder is empty for the template
-/ bookmark mutations, and the interpreter branch emits no notification.
+* Both ``_on_pattern_apply`` branches (the HexPat interpreter path and the
+  compile-register-apply path) emit the appropriate ``TEMPLATE_REGISTERED``
+  and ``PATTERN_EXECUTED`` notifications, and the apply paths mirror the
+  bridge's register-then-execute fan-out.
 """
 
 from __future__ import annotations
@@ -370,7 +367,7 @@ class NotifyRecorder:
 
 @pytest.mark.usefixtures("qapp")
 class TestTemplatesMixinNotifications:
-    """F-0003 + F-0012 -- ``TemplatesMixin`` mutation paths emit state events."""
+    """``TemplatesMixin`` mutation paths emit state events."""
 
     @staticmethod
     def test_apply_template_decodes_real_fields_and_emits_both_events() -> None:
@@ -404,7 +401,7 @@ class TestTemplatesMixinNotifications:
 
     @staticmethod
     def test_apply_template_uses_audit_source_for_loop_guard() -> None:
-        """The apply notifications use their audit source ids so echoes self-suppress.
+        """The apply notifications use their documented source ids so echoes self-suppress.
 
         Registering the recorder under both apply source ids and observing
         the loop guard drop each echo proves the mixin emitted with exactly
@@ -532,7 +529,7 @@ class TestTemplatesMixinNotifications:
 
 @pytest.mark.usefixtures("qapp")
 class TestAutoBookmarkNotifications:
-    """F-0003 -- bookmark mutation paths publish ``DATA_MODIFIED`` events."""
+    """Bookmark mutation paths publish ``DATA_MODIFIED`` events."""
 
     @staticmethod
     def test_pe_auto_bookmark_creates_real_bookmarks_and_one_event_per_region() -> None:
@@ -622,7 +619,7 @@ class TestAutoBookmarkNotifications:
 
 @pytest.mark.usefixtures("qapp")
 class TestPatternApplyBranches:
-    """F-0012 + F-0017 -- both ``_on_pattern_apply`` branches notify correctly."""
+    """Both ``_on_pattern_apply`` branches notify correctly."""
 
     @staticmethod
     def test_compile_register_apply_decodes_real_fields_and_emits_both_events() -> None:
@@ -663,7 +660,7 @@ class TestPatternApplyBranches:
     def test_compile_branch_uses_distinct_audit_sources() -> None:
         """The compile branch register and apply notifications use distinct sources.
 
-        Each notification carries its own audit source so loop-guard filters
+        Each notification carries its own source id so loop-guard filters
         suppress the registration echo independently from the apply echo. A
         recorder bound to one source must miss its own event but still see the
         other.
@@ -756,7 +753,7 @@ class TestPatternApplyBranches:
     def test_interpreter_branch_uses_distinct_audit_sources() -> None:
         """The interpreter branch register / apply notifications use distinct sources.
 
-        Each interpreter notification carries its own audit source id; a
+        Each interpreter notification carries its own source id; a
         recorder bound to one must miss its own event yet still observe the
         other, proving the documented identifiers are used.
         """

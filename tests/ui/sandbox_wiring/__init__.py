@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit7 F-0021: ``wire_sandbox_backend`` injection path.
+"""Regression tests for the ``wire_sandbox_backend`` injection path.
 
-The defect: :meth:`ToolOutputPanel.wire_sandbox_backend` was fully
-implemented but had no production caller. This package validates the
-plugin / CLI / startup injection path now in place:
+The panel-level :meth:`ToolOutputPanel.wire_sandbox_backend` must have a production caller.
+This package validates the plugin / CLI / startup injection path:
 
 * :meth:`MainWindow.wire_sandbox_backend` forwards an externally
   constructed ``SandboxBase`` (and optional ``SandboxManager``) to

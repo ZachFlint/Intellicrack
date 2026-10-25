@@ -2,20 +2,20 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the Scripts panel and the orchestrator sharing one manager.
+"""Gate for the Scripts panel and the orchestrator sharing one manager.
 
 ``MainWindow._configure_orchestrator`` builds a ``ScriptManager`` rooted at
 ``<project>/.intellicrack/scripts`` and hands it to the orchestrator, which
 uses it to record the outcome of every successful tool call. Startup then
 wires a *different* ``ScriptManager`` -- the one built in ``main.py`` over
-``config.data_directory / "scripts"`` -- into the Scripts panel, and that call
-never reached the orchestrator. Two managers, two directories, two script
+``config.data_directory / "scripts"`` -- into the Scripts panel. The panel and the
+orchestrator must share one manager; two managers mean two directories and two script
 registries.
 
 The consequence is not cosmetic. ``ScriptManager.record_execution`` looks the
 script up in its own in-memory registry and returns ``False`` when it is
 absent, so every execution of a script the user authored in the Scripts panel
-was silently discarded by the orchestrator: the panel's script simply did not
+would be silently discarded by the orchestrator: the panel's script would not
 exist as far as the recording half was concerned.
 
 The gate drives the real wiring entry point on a real ``MainWindow`` with a
@@ -143,8 +143,7 @@ def test_a_panel_authored_script_can_be_recorded_against(
     """An execution of a panel-authored script must reach that script.
 
     ``record_execution`` returns ``False`` for a name its own registry does not
-    hold, which is exactly what happened to every user script while the two
-    halves owned separate managers.
+    hold, so the two managers must be one.
 
     Args:
         window_and_orchestrator: The real window/orchestrator pair.

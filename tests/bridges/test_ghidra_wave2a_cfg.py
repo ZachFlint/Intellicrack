@@ -3,22 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GHIDRA-B wave-2a: real falsifiable gates for CFG/pcode/flow/slice/callgraph/frames.
+"""Falsifiable gates for the GhidraBridge CFG, P-code, flow, slice, callgraph and frame accessors.
 
-Methods gated (all were disconnected-state-only before this file):
-  get_pcode, get_basic_blocks, get_instruction_flow, get_slice, get_callers,
-  get_program_tree, get_properties, get_register_value, get_stack_frame.
+Methods gated: get_pcode, get_basic_blocks, get_instruction_flow, get_slice, get_callers, get_program_tree, get_properties, get_register_value, get_stack_frame.
 
-Methods skipped (already REAL in section-02 audit):
-  get_call_graph (test_f0011_call_graph_uses_get_called_functions in test_ghidra_audit6.py)
-  get_call_tree  (test_f0011_call_tree_uses_get_called_functions  in test_ghidra_audit6.py)
-
-The test seam is a self-contained ``_FakeBridgeClient`` that mirrors the
-upstream ``BridgeClient.remote_exec`` / ``remote_eval`` contract.  Fake Ghidra
-domain objects are injected into ``fake.globals`` so that the real bridge method
-script runs end-to-end against known values. Assertions cover both the exact
-return-value structure (independent oracle) and the Ghidra API framing present
-in the emitted script (mutation guard).
+The test seam is a self-contained ``_FakeBridgeClient`` that mirrors the upstream ``BridgeClient.remote_exec`` / ``remote_eval`` contract.  Fake Ghidra domain objects are injected into ``fake.globals`` so that the real bridge method script runs end-to-end against known values. Assertions cover both the exact return-value structure (independent oracle) and the Ghidra API framing present in the emitted script (mutation guard).
 """
 
 from __future__ import annotations

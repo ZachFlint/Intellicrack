@@ -181,8 +181,7 @@ class TestAllProvidersModelCount:
         For Ollama, the daemon must be running with at least one model pulled.
         When the daemon is reachable ``has_ollama_available`` is True and this
         gate asserts that ``list_models()`` returns a non-empty list; a bridge
-        regression that silently empties the model list will fail the assertion
-        and turn the test red.
+        regression that silently empties the model list fails the assertion.
 
         Args:
             credential_loader: Credential loader fixture.

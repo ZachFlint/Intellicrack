@@ -99,11 +99,11 @@ if TYPE_CHECKING:
 
 _MODE_LABEL_HPADDING: Final[int] = 16
 _SEARCH_MODE_COMBO_HPADDING: Final[int] = 32
-# 180px truncated a representative byte-pattern query (e.g. an 11-byte hex
-# signature) before it could be typed in full without horizontal scrolling
-# (S19-D03). Widened just enough to fit that query plus the styled
-# QLineEdit's horizontal chrome (padding: 6px 8px + 1px border each side)
-# across the fallback UI fonts a target system may substitute for Segoe UI.
+# A representative byte-pattern query (e.g. an 11-byte hex signature) must be
+# typeable in full without horizontal scrolling. Wide enough to fit that query
+# plus the styled QLineEdit's horizontal chrome (padding: 6px 8px + 1px border
+# each side) across the fallback UI fonts a target system may substitute for
+# Segoe UI.
 _SEARCH_INPUT_MAX_WIDTH: Final[int] = 260
 _ENCODING_COMBO_WIDTH: Final[int] = 120
 _LOG_BTN_HPADDING: Final[int] = 24
@@ -594,7 +594,7 @@ class HexEditorPanel(
     def _build_byte_distribution_header(self) -> QHBoxLayout:
         """Build the byte-distribution header row with a log-scale toggle.
 
-        Initialises :attr:`_byte_dist_widget` as a side effect so the
+        Initializes :attr:`_byte_dist_widget` as a side effect so the
         statistics tab can lay it out directly underneath the header row.
 
         Returns:

@@ -5,18 +5,15 @@
 
 """Regression gate: ``HexEditorPanel.load_file`` must wire its hexcore document into the bridge.
 
-Prior to this fix, ``HexEditorPanel._load_file_impl`` (``ui/panels/hex_editor/panel.py``)
-opened ``intellicrack_hexcore.HexDocument`` directly for the panel's own hex
-widget but never told the attached ``HexEditorBridge`` about the new
-document. The bridge's own ``document`` attribute stayed ``None`` forever, so
+``HexEditorPanel._load_file_impl`` (``ui/panels/hex_editor/panel.py``)
+opened ``intellicrack_hexcore.HexDocument`` for the panel's own hex widget and must also tell the attached ``HexEditorBridge`` about the new
+document. Otherwise the bridge's own ``document`` attribute stays ``None``, so
 every AI/GUI operation dispatched through the bridge -- ``get_pe_sections``,
 ``get_pe_imports``, ``get_pe_exports``, ``auto_detect_pattern``,
 ``disassemble``, VA-mapping auto-detect -- raised
-``RuntimeError("no document open")`` even though the panel was visibly
-displaying a loaded file, and the sidebar auto-refresh that fires from
-``_load_file_impl`` itself failed the same way on every load.
+``RuntimeError("no document open")`` while the panel displays a loaded file, and the sidebar auto-refresh that fires from ``_load_file_impl`` fails the same way.
 
-The fix adds ``HexEditorBridge.adopt_document`` (a synchronous method that
+``HexEditorBridge.adopt_document`` (a synchronous method that
 mirrors ``open_file``'s state bookkeeping without re-reading the file from
 disk or publishing a second ``DOCUMENT_OPENED`` notification back through the
 shared ``HexDocumentState`` -- which would otherwise re-enter
@@ -92,7 +89,7 @@ class TestLoadFileAdoptsBridgeDocument:
         """After ``load_file``, ``bridge.document`` must be the panel's own document.
 
         Falsifiable: if ``_load_file_impl`` never calls
-        ``HexEditorBridge.adopt_document`` (the pre-fix state), ``bridge.document``
+        ``HexEditorBridge.adopt_document`` (the unwired state), ``bridge.document``
         stays ``None`` and this assertion fails.
 
         Args:

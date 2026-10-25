@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 7: the operator can see and change a server's sandbox, and is told plainly what it does not enforce.
+"""The operator can see and change a server's sandbox, and is told plainly what it does not enforce.
 
 The gates drive the real MCP settings dialog over a real configuration file: they read what the sandbox editor shows for a configured
 server, change every sandbox field through its widget, press Save, and read the file back.

@@ -4,12 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Falsifiable gates: a bridge call must outlive the widget that dispatched it.
 
-``run_bridge_coroutine_async`` used to parent its ``BridgeCallWorker`` to the calling widget. Closing a panel or dialog while a call was
-in flight therefore had Qt delete a running ``QThread`` along with its parent, and Qt answers that with a native access violation that
-takes the whole process down: no Python traceback, exit 255, nothing reported. Provider Settings' own workers were fixed the same way in
-``ui/provider_config.py``; these gates cover the shared dispatch helper that every panel in the application funnels through.
+``run_bridge_coroutine_async`` must not parent its ``BridgeCallWorker`` to the calling widget. Closing a panel or dialog while a call is
+in flight would let Qt delete a running ``QThread`` along with its parent, and Qt answers that with a native access violation that
+takes the whole process down: no Python traceback, exit 255, nothing reported. These gates cover the shared dispatch helper that every
+panel in the application funnels through.
 
-The worker is now dispatched unparented, carries the calling widget as its recorded owner so :func:`drain_bridge_workers_for` still finds
+The worker is dispatched unparented, carries the calling widget as its recorded owner so :func:`drain_bridge_workers_for` still finds
 it, and its result is dropped when that owner's C++ object has been deleted.
 
 Every gate drives the real helpers against a real coroutine -- an HTTP request over a loopback socket the server holds open until the test
@@ -243,7 +243,7 @@ def _delete(widget: QWidget, qtbot: QtBot) -> None:
 def test_the_dispatched_worker_is_not_parented_to_its_delivery_context(qtbot: QtBot, held_server: _HeldResponseServer) -> None:
     """The worker must be unparented, with the widget recorded as its owner instead.
 
-    This is the structural half of the crash fix, and the one gate that reports a clean failure rather than an aborted interpreter: a
+    This is the structural check, and the one that reports a clean failure rather than an aborted interpreter: a
     worker parented to the widget is destroyed with it, and Qt answers the destruction of a running ``QThread`` with an access violation.
 
     Args:
@@ -368,9 +368,9 @@ def test_a_logged_dispatch_drops_its_result_when_the_context_dies(qtbot: QtBot, 
 def test_deleting_the_delivery_context_mid_call_leaves_the_worker_running(qtbot: QtBot, held_server: _HeldResponseServer) -> None:
     """Deleting the widget mid-call must not touch the worker, and must drop its result.
 
-    The crash gate. With the worker parented to the widget again, the ``deleteLater`` below destroys a ``QThread`` that is still blocked
-    inside its request and the interpreter dies on a native access violation -- exit 255, no traceback, nothing collected. With the fix,
-    the worker runs on, finishes normally once released, and its result is dropped instead of being delivered into freed memory.
+    The crash gate. With the worker parented to the widget, the ``deleteLater`` below destroys a ``QThread`` that is still blocked
+    inside its request and the interpreter dies on a native access violation -- exit 255, no traceback, nothing collected. With the worker
+    unparented, the worker runs on, finishes normally once released, and its result is dropped instead of being delivered into freed memory.
 
     Args:
         qtbot: pytest-qt bot, which fails the test on an exception raised inside the Qt event loop -- including a late delivery reaching a

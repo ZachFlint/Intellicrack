@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 24: a forced tool choice is sent only to a Claude model that accepts one in its current thinking state.
+"""A forced tool choice is sent only to a Claude model that accepts one in its current thinking state.
 
 Claude Fable 5.1 and Opus 5.5 answer ``tool_choice: any`` and ``tool_choice: tool`` with ``400``, and so does every Claude model while
 it thinks. The gates connect the real built-in :class:`AnthropicProvider`, through the real ``anthropic`` SDK, and an Anthropic-compatible

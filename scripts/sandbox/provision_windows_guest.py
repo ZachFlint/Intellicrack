@@ -110,11 +110,11 @@ _CATALOG_LOAD_LBA_OFFSET: Final[int] = 8
 _PLATFORM_ID_X86: Final[int] = 0x00
 _PLATFORM_ID_UEFI: Final[int] = 0xEF
 
-# Both Microsoft ISOs measured on this host - the untouched retail image and
-# the prompt-free rebuild - carry this string in the El Torito validation
-# entry, while the Debian and Fedora images measured alongside them leave the
-# field empty. It is the cheapest positive identifier for Microsoft-authored
-# media that needs no mount and no elevation, and it survives the fact that a
+# Microsoft's ISOs, the untouched retail image and the prompt-free rebuild
+# alike, carry this string in the El Torito validation entry, while the Debian
+# and Fedora images leave the field empty. It is the cheapest positive
+# identifier for Microsoft-authored media that needs no mount and no
+# elevation, and it survives the fact that a
 # Microsoft ISO's ISO9660 filesystem may hold nothing but a stub because the
 # real sources tree lives in UDF.
 _MICROSOFT_EL_TORITO_ID: Final[str] = "Microsoft Corporation"
@@ -3085,10 +3085,8 @@ def stage_virtio_medium(
 
     Mounting an ISO on Windows pays a full ``Mount-DiskImage`` round trip plus
     the 750 ms settle :func:`mount_disk_image` waits out, so verifying the
-    medium's contents and then staging its drivers used to mount it twice for
-    the same provisioning run: S17-D44 established the medium is checked
-    before use, and that check paid its own mount on top of the one staging
-    already needed. This mounts ``virtio_iso`` exactly once, confirms it with
+    medium's contents and staging its drivers share one mount instead of
+    paying for two. This mounts ``virtio_iso`` exactly once, confirms it with
     :func:`_check_virtio_medium`, and threads that one mount and its
     enumeration straight into :func:`stage_answer_tree`, dismounting in a
     ``finally`` that runs even when staging raises.

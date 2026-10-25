@@ -3,19 +3,19 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GUI audit regression gates for ``intellicrack.ui.panels.ghidra_panel``.
+"""Gates for ``intellicrack.ui.panels.ghidra_panel`` teardown, splitter and label layout.
 
-Covers the 2026-07-02 audit findings for ``ghidra_panel.py``:
+Covers the ``ghidra_panel.py`` widgets:
 
-* H3 -- ``_cleanup`` must bound its wait on ``GhidraBridge.shutdown()`` to
+* ``_cleanup`` must bound its wait on ``GhidraBridge.shutdown()`` to
   ``_CLEANUP_SHUTDOWN_TIMEOUT_S`` instead of blocking the GUI thread forever
   (``run_bridge_coroutine`` with ``timeout_s=None``) when the bridge hangs.
-* M46 -- the Labels/Bookmarks vertical splitter must be non-collapsible, like
+* The Labels/Bookmarks vertical splitter must be non-collapsible, like
   every other splitter in the panel, so neither pane can be dragged to zero
   height.
-* M47 -- the structure-fields summary label must word-wrap and mirror its
+* The structure-fields summary label must word-wrap and mirror its
   full text into a tooltip instead of clipping an unbounded field list.
-* L10 -- the functions sidebar tree's Name column must resize to its
+* The functions sidebar tree's Name column must resize to its
   contents (and re-fit on every repopulation) instead of staying pinned to
   the header label's width for long/mangled symbol names.
 """
@@ -46,7 +46,7 @@ class _HangingShutdownBridge:
     ``_cleanup`` only reads ``state.is_ready()`` and awaits ``shutdown()``, so
     this stand-in provides nothing beyond that contract. ``shutdown`` performs
     a genuine ``asyncio.sleep`` far longer than the (patched) cleanup timeout,
-    reproducing the "stalled headless RPC socket" scenario H3 describes
+    reproducing the "stalled headless RPC socket" scenario.
     without needing a real Ghidra process.
     """
 
@@ -102,7 +102,7 @@ def _ancestor_splitter(widget: QWidget) -> QSplitter:
 
 @pytest.mark.usefixtures("qapp")
 class TestH3CleanupHonorsShutdownTimeout:
-    """H3: panel teardown must not block the GUI thread forever on a hung bridge shutdown."""
+    """Panel teardown must not block the GUI thread forever on a hung bridge shutdown."""
 
     @staticmethod
     def test_stop_tool_returns_within_the_configured_timeout_when_shutdown_hangs(
@@ -110,13 +110,13 @@ class TestH3CleanupHonorsShutdownTimeout:
     ) -> None:
         """``stop_tool`` must bound teardown to ``_CLEANUP_SHUTDOWN_TIMEOUT_S``, not hang forever.
 
-        Regression: pre-fix, ``_cleanup`` called
+        ``_cleanup`` must not call
         ``run_bridge_coroutine(self._bridge.shutdown())`` with no ``timeout_s``,
         which blocks the GUI thread on ``future.result(timeout=None)`` for as
         long as the bridge's real ``shutdown()`` coroutine takes -- unbounded.
         With a stand-in bridge whose ``shutdown()`` genuinely sleeps for 2
         seconds (a real ``asyncio.sleep``, not a mock of the timeout
-        mechanism), the pre-fix call blocks for the full 2s; the fixed call
+        mechanism), an unbounded call would block for the full 2s; a bounded call
         must return in well under 2s once ``timeout_s`` is honoured, and the
         hung coroutine must still be mid-flight (not completed) when it does.
 
@@ -149,15 +149,15 @@ class TestH3CleanupHonorsShutdownTimeout:
 
 @pytest.mark.usefixtures("qapp")
 class TestM46LabelsBookmarksSplitterNotCollapsible:
-    """M46: the Labels/Bookmarks splitter must forbid collapsing either pane to zero."""
+    """The Labels/Bookmarks splitter must forbid collapsing either pane to zero."""
 
     @staticmethod
     def test_splitter_flag_is_non_collapsible_and_shared_by_both_tables() -> None:
         """The vertical splitter hosting labels and bookmarks must set ``childrenCollapsible(False)``.
 
-        Regression: pre-fix, the splitter built in ``_create_labels_bookmarks_tab``
-        never called ``setChildrenCollapsible(False)`` (unlike ``main_splitter``
-        and ``left_splitter``), so it kept Qt's collapsible-by-default behaviour.
+        The splitter built in ``_create_labels_bookmarks_tab`` must call
+        ``setChildrenCollapsible(False)``, as ``main_splitter`` and ``left_splitter`` do,
+        rather than keep Qt's collapsible-by-default behaviour.
         """
         panel = GhidraPanel()
         try:
@@ -175,7 +175,7 @@ class TestM46LabelsBookmarksSplitterNotCollapsible:
 
         Drives the real Qt splitter layout: with ``childrenCollapsible(False)``,
         ``setSizes([0, big])`` clamps the first pane to its minimum size hint;
-        with the pre-fix default (``True``), the same call drives it to exactly
+        with the default (``True``), the same call drives it to exactly
         zero. This exercises genuine Qt layout behaviour, not just the flag.
         """
         panel = GhidraPanel()
@@ -201,14 +201,14 @@ class TestM46LabelsBookmarksSplitterNotCollapsible:
 
 @pytest.mark.usefixtures("qapp")
 class TestM47StructFieldsLabelWrapsAndTooltips:
-    """M47: the structure-fields summary label must wrap and tooltip an unbounded field list."""
+    """The structure-fields summary label must wrap and tooltip an unbounded field list."""
 
     @staticmethod
     def test_label_has_word_wrap_enabled_at_construction() -> None:
         """``_struct_fields_label`` must have word wrap enabled at construction.
 
-        Regression: pre-fix, the bare ``QLabel("")`` never called
-        ``setWordWrap(True)``, so a long comma-joined field list would be
+        The bare ``QLabel("")`` must call
+        ``setWordWrap(True)``, since otherwise a long comma-joined field list would be
         clipped to the vertical layout's width with no way to read the rest.
         """
         panel = GhidraPanel()
@@ -228,7 +228,7 @@ class TestM47StructFieldsLabelWrapsAndTooltips:
         name/type pairs instead of blocking on a modal dialog) for a
         realistic ``IMAGE_NT_HEADERS``-sized field list, then asserts the
         resulting label text contains every field and the tooltip mirrors it
-        exactly -- the fallback the fix adds for whatever word-wrap still
+        exactly -- the fallback for whatever word-wrap still
         does not make visible.
 
         Args:
@@ -290,14 +290,13 @@ class TestM47StructFieldsLabelWrapsAndTooltips:
 
 @pytest.mark.usefixtures("qapp")
 class TestL10FunctionTreeResizesNameColumnToContents:
-    """L10: the functions sidebar Name column must resize to fit long function names."""
+    """The functions sidebar Name column must resize to fit long function names."""
 
     @staticmethod
     def test_name_column_header_uses_resize_to_contents_mode() -> None:
         """The functions tree header must set column 0 to ``ResizeToContents``.
 
-        Regression: pre-fix, no ``setSectionResizeMode`` call existed for
-        ``_func_tree``, so Qt's default ``Interactive`` mode sized the column
+        ``_func_tree`` must call ``setSectionResizeMode``. Otherwise Qt's default ``Interactive`` mode sizes the column
         from the header label ("Name") rather than the populated data.
         """
         panel = GhidraPanel()
@@ -347,9 +346,8 @@ class TestL10FunctionTreeResizesNameColumnToContents:
     def test_repopulating_the_tree_re_fits_the_column_each_time() -> None:
         """Every ``_apply_functions`` call must re-run ``resizeColumnToContents``, not just the first.
 
-        Regression: without the fix, nothing ever widened the column, so a
-        short initial list followed by a refresh with long names would leave
-        the column pinned at its narrow initial width.
+        Nothing may leave the column pinned at its narrow initial width: a short initial list followed by a refresh with long names
+        must re-run the resize.
         """
         panel = GhidraPanel()
         try:

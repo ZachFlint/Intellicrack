@@ -5,18 +5,24 @@
 
 use thiserror::Error;
 
+/// Errors raised by a [`DataSource`].
 #[derive(Error, Debug)]
 pub enum DataSourceError {
+    /// An underlying I/O or OS error.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+    /// The offset lies past the end of the source.
     #[error("offset out of bounds: {offset} >= {length}")]
     OutOfBounds { offset: usize, length: usize },
+    /// A process-memory call failed or transferred too few bytes.
     #[error("process error: {0}")]
     ProcessError(String),
+    /// A write was attempted on a read-only source.
     #[error("read-only data source")]
     ReadOnly,
 }
 
+/// A byte-addressable backing store an editor can read from and write to.
 pub trait DataSource: Send {
     /// Reads data from the source at the given offset.
     ///
@@ -32,22 +38,28 @@ pub trait DataSource: Send {
     /// Returns `DataSourceError` if the source is read-only, offset is out of bounds, or the write fails.
     fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), DataSourceError>;
 
+    /// Returns the number of addressable bytes.
     fn length(&self) -> usize;
+    /// Returns `true` when [`DataSource::write`] is permitted.
     fn is_writable(&self) -> bool;
+    /// Returns a short name for the kind of source, e.g. `"buffer"`.
     fn source_type(&self) -> &'static str;
 }
 
+/// An in-memory [`DataSource`] over an owned byte vector.
 pub struct BufferDataSource {
     data: Vec<u8>,
     writable: bool,
 }
 
 impl BufferDataSource {
+    /// Wraps `data`, writable when `writable` is `true`.
     #[must_use]
     pub fn new(data: Vec<u8>, writable: bool) -> Self {
         Self { data, writable }
     }
 
+    /// Wraps `data` as a read-only source.
     #[must_use]
     pub fn new_readonly(data: Vec<u8>) -> Self {
         Self {
@@ -65,7 +77,7 @@ impl DataSource for BufferDataSource {
                 length: self.data.len(),
             });
         }
-        let end = (offset + length).min(self.data.len());
+        let end = offset.saturating_add(length).min(self.data.len());
         Ok(self.data[offset..end].to_vec())
     }
 
@@ -79,7 +91,7 @@ impl DataSource for BufferDataSource {
                 length: self.data.len(),
             });
         }
-        let end = (offset + data.len()).min(self.data.len());
+        let end = offset.saturating_add(data.len()).min(self.data.len());
         let actual_len = end - offset;
         self.data[offset..end].copy_from_slice(&data[..actual_len]);
         Ok(())
@@ -98,21 +110,31 @@ impl DataSource for BufferDataSource {
     }
 }
 
+/// One region reported by `VirtualQueryEx`.
 #[cfg(windows)]
 #[derive(Debug, Clone)]
 pub struct MemoryRegion {
+    /// First address of the region.
     pub base_address: usize,
+    /// Region size in bytes.
     pub size: usize,
+    /// `PAGE_*` protection flags.
     pub protection: u32,
+    /// `MEM_COMMIT` / `MEM_RESERVE` / `MEM_FREE` state.
     pub state: u32,
+    /// `MEM_IMAGE` / `MEM_MAPPED` / `MEM_PRIVATE` type.
     pub region_type: u32,
 }
 
+/// A [`DataSource`] over a window of another process's memory.
 #[cfg(windows)]
 pub struct ProcessDataSource {
     handle: windows_sys::Win32::Foundation::HANDLE,
+    /// Target process id.
     pub pid: u32,
+    /// Address of offset 0 in the target.
     pub base_address: usize,
+    /// Number of addressable bytes from `base_address`.
     pub region_size: usize,
     writable: bool,
 }
@@ -154,8 +176,12 @@ impl ProcessDataSource {
         // immediately below before the handle is stored or used.
         let handle = unsafe { OpenProcess(access, 0, pid) };
         if handle.is_null() {
+            // Carry the OS error so access-denied (a live process the caller
+            // may not open) is distinguishable from an invalid pid, as
+            // `check_transfer` already does for the transfer calls.
             return Err(DataSourceError::ProcessError(format!(
-                "OpenProcess failed for pid {pid}"
+                "OpenProcess failed for pid {pid}: {}",
+                std::io::Error::last_os_error()
             )));
         }
         Ok(Self {
@@ -196,7 +222,13 @@ impl ProcessDataSource {
                 )
             };
             if result == 0 {
-                break;
+                let err = std::io::Error::last_os_error();
+                if err.raw_os_error()
+                    == i32::try_from(windows_sys::Win32::Foundation::ERROR_INVALID_PARAMETER).ok()
+                {
+                    break;
+                }
+                return Err(DataSourceError::Io(err));
             }
             regions.push(MemoryRegion {
                 base_address: mbi.BaseAddress as usize,
@@ -212,6 +244,53 @@ impl ProcessDataSource {
         }
         Ok(regions)
     }
+
+    /// Converts a region-relative `offset` to an address in the target.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DataSourceError::ProcessError` if the address would wrap past
+    /// the top of the address space.
+    fn address_of(&self, offset: usize) -> Result<usize, DataSourceError> {
+        self.base_address.checked_add(offset).ok_or_else(|| {
+            DataSourceError::ProcessError(format!(
+                "address 0x{:X} + 0x{offset:X} overflows the address space",
+                self.base_address
+            ))
+        })
+    }
+}
+
+/// Turns a Win32 memory-transfer result into a typed outcome.
+///
+/// `ReadProcessMemory`/`WriteProcessMemory` return `FALSE` on failure, but a
+/// `TRUE` return with fewer bytes transferred than requested is still a
+/// partial copy, so both conditions are reported instead of silently
+/// truncating.
+///
+/// # Errors
+///
+/// Returns `DataSourceError::ProcessError` naming the call and the OS error
+/// when `ok` is zero, or the short count when `transferred != requested`.
+#[cfg(windows)]
+fn check_transfer(
+    call: &str,
+    ok: windows_sys::core::BOOL,
+    transferred: usize,
+    requested: usize,
+) -> Result<(), DataSourceError> {
+    if ok == 0 {
+        return Err(DataSourceError::ProcessError(format!(
+            "{call} failed: {}",
+            std::io::Error::last_os_error()
+        )));
+    }
+    if transferred != requested {
+        return Err(DataSourceError::ProcessError(format!(
+            "{call} transferred {transferred} of {requested} bytes"
+        )));
+    }
+    Ok(())
 }
 
 #[cfg(windows)]
@@ -228,8 +307,12 @@ impl DataSource for ProcessDataSource {
         if length == 0 {
             return Ok(Vec::new());
         }
-        let addr = self.base_address + offset;
-        let mut buffer = vec![0u8; length];
+        let addr = self.address_of(offset)?;
+        let mut buffer: Vec<u8> = Vec::new();
+        buffer.try_reserve_exact(length).map_err(|e| {
+            DataSourceError::ProcessError(format!("cannot allocate {length} bytes for read: {e}"))
+        })?;
+        buffer.resize(length, 0);
         let mut bytes_read: usize = 0;
         // SAFETY: `self.handle` is a live process handle opened with
         // `PROCESS_VM_READ`; `buffer` is a freshly allocated `Vec<u8>` of
@@ -245,12 +328,7 @@ impl DataSource for ProcessDataSource {
                 &raw mut bytes_read,
             )
         };
-        if result == 0 {
-            return Err(DataSourceError::ProcessError(
-                "ReadProcessMemory failed".to_string(),
-            ));
-        }
-        buffer.truncate(bytes_read);
+        check_transfer("ReadProcessMemory", result, bytes_read, length)?;
         Ok(buffer)
     }
 
@@ -270,7 +348,7 @@ impl DataSource for ProcessDataSource {
         if data.is_empty() {
             return Ok(());
         }
-        let addr = self.base_address + offset;
+        let addr = self.address_of(offset)?;
         let mut bytes_written: usize = 0;
         // SAFETY: `self.handle` is a live process handle opened with
         // `PROCESS_VM_WRITE | PROCESS_VM_OPERATION`; `data` is a Rust slice and
@@ -286,12 +364,7 @@ impl DataSource for ProcessDataSource {
                 &raw mut bytes_written,
             )
         };
-        if result == 0 {
-            return Err(DataSourceError::ProcessError(
-                "WriteProcessMemory failed".to_string(),
-            ));
-        }
-        Ok(())
+        check_transfer("WriteProcessMemory", result, bytes_written, data.len())
     }
 
     fn length(&self) -> usize {
@@ -328,36 +401,28 @@ mod tests {
 
     #[test]
     fn test_read_mid_offset_returns_exact_slice() {
-        // Oracle: bytes at indices 1..4 of [0x41,0x42,0x43,0x44,0x45] are [0x42,0x43,0x44]
         let src = BufferDataSource::new(vec![0x41u8, 0x42, 0x43, 0x44, 0x45], false);
         let result = src.read(1, 3).unwrap();
         assert_eq!(result, vec![0x42u8, 0x43, 0x44]);
-        // Mutation caught: `self.data[0..actual_len]` instead of `self.data[offset..end]`
-        // places bytes from index 0, returning [0x41,0x42,0x43] and failing this assertion
     }
 
     #[test]
     fn test_read_from_offset_zero_returns_leading_bytes() {
-        // Oracle: full buffer [0x10,0x20,0x30] read from offset 0, length 3
         let src = BufferDataSource::new(vec![0x10u8, 0x20, 0x30], false);
         let result = src.read(0, 3).unwrap();
         assert_eq!(result, vec![0x10u8, 0x20, 0x30]);
-        // Mutation caught: returning data starting from offset 1 drops 0x10 and fails equality
     }
 
     #[test]
     fn test_read_length_beyond_end_clamps_to_buffer_boundary() {
-        // Oracle: [0xAA,0xBB,0xCC].read(1,10); end = min(11,3) = 3; slice [1..3] = [0xBB,0xCC]
         let src = BufferDataSource::new(vec![0xAAu8, 0xBB, 0xCC], false);
         let result = src.read(1, 10).unwrap();
         assert_eq!(result, vec![0xBBu8, 0xCC]);
-        // Mutation caught: `.min(self.data.len() - 1)` returns [0xBB] only, failing the eq
     }
 
     #[test]
     fn test_read_offset_equal_to_len_returns_empty_vec() {
         // Boundary: offset == data.len(); guard `offset > len` is false, so Ok([]) is the contract.
-        // Mutation caught: changing `>` to `>=` in the bounds guard returns Err instead of Ok([])
         let src = BufferDataSource::new(vec![0x01u8, 0x02, 0x03], false);
         let result = src.read(3, 5).unwrap();
         assert_eq!(result, Vec::<u8>::new());
@@ -365,8 +430,6 @@ mod tests {
 
     #[test]
     fn test_read_offset_beyond_len_returns_exact_out_of_bounds_variant() {
-        // Oracle: buffer.len() == 3; offset 4 > 3 triggers OutOfBounds{offset:4, length:3}
-        // Mutation caught: removing the guard causes a panic; wrong field values fail the match
         let src = BufferDataSource::new(vec![0x01u8, 0x02, 0x03], false);
         let err = src.read(4, 1).unwrap_err();
         assert!(
@@ -383,9 +446,6 @@ mod tests {
 
     #[test]
     fn test_write_within_bounds_mutates_exact_byte_positions() {
-        // Oracle: [0,0,0,0,0].write([0xDE,0xAD], offset=2) -> [0x00,0x00,0xDE,0xAD,0x00]
-        // Mutation caught: `self.data[0..actual_len]` instead of `self.data[offset..end]`
-        // places 0xDE at index 0, producing [0xDE,0xAD,0x00,0x00,0x00] and failing equality
         let mut src = BufferDataSource::new(vec![0x00u8; 5], true);
         src.write(2, &[0xDEu8, 0xAD]).unwrap();
         let readback = src.read(0, 5).unwrap();
@@ -394,9 +454,6 @@ mod tests {
 
     #[test]
     fn test_write_partial_overlap_at_buffer_end_clamps_written_data() {
-        // Oracle: [0,0,0,0].write([0x11,0x22,0x33,0x44], offset=2)
-        // end = min(6,4) = 4; actual_len = 4-2 = 2; only [0x11,0x22] written at indices 2..4
-        // Mutation caught: removing `.min(self.data.len())` causes copy_from_slice to panic
         let mut src = BufferDataSource::new(vec![0x00u8; 4], true);
         src.write(2, &[0x11u8, 0x22, 0x33, 0x44]).unwrap();
         let readback = src.read(0, 4).unwrap();
@@ -405,8 +462,6 @@ mod tests {
 
     #[test]
     fn test_write_offset_beyond_len_returns_exact_out_of_bounds_variant() {
-        // Oracle: buffer.len() == 3; write at offset 10 -> OutOfBounds{offset:10, length:3}
-        // Mutation caught: removing the write bounds check causes a slice panic instead of Err
         let mut src = BufferDataSource::new(vec![0xAAu8, 0xBB, 0xCC], true);
         let err = src.write(10, &[0xFFu8]).unwrap_err();
         assert!(
@@ -424,7 +479,6 @@ mod tests {
     #[test]
     fn test_write_on_new_readonly_returns_read_only_variant() {
         // new_readonly sets writable:false; write must return ReadOnly before any bounds check
-        // Mutation caught: removing `if !self.writable` allows the write to proceed silently
         let mut src = BufferDataSource::new_readonly(vec![0x01u8, 0x02]);
         let err = src.write(0, &[0xFFu8]).unwrap_err();
         assert!(
@@ -436,7 +490,6 @@ mod tests {
     #[test]
     fn test_write_on_new_with_writable_false_returns_read_only_variant() {
         // new(..., false) must treat writable:false identically to new_readonly
-        // Mutation caught: inverting `!self.writable` to `self.writable` flips read/write semantics
         let mut src = BufferDataSource::new(vec![0xAAu8], false);
         let err = src.write(0, &[0xBBu8]).unwrap_err();
         assert!(
@@ -448,7 +501,6 @@ mod tests {
     #[test]
     fn test_write_on_writable_source_succeeds_and_changes_bytes() {
         // Confirms writable:true allows writes; read-back distinguishes from ReadOnly rejection
-        // Mutation caught: always returning Err(ReadOnly) regardless of writable flag fails here
         let mut src = BufferDataSource::new(vec![0x00u8; 3], true);
         src.write(0, &[0xCAu8, 0xFE, 0xBA]).unwrap();
         assert_eq!(src.read(0, 3).unwrap(), vec![0xCAu8, 0xFE, 0xBA]);
@@ -456,46 +508,54 @@ mod tests {
 
     #[test]
     fn test_length_returns_exact_allocated_byte_count() {
-        // Oracle: exactly 7 bytes allocated; length() must equal data.len() == 7
-        // Mutation caught: `self.data.capacity()` or a constant differs from the logical length
         let src = BufferDataSource::new(vec![0u8; 7], false);
         assert_eq!(src.length(), 7usize);
     }
 
     #[test]
     fn test_is_writable_returns_true_when_constructed_writable() {
-        // Mutation caught: always returning `false` from is_writable fails this assertion
         let src = BufferDataSource::new(vec![0u8; 4], true);
         assert!(src.is_writable());
     }
 
     #[test]
     fn test_is_writable_returns_false_for_new_readonly_source() {
-        // Mutation caught: new_readonly setting `writable: true` fails this assertion
         let src = BufferDataSource::new_readonly(vec![0u8; 4]);
         assert!(!src.is_writable());
     }
 
     #[test]
     fn test_is_writable_returns_false_for_new_with_writable_false() {
-        // Mutation caught: ignoring the writable constructor argument returns true here
         let src = BufferDataSource::new(vec![0u8; 2], false);
         assert!(!src.is_writable());
     }
 
     #[test]
     fn test_source_type_returns_buffer_discriminator_string() {
-        // Oracle: "buffer" distinguishes this source from "process" in dispatch code
-        // Mutation caught: returning "process" or "" fails the exact string equality
         let src = BufferDataSource::new(vec![], false);
         assert_eq!(src.source_type(), "buffer");
+    }
+
+    /// `BufferDataSource::read` must not compute `offset + length` unchecked:
+    /// `read(1, usize::MAX)` would overflow (a debug panic, and a release
+    /// `data[1..0]` slice panic) instead of clamping to the buffer.
+    #[test]
+    fn test_read_length_overflowing_usize_clamps_to_buffer_end() {
+        let src = BufferDataSource::new(vec![0x41u8, 0x42, 0x43], false);
+        assert_eq!(src.read(1, usize::MAX).unwrap(), vec![0x42u8, 0x43]);
+    }
+
+    #[test]
+    fn test_write_length_overflow_guard_clamps_to_buffer_end() {
+        let mut src = BufferDataSource::new(vec![0u8; 3], true);
+        src.write(3, &[0xFF]).unwrap();
+        src.write(2, &[0x11, 0x22]).unwrap();
+        assert_eq!(src.read(0, 3).unwrap(), vec![0x00, 0x00, 0x11]);
     }
 
     #[test]
     fn test_datasource_error_io_from_std_io_error_preserves_message() {
         // Covers the `#[from] std::io::Error` conversion on DataSourceError::Io.
-        // Mutation caught: dropping the `#[from]` attribute breaks the `?`/`.into()` path;
-        // altering the Display format string fails the prefix/content assertions.
         let io_err =
             std::io::Error::new(std::io::ErrorKind::PermissionDenied, "mapped view failed");
         let ds_err: DataSourceError = io_err.into();
@@ -509,13 +569,61 @@ mod tests {
 
 #[cfg(all(test, windows))]
 mod process_tests {
-    use super::{DataSource, DataSourceError, MemoryRegion, ProcessDataSource};
+    use super::{check_transfer, DataSource, DataSourceError, MemoryRegion, ProcessDataSource};
+
+    /// `read` must not allocate `vec![0u8; length]` for a caller-chosen
+    /// length: `from_process_memory(pid, 0, huge)` would panic with "capacity
+    /// overflow" or abort the whole Python process when the allocation could
+    /// not be committed, instead of returning an error.
+    #[test]
+    fn test_read_unallocatable_length_returns_error_not_panic() {
+        let src = ProcessDataSource::attach(std::process::id(), 0, usize::MAX, true)
+            .expect("self-attach failed");
+        let err = src.read(0, usize::MAX).unwrap_err();
+        let prefix = format!("cannot allocate {} bytes for read: ", usize::MAX);
+        assert!(
+            matches!(&err, DataSourceError::ProcessError(m) if m.starts_with(&prefix)),
+            "expected allocation ProcessError, got {err:?}"
+        );
+    }
+
+    /// A `TRUE` return with a short byte count must not be accepted (reads
+    /// would be silently truncated, writes would report success after copying
+    /// only a prefix), so a partial transfer cannot look complete.
+    #[test]
+    fn test_check_transfer_rejects_short_and_failed_transfers() {
+        let short = check_transfer("ReadProcessMemory", 1, 3, 4).unwrap_err();
+        assert_eq!(
+            short.to_string(),
+            "process error: ReadProcessMemory transferred 3 of 4 bytes"
+        );
+        assert!(matches!(
+            check_transfer("WriteProcessMemory", 0, 0, 4),
+            Err(DataSourceError::ProcessError(m)) if m.starts_with("WriteProcessMemory failed: ")
+        ));
+        assert!(check_transfer("ReadProcessMemory", 1, 4, 4).is_ok());
+    }
+
+    /// `base_address + offset` must be checked: a region declared near the top
+    /// of the address space would otherwise overflow (a debug panic) instead of
+    /// reporting a typed error.
+    #[test]
+    fn test_read_address_overflow_is_typed_error() {
+        let src = ProcessDataSource::attach(std::process::id(), usize::MAX, 16, true)
+            .expect("self-attach failed");
+        let err = src.read(1, 1).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "process error: address 0x{:X} + 0x1 overflows the address space",
+                usize::MAX
+            )
+        );
+    }
 
     #[test]
     fn test_memory_region_debug_and_clone_roundtrip() {
         // Exercises the derived Debug + Clone on MemoryRegion.
-        // Mutation caught: dropping a field from Clone changes the cloned value; a broken
-        // Debug impl fails the substring check.
         let region = MemoryRegion {
             base_address: 0x0001_0000,
             size: 0x2000,
@@ -540,7 +648,6 @@ mod process_tests {
     #[test]
     fn test_attach_readonly_sets_access_flags_and_metadata() {
         // read_only=true takes the PROCESS_VM_READ|PROCESS_QUERY_INFORMATION access branch.
-        // Mutation caught: setting writable:!read_only wrong flips is_writable().
         let src = ProcessDataSource::attach(std::process::id(), 0, 4096, true)
             .expect("self-attach failed");
         assert!(!src.is_writable());
@@ -551,8 +658,6 @@ mod process_tests {
     #[test]
     fn test_attach_writable_sets_writable_true() {
         // read_only=false takes the VM_WRITE|VM_OPERATION access branch and sets writable:true.
-        // Mutation caught: swapping the two access-flag branches would still open, but
-        // is_writable() would be false here.
         let src = ProcessDataSource::attach(std::process::id(), 0, 8, false)
             .expect("self-attach (writable) failed");
         assert!(src.is_writable());
@@ -563,20 +668,21 @@ mod process_tests {
     fn test_attach_invalid_pid_returns_process_error() {
         // u32::MAX is odd; Windows kernel PIDs are multiples of 4, so it never names a live
         // process and OpenProcess returns NULL.
-        // Mutation caught: removing the `handle.is_null()` guard returns Ok with a null handle.
         let Err(err) = ProcessDataSource::attach(u32::MAX, 0, 16, true) else {
             panic!("expected attach to an invalid pid to fail");
         };
+        let DataSourceError::ProcessError(message) = err else {
+            panic!("expected ProcessError, got {err:?}");
+        };
         assert!(
-            matches!(err, DataSourceError::ProcessError(_)),
-            "expected ProcessError, got {err:?}"
+            message.starts_with("OpenProcess failed for pid 4294967295: "),
+            "the failure must name the pid and carry the OS error, got {message:?}"
         );
     }
 
     #[test]
     fn test_read_own_memory_returns_exact_bytes() {
         // Real ReadProcessMemory against our own committed heap: read back a known payload.
-        // Mutation caught: an off-by-one on `base_address + offset` returns shifted bytes.
         let payload: Vec<u8> = vec![0xDE, 0xAD, 0xBE, 0xEF];
         let base = payload.as_ptr() as usize;
         let src = ProcessDataSource::attach(std::process::id(), base, payload.len(), true)
@@ -590,7 +696,6 @@ mod process_tests {
     #[test]
     fn test_read_zero_length_returns_empty_without_syscall() {
         // length==0 early-return path.
-        // Mutation caught: removing the guard issues ReadProcessMemory(len=0) which fails -> Err.
         let src =
             ProcessDataSource::attach(std::process::id(), 0, 16, true).expect("attach failed");
         assert_eq!(src.read(0, 0).unwrap(), Vec::<u8>::new());
@@ -599,7 +704,6 @@ mod process_tests {
     #[test]
     fn test_write_readonly_source_returns_read_only() {
         // Writable guard fires before any WriteProcessMemory call.
-        // Mutation caught: removing the `!self.writable` guard attempts the syscall.
         let mut src =
             ProcessDataSource::attach(std::process::id(), 0, 16, true).expect("attach failed");
         let err = src.write(0, &[0xFF]).unwrap_err();
@@ -612,7 +716,6 @@ mod process_tests {
     #[test]
     fn test_write_empty_data_is_noop_ok() {
         // data.is_empty() early-return on a writable source.
-        // Mutation caught: removing the guard issues WriteProcessMemory(len=0) -> Err.
         let mut src =
             ProcessDataSource::attach(std::process::id(), 0, 16, false).expect("attach failed");
         assert!(src.write(0, &[]).is_ok());
@@ -621,7 +724,6 @@ mod process_tests {
     #[test]
     fn test_write_own_memory_mutates_target_bytes() {
         // Real WriteProcessMemory against our own writable heap buffer.
-        // Mutation caught: writing to base_address without `+ offset` corrupts the wrong index.
         let payload: Vec<u8> = vec![0u8; 4];
         let base = payload.as_ptr() as usize;
         let mut src = ProcessDataSource::attach(std::process::id(), base, payload.len(), false)
@@ -631,12 +733,12 @@ mod process_tests {
         assert_eq!(payload, vec![0x00, 0xAB, 0xCD, 0x00]);
     }
 
-    /// F-0047 regression: `read`/`write` forwarded straight into
-    /// ReadProcessMemory/WriteProcessMemory without ever comparing the
-    /// requested range against the declared `region_size`. The underlying
-    /// heap allocation has 4 real bytes, but the source only declares a
-    /// 2-byte window; without the bounds check the read spills into the
-    /// extra 2 bytes just because the underlying memory happens to be valid.
+    /// `read`/`write` must compare the requested range against the declared
+    /// `region_size` before calling ReadProcessMemory/WriteProcessMemory. The
+    /// underlying heap allocation has 4 real bytes, but the source only
+    /// declares a 2-byte window; without the bounds check the read spills into
+    /// the extra 2 bytes just because the underlying memory happens to be
+    /// valid.
     #[test]
     fn test_read_beyond_declared_region_size_is_clamped() {
         let payload: Vec<u8> = vec![0xDE, 0xAD, 0xBE, 0xEF];
@@ -705,7 +807,6 @@ mod process_tests {
     fn test_list_regions_returns_contiguous_walk() {
         // VirtualQueryEx enumeration: every pushed region begins exactly where the previous
         // one ends (address = base + size). A real process has many regions.
-        // Mutation caught: a wrong address advance breaks contiguity or truncates the walk.
         let src = ProcessDataSource::attach(std::process::id(), 0, 0, true).expect("attach failed");
         let regions = src.list_regions().expect("list_regions failed");
         assert!(

@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the GUI audit finding in ``theme_manager``.
+"""Gate for ``LIGHT_THEME_FALLBACK`` selector parity with ``DARK_THEME_FALLBACK``.
 
-* ``M37``: ``LIGHT_THEME_FALLBACK`` must carry the same widget-rule selectors
+* ``LIGHT_THEME_FALLBACK`` must carry the same widget-rule selectors
   as ``DARK_THEME_FALLBACK`` -- in particular ``QLabel[heading="true"]``,
   plus the ``QScrollArea``, ``QTreeWidget``/``QTreeView``, ``QRadioButton``,
   ``QSpinBox``/``QDoubleSpinBox``, ``QSlider`` and ``QFrame[frameShape]``
@@ -16,17 +16,11 @@
   text, and one test drives the real :class:`ThemeManager` routing logic
   that selects the fallback when a theme's ``.qss`` file is missing.
 
-* ``D33``: the fallback rewrite that made ``.qss`` the single source of
-  truth for ``DARK_THEME_FALLBACK`` / ``LIGHT_THEME_FALLBACK`` replaced the
-  independently hand-authored fallback text with the live contents of
-  ``dark_theme.qss`` / ``light_theme.qss``. Two assumptions that only ever
-  held for the old, hand-authored text no longer apply and are removed here:
-  a ``QLabel[subheading="true"]`` rule that was never part of the shipped
-  ``.qss`` assets, and a points-based (``pointSizeF``) heading size -- the
-  real ``.qss`` sets ``font-size: 16px``, which Qt resolves as a pixel size
-  rather than a point size. See
-  ``tests/ui/test_theme_manager_d33_fallback_drift.py`` for the drift gate
-  covering that rewrite.
+* The fallback sheets are generated from the live ``dark_theme.qss`` / ``light_theme.qss`` contents, which makes ``.qss`` the single source of
+  truth. Assumptions that held only for hand-authored text are dropped: a ``QLabel[subheading="true"]`` rule
+  that was never part of the shipped ``.qss`` assets, and a points-based (``pointSizeF``) heading size, because the real ``.qss``
+  sets ``font-size: 16px``, which Qt resolves as a pixel size rather than a point size. See
+  ``tests/ui/test_theme_manager_d33_fallback_drift.py`` for the drift gate covering that rewrite.
 """
 
 from __future__ import annotations
@@ -97,14 +91,11 @@ def _repolished_label(
 
 
 def test_m37_light_fallback_has_selector_parity_with_dark_fallback() -> None:
-    """M37: LIGHT_THEME_FALLBACK defines every selector DARK_THEME_FALLBACK defines.
+    """``LIGHT_THEME_FALLBACK`` defines every selector ``DARK_THEME_FALLBACK`` defines.
 
-    Before the fix, ``LIGHT_THEME_FALLBACK``'s ``/* Label */`` block and the
-    rest of the sheet were missing ``QLabel[heading="true"]``, and complete
-    ``QScrollArea``, ``QTreeWidget``/``QTreeView``, ``QRadioButton``,
-    ``QSpinBox``/``QDoubleSpinBox``, ``QSlider`` and ``QFrame[frameShape]``
-    base rules that ``DARK_THEME_FALLBACK`` has -- only leftover
-    ``:disabled``/``:focus`` pseudo-state rules survived for some of them,
+    ``LIGHT_THEME_FALLBACK``'s ``/* Label */`` block and the rest of the sheet must include ``QLabel[heading="true"]``, and complete
+    ``QScrollArea``, ``QTreeWidget``/``QTreeView``, ``QRadioButton``, ``QSpinBox``/``QDoubleSpinBox``, ``QSlider`` and ``QFrame[frameShape]``
+    base rules that ``DARK_THEME_FALLBACK`` has. Leftover ``:disabled``/``:focus`` pseudo-state rules must not stand in for them,
     with no base style.
     """
     for selector in _PARITY_SELECTORS:
@@ -117,7 +108,7 @@ def test_m37_light_fallback_has_selector_parity_with_dark_fallback() -> None:
 def test_m37_heading_label_renders_bold_sixteen_pixel_under_light_fallback(
     qapp: QApplication,
 ) -> None:
-    """M37: a real QLabel with ``heading=true`` resolves bold 16px text under the light fallback.
+    """A real QLabel with ``heading=true`` resolves bold 16px text under the light fallback.
 
     Args:
         qapp: Shared offscreen QApplication fixture required to construct
@@ -137,13 +128,13 @@ def test_m37_heading_label_renders_bold_sixteen_pixel_under_light_fallback(
 def test_m37_missing_light_theme_file_routes_to_feature_complete_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """M37: a missing ``light_theme.qss`` file routes to the now-feature-complete fallback.
+    """A missing ``light_theme.qss`` file routes to the fallback with full selector parity.
 
-    Simulates the exact scenario from the finding: the styles directory and
+    Simulates the scenario where the styles directory and
     ``dark_theme.qss`` remain present and readable, but ``light_theme.qss``
     is unreadable/missing. Drives the real ``ThemeManager._load_stylesheet``
     routing logic (not a re-implementation of it) and asserts the light
-    theme falls back to the constant that now carries full selector parity.
+    theme falls back to the constant that carries full selector parity.
 
     Args:
         monkeypatch: Pytest fixture used to force the per-file read for

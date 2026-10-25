@@ -385,7 +385,7 @@ _MAIN_HEADER_MARGIN_H: Final[int] = 12
 _LEFT_MIN_WIDTH: Final[int] = 240
 _RIGHT_MIN_WIDTH: Final[int] = 120
 # Space reserved beyond the right column's own minimum when capping the left
-# column's floor, so the splitter handle always has room left to move (D02).
+# column's floor, so the splitter handle always has room left to move.
 _SPLITTER_HANDLE_SLACK: Final[int] = 24
 _DEFAULT_SPLIT_LEFT: Final[int] = 600
 _DEFAULT_SPLIT_RIGHT: Final[int] = 200
@@ -499,7 +499,6 @@ class CodeDisplay(QPlainTextEdit):
         """
         self._language = language
         self._highlighter = get_highlighter_for_language(language, self.document())
-        # Ensure highlighter is attached to the document
         if self._highlighter:
             self._highlighter.setDocument(self.document())
 
@@ -919,7 +918,7 @@ class _ToolOutputPanelBase(QFrame):
             # outgrows any reasonable panel width; ElideRight plus the scroll
             # buttons enabled above means a clipped tab degrades to a legible
             # "Analysi..." with a nav arrow to reach it, instead of Qt's default
-            # of silently shrinking labels with no indication more tabs exist (D16).
+            # of silently shrinking labels with no indication more tabs exist.
             tab_bar.setElideMode(Qt.TextElideMode.ElideRight)
             tab_bar.setUsesScrollButtons(True)
             tab_bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -946,8 +945,8 @@ class _ToolOutputPanelBase(QFrame):
 
         # The right column hosts fixed (non-tabbed) content, so its natural
         # minimum can be measured once from its actual children instead of
-        # relying on a guessed constant that drifts as those panels change
-        # (N2): the floor is whichever is larger, the static constant or the
+        # relying on a guessed constant that drifts as those panels change:
+        # the floor is whichever is larger, the static constant or the
         # real minimum size hint of the widest child.
         self.right_panel.setMinimumWidth(
             max(_RIGHT_MIN_WIDTH, self.func_list.minimumSizeHint().width(), self.xref_panel.minimumSizeHint().width()),
@@ -972,13 +971,13 @@ class _ToolOutputPanelBase(QFrame):
         ``setChildrenCollapsible(False)``, raising :attr:`left_panel`'s
         minimum width to match the currently active tab's real minimum size
         hint is what actually stops the splitter from squeezing that tab's
-        content narrower than it can render (N2), while still allowing a
+        content narrower than it can render, while still allowing a
         smaller floor for lightweight tabs.
 
         Pinning the floor to the tab's raw ``minimumSizeHint`` unconditionally
         would combine with :attr:`right_panel`'s own minimum to exceed the
         splitter's available width, leaving every handle immovable and the
-        right panel spilling off-screen (D02). So the natural floor is capped
+        right panel spilling off-screen. So the natural floor is capped
         to whatever the splitter's *current* width leaves over for the right
         column plus a handle-movement slack, once that width is known (it is
         zero before the splitter is first laid out, in which case the natural
@@ -999,7 +998,7 @@ class _ToolOutputPanelBase(QFrame):
         """Re-cap the left column's minimum width whenever the main splitter resizes.
 
         :meth:`_sync_left_panel_min_width` only runs on tab switches, but the
-        cap it computes depends on the splitter's current width (D02); without
+        cap it computes depends on the splitter's current width; without
         this, resizing the window after switching tabs would leave the floor
         capped to a stale width instead of the new one.
 
@@ -1045,10 +1044,9 @@ class _ToolOutputPanelBase(QFrame):
     def _get_or_create_tool_tab(self, tab_name: OutputType, *, language: str = "text") -> ToolTab | None:
         """Return the generic ``ToolTab`` backing ``tab_name``, creating it on demand.
 
-        Mirrors the on-demand creation historically used only for the
-        ``"log"`` tab so every ``OutputType`` that has no dedicated native
-        panel (e.g. ``"binary"``) gets a real, functioning content tab
-        instead of silently discarding updates.
+        Creates the tab on demand so every ``OutputType`` that has no
+        dedicated native panel (e.g. ``"binary"``) gets a real, functioning
+        content tab instead of silently discarding updates.
 
         Args:
             tab_name: Output type identifier for the target tab.
@@ -1652,7 +1650,7 @@ class _ToolOutputPanelBase(QFrame):
             window.deleteLater()
 
         # Restore the panel at its original tab position rather than appending
-        # it at the end (F3 / F18). A stale index is clamped to the current tab
+        # it at the end. A stale index is clamped to the current tab
         # count so it always lands in range.
         source_index = self._detached_indices.pop(title, self.tab_widget.count())
         insert_at = max(0, min(source_index, self.tab_widget.count()))
@@ -1836,8 +1834,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
         panel = cast("BridgeAnalysisPanel", panel_module.BridgeAnalysisPanel())
         self.analysis_panel = panel
         # Route a double-clicked Section/address VA through the shared address
-        # chain so it scrolls the hex editor (F1); previously this signal was
-        # emitted but never connected, so VA links were dead.
+        # chain so it scrolls the hex editor.
         _ = panel.address_navigate.connect(self.address_clicked)
         self.tab_widget.addTab(panel, "Analysis")
         self.panels["analysis"] = panel
@@ -2489,7 +2486,7 @@ class _ToolOutputPanelOpenersMixin(_ToolOutputPanelPanelsMixin):
     """Mixin providing ``open_in_*`` and ``activate_*_tab`` operations.
 
     Routes binary paths to the appropriate embedded tool panel, lazily
-    materialising the tab when needed and bringing it into focus after
+    materializing the tab when needed and bringing it into focus after
     the underlying tool reports a successful load.
     """
 
@@ -2681,7 +2678,7 @@ class _ToolOutputPanelOpenersMixin(_ToolOutputPanelPanelsMixin):
 
         Ensures the analysis panel exists and switches its header to the
         intermediate "Loaded - not analyzed" state, clearing any prior binary's
-        stale tables (N3 / F11).
+        stale tables.
 
         Args:
             binary_name: Name of the freshly loaded binary.
@@ -2698,7 +2695,7 @@ class _ToolOutputPanelOpenersMixin(_ToolOutputPanelPanelsMixin):
         """Clear the analysis panel back to the empty "no binary" state.
 
         Used when a load fails or an unsupported format is detected so the panel
-        never shows a prior binary's data against a failed load (F11). Also clears
+        never shows a prior binary's data against a failed load. Also clears
         the right-hand function navigator and cross-reference panel, which are
         populated independently of the analysis panel by ``update_bridge_analysis``
         and must not keep showing the previous binary's functions/xrefs.
@@ -3089,7 +3086,7 @@ class _ToolOutputPanelWiringMixin(_ToolOutputPanelAccessorsMixin):
         ``SandboxBridge``. Constructs a ``SandboxBridge``, attaches the
         supplied manager when provided, registers the sandbox under the
         detected ``SandboxType``, and delegates to ``wire_sandbox_bridge``
-        so the sandbox tab and the chat workflow see a fully-initialised
+        so the sandbox tab and the chat workflow see a fully-initialized
         bridge.
 
         Args:
@@ -3157,7 +3154,7 @@ class _ToolOutputPanelWiringMixin(_ToolOutputPanelAccessorsMixin):
         """Capture the current tab layout state for persistence.
 
         Returns:
-            dict[str, object]: Serialisable snapshot of open tabs, their
+            dict[str, object]: Serializable snapshot of open tabs, their
                 order, the active tab index, and splitter proportions.
         """
         tab_names: list[str] = []

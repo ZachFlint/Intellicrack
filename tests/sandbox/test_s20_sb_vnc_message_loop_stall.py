@@ -2,17 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S20-D12 (VNC half): the RFB read loop logged idle polling as a stall.
+"""Gates for the RFB read loop: idle polling must not be logged as a stall.
 
-Measured live: while the VNC framebuffer rendered correctly, ``handle_server_message``
-logged frequent ``vnc_message_timeout`` warnings. The read loop polls for a new
-server message every ``_MESSAGE_READ_TIMEOUT`` (100ms), and on an idle console
-that poll times out on essentially every cycle - the previous code logged a
-warning on every single one of those, with no way to tell that apart from an
-actual protocol stall, because no timeout was ever applied to the body of a
-message that had already started.
+The read loop polls for a new server message every ``_MESSAGE_READ_TIMEOUT``
+(100ms), and on an idle console that poll times out on essentially every
+cycle. That must not be reported the same way as an actual protocol stall.
 
-:meth:`RFBClient._dispatch_server_message` now times the initial poll for a
+:meth:`RFBClient._dispatch_server_message` times the initial poll for a
 message-type byte separately from the rest of a message that has already
 begun: a poll finding nothing pending raises the internal
 ``_NoMessagePendingError`` and is never logged, while a timeout partway

@@ -1,23 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 
-"""GHIDRA-E regression gates: edits, memory, search, options, diff.
+"""Gates for GhidraBridge edit, memory, search, options and diff methods.
 
-Converts the following disconnected-gate-only operations into real,
-falsifiable body tests that exercise the bridge's Jython-script
-generation (wire framing) and response-parsing logic:
+Covers the following operations, which are otherwise gated only by disconnected-state guards. Each has a body test that exercises the bridge's Jython-script generation (wire framing) and response-parsing logic:
 
-    create_function, delete_function, edit_function_signature,
-    set_function_variable_type, write_bytes, undo, redo, search_strings,
-    search_bytes, create_memory_block, configure_analysis,
-    set_decompiler_options, import_debug_info, diff_programs.
+create_function, delete_function, edit_function_signature, set_function_variable_type, write_bytes, undo, redo, search_strings, search_bytes, create_memory_block, configure_analysis, set_decompiler_options, import_debug_info, diff_programs.
 
-Already REAL (skipped): rename_function, execute_script, read_bytes.
+rename_function, execute_script and read_bytes are gated elsewhere and are not repeated here.
 
-Each test injects a _FakeGhidraBridge whose eval_response is the
-independent oracle (the canned Ghidra-side result), asserts that the
-Ghidra API name appears in the emitted exec script (wire framing), and
-asserts the exact parsed return structure against the known oracle.
+Each test injects a _FakeGhidraBridge whose eval_response is the independent oracle (the canned Ghidra-side result), asserts that the Ghidra API name appears in the emitted exec script (wire framing), and asserts the exact parsed return structure against the known oracle.
 """
 
 from __future__ import annotations
@@ -155,9 +147,7 @@ def _run(coro: Coroutine[Any, Any, object]) -> object:
     return asyncio.run(coro)
 
 
-# ---------------------------------------------------------------------------
 # create_function
-# ---------------------------------------------------------------------------
 
 
 def test_create_function_happy_path_returns_dict_with_correct_fields(
@@ -212,9 +202,7 @@ def test_create_function_none_result_raises_tool_error(
         _run(connected_bridge.create_function(_TEST_ADDR))
 
 
-# ---------------------------------------------------------------------------
 # delete_function
-# ---------------------------------------------------------------------------
 
 
 def test_delete_function_happy_path_returns_correct_dict(
@@ -266,9 +254,7 @@ def test_delete_function_not_found_raises_tool_error(
         _run(connected_bridge.delete_function(_TEST_ADDR))
 
 
-# ---------------------------------------------------------------------------
 # edit_function_signature
-# ---------------------------------------------------------------------------
 
 
 def test_edit_function_signature_happy_path_returns_correct_dict(
@@ -314,9 +300,7 @@ def test_edit_function_signature_happy_path_returns_correct_dict(
     assert "getFunctionContaining" in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # set_function_variable_type
-# ---------------------------------------------------------------------------
 
 
 def test_set_function_variable_type_found_returns_success_dict(
@@ -374,9 +358,7 @@ def test_set_function_variable_type_not_found_raises_tool_error(
         )
 
 
-# ---------------------------------------------------------------------------
 # write_bytes
-# ---------------------------------------------------------------------------
 
 
 def test_write_bytes_happy_path_returns_verified_dict(
@@ -467,9 +449,7 @@ def test_write_bytes_invalid_hex_raises_before_dispatch(
     assert len(fake.exec_calls) == 0
 
 
-# ---------------------------------------------------------------------------
-# undo / redo  (production defect fixed: script was syntactically invalid)
-# ---------------------------------------------------------------------------
+# undo / redo
 
 
 def test_undo_emits_undo_call_and_returns_success(
@@ -524,9 +504,7 @@ def test_redo_emits_redo_call_and_returns_success(
     assert "undo" not in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # search_strings
-# ---------------------------------------------------------------------------
 
 
 def test_search_strings_result_fields_populated_correctly(
@@ -560,9 +538,7 @@ def test_search_strings_result_fields_populated_correctly(
     assert "getListing" in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # search_bytes (hex_pattern path — address list parsing)
-# ---------------------------------------------------------------------------
 
 
 def test_search_bytes_hex_pattern_parses_address_list_as_ints(
@@ -592,9 +568,7 @@ def test_search_bytes_hex_pattern_parses_address_list_as_ints(
     assert "findBytes" in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # create_memory_block
-# ---------------------------------------------------------------------------
 
 
 def test_create_memory_block_happy_path_returns_correct_dict(
@@ -637,9 +611,7 @@ def test_create_memory_block_happy_path_returns_correct_dict(
     assert "createInitializedBlock" in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # configure_analysis
-# ---------------------------------------------------------------------------
 
 
 def test_configure_analysis_happy_path_returns_correct_dict(
@@ -678,9 +650,7 @@ def test_configure_analysis_happy_path_returns_correct_dict(
     assert "getAnalyzers" in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # set_decompiler_options
-# ---------------------------------------------------------------------------
 
 
 def test_set_decompiler_options_persists_and_returns_correct_dict(
@@ -728,9 +698,7 @@ def test_set_decompiler_options_persists_and_returns_correct_dict(
     assert opts["max_instructions"] == 256
 
 
-# ---------------------------------------------------------------------------
 # import_debug_info (connected happy path)
-# ---------------------------------------------------------------------------
 
 
 def test_import_debug_info_connected_pdb_path_returns_correct_dict(
@@ -773,9 +741,7 @@ def test_import_debug_info_connected_pdb_path_returns_correct_dict(
     assert "PdbUniversalAnalyzer" in fake.exec_calls[0]
 
 
-# ---------------------------------------------------------------------------
 # diff_programs
-# ---------------------------------------------------------------------------
 
 
 def test_diff_programs_parses_differences_and_details(

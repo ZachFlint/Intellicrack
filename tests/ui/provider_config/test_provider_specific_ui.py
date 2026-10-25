@@ -3,12 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for audit5 U7 ui-providerconfig fix (F-0022).
+"""Tests for the provider-specific sections of the provider settings widget.
 
 Verifies that ``ProviderSettingsWidget._setup_provider_specific_ui`` wires
 provider-specific UI for every supported provider, not just the original
 three (Ollama, Local Transformers, OpenRouter). Each cloud provider that
-previously had no provider-specific section now exposes a "Resources"
+    has no provider-specific section exposes a "Resources"
 group with deep links that route through ``QDesktopServices.openUrl``.
 """
 
@@ -166,12 +166,11 @@ def test_resources_group_present_for_previously_unwired_providers(
     tmp_path: Path,
     provider_id: str,
 ) -> None:
-    """Cloud providers without bespoke groups now expose a Resources group.
+    """Cloud providers without bespoke groups expose a Resources group.
 
-    Before F-0022 the function silently returned for these providers, leaving
-    the dialog with no provider-specific UI. The fix registers a Resources
-    group with deep links so each supported provider has at least one
-    provider-specific affordance.
+    The function must not silently return for these providers, leaving
+    the dialog with no provider-specific UI. A Resources group with deep links
+    gives each supported provider at least one provider-specific affordance.
 
     Args:
         qapp: Module-scoped Qt application.
@@ -265,7 +264,7 @@ def test_previously_wired_providers_retain_their_groups(
     tmp_path: Path,
     provider_id: str,
 ) -> None:
-    """Existing provider-specific groups remain wired after the fix.
+    """Existing provider-specific groups remain wired.
 
     Args:
         qapp: Module-scoped Qt application.

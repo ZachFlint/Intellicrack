@@ -2,14 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for S14-D12 (section unmap teardown) and S14-D13 (pattern search scoping/cancel/progress).
+"""Tests for section unmap teardown and pattern search scoping, cancellation, and progress.
 
 Exercises ``ProcessBridge`` against real Win32 section objects and the
 current process's own memory through live ``CreateFileMappingW`` /
 ``MapViewOfFile`` / ``UnmapViewOfFile`` and ``ReadProcessMemory`` calls. No
 mocks: every assertion is derived from live kernel state (residual-mapping
 queries via ``VirtualQuery``) or from wall-clock timing and byte counts of a
-live memory scan, so a regression in either defect fix causes a genuine test
+live memory scan, so a regression in either behaviour causes a genuine test
 failure.
 """
 
@@ -89,7 +89,7 @@ def _alloc_scratch_region(size: int) -> int:
 
 
 def _free_scratch_region(address: int) -> None:
-    """Release a scratch region previously committed by :func:`_alloc_scratch_region`.
+    """Release a scratch region committed by :func:`_alloc_scratch_region`.
 
     Args:
         address: Base address returned by :func:`_alloc_scratch_region`.
@@ -116,7 +116,7 @@ async def process_bridge() -> AsyncGenerator[ProcessBridge]:
 
 
 class TestS14D12SectionUnmap:
-    """S14-D12: section create -> map -> unmap must round-trip cleanly."""
+    """Section create, map, and unmap must round-trip cleanly."""
 
     async def test_create_map_unmap_round_trip_succeeds(self, process_bridge: ProcessBridge) -> None:
         """A mapped section view must unmap successfully with no residual mapping.
@@ -167,7 +167,7 @@ class TestS14D12SectionUnmap:
 
 
 class TestS14D13PatternSearchScopingCancelProgress:
-    """S14-D13: pattern search must support address scoping, cancellation, and progress."""
+    """Pattern search must support address scoping, cancellation, and progress."""
 
     async def test_scoped_scan_finds_pattern_and_scans_far_fewer_bytes(self, process_bridge: ProcessBridge) -> None:
         """A tightly-scoped scan must find a known pattern while scanning a small fraction of the process.

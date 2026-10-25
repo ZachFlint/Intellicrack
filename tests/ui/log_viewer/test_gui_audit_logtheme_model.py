@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for log-viewer level color theming (GUI audit finding H4).
+"""Tests for log-viewer level color theming.
 
-The pre-fix model shipped a hard-coded dark palette: ``INFO`` was near-white
+A hard-coded dark palette would make ``INFO`` near-white
 ``QColor(220, 220, 220)`` with no background override, so under the light theme
-it rendered white text on a near-white background. These tests apply both the
+it would render white text on a near-white background. These tests apply both the
 light and dark themes to the real :class:`ThemeManager` singleton and assert the
 model resolves per-level foreground colors with sufficient WCAG contrast against
 the active background, and that switching themes re-resolves the colors and
@@ -121,8 +121,8 @@ def theme_manager() -> Iterator[ThemeManager]:
 def test_info_and_debug_readable_in_both_themes(theme_manager: ThemeManager, theme: str) -> None:
     """INFO and DEBUG foreground colors keep adequate contrast in each theme.
 
-    Catches the H4 regression where the hard-coded near-white INFO color
-    rendered white-on-white under the light theme.
+    Catches a hard-coded near-white INFO color that would render
+    white-on-white under the light theme.
 
     Args:
         theme_manager: The theme manager singleton fixture.

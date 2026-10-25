@@ -3,22 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for FridaBridge child-gating not-supported classification.
+"""Tests for FridaBridge child-gating not-supported classification.
 
-Covers defect A6 (S14-D18, Low): ``FridaBridge.enable_child_gating`` and
-``FridaBridge.disable_child_gating`` used to catch every failure from
-``Device.enable_spawn_gating`` / ``Device.disable_spawn_gating`` with a single
-broad ``except Exception`` handler and set ``ToolError.details['reason']`` to
-whatever ``str(e)`` happened to contain. On platforms where spawn gating is
-unsupported, Frida's Python binding raises ``frida.NotSupportedError``, but
-the bridge never classified that condition -- it relied entirely on fragile
-third-party error text instead of a stable, distinct, user-meaningful reason.
-
-The fix adds an explicit ``except frida.NotSupportedError`` branch (ordered
-before the broad ``except Exception`` fallback) in both operations that
-raises a ``ToolError`` carrying the stable ``_ERR_CHILD_GATING_NOT_SUPPORTED``
-reason instead of the raw exception text, while any other exception type
-still falls through to the pre-existing generic classification.
+``FridaBridge.enable_child_gating`` and ``FridaBridge.disable_child_gating`` wrap ``Device.enable_spawn_gating``
+and ``Device.disable_spawn_gating``. On platforms where spawn gating is unsupported, Frida's Python binding raises
+``frida.NotSupportedError``. Both operations catch that exception in an explicit branch ordered before the broad
+``except Exception`` fallback and raise a ``ToolError`` carrying the stable ``_ERR_CHILD_GATING_NOT_SUPPORTED``
+reason instead of the raw exception text. Any other exception type falls through to the generic classification.
 
 These tests drive the REAL ``FridaBridge.enable_child_gating`` /
 ``disable_child_gating`` code paths against a minimal device double whose
@@ -130,7 +121,7 @@ class _GenericFailureSpawnGatingDevice:
     """Device double whose spawn-gating calls raise a non-Frida exception.
 
     Used as the discriminator: an exception type other than
-    ``frida.NotSupportedError`` must still fall through to the pre-existing
+    ``frida.NotSupportedError`` must still fall through to the
     generic ``_ERR_CHILD_GATING_FAILED`` classification, proving that the
     not-supported branch is a real classification rather than every failure
     collapsing onto the same stable reason.
@@ -165,7 +156,7 @@ class _GenericFailureSpawnGatingDevice:
 def test_enable_child_gating_not_supported_yields_stable_reason() -> None:
     """Verify ``enable_child_gating`` classifies ``frida.NotSupportedError`` distinctly.
 
-    Regression test for A6/S14-D18: drives the real ``FridaBridge.enable_child_gating``
+    Drives the real ``FridaBridge.enable_child_gating``
     against a device double whose ``enable_spawn_gating`` raises the real
     ``frida.NotSupportedError``, and asserts the raised ``ToolError`` carries
     the stable ``_ERR_CHILD_GATING_NOT_SUPPORTED`` reason rather than the raw,
@@ -191,12 +182,12 @@ def test_enable_child_gating_not_supported_yields_stable_reason() -> None:
 def test_enable_child_gating_other_exception_yields_generic_reason() -> None:
     """Verify a non-``NotSupportedError`` failure still yields the generic reason.
 
-    Discriminator for A6/S14-D18: drives the real ``FridaBridge.enable_child_gating``
+    Discriminator: drives the real ``FridaBridge.enable_child_gating``
     against a device double whose ``enable_spawn_gating`` raises a plain
     ``RuntimeError`` (not ``frida.NotSupportedError``), and asserts the raised
-    ``ToolError`` still carries the pre-existing generic classification
+    ``ToolError`` still carries the generic classification
     (``_ERR_CHILD_GATING_FAILED`` with the raw exception text as the reason).
-    This proves the new ``frida.NotSupportedError`` branch is a real,
+    This proves the ``frida.NotSupportedError`` branch is a real,
     type-specific classification rather than every failure collapsing onto
     the same stable not-supported message. Falsifiable: if the bridge were
     broken so every exception is classified as not-supported, ``reason``
@@ -222,17 +213,13 @@ def test_enable_child_gating_other_exception_yields_generic_reason() -> None:
 def test_disable_child_gating_not_supported_yields_stable_reason() -> None:
     """Verify ``disable_child_gating`` classifies ``frida.NotSupportedError`` distinctly.
 
-    Symmetric sibling coverage for A6/S14-D18: the same ``frida.NotSupportedError``
-    classification applied to ``enable_child_gating`` must also apply to
-    ``disable_child_gating``. Drives the real ``FridaBridge.disable_child_gating``
-    (with ``_child_gating_enabled`` pre-set so the operation does not take its
-    early no-op return path) against a device double whose
-    ``disable_spawn_gating`` raises the real ``frida.NotSupportedError``, and
-    asserts the raised ``ToolError`` carries the same stable
-    ``_ERR_CHILD_GATING_NOT_SUPPORTED`` reason. Falsifiable: if the sibling
-    operation was left with only the broad ``except Exception`` fallback,
-    ``details['reason']`` would be absent (the generic branch on this
-    operation does not attach a reason at all) and this assertion fails.
+    The same ``frida.NotSupportedError`` classification applied to ``enable_child_gating`` must also apply to
+    ``disable_child_gating``. Drives the real ``FridaBridge.disable_child_gating`` (with ``_child_gating_enabled``
+    pre-set so the operation does not take its early no-op return path) against a device double whose
+    ``disable_spawn_gating`` raises the real ``frida.NotSupportedError``, and asserts the raised ``ToolError`` carries
+    the same stable ``_ERR_CHILD_GATING_NOT_SUPPORTED`` reason. Falsifiable: if this operation lost its branch and fell
+    through to the broad ``except Exception`` fallback, ``details['reason']`` would be absent (the generic branch on
+    this operation does not attach a reason at all) and this assertion fails.
     """
     bridge = FridaBridge()
     setattr(bridge, "_device", _NotSupportedSpawnGatingDevice())

@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit6 CORE-D regression tests for ``intellicrack.core.logging``.
+"""Regression tests for ``intellicrack.core.logging``.
 
 Exercises:
-    * F-0016 - ``_default_log_dir`` honours the configured ``logs_directory``
+    * ``_default_log_dir`` honours the configured ``logs_directory``
       rather than always returning ``Path.cwd() / "logs"``.
 """
 

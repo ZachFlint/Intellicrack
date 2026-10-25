@@ -263,7 +263,7 @@ def _iter_document_chunks_for_crc(
 ) -> Iterator[bytes]:
     """Yield ``chunk_size`` byte slices from a hexcore-style document.
 
-    Normalises the document's ``read`` return type so the CRC inner
+    Normalizes the document's ``read`` return type so the CRC inner
     loop always sees ``bytes``.
 
     Args:

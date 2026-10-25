@@ -2,10 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit5 U2 FridaBridge fixes.
+"""Regression tests for FridaBridge fixes.
 
-Each test exercises one finding and would fail without the corresponding
-remediation in :mod:`intellicrack.bridges.frida_bridge`.
+Each test exercises one defect and would fail without the corresponding fix in :mod:`intellicrack.bridges.frida_bridge`.
 
 The bridge is heavily I/O bound (it talks to a real Frida runtime), so the
 tests use a small set of test doubles -- recording bridges, fake script
@@ -320,11 +319,10 @@ def _patch_execute_script(
 
 
 def test_f0005_hook_function_no_default_console_log() -> None:
-    """F-0005: hook_function must NOT inject default console.log instrumentation.
+    """hook_function must NOT inject default console.log instrumentation.
 
-    Without the fix the bridge wraps every hook in a verbose
-    ``console.log('[+] Called ...')`` call. The remediation makes the
-    default on-enter handler a noop.
+    Without that, the bridge wraps every hook in a verbose
+    ``console.log('[+] Called ...')`` call. The default on-enter handler is a noop.
     """
     bridge, session, _ = _build_attached_bridge()
 
@@ -357,7 +355,7 @@ def test_f0005_hook_function_no_default_console_log() -> None:
 
 
 def test_f0006_scan_memory_accepts_hex_string_with_wildcards() -> None:
-    """F-0006: scan_memory tool accepts the same hex pattern the JSON tool advertises.
+    """scan_memory tool accepts the same hex pattern the JSON tool advertises.
 
     Range enumeration reports one readable range, so the bridge must load the
     persistent scan agent and forward the normalised wildcard pattern to its
@@ -378,7 +376,7 @@ def test_f0006_scan_memory_accepts_hex_string_with_wildcards() -> None:
 
 
 def test_f0006_scan_memory_rejects_malformed_hex_pattern() -> None:
-    """F-0006: malformed hex patterns must raise rather than silently scan garbage."""
+    """Malformed hex patterns must raise rather than silently scan garbage."""
     bridge, _, _ = _build_attached_bridge()
 
     async def driver() -> None:
@@ -390,10 +388,9 @@ def test_f0006_scan_memory_rejects_malformed_hex_pattern() -> None:
 
 
 def test_f0007_call_function_pointer_return_preserves_64bit_value() -> None:
-    """F-0007: pointer returns must not be truncated through ``toInt32``.
+    """Pointer returns must not be truncated through ``toInt32``.
 
-    A pointer above ``2**31`` would silently lose its high bits in the
-    pre-fix code. The fix sends the pointer as a string and parses it
+    A pointer above ``2**31`` would silently lose its high bits through toInt32. The bridge sends the pointer as a string and parses it
     back exactly, so the round-tripped value matches the input.
     """
     bridge, _, _ = _build_attached_bridge()
@@ -413,12 +410,11 @@ def test_f0007_call_function_pointer_return_preserves_64bit_value() -> None:
 
 
 def test_f0008_read_memory_uses_separate_binary_channel() -> None:
-    """F-0008: binary side-channel ``__binary`` must not collide with JSON ``data``.
+    """Binary side-channel ``__binary`` must not collide with JSON ``data``.
 
-    Before the fix, ``read_memory`` populated ``result["data"]`` with the
+    ``read_memory`` must not populate ``result["data"]`` with the
     binary payload, which collided with the JSON ``data`` key used by
-    every other Frida script (e.g. ``get_memory_regions``). The fix
-    routes the binary payload through ``__binary`` while leaving JSON
+    every other Frida script (e.g. ``get_memory_regions``). The binary payload goes through ``__binary`` while leaving JSON
     ``data`` to the script-defined contract.
     """
     bridge, _, _ = _build_attached_bridge()
@@ -432,7 +428,7 @@ def test_f0008_read_memory_uses_separate_binary_channel() -> None:
         del script_code, max_wait, cancellable_id
         await asyncio.sleep(0)
         # Simulate a payload that ALSO carries a JSON ``data`` field --
-        # exactly the cross-script collision F-0008 calls out.
+        # exactly the cross-script collision this gate guards against.
         return {"type": "memory", "data": [99, 99, 99], "__binary": [1, 2, 3]}
 
     _set(bridge, "_execute_script_and_wait", fake)
@@ -445,7 +441,7 @@ def test_f0008_read_memory_uses_separate_binary_channel() -> None:
 
 
 def test_f0009_enable_crash_reporting_is_idempotent_and_disable_works() -> None:
-    """F-0009: repeated enable calls must not stack handlers; disable removes the handler."""
+    """Repeated enable calls must not stack handlers; disable removes the handler."""
     bridge, _, device = _build_attached_bridge()
 
     async def driver() -> None:
@@ -462,7 +458,7 @@ def test_f0009_enable_crash_reporting_is_idempotent_and_disable_works() -> None:
 
 
 def test_f0010_unload_script_clears_alloc_and_probe_registries() -> None:
-    """F-0010 + F-0027: when a script unloads via any path the secondary registries are reaped."""
+    """When a script unloads via any path the secondary registries are reaped."""
     bridge, _, _ = _build_attached_bridge()
     fake_script = _FakeScript()
     _index_set(bridge, "_scripts", "abc123", fake_script)
@@ -483,7 +479,7 @@ def test_f0010_unload_script_clears_alloc_and_probe_registries() -> None:
 
 
 def test_f0011_resolve_symbol_raises_on_unresolved() -> None:
-    """F-0011: resolve_symbol must NOT fabricate ``sub_<addr>`` when DebugSymbol is empty."""
+    """resolve_symbol must NOT fabricate ``sub_<addr>`` when DebugSymbol is empty."""
     bridge, _, _ = _build_attached_bridge()
     _patch_execute_script(
         bridge,
@@ -500,9 +496,9 @@ def test_f0011_resolve_symbol_raises_on_unresolved() -> None:
 def test_f0012_compile_typescript_reuses_compiler_instance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-0012: ``frida.Compiler`` must be reused, not instantiated per call.
+    """``frida.Compiler`` must be reused, not instantiated per call.
 
-    The instance-count assertion is the genuine gate for the F-0012 fix:
+    The instance-count assertion is the genuine gate for compiler reuse:
     two successive ``compile_typescript`` calls must share one compiler
     instance.  The build log asserts that each call drove the compiler
     with a distinct entrypoint path (different temporary files for
@@ -560,7 +556,7 @@ def test_f0012_compile_typescript_reuses_compiler_instance(
 
 
 def test_f0012_compile_typescript_real_output_is_js() -> None:
-    """F-0012: compile_typescript drives the real frida.Compiler and returns valid JS.
+    """compile_typescript drives the real frida.Compiler and returns valid JS.
 
     Uses the genuine ``frida.Compiler`` (no monkeypatching) to compile a
     trivial TypeScript snippet and asserts the output is non-empty JavaScript
@@ -581,7 +577,7 @@ def test_f0012_compile_typescript_real_output_is_js() -> None:
 
 
 def test_f0013_stalker_unfollow_routes_through_owning_script() -> None:
-    """F-0013: ``Stalker.unfollow`` must be posted into the script that called ``Stalker.follow``."""
+    """``Stalker.unfollow`` must be posted into the script that called ``Stalker.follow``."""
     bridge, _, _ = _build_attached_bridge()
     owning_script = _FakeScript()
     _index_set(bridge, "_scripts", "stalker-script", owning_script)
@@ -719,7 +715,7 @@ def _f0014_assert_error_triggers(
 
 
 def test_f0014_message_waiter_does_not_capture_loop_at_construction() -> None:
-    """F-0014: _set_event_threadsafe must route through the loop the event is bound to.
+    """_set_event_threadsafe must route through the loop the event is bound to.
 
     Falsifiable property: the waiter is constructed while loop A is explicitly
     running (giving any eager construction-time capture a live reference to
@@ -737,7 +733,7 @@ def test_f0014_message_waiter_does_not_capture_loop_at_construction() -> None:
     Only delivery-time resolution through ``event._loop`` (which is ``loop_B``
     once the awaiter has started) produces a correct green result.
 
-    Four structural invariants are verified, each failing without F-0014:
+    Four structural invariants are verified, each failing without the fix:
 
     1.  Construction-while-loop-A-running + stale-A-closed: waiter built
         during loop A's execution still fires correctly on loop B after A
@@ -805,7 +801,7 @@ def test_f0014_message_waiter_does_not_capture_loop_at_construction() -> None:
 
 
 def test_f0015_call_function_rejects_non_int_address() -> None:
-    """F-0015: integer JS interpolation rejects non-int and bool values."""
+    """Integer JS interpolation rejects non-int and bool values."""
     bridge, _, _ = _build_attached_bridge()
 
     bad_address: object = "0xdeadbeef"
@@ -826,7 +822,7 @@ def test_f0015_call_function_rejects_non_int_address() -> None:
 
 
 def test_f0015_read_memory_rejects_non_int_inputs() -> None:
-    """F-0015: read_memory rejects non-integer inputs at the validation gate."""
+    """read_memory rejects non-integer inputs at the validation gate."""
     bridge, _, _ = _build_attached_bridge()
 
     bad_addr: object = 1.5
@@ -839,7 +835,7 @@ def test_f0015_read_memory_rejects_non_int_inputs() -> None:
 
 
 def test_f0018_memory_region_state_is_not_win32_specific() -> None:
-    """F-0018: MemoryRegion must not stamp Win32-only constants regardless of source."""
+    """MemoryRegion must not stamp Win32-only constants regardless of source."""
     bridge, _, _ = _build_attached_bridge()
     _patch_execute_script(
         bridge,
@@ -862,7 +858,7 @@ def test_f0018_memory_region_state_is_not_win32_specific() -> None:
 
 
 def test_f0021_execute_script_raises_on_timeout() -> None:
-    """F-0021: ``_execute_script_and_wait`` must RAISE on timeout, not return a partial dict."""
+    """``_execute_script_and_wait`` must RAISE on timeout, not return a partial dict."""
     bridge, _session, _ = _build_attached_bridge()
 
     async def driver() -> dict[str, object]:
@@ -880,7 +876,7 @@ def test_f0021_execute_script_raises_on_timeout() -> None:
 
 
 def test_f0022_allocate_memory_breaks_after_capturing_address() -> None:
-    """F-0022: allocate_memory must stop reading messages once the address is captured."""
+    """allocate_memory must stop reading messages once the address is captured."""
     bridge, _, _ = _build_attached_bridge()
 
     async def driver() -> int:
@@ -896,7 +892,7 @@ def test_f0022_allocate_memory_breaks_after_capturing_address() -> None:
             if script.load_calls > 0:
                 break
             await asyncio.sleep(0.01)
-        # Deliver alloc + a follow-up error.  The pre-fix code processed
+        # Deliver alloc + a follow-up error.  Code that handled the error after capturing the address processed
         # the error AFTER capturing the address and unloaded the script.
         script.deliver({"type": "alloc", "address": "0x40000000"})
         script.deliver({"__type": "error", "description": "post-alloc noise"})
@@ -911,7 +907,7 @@ def test_f0022_allocate_memory_breaks_after_capturing_address() -> None:
 
 
 def test_f0023_attach_propagates_frida_error_details() -> None:
-    """F-0023: bare ``except Exception`` must be replaced by typed handlers carrying details."""
+    """Bare ``except Exception`` must be replaced by typed handlers carrying details."""
     bridge, _, _ = _build_attached_bridge()
     _set(bridge, "_session", None)  # require attach to actually call into device
 
@@ -957,7 +953,7 @@ def test_f0023_attach_propagates_frida_error_details() -> None:
 
 
 def test_f0024_shutdown_calls_super_in_finally() -> None:
-    """F-0024: ``super().shutdown()`` must run even when tool-specific cleanup raises."""
+    """``super().shutdown()`` must run even when tool-specific cleanup raises."""
     bridge = FridaBridge()
     bridge.state.connected = True
 
@@ -991,7 +987,7 @@ def test_f0024_shutdown_calls_super_in_finally() -> None:
 
 
 def test_f0027_unload_script_clears_alloc_after_explicit_unload() -> None:
-    """F-0027: ``unload_script`` from any caller must garbage-collect ``_alloc_scripts``."""
+    """``unload_script`` from any caller must garbage-collect ``_alloc_scripts``."""
     bridge, _, _ = _build_attached_bridge()
     fake_script = _FakeScript()
     _index_set(bridge, "_scripts", "alloc-script", fake_script)
@@ -1007,7 +1003,7 @@ def test_f0027_unload_script_clears_alloc_after_explicit_unload() -> None:
 
 
 def test_f0030_attach_does_not_reinitialize_implicitly() -> None:
-    """F-0030: ``attach`` must NOT silently re-initialise; uninit must surface as device error."""
+    """``attach`` must NOT silently re-initialise; uninit must surface as device error."""
     bridge = FridaBridge()  # not initialised, no device set
 
     init_calls: list[None] = []

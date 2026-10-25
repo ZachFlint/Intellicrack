@@ -3,16 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for the address formatting in ``ghidra_panel``.
+"""Gates for the address formatting in ``ghidra_panel``.
 
-Covers two 2026-09-20 Qodana ``PyStringFormatInspection`` findings in
-``GhidraPanel``:
+Covers two address-formatting cases in ``GhidraPanel``:
 
 * ``_on_apply_structure``: the parsed ``addr`` (``int | None``) is read
   again inside an ``on_success`` closure handed to
   ``run_bridge_coroutine_logged``; the guard above the closure narrows it in
   the enclosing scope but static analysis cannot prove that survives into
-  the closure. The handler now rebinds the narrowed value to an explicitly
+  the closure. The handler rebinds the narrowed value to an explicitly
   ``int``-typed local (``resolved_addr``).
 * ``_on_write_bytes``: the same pattern for the parsed write address,
   rebound to ``resolved_addr`` before the invalid-hex log line, the
@@ -50,7 +49,7 @@ class _RecordingGhidraBridge:
     """Stand-in bridge recording exactly which arguments each call forwarded."""
 
     def __init__(self) -> None:
-        """Initialise a connected, ready bridge state and empty call log."""
+        """Initialize a connected, ready bridge state and empty call log."""
         self.state = BridgeState(connected=True, tool_running=True)
         self.calls: dict[str, tuple[object, ...]] = {}
 

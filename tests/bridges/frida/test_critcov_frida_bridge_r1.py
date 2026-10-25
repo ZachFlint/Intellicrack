@@ -3,11 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Second-pass critical-coverage tests for the Frida bridge.
+"""Coverage tests for the Frida bridge.
 
 Every test drives the real Frida runtime against a child process that the test
 itself starts (a Python interpreter blocked on stdin), never against the pytest
-process. The tests cover what the first pass left: shutdown phases that depend
+process. The tests cover: shutdown phases that depend
 on bookkeeping, failures of a session whose target is gone, the message and
 signal callbacks that the bridge records and that are therefore invoked here on
 the test thread, and the removal of a remote device.

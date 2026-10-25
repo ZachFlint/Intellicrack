@@ -3,32 +3,32 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for the GUI audit findings in ``ui.tools``.
+"""Gates for ``ui.tools`` bridge teardown, tab content routing and splitter collapsing.
 
-Each test class targets one audit finding and fails against the pre-fix
+Each test class targets one defect and fails against the defective
 behaviour:
 
-* ``TestH21BridgeCleanupDoesNotBlock`` (H21): ``_cleanup_bridge`` (invoked on
+* ``TestH21BridgeCleanupDoesNotBlock``: ``_cleanup_bridge`` (invoked on
   every interactive tab close) must dispatch a bridge's ``detach``/
   ``shutdown``/``stop`` coroutines onto the persistent background bridge loop
   via ``run_bridge_coroutine_async`` instead of blocking the calling (GUI)
   thread with an unbounded ``run_bridge_coroutine`` wait.
-* ``TestH31CloseEmbeddedToolsShutsDownBridges`` (H31): ``close_embedded_tools``
+* ``TestH31CloseEmbeddedToolsShutsDownBridges``: ``close_embedded_tools``
   (invoked from ``MainWindow.closeEvent`` on every app shutdown) must actually
   await each bridge's teardown coroutine -- via the bounded, synchronous
   ``_cleanup_bridge_blocking`` -- before nulling the reference, instead of
   dropping the bridge object without ever calling ``shutdown()`` and leaking
   its OS handles.
-* ``TestM32GenericTabContentRouting`` (M32): ``set_tab_content``/
+* ``TestM32GenericTabContentRouting``: ``set_tab_content``/
   ``set_tab_info``/``clear_tab`` must actually update visible content for
   every ``OutputType``, not just ``"log"``, and ``display_analysis_result``
   must route a ``BridgeAnalysisSummary`` into ``BridgeAnalysisPanel``'s
   structured tables instead of being silently discarded.
-* ``TestM33X64dbgTabRestoration`` (M33): ``restore_tab_state`` must be able to
+* ``TestM33X64dbgTabRestoration``: ``restore_tab_state`` must be able to
   reopen the ``"x64dbg"``/``"x32dbg"`` tabs that ``save_tab_state`` records.
-* ``TestM69MainSplitterCannotCollapse`` (M69): ``main_splitter`` must not let
+* ``TestM69MainSplitterCannotCollapse``: ``main_splitter`` must not let
   a drag collapse the tab area or the Functions/XRefs navigator to 0 width.
-* ``TestL19ToolTabSplitterCannotCollapse`` (L19): ``ToolTab._splitter`` must
+* ``TestL19ToolTabSplitterCannotCollapse``: ``ToolTab._splitter`` must
   not let a drag collapse the Details/info panel to 0 height.
 
 All tests drive real ``ToolOutputPanel``/``ToolTab`` instances (and real
@@ -181,19 +181,16 @@ class _FakeGhidraWidget(QWidget):
 
 @pytest.mark.usefixtures("qapp")
 class TestH21BridgeCleanupDoesNotBlock:
-    """H21: bridge cleanup on tab close must not block the GUI thread."""
+    """Bridge cleanup on tab close must not block the GUI thread."""
 
     @staticmethod
     def test_h21_cleanup_bridge_dispatches_asynchronously_and_completes(qtbot: QtBot) -> None:
         """``_cleanup_bridge`` returns promptly and finishes teardown on the background loop.
 
-        Pre-fix, ``_cleanup_bridge`` was a ``@staticmethod`` that resolved
-        ``run_bridge_coroutine`` (the blocking variant, no ``timeout_s``) and
-        called ``run_coro(method())`` directly, so this call would not return
-        until the full simulated RPC latency had elapsed. Post-fix the
-        teardown coroutine is dispatched via ``run_bridge_coroutine_async``
-        onto the persistent background bridge loop, so the call must return
-        long before the delayed ``shutdown`` completes.
+        ``_cleanup_bridge`` must not be a ``@staticmethod`` that resolves ``run_bridge_coroutine`` (the blocking variant, no
+        ``timeout_s``) and calls ``run_coro(method())`` directly, since this call would not return until the full simulated RPC
+        latency had elapsed. The teardown coroutine is dispatched via ``run_bridge_coroutine_async`` onto the persistent background
+        bridge loop, so the call must return long before the delayed ``shutdown`` completes.
 
         Args:
             qtbot: pytest-qt bot used to pump the event loop for the async
@@ -222,8 +219,8 @@ class TestH21BridgeCleanupDoesNotBlock:
 
         Drives ``_on_tab_close_requested`` -- the real slot connected to
         ``tabCloseRequested`` -- for a tab matched to a Ghidra-like widget and
-        bridge. Pre-fix this call would block until the bridge's ``shutdown``
-        RPC finished; post-fix it must return immediately while the teardown
+        bridge. This call must not block until the bridge's ``shutdown``
+        RPC finished; it must return immediately while the teardown
         continues on the background loop.
 
         Args:
@@ -254,17 +251,17 @@ class TestH21BridgeCleanupDoesNotBlock:
 
 @pytest.mark.usefixtures("qapp")
 class TestH31CloseEmbeddedToolsShutsDownBridges:
-    """H31: close_embedded_tools must await bridge teardown, not just drop the reference."""
+    """``close_embedded_tools`` must await bridge teardown, not just drop the reference."""
 
     @staticmethod
     def test_h31_close_embedded_tools_shuts_down_process_bridge_synchronously() -> None:
         """``close_embedded_tools`` must actually call ``ProcessBridge.shutdown``.
 
-        Pre-fix, the bridge-clearing loop only did
+        The bridge-clearing loop must not only do
         ``setattr(self, "process_bridge", None)`` -- ``shutdown()`` was never
         invoked, so ``ProcessBridge``'s tracked Win32 handles (attached
         process, mapped sections, pipes/devices) leaked on every app exit.
-        Post-fix ``_cleanup_bridge_blocking`` is called first and blocks
+        ``_cleanup_bridge_blocking`` must be called first and block
         (bounded by a timeout) until teardown genuinely completes, so
         ``shutdown_completed`` must already be set by the time this method
         returns.
@@ -286,10 +283,10 @@ class TestH31CloseEmbeddedToolsShutsDownBridges:
     def test_h31_close_embedded_tools_shuts_down_every_bridge_type() -> None:
         """Every bridge attribute in the teardown loop must be shut down, not just process_bridge.
 
-        Pre-fix, the loop unconditionally nulled every bridge attribute
+        The loop must not unconditionally null every bridge attribute
         (``x64dbg_bridge``, ``ghidra_bridge``, ``cutter_bridge``,
         ``frida_bridge``, ``process_bridge``) without invoking any teardown
-        method on any of them. Post-fix each one is torn down via
+        method on any of them. Each one must be torn down via
         ``_cleanup_bridge_blocking`` before being nulled.
         """
         panel = ToolOutputPanel()
@@ -314,15 +311,15 @@ class TestH31CloseEmbeddedToolsShutsDownBridges:
 
 @pytest.mark.usefixtures("qapp")
 class TestM32GenericTabContentRouting:
-    """M32: set_tab_content/set_tab_info/clear_tab must work for every OutputType."""
+    """``set_tab_content``/``set_tab_info``/``clear_tab`` must work for every ``OutputType``."""
 
     @staticmethod
     def test_m32_set_tab_content_creates_and_populates_generic_tab() -> None:
         """A non-``"log"`` ``OutputType`` with no native panel gets a real, populated tab.
 
-        Pre-fix, ``set_tab_content`` only looked up ``self.tabs.get(...)``,
+        ``set_tab_content`` must not only look up ``self.tabs.get(...)``,
         which was never populated for any type other than ``"log"``, so this
-        call was a silent no-op. Post-fix it creates a real ``ToolTab`` on
+        call would be a silent no-op. It creates a real ``ToolTab`` on
         demand.
         """
         panel = ToolOutputPanel()
@@ -340,7 +337,7 @@ class TestM32GenericTabContentRouting:
     def test_m32_set_tab_info_populates_info_panel() -> None:
         """``set_tab_info`` must populate the Details header/content for a non-log tab.
 
-        Pre-fix this was a silent no-op for any ``OutputType`` other than
+        Otherwise this is a silent no-op for any ``OutputType`` other than
         ``"log"`` because ``self.tabs`` never contained the key.
         """
         panel = ToolOutputPanel()
@@ -371,10 +368,10 @@ class TestM32GenericTabContentRouting:
     def test_m32_display_analysis_result_routes_bridge_summary_into_analysis_panel() -> None:
         """A ``BridgeAnalysisSummary`` must populate ``BridgeAnalysisPanel``'s real tables.
 
-        Pre-fix, ``display_analysis_result`` always routed through
+        ``display_analysis_result`` must not always route through
         ``set_tab_content``, which is a no-op for ``"analysis"`` (never a key
         in ``self.tabs``) -- the structured summary was discarded entirely.
-        Post-fix a ``BridgeAnalysisSummary`` for the ``"analysis"`` tab is
+        A ``BridgeAnalysisSummary`` for the ``"analysis"`` tab must be
         routed directly into ``BridgeAnalysisPanel.set_analysis``.
         """
         panel = ToolOutputPanel()
@@ -407,13 +404,13 @@ class TestM32GenericTabContentRouting:
 
 @pytest.mark.usefixtures("qapp")
 class TestM33X64dbgTabRestoration:
-    """M33: restore_tab_state must be able to reopen x64dbg/x32dbg tabs."""
+    """restore_tab_state must be able to reopen x64dbg/x32dbg tabs."""
 
     @staticmethod
     def test_m33_x64dbg_tab_reopens_on_restore() -> None:
         """A saved ``"x64dbg"`` tab name must reopen the x64dbg tab on restore.
 
-        Pre-fix, ``tab_openers`` had no ``"x64dbg"``/``"x32dbg"`` entries, so
+        ``tab_openers`` must have ``"x64dbg"``/``"x32dbg"`` entries, otherwise
         ``opener = tab_openers.get(tab_name)`` resolved to ``None`` and the
         debugger tab was silently dropped on restore.
         """
@@ -451,7 +448,7 @@ class TestM33X64dbgTabRestoration:
 
 @pytest.mark.usefixtures("qapp")
 class TestM69MainSplitterCannotCollapse:
-    """M69: main_splitter must not let a drag hide the tab area or the navigator."""
+    """main_splitter must not let a drag hide the tab area or the navigator."""
 
     @staticmethod
     def test_m69_children_collapsible_is_false() -> None:
@@ -471,9 +468,9 @@ class TestM69MainSplitterCannotCollapse:
     def test_m69_dragging_handle_to_edge_cannot_collapse_right_navigator() -> None:
         """Dragging the handle fully right must not collapse the Functions/XRefs navigator.
 
-        Pre-fix (``childrenCollapsible=True``), Qt lets the drag snap the
-        right panel to 0 width regardless of ``setMinimumWidth``. Post-fix
-        the right panel must clamp at its minimum width.
+        With ``childrenCollapsible=True``, Qt lets the drag snap the
+        right panel to 0 width regardless of ``setMinimumWidth``.
+        The right panel must clamp at its minimum width.
         """
         panel = ToolOutputPanel()
         try:
@@ -498,9 +495,9 @@ class TestM69MainSplitterCannotCollapse:
     def test_m69_dragging_handle_to_edge_cannot_collapse_left_tab_area() -> None:
         """Dragging the handle fully left must not collapse the tab area.
 
-        Pre-fix (``childrenCollapsible=True``), Qt lets the drag snap the
-        left panel to 0 width regardless of ``setMinimumWidth``. Post-fix
-        the left panel must clamp at its minimum width.
+        With ``childrenCollapsible=True``, Qt lets the drag snap the
+        left panel to 0 width regardless of ``setMinimumWidth``.
+        The left panel must clamp at its minimum width.
         """
         panel = ToolOutputPanel()
         try:
@@ -523,7 +520,7 @@ class TestM69MainSplitterCannotCollapse:
 
 @pytest.mark.usefixtures("qapp")
 class TestL19ToolTabSplitterCannotCollapse:
-    """L19: ToolTab's internal splitter must not let a drag hide the info panel."""
+    """ToolTab's internal splitter must not let a drag hide the info panel."""
 
     @staticmethod
     def test_l19_children_collapsible_is_false() -> None:
@@ -538,9 +535,9 @@ class TestL19ToolTabSplitterCannotCollapse:
     def test_l19_dragging_handle_to_bottom_cannot_collapse_info_panel() -> None:
         """Dragging the handle fully down must not collapse the Details/info panel to 0 height.
 
-        Pre-fix (``childrenCollapsible=True``), Qt lets the drag snap the
+        With ``childrenCollapsible=True``, Qt lets the drag snap the
         info panel to exactly 0 height regardless of its layout content.
-        Post-fix it must clamp at a positive height.
+        It must clamp at a positive height.
         """
         tab = ToolTab("Log", "python")
         try:

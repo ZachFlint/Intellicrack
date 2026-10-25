@@ -4,49 +4,46 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge-completeness gate tests for the Cutter/Rizin static-analysis slice.
 
-Covers ``audit/bridge-completeness/agent-03-cutter-rizin-static-analysis.md``
-and its verifier. Every test drives a real ``CutterBridge`` (backed by a
+Every test drives a real ``CutterBridge`` (backed by a
 recording r2pipe double, the genuine external boundary a live rizin child
 process would occupy) and/or a real Qt widget from
 ``intellicrack.ui.panels.cutter_panel``/``cutter_static_extra_tab`` so the
 production bridge parsing, tool-def dispatch, and GUI handler code all run
 for real.
 
-Regression coverage for the confirmed defect:
+Regression coverage for swapped rizin commands:
 
-* Rows 20/21 -- ``get_relocations``/``get_resources`` had their rizin
-  commands swapped (``iRj``/``irj`` inverted relative to upstream rizin,
-  where ``ir`` = relocations and ``iR`` = resources). The fix un-swaps the
-  two command strings. These tests assert the bridge issues the *correct*
+* ``get_relocations`` must issue ``irj`` and ``get_resources`` must issue ``iRj``, matching rizin's
+  relocation (``ir``) and resource (``iR``) listings. These tests assert the bridge issues the
+  *correct*
   command for each method and parses the *matching* dataset, not the other
   feature's data.
 
-L3 gates for the remediated GUI gaps in this slice:
+L3 gates for the GUI controls in this slice:
 
-* Row 1 -- the analysis-depth selector (``quick``/``normal``/``deep``) is
-  now a real combo box threaded into ``CutterPanel._on_analyze``'s call to
+* The analysis-depth selector (``quick``/``normal``/``deep``) is a combo box threaded into
+  ``CutterPanel._on_analyze``'s call to
   ``bridge.analyze(level=...)``.
-* Row 26 -- the hexdump mode combo box in ``HexdumpTab`` now threads through
+* The hexdump mode combo box in ``HexdumpTab`` threads through
   to ``hexdump_words`` (``pxw``) when "Words" mode is selected, distinct
   from the byte-mode ``hexdump`` (``px``) default.
-* Rows 4, 7, 8, 18, 19, 22, 23, 24/24b/24c/24d -- the previously NO-CONTROL
-  static-analysis capabilities (classes/RTTI, call graph, vtables, syscalls,
+* The static-analysis capabilities (classes/RTTI, call graph, vtables, syscalls,
   zignatures list/generate/add/search, basic-block listing, and linear
-  whole-function disassembly) are now real Qt tabs in
+  whole-function disassembly) are real Qt tabs in
   ``StaticAnalysisExtrasTab`` (``cutter_static_extra_tab.py``), each wired
   to its real bridge method via ``run_bridge_coroutine_logged``.
-* Row 25 -- binary debug information (``iDj``) is now the ``DebugInfoTab``
+* Binary debug information (``iDj``) is the ``DebugInfoTab``
   sub-tab of ``StaticAnalysisExtrasTab``, wired to ``get_debug_info``.
-* Rows 40/41 -- ESIL function emulation (``aef``) and PC assignment
-  (``aepc``) are now the "Emulate Function"/"Set PC" controls of
+* ESIL function emulation (``aef``) and PC assignment
+  (``aepc``) are the "Emulate Function"/"Set PC" controls of
   ``ESILConsoleTab`` (``cutter_tabs.py``), wired to
   ``esil_emulate_function``/``esil_set_pc``.
-* Rows 42/43 -- adding a named flag (``f <name> <size> @ <addr>``) and
-  resolving the nearest flag from an address (``fdj``) are now the "Add
-  Flag"/"Resolve Flag" controls of ``FlagsTab`` (``cutter_tabs.py``), wired
+* Adding a named flag (``f <name> <size> @ <addr>``) and
+  resolving the nearest flag from an address (``fdj``) are the "Add Flag"/"Resolve Flag" controls of
+  ``FlagsTab`` (``cutter_tabs.py``), wired
   to ``add_flag``/``resolve_flag``.
-* Rows 46/47 -- reading and writing a Rizin configuration variable (``e``)
-  are now the "Get"/"Set" controls of ``ConfigTab`` (``cutter_tabs.py``),
+* Reading and writing a Rizin configuration variable (``e``)
+  are the "Get"/"Set" controls of ``ConfigTab`` (``cutter_tabs.py``),
   wired to ``get_config``/``set_config``.
 """
 
@@ -313,7 +310,7 @@ class TestAnalysisDepthSelectorL3:
 
         Falsifiable: if ``CutterPanel._on_analyze`` ignored
         ``self._analysis_level_combo.currentText()`` and always called
-        ``self._bridge.analyze()`` with no argument (the pre-fix behaviour),
+        ``self._bridge.analyze()`` with no argument (the regressed behaviour),
         the bridge would always run the default 'normal' level ('aaa'), and
         this test's assertion that 'aa' is issued (and 'aaa' is not) would
         fail. Broken production line: the
@@ -432,7 +429,7 @@ class TestHexdumpWordModeL3:
 
 
 class TestStaticAnalysisExtrasTabConstruction:
-    """L3 gate: ``StaticAnalysisExtrasTab`` really wires all 9 previously-NO-CONTROL sub-tabs."""
+    """L3 gate: ``StaticAnalysisExtrasTab`` wires all 9 sub-tabs."""
 
     @staticmethod
     @pytest.mark.usefixtures("qapp")
@@ -462,7 +459,7 @@ class TestStaticAnalysisExtrasTabConstruction:
 
 @pytest.mark.usefixtures("qapp")
 class TestClassesTabL3:
-    """L3 gate: row 19 (Classes/RTTI) -- the tab's refresh must invoke the real ``get_classes`` bridge method."""
+    """L3 gate: Classes/RTTI -- the tab's refresh must invoke the real ``get_classes`` bridge method."""
 
     @staticmethod
     def test_refresh_calls_icj_and_populates_tree(qapp: QApplication) -> None:
@@ -501,7 +498,7 @@ class TestClassesTabL3:
 
 @pytest.mark.usefixtures("qapp")
 class TestCallGraphTabL3:
-    """L3 gate: row 8 (call graph) -- the tab's refresh must invoke the real ``get_callgraph`` bridge method."""
+    """L3 gate: call graph -- the tab's refresh must invoke the real ``get_callgraph`` bridge method."""
 
     @staticmethod
     def test_refresh_calls_agcj_and_populates_table(qapp: QApplication) -> None:
@@ -540,7 +537,7 @@ class TestCallGraphTabL3:
 
 @pytest.mark.usefixtures("qapp")
 class TestVtablesTabL3:
-    """L3 gate: row 22 (vtables) -- the tab's refresh must invoke the real ``get_vtables`` bridge method."""
+    """L3 gate: vtables -- the tab's refresh must invoke the real ``get_vtables`` bridge method."""
 
     @staticmethod
     def test_refresh_calls_avj_and_populates_table(qapp: QApplication) -> None:
@@ -577,7 +574,7 @@ class TestVtablesTabL3:
 
 @pytest.mark.usefixtures("qapp")
 class TestSyscallsTabL3:
-    """L3 gate: row 23 (syscalls) -- the tab's refresh must invoke the real ``get_syscalls`` bridge method."""
+    """L3 gate: syscalls -- the tab's refresh must invoke the real ``get_syscalls`` bridge method."""
 
     @staticmethod
     def test_refresh_calls_asj_and_populates_table(qapp: QApplication) -> None:
@@ -611,7 +608,7 @@ class TestSyscallsTabL3:
 
 @pytest.mark.usefixtures("qapp")
 class TestZignaturesTabL3:
-    """L3 gate: rows 24/24b/24c/24d (zignatures) -- list/generate/add/search must invoke the real bridge methods."""
+    """L3 gate: zignatures -- list/generate/add/search must invoke the real bridge methods."""
 
     @staticmethod
     def test_list_button_calls_zj_and_populates_table(qapp: QApplication) -> None:
@@ -725,7 +722,7 @@ class TestZignaturesTabL3:
 
 @pytest.mark.usefixtures("qapp")
 class TestBasicBlocksTabL3:
-    """L3 gate: row 7 (basic blocks) -- ``set_address``/fetch must invoke the real ``get_basic_blocks`` bridge method."""
+    """L3 gate: basic blocks -- ``set_address``/fetch must invoke the real ``get_basic_blocks`` bridge method."""
 
     @staticmethod
     def test_set_address_calls_afbj_and_populates_table(qapp: QApplication) -> None:
@@ -761,14 +758,14 @@ class TestBasicBlocksTabL3:
 
 @pytest.mark.usefixtures("qapp")
 class TestFunctionDisasmTabL3:
-    """L3 gate: row 4 (linear function disassembly) -- must invoke the real ``disassemble_function`` bridge method."""
+    """L3 gate: linear function disassembly -- must invoke the real ``disassemble_function`` bridge method."""
 
     @staticmethod
     def test_set_address_calls_pdf_and_renders_text(qapp: QApplication) -> None:
         """``FunctionDisasmTab.set_address`` must issue ``pdf @ <addr>`` and render the returned text verbatim.
 
-        Falsifiable: if the tab called ``disassemble`` (range-mode ``pdj``,
-        the pre-existing Disassembly tab's method) instead of the new
+        Falsifiable: if the tab called ``disassemble`` (range-mode ``pdj``, the Disassembly tab's
+        method) instead of the new
         ``disassemble_function`` (``pdf``), 'pdf' would never be recorded
         and the text would be wrong or empty.
 
@@ -792,7 +789,7 @@ class TestFunctionDisasmTabL3:
 
 @pytest.mark.usefixtures("qapp")
 class TestDebugInfoTabL3:
-    """L3 gate: row 25 (debug info) -- Refresh must invoke the real ``get_debug_info`` bridge method."""
+    """L3 gate: debug info -- Refresh must invoke the real ``get_debug_info`` bridge method."""
 
     @staticmethod
     def test_refresh_calls_idj_and_populates_table(qapp: QApplication) -> None:
@@ -824,7 +821,7 @@ class TestDebugInfoTabL3:
 
 @pytest.mark.usefixtures("qapp")
 class TestESILConsoleTabEmulateAndSetPcL3:
-    """L3 gate: rows 40/41 (ESIL emulate function / set PC) -- must invoke the real bridge methods."""
+    """L3 gate: ESIL emulate function / set PC -- must invoke the real bridge methods."""
 
     @staticmethod
     def test_emulate_function_button_calls_aef_at_address(qapp: QApplication) -> None:
@@ -1099,7 +1096,7 @@ class TestAddEsilWatchpoint:
 
 @pytest.mark.usefixtures("qapp")
 class TestFlagsTabAddAndResolveL3:
-    """L3 gate: rows 42/43 (add flag / resolve flag) -- must invoke the real bridge methods."""
+    """L3 gate: add flag / resolve flag -- must invoke the real bridge methods."""
 
     @staticmethod
     def test_add_flag_button_calls_f_command_and_refreshes_table(qapp: QApplication) -> None:
@@ -1177,7 +1174,7 @@ class TestFlagsTabAddAndResolveL3:
 
 @pytest.mark.usefixtures("qapp")
 class TestConfigTabGetAndSetL3:
-    """L3 gate: rows 46/47 (config get / set) -- must invoke the real bridge methods."""
+    """L3 gate: config get / set -- must invoke the real bridge methods."""
 
     @staticmethod
     def test_get_button_calls_e_command_and_shows_value(qapp: QApplication) -> None:
@@ -1491,9 +1488,8 @@ class TestDisassembleRange:
     """L1/L2/L3 gate: fixed byte-range disassembly (rizin 'pD'/'pDj') must be real and reachable.
 
     Falsified by: changing the issued command from ``f"pDj {length}"`` to
-    ``f"pdj {length}"`` (the pre-existing instruction-count command) turns
-    the exact-match assertion on ``"pDj 8"`` red immediately -- this is the
-    precise defect this item closes, since a naive implementation could
+    ``f"pdj {length}"`` (the instruction-count command) turns
+    the exact-match assertion on ``"pDj 8"`` red immediately , since a naive implementation could
     accidentally alias to the existing ``disassemble``/``pdj`` path instead
     of a genuine byte-bounded variant.
     """
@@ -1693,11 +1689,9 @@ class TestFlirtRoundTrip:
     """Real round trip: Fc-export a signature this session creates, then Fs-apply it elsewhere.
 
     Applies the exported signature to a fresh session and asserts the
-    function is named -- never an external vendor .sig download. Gates both
-    work order 03-27 (the ``Fs``-apply half, session B) and work order 03-28
-    (the ``Fc``-export half, session A) in a single shared integration
-    test, per the stream-wide FLIRT hazard note that the round trip must
-    use only signatures the test itself creates.
+    function is named -- never an external vendor .sig download. The ``Fs``-apply and ``Fc``-export
+    halves run as one integration test, so the round trip uses only signatures the test itself
+    creates.
     """
 
     @staticmethod
@@ -1706,10 +1700,10 @@ class TestFlirtRoundTrip:
     async def test_export_then_apply_flirt_signature_renames_function(tmp_path: Path) -> None:
         """Export a FLIRT signature from one session, apply it in a fresh session, confirm the rename sticks.
 
-        Falsifiable (03-27, the ``Fs`` half): if ``apply_flirt_signatures``
+        Falsifiable (the ``Fs`` half): if ``apply_flirt_signatures``
         issued a no-op instead of ``f"Fs {path}"``, session B's
-        ``functions_after`` would never regain the marker name. Falsifiable
-        (03-28, the ``Fc`` half): if ``create_flirt_signatures`` issued a
+        ``functions_after`` would never regain the marker name. Falsifiable (the ``Fc`` half): if
+        ``create_flirt_signatures`` issued a
         no-op instead of ``f"Fc {path}"``, ``sig_path.is_file()`` would be
         ``False`` and the method's own defensive verification would raise
         ``ToolError`` before session B ever runs.

@@ -2,17 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for S20-D16 (Analysis Output share): sub-tab strip overflow degrade.
+"""Tests for the analysis tab strip overflow degrade.
 
 ``BridgeAnalysisPanel`` hosts its own ``QTabWidget`` (Strings / Imports /
 Exports / Functions / Sections / Notes). At the fresh-launch tool-pane width
-(~530px, per the S20 live-audit sweep) that six-tab strip clips mid-glyph
-with no way to reach the hidden tabs. This mirrors the fix already applied to
-``ToolOutputPanel``'s own tab strip in ``ui/tools.py``: an explicit
-``ElideRight`` elide mode plus enabled scroll buttons so a clipped tab
-degrades to a legible partial label ("Str...") with a reachable nav arrow,
-instead of Qt's default of silently shrinking every label illegibly with no
-indication more tabs exist.
+(~530px) that six-tab strip clips mid-glyph with no way to reach the hidden
+tabs. This mirrors the ``ElideRight`` setup already used on the
+``ToolOutputPanel`` tab strip in ``ui/tools.py``: an explicit elide mode plus
+enabled scroll buttons so a clipped tab degrades to a legible partial label
+("Str...") with a reachable nav arrow, instead of Qt's default of silently
+shrinking every label illegibly with no indication more tabs exist.
 """
 
 from __future__ import annotations

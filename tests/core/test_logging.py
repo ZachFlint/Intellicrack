@@ -160,7 +160,7 @@ def _expected_render(
     return f"{timestamp} | {color}{padded_level}{_RESET} | {location} | {event}{context}"
 
 
-# --- ColoredConsoleRenderer ---
+# ColoredConsoleRenderer
 
 
 def test_renderer_info_level() -> None:
@@ -340,7 +340,7 @@ def test_renderer_skips_underscore_keys() -> None:
     assert "_internal" not in result
 
 
-# --- cleanup_old_logs ---
+# cleanup_old_logs
 
 
 def test_cleanup_nonexistent_directory() -> None:
@@ -436,7 +436,7 @@ def test_cleanup_handles_rotated_logs(tmp_path: Path) -> None:
     assert result == 1
 
 
-# --- _sanitize_arguments ---
+# _sanitize_arguments
 
 
 def test_sanitize_bytes_value() -> None:
@@ -519,7 +519,7 @@ def test_sanitize_empty_dict() -> None:
     assert result == {}
 
 
-# --- IntellicrackLogger ---
+# IntellicrackLogger
 
 
 def test_intellicrack_logger_default_name() -> None:
@@ -692,7 +692,7 @@ def test_intellicrack_logger_configure_plain_text(tmp_path: Path) -> None:
     assert "at_threshold" in text
 
 
-# --- get_logger ---
+# get_logger
 
 
 def test_get_logger_returns_bound_logger(tmp_path: Path) -> None:
@@ -786,7 +786,7 @@ def test_get_logger_with_name(tmp_path: Path) -> None:
     assert matching[0]["marker"] == "delegated"
 
 
-# --- log convenience functions (verify no exceptions) ---
+# Log convenience functions (verify no exceptions)
 
 
 def test_log_tool_call_minimal() -> None:
@@ -1019,7 +1019,7 @@ def test_log_analysis_operation() -> None:
     assert record["protection"] == "vmprotect"
 
 
-# --- OperationTimer ---
+# OperationTimer
 
 
 def test_operation_timer_success() -> None:
@@ -1093,7 +1093,7 @@ def test_operation_timer_measures_time() -> None:
     assert timer.elapsed_ms > 0
 
 
-# --- LEVEL_COLORS class attribute ---
+# LEVEL_COLORS class attribute
 
 
 def test_level_colors_contains_all_levels() -> None:

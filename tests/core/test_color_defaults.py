@@ -122,7 +122,7 @@ def test_contract_values_are_unchanged(name: str, expected: str | tuple[str, ...
 
     Args:
         name: Constant name in the defaults module.
-        expected: The value the bridge or evaluator used before the defaults were centralised.
+        expected: The value the bridge or evaluator carries.
     """
     assert getattr(color_defaults, name) == expected
 

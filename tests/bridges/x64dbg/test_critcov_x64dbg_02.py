@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Coverage-gap tests for ``X64DbgBridge`` (stack walking, Win32 enumeration, PE readers, verified wrappers).
+"""Coverage tests for ``X64DbgBridge`` (stack walking, Win32 enumeration, PE readers, verified wrappers).
 
 x64dbg is not installed where these tests run, so everything that normally travels the plugin pipe is
 answered by :class:`ScriptedBridge`, a subclass of the real bridge that replaces only the two transport

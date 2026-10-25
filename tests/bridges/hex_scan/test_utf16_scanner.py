@@ -3,13 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit7 U01 regression tests for the UTF-16LE scanner (F-0040).
+"""Regression tests for the UTF-16LE scanner.
 
 These tests pin the strict ASCII-printable semantics of
-``HexEditorBridge._scan_utf16le_runs`` against the prior over-permissive
-behaviour, which delegated to :meth:`str.isprintable` and therefore
+``HexEditorBridge._scan_utf16le_runs`` against an over-permissive
+behaviour that delegated to :meth:`str.isprintable` and therefore
 accepted code units such as ``U+2070`` (superscript zero), ``U+00A3``
-(GBP sign), or ``U+2200`` (for-all). The fixed scanner accepts only the
+(GBP sign), or ``U+2200`` (for-all). The scanner accepts only the
 strict ASCII-printable range ``0x20..0x7E`` plus the explicit whitespace
 controls (``0x09``, ``0x0A``, ``0x0D``), matching the ``strings(1)``
 convention. The tests exercise the scanner through the bridge's public
@@ -116,8 +116,7 @@ def test_ascii_hello_utf16le_misaligned_detected() -> None:
 def test_superscript_zero_run_rejected() -> None:
     """A run of ``U+2070`` (superscript zero) is rejected.
 
-    Pre-fix, :meth:`str.isprintable` returned True for ``U+2070`` and
-    the scanner emitted a spurious UTF-16LE run for any run of
+    An :meth:`str.isprintable` check returns True for ``U+2070`` and would emit a spurious UTF-16LE run for any run of
     superscript-digit code units. With the strict ASCII filter, no
     match must be produced.
     """
@@ -130,8 +129,7 @@ def test_superscript_zero_run_rejected() -> None:
 def test_currency_and_math_symbol_run_rejected() -> None:
     """Long runs of currency and math symbols are rejected.
 
-    Mixes ``U+00A3`` (GBP sign) and ``U+221E`` (infinity). Both were
-    accepted by the pre-fix :meth:`str.isprintable` test and both must
+    Mixes ``U+00A3`` (GBP sign) and ``U+221E`` (infinity). Both are accepted by :meth:`str.isprintable` test and both must
     be rejected by the strict ASCII-printable filter on both the
     even-aligned and odd-aligned passes.
     """

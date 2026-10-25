@@ -3,24 +3,22 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Audit3 U4 tests for ``service_monitor.ps1`` remediation.
+r"""Tests for ``service_monitor.ps1`` behavior.
 
-Validates the three fixes applied to
+Validates the following behavior of
 ``src/intellicrack/sandbox/scripts/service_monitor.ps1``:
 
-* F-0007 - the script honors the caller-supplied ``-LogDir`` instead of
-  the hardcoded ``C:\sandbox_shared\logs`` path.
-* F-0008 - the script no longer suppresses errors with a file-level
-  ``$ErrorActionPreference = 'SilentlyContinue'``; registry-read
-  failures are caught explicitly and surfaced through
-  ``service_monitor.errors.jsonl``.
-* F-0009 - the racy 2-second polling loop is replaced by event-driven
+* The script honors the caller-supplied ``-LogDir`` instead of the hardcoded
+  ``C:\sandbox_shared\logs`` path.
+* The script does not suppress errors with a file-level
+  ``$ErrorActionPreference = 'SilentlyContinue'``. Registry-read failures are
+  caught explicitly and surfaced through ``service_monitor.errors.jsonl``.
+* Service state changes are handled by event-driven
   ``Register-CimIndicationEvent`` subscriptions on
   ``__InstanceModificationEvent``, ``__InstanceCreationEvent`` and
-  ``__InstanceDeletionEvent`` for ``Win32_Service``. Every state
-  transition (Stopped/StartPending/Running/StopPending/...) is logged
-  in both the parser-compatible pipe-delimited log and a structured
-  JSONL stream.
+  ``__InstanceDeletionEvent`` for ``Win32_Service``, not a polling loop. Every state
+  transition (Stopped/StartPending/Running/StopPending/...) is logged in both the
+  parser-compatible pipe-delimited log and a structured JSONL stream.
 
 The tests run the real script under ``pwsh`` against the live
 filesystem and the live Service Control Manager. They are skipped on
@@ -259,12 +257,12 @@ def _read_jsonl(path: Path) -> list[dict[str, object]]:
 
 
 def test_script_file_exists() -> None:
-    """The remediated script must exist on disk."""
+    """The script must exist on disk."""
     assert _SCRIPT_PATH.is_file(), f"missing script: {_SCRIPT_PATH}"
 
 
 def test_script_does_not_use_blanket_silentlycontinue() -> None:
-    """F-0008: the file-level ``SilentlyContinue`` preference must be gone.
+    """The file-level ``SilentlyContinue`` preference must not be set.
 
     The script must opt into ``$ErrorActionPreference = 'Stop'`` so that
     registry read failures and WMI subscription failures surface as
@@ -278,7 +276,7 @@ def test_script_does_not_use_blanket_silentlycontinue() -> None:
 
 
 def test_script_does_not_hardcode_legacy_log_path() -> None:
-    r"""F-0007: the hardcoded ``C:\sandbox_shared\logs`` path must be gone.
+    r"""The hardcoded ``C:\sandbox_shared\logs`` path must not appear.
 
     The script must not reference the legacy hardcoded shared-folder
     location anywhere; every log write must be derived from the
@@ -291,15 +289,15 @@ def test_script_does_not_hardcode_legacy_log_path() -> None:
 
 
 def test_script_declares_logdir_parameter() -> None:
-    """F-0007: the script must declare a ``-LogDir`` parameter."""
+    """The script must declare a ``-LogDir`` parameter."""
     text = _SCRIPT_PATH.read_text(encoding="utf-8")
     assert "[string]$LogDir" in text, "service_monitor.ps1 must declare -LogDir parameter"
 
 
 def test_script_uses_event_driven_subscriptions_not_polling_loop() -> None:
-    """F-0009: replace the racy polling loop with WMI event subscriptions.
+    """Replace the polling loop with WMI event subscriptions.
 
-    The remediated script must use ``Register-CimIndicationEvent`` (or
+    The script must use ``Register-CimIndicationEvent`` (or
     ``Register-WmiEvent``) against ``__InstanceModificationEvent``,
     ``__InstanceCreationEvent`` and ``__InstanceDeletionEvent`` queries
     on ``Win32_Service``.
@@ -315,7 +313,7 @@ def test_script_uses_event_driven_subscriptions_not_polling_loop() -> None:
 
 
 def test_script_writes_logs_to_supplied_logdir(tmp_path: Path) -> None:
-    """F-0007 runtime check: log files must land under the supplied ``-LogDir``.
+    """Log files must land under the supplied ``-LogDir``.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
@@ -354,7 +352,7 @@ def test_script_writes_logs_to_supplied_logdir(tmp_path: Path) -> None:
 
 
 def test_script_records_lifecycle_transitions(tmp_path: Path) -> None:
-    """F-0009 runtime check: lifecycle transitions are captured event-driven.
+    """Lifecycle transitions are captured event-driven.
 
     Spawns the monitor, then stops and immediately restarts the
     ``Spooler`` service in rapid succession (well under any 2-second
@@ -498,7 +496,7 @@ def _build_dedup_harness(log_dir: Path) -> str:
 
 
 def test_script_idempotency_dedupes_rapid_duplicate_transitions(tmp_path: Path) -> None:
-    """F-0009 idempotency: identical back-to-back transitions are deduped.
+    """Identical back-to-back transitions are deduped.
 
     Runs a PowerShell harness that loads the exact production function
     bodies from ``service_monitor.ps1`` verbatim (not reimplemented)
@@ -509,17 +507,9 @@ def test_script_idempotency_dedupes_rapid_duplicate_transitions(tmp_path: Path) 
 
     Independent oracle: the JSONL record count emitted by the harness
     must equal **2** (one from the first burst, one after the recorded
-    transitions age out of the window). Under the documented production mutation --- removing
-    the ``Test-DuplicateTransition`` guard at line 196 of
-    ``service_monitor.ps1`` so that ``Publish-LifecycleTransition``
-    writes a record on every call --- all six calls write JSONL records,
-    yielding a count of 6, which fails the ``== 2`` assertion.
-
-    Documented falsifying mutation: in ``service_monitor.ps1`` at
-    line 196, remove ``if (Test-DuplicateTransition -ServiceName
-    $serviceName -State "$EventKind::$stateName") { return }``.  Under
-    that mutation the harness emits 6 JSONL records and the assertion
-    ``count == 2`` fails.
+    transitions age out of the window). Removing the ``Test-DuplicateTransition``
+    guard from ``Publish-LifecycleTransition`` would make every call write a
+    record, yielding a count of 6, which fails the ``== 2`` assertion.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.

@@ -2,21 +2,21 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the GUI audit findings in ``x64dbg_advanced_tab``.
+"""Gates for ``x64dbg_advanced_tab`` handle coercion, table column sizing and label wrapping.
 
-Each test targets one audit finding and fails against the pre-fix behaviour:
+Each test targets one defect and fails against the defective behaviour:
 
-* ``H27``: the Handles table must coerce the bridge's hex-string handle
+* The Handles table must coerce the bridge's hex-string handle
   values (``"0x1a4"``) to real integers instead of silently collapsing every
   row to ``0x0``, both in the rendered cell and in the row-selection
   round-trip that feeds the Close Handle field.
-* ``M63``: the Handles table header must stretch only the variable-length
+* The Handles table header must stretch only the variable-length
   "Object" column and size the remaining short columns to their content, and
   the "Object" cell must carry a tooltip so elided text is recoverable.
-* ``L15``: the Module Info table (shared by the imports and PE-directories
+* The Module Info table (shared by the imports and PE-directories
   views) must stretch only the variable-length "Name" column for whichever
   view is active, and "Name" cells must carry a tooltip.
-* ``L16``: the breakpoint-config and script-engine status labels must word
+* The breakpoint-config and script-engine status labels must word
   wrap so unbounded error text grows the label vertically instead of
   overflowing or clipping horizontally.
 
@@ -54,12 +54,12 @@ def _make_tab(qapp: QApplication) -> X64DbgAdvancedTab:
 
 
 class TestH27HandleValueCoercion:
-    """H27: hex-string handle values from the bridge must resolve as real ints."""
+    """Hex-string handle values from the bridge must resolve as real ints."""
 
     def test_h27_coerce_handle_value_parses_hex_string(self, qapp: QApplication) -> None:
         """``_coerce_handle_value`` parses a bridge hex string to its real int.
 
-        Pre-fix there was no coercion helper; the call site only accepted
+        Without a coercion helper, the call site would only accept
         ``isinstance(handle_val, int)`` and silently returned 0 for every
         string value, which is what the bridge always sends.
 
@@ -76,10 +76,8 @@ class TestH27HandleValueCoercion:
         """``_apply_handles`` renders the bridge's real hex-string handle value.
 
         The bridge (``X64DbgBridge.get_handles``) emits
-        ``"handle": hex(int(entry.HandleValue or 0))``, a ``str``. Pre-fix,
-        ``handle_val if isinstance(handle_val, int) else 0`` coerced every
-        such string to 0, so every row rendered ``"0x0"`` regardless of the
-        real handle.
+        ``"handle": hex(int(entry.HandleValue or 0))``, a ``str``. A ``handle_val if isinstance(handle_val, int) else 0`` check would
+        coerce every such string to 0, so every row would render ``"0x0"`` regardless of the real handle.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -106,7 +104,7 @@ class TestH27HandleValueCoercion:
         """Selecting a handle row must populate Close Handle with the real value.
 
         ``_on_handle_row_selected`` reads back the same ``UserRole`` data
-        that ``_apply_handles`` stored; pre-fix that data was always 0, so
+        that ``_apply_handles`` stored; that data would always be 0, so
         Close Handle could never target the handle the user actually
         selected.
 
@@ -126,12 +124,12 @@ class TestH27HandleValueCoercion:
 
 
 class TestM63HandlesTableLayout:
-    """M63: the Handles header stretches only "Object"; others size-to-content."""
+    """The Handles header stretches only "Object"; others size-to-content."""
 
     def test_m63_object_column_stretches_other_columns_fit_content(self, qapp: QApplication) -> None:
         """Only the "Object" column (index 1) uses Stretch resize mode.
 
-        Pre-fix, a single header-wide ``setSectionResizeMode(Stretch)`` call
+        A single header-wide ``setSectionResizeMode(Stretch)`` call would
         put all 5 columns in Stretch mode, so every short numeric column
         (Handle, Granted Access, Type Index, Attributes) claimed the same
         width share as the variable-length Object column.
@@ -152,7 +150,7 @@ class TestM63HandlesTableLayout:
     def test_m63_object_cell_carries_tooltip_for_elided_text(self, qapp: QApplication) -> None:
         """The "Object" cell's tooltip recovers the full text when elided.
 
-        Pre-fix, no tooltip was set on the Object cell, so eliding the
+        Without a tooltip on the Object cell, eliding the
         squeezed column left no way to recover the full identifier.
 
         Args:
@@ -170,12 +168,12 @@ class TestM63HandlesTableLayout:
 
 
 class TestL15ModinfoTableLayout:
-    """L15: the Module Info header stretches only the active "Name" column."""
+    """The Module Info header stretches only the active "Name" column."""
 
     def test_l15_imports_view_stretches_name_column(self, qapp: QApplication) -> None:
         """In the imports view (built at construction) Name (col 0) stretches.
 
-        Pre-fix, a single header-wide Stretch call put all 4 columns in
+        A single header-wide Stretch call would put all 4 columns in
         Stretch mode uniformly, regardless of which column held the
         variable-length import name.
 
@@ -195,10 +193,8 @@ class TestL15ModinfoTableLayout:
     def test_l15_pe_directories_view_moves_stretch_to_name_column(self, qapp: QApplication) -> None:
         """Switching to the PE-directories view re-targets Stretch to col 1.
 
-        The PE-directories view's "Name" column is index 1, not 0. Pre-fix
-        there was no per-view resize-mode call at all (and no
-        ``_apply_modinfo_resize_modes`` method existed), so the header
-        stayed uniformly stretched across all 4 columns no matter which
+        The PE-directories view's "Name" column is index 1, not 0. Without a per-view resize-mode call (and without an
+        ``_apply_modinfo_resize_modes`` method), the header would stay uniformly stretched across all 4 columns no matter which
         view was active.
 
         Args:
@@ -218,7 +214,7 @@ class TestL15ModinfoTableLayout:
     def test_l15_import_name_cell_carries_tooltip(self, qapp: QApplication) -> None:
         """A long undecorated import name gets a matching tooltip.
 
-        Pre-fix, no tooltip was set on the Name cell in the imports view.
+        Without a tooltip, the Name cell in the imports view has none.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -234,7 +230,7 @@ class TestL15ModinfoTableLayout:
     def test_l15_pe_directory_name_cell_carries_tooltip(self, qapp: QApplication) -> None:
         """A long PE-directory name gets a matching tooltip.
 
-        Pre-fix, no tooltip was set on the Name cell in the PE-directories
+        Likewise, the Name cell in the PE-directories
         view either.
 
         Args:
@@ -250,7 +246,7 @@ class TestL15ModinfoTableLayout:
 
 
 class TestL16StatusLabelWordWrap:
-    """L16: status labels word wrap unbounded error text instead of clipping."""
+    """Status labels word wrap unbounded error text instead of clipping."""
 
     @staticmethod
     def _assert_wraps_within_width(label_text_owner: object, label_attr: str, width: int) -> None:
@@ -259,7 +255,7 @@ class TestL16StatusLabelWordWrap:
         Constrains the label to a narrow width and checks that the
         word-wrapped height for that width spans multiple text lines; a
         label without word wrap reports a fixed single-line height
-        regardless of width, which is the pre-fix failure mode.
+        regardless of width, which is the failure mode.
 
         Args:
             label_text_owner: The widget instance holding the label attribute.
@@ -279,7 +275,7 @@ class TestL16StatusLabelWordWrap:
     def test_l16_bpcfg_status_label_wraps_long_error_text(self, qapp: QApplication) -> None:
         """A long breakpoint-config error message wraps instead of clipping.
 
-        Pre-fix ``_bpcfg_status_label`` had no ``setWordWrap(True)``, so
+        ``_bpcfg_status_label`` must call ``setWordWrap(True)``, since otherwise
         ``heightForWidth`` at a narrow width would report the same
         single-line height as the unconstrained ``sizeHint``.
 
@@ -299,7 +295,7 @@ class TestL16StatusLabelWordWrap:
     def test_l16_script_status_label_wraps_long_error_text(self, qapp: QApplication) -> None:
         """A long script-engine error message wraps instead of clipping.
 
-        Pre-fix ``_script_status_label`` had no ``setWordWrap(True)`` either.
+        ``_script_status_label`` must call ``setWordWrap(True)`` as well.
 
         Args:
             qapp: The shared QApplication fixture.

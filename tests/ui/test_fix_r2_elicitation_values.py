@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, items 14 and 44: the elicitation form sends only what the operator gave, as the protocol's types and formats define it.
+"""The elicitation form sends only what the operator gave, as the protocol's types and formats define it.
 
 Each gate builds the real dialog from a real protocol request, fills its real widgets as an operator would, presses Send, and reads what
 the dialog returns to the server: the action and the content. An optional yes/no question left alone is omitted, not sent as ``false``;

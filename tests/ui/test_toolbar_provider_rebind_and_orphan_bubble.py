@@ -2,34 +2,30 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for S16-D01 (toolbar rebind), S16-D05 (orphan bubble), and the S16 duplicate-assistant-bubble investigation.
+"""Gates for the toolbar provider rebind, the orphan bubble, and the duplicate assistant bubble.
 
-S16-D01: switching the toolbar's Provider/Model combos after the first
-message had zero effect on subsequent completions -- ``MainWindow._on_send``
-only consulted the toolbar selection while no session existed yet, and
-``_ensure_active_session`` early-returned whenever a session was already
-active, so a later toolbar switch was silently ignored until "New Session".
+Toolbar rebind: a Provider/Model switch on the toolbar after the first message must affect the
+subsequent completions. ``MainWindow._on_send`` must consult the toolbar selection on every turn,
+not only while no session exists, and ``_ensure_active_session`` must not return early on a
+session that is already active, so a later toolbar switch is never ignored until "New Session".
 
-S16-D05: every turn's ``add_streaming_message()`` placeholder bubble was
-created eagerly at send time. A completion that never streamed left that
-placeholder empty forever while the real reply arrived as a separate bubble
-via ``message_received`` -> ``add_message``, producing an orphan empty
-"Intellicrack" bubble above the user's message on every turn.
+Orphan bubble: a turn's ``add_streaming_message()`` placeholder bubble must not stay empty when
+the completion never streamed. The real reply arrives as a separate bubble through
+``message_received`` -> ``add_message``, which would leave an orphan empty "Intellicrack" bubble
+above the user's message on every turn.
 
-Duplicate assistant bubble: on a turn whose text streams, the completed
-``response`` message the orchestrator's agent loop appends and fires through
-``message_received`` used to reach ``ChatPanel.add_message`` unconditionally,
-duplicating the same content that ``_on_stream_chunk`` had already rendered
-into a live streaming bubble. ``MainWindow._on_message_received`` now folds
-that completed message into the already-rendered bubble via
-``ChatPanel.finalize_streaming_message`` instead of appending a second one.
+Duplicate assistant bubble: on a turn whose text streams, the completed ``response`` message that
+the orchestrator's agent loop appends and fires through ``message_received`` must not reach
+``ChatPanel.add_message``, because that would duplicate the content ``_on_stream_chunk`` already
+rendered into a live streaming bubble. ``MainWindow._on_message_received`` folds the completed
+message into that bubble via ``ChatPanel.finalize_streaming_message`` instead of appending a
+second one.
 
-All three tests drive the real :class:`MainWindow` over a real
-:class:`Orchestrator` and real, self-contained :class:`LLMProviderBase`
-subclasses -- no mocked provider calls or asserted-on mocks. The toolbar and
-orphan-bubble tests disable streaming on the orchestrator config to exercise
-the non-streaming completion path described by their defects; the duplicate-
-bubble test forces streaming on to exercise the streamed completion path.
+All three tests drive the real :class:`MainWindow` over a real :class:`Orchestrator` and real,
+self-contained :class:`LLMProviderBase` subclasses -- no mocked provider calls or asserted-on
+mocks. The toolbar and orphan-bubble tests disable streaming on the orchestrator config to exercise
+the non-streaming completion path described above; the duplicate-bubble test forces streaming on
+to exercise the streamed completion path.
 """
 
 from __future__ import annotations
@@ -227,10 +223,9 @@ _STREAM_CHUNKS: Final[tuple[str, ...]] = ("Streaming ", "reply ", "chunks", ".")
 class _StreamingProvider(LLMProviderBase):
     """Real, connectable provider whose ``chat_stream`` yields several deltas.
 
-    Used to drive a genuine streamed turn end to end through the real
-    ``ChatPanel`` and ``MainWindow`` signal wiring, so the duplicate
-    assistant-bubble question (S16 investigation) is settled against actual
-    application code rather than a mocked chat panel.
+    Used to drive a genuine streamed turn end to end through the real ``ChatPanel`` and
+    ``MainWindow`` signal wiring, so the duplicate assistant-bubble question is checked against
+    actual application code rather than a mocked chat panel.
     """
 
     def __init__(self, provider_name: str, model_id: str) -> None:
@@ -498,13 +493,12 @@ def test_toolbar_model_switch_rebinds_active_session(
 ) -> None:
     """Switching the toolbar Provider/Model must retarget the next completion.
 
-    Reproduces S16-D01: with two connected providers, the first send binds
+    With two connected providers, the first send binds the session to provider A / model A.
     the session to provider A / model A. Switching the toolbar to provider B
     / model B and sending again must route the second completion to provider
     B with model B on the *same* session -- a rebind, not a new session.
-    Before the fix, ``_ensure_active_session`` early-returned whenever a
-    session already existed, so the second send silently kept hitting
-    provider A with model A.
+    A regression here would be ``_ensure_active_session`` early-returning whenever a session already
+    exists, so the second send silently keeps hitting provider A with model A.
 
     Args:
         window_factory: Factory yielding a real, auto-closed MainWindow.
@@ -555,12 +549,10 @@ def test_non_stream_completion_leaves_single_assistant_bubble(
 ) -> None:
     """A non-streaming completion must leave exactly one assistant bubble.
 
-    Reproduces S16-D05: before the fix, ``_on_user_message`` eagerly created
-    an empty streaming placeholder bubble for every send via
-    ``add_streaming_message()``, but the non-streaming completion path never
-    filled it -- the real reply arrived as a second, separate bubble via
-    ``message_received`` -> ``add_message``. That left an empty orphan
-    "Intellicrack" bubble ahead of the user's own message on every turn.
+    ``_on_user_message`` must not leave an empty streaming placeholder bubble behind for a send via
+    ``add_streaming_message()`` when the non-streaming completion path never fills it. The real reply
+    arrives as a second, separate bubble via ``message_received`` -> ``add_message``, and that would
+    leave an empty orphan "Intellicrack" bubble ahead of the user's own message on every turn.
 
     Args:
         window_factory: Factory yielding a real, auto-closed MainWindow.
@@ -592,20 +584,15 @@ def test_streamed_completion_leaves_single_assistant_bubble(
 ) -> None:
     """A streamed completion must leave exactly one assistant bubble, not two.
 
-    Settles the S16 duplicate-assistant-bubble investigation against the
-    real application wiring: ``_on_stream_chunk`` lazily creates a streaming
-    bubble via ``ChatPanel.add_streaming_message()`` and renders the reply
-    into it chunk by chunk, while the orchestrator's agent loop *also*
-    appends the completed ``response`` message and fires it through
-    ``message_received`` once the stream finishes. Before the fix,
-    ``message_received`` was wired directly to ``ChatPanel.add_message``,
-    which unconditionally builds a brand-new bubble for that same content --
-    turning every streamed turn into two assistant bubbles (the live
-    streamed one, plus a duplicate final one). ``MainWindow._on_message_received``
-    now folds the completed message into the already-rendered streaming
-    bubble via ``ChatPanel.finalize_streaming_message`` instead of
-    duplicating it, so exactly one assistant bubble should remain, carrying
-    the full streamed text.
+    The streamed reply must not be duplicated. ``_on_stream_chunk`` lazily creates a streaming bubble
+    via ``ChatPanel.add_streaming_message()`` and renders the reply into it chunk by chunk, while the
+    orchestrator's agent loop also appends the completed ``response`` message and fires it through
+    ``message_received`` once the stream finishes. ``message_received`` must not be wired directly to
+    ``ChatPanel.add_message``, which builds a brand-new bubble for that same content and would turn
+    every streamed turn into two assistant bubbles. ``MainWindow._on_message_received`` folds the
+    completed message into the already-rendered streaming bubble via
+    ``ChatPanel.finalize_streaming_message``, so exactly one assistant bubble remains, carrying the
+    full streamed text.
 
     Args:
         streaming_window_factory: Factory yielding a real, auto-closed

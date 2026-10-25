@@ -6,10 +6,9 @@
 """Layout gates for the SplashScreen progress overlay.
 
 The splash paints an eight-stage pipeline, the status message and the version
-string itself. The child overlay used to repeat the status and version as
-labels and to place its progress bar on top of the pipeline circles. These
-gates pin one owner per element at both 100% and 150% display scaling while
-keeping the D45 guarantee that progress movement is visible during load.
+string itself. The child overlay must not repeat the status and version as labels, or place its
+progress bar on top of the pipeline circles. These gates pin one owner per element at both 100%
+and 150% display scaling, while keeping the guarantee that progress movement is visible during load.
 """
 
 from __future__ import annotations
@@ -266,7 +265,7 @@ class TestOverlayLayout:
         monkeypatch: pytest.MonkeyPatch,
         scale: float,
     ) -> None:
-        """D45: the filled portion of the bar is really present in the grabbed splash.
+        """The filled portion of the bar is really present in the grabbed splash.
 
         Args:
             qapp: QApplication fixture required by Qt widgets.

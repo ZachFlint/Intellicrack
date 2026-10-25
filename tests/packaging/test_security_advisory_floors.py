@@ -24,7 +24,7 @@ Several PyPI distributions carried Dependabot advisories:
   is fully patched by ``2.12.0`` and ``httpcore2`` clears its half of
   CVE-2026-84381 by ``2.10.0``.
 
-The fix expresses a minimum-version floor for each in ``pyproject.toml`` --
+Each gets a minimum-version floor in ``pyproject.toml`` --
 ``pyasn1``, ``httpx2`` and ``httpcore2`` in the default (runtime)
 ``[tool.pixi].pypi-dependencies`` and ``gitpython`` in
 ``[tool.pixi.feature.dev.pypi-dependencies]`` so it stays out of the shipped

@@ -481,7 +481,7 @@ def capture_window_image(hwnd: int) -> QImage | None:
     where ``SetParent`` fails with ``ERROR_INVALID_PARAMETER`` but
     ``PrintWindow`` renders correctly. This is how the x64dbg panel shows a
     live mirror of its debugger window's real content when the window
-    itself cannot be embedded as a native child widget (S20-D01).
+    itself cannot be embedded as a native child widget.
 
     Args:
         hwnd: Native window handle (HWND) to capture.

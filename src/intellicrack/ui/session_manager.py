@@ -569,7 +569,7 @@ class SessionManagerDialog(QDialog):
             parent: Parent widget to inspect for an ``_orchestrator``
                 attribute. When ``None`` or the attribute is absent, this
                 is a no-op and the dialog keeps its disk-fallback
-                behaviour.
+                behavior.
         """
         orchestrator = getattr(parent, "_orchestrator", None)
         if orchestrator is None:
@@ -837,14 +837,14 @@ class SessionManagerDialog(QDialog):
 
     @staticmethod
     def _read_session_file(session_file: Path) -> dict[str, object]:
-        """Read and normalise a single session JSON file.
+        """Read and normalize a single session JSON file.
 
         Args:
             session_file: Path to the session JSON file.
 
         Returns:
             dict[str, object]: Session payload dictionary with id, name, and
-            datetime fields normalised.
+            datetime fields normalized.
 
         Raises:
             TypeError: If the file does not hold a JSON object.
@@ -870,12 +870,12 @@ class SessionManagerDialog(QDialog):
     def _normalise_session_datetime(session_data: dict[str, object], field: str) -> None:
         """Convert an ISO-format datetime string in ``session_data`` to a ``datetime``.
 
-        A timestamp without a time zone is read as UTC so every normalised
+        A timestamp without a time zone is read as UTC so every normalized
         value can be compared with every other.
 
         Args:
             session_data: Session payload dictionary to mutate in place.
-            field: Name of the datetime field to normalise.
+            field: Name of the datetime field to normalize.
         """
         raw = session_data.get(field)
         if not isinstance(raw, str):
@@ -1117,7 +1117,7 @@ class SessionManagerDialog(QDialog):
         pattern already used for delete/import/tag-persist so the Qt event
         loop stays responsive while the backing ``SessionStore`` performs its
         SQLite read. Either path persists the previously-current session
-        before switching, honouring the confirmation prompt's "Current
+        before switching, honoring the confirmation prompt's "Current
         session progress will be saved" promise.
 
         Args:
@@ -1556,7 +1556,7 @@ class SessionManagerDialog(QDialog):
                 )
 
     def _write_session_export(self, session_id: str, session_data: dict[str, object], path: str) -> None:
-        """Serialise ``session_data`` as JSON to ``path``.
+        """Serialize ``session_data`` as JSON to ``path``.
 
         Args:
             session_id: Identifier of the session being exported.
@@ -1631,7 +1631,7 @@ class SessionManagerDialog(QDialog):
         """Import session from file.
 
         When a session manager is available, the import is routed through ``SessionManager.import_json`` so the imported session lands in
-        the backing ``SessionStore``. Without a manager, the legacy disk-sidecar fallback is used.
+        the backing ``SessionStore``. Without a manager, the disk-sidecar fallback is used.
         """
         path_str, _ = QFileDialog.getOpenFileName(
             self,

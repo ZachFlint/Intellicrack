@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Coverage for the process manager paths the existing suites leave unexecuted.
+"""Coverage for process manager paths that other suites do not reach.
 
 Every process that is registered, signalled or terminated here is a child this
 module started itself: ``sys.executable`` running a script that prints a ready

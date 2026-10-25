@@ -842,10 +842,8 @@ class SandboxPanel(AnalysisPanelBase):
     def set_sandbox(self, sandbox: SandboxBase) -> None:
         """Wire a legacy ``SandboxBase`` into the panel via a bridge adapter.
 
-        The legacy ``SandboxBase`` contract pre-dates the
-        ``SandboxBridge``-based panel API. To preserve the public method
-        without short-circuiting around the bridge layer, the supplied
-        instance is wrapped in a fresh ``SandboxBridge``: a single-slot
+        The panel only drives a ``SandboxBridge``. To keep this entry point without
+        bypassing that layer, the supplied instance is wrapped in a fresh ``SandboxBridge``: a single-slot
         ``SandboxManager`` is constructed, a ``SandboxInstance`` for the
         legacy sandbox is registered against it, and the resulting
         bridge is installed via :meth:`set_bridge` so all subsequent
@@ -956,8 +954,8 @@ class SandboxPanel(AnalysisPanelBase):
 
         The console line is kept as the durable record of the failure while the
         modal dialog guarantees the user actually sees it: without one, a failed
-        Create (or any other toolbar action) was silent unless the Console tab
-        happened to be the visible tab.
+        Create (or any other toolbar action) is silent unless the Console tab happens
+        to be the visible tab.
 
         Args:
             title: Dialog window title naming the action that failed.
@@ -1008,7 +1006,7 @@ class SandboxPanel(AnalysisPanelBase):
         nor the guest-agent message channel - it inherits the ``SandboxBase``
         implementations that raise "not supported" - and it has no VNC port, so
         its ``vnc_port`` is always ``None``. Leaving those controls enabled for
-        a Windows sandbox offered actions that could only ever fail.
+        a Windows sandbox would offer actions that can only ever fail.
 
         The gated set mirrors exactly the ``SandboxBridge`` operations that
         reject a non-QEMU instance outright: ``snapshot_create``,
@@ -2001,8 +1999,8 @@ class SandboxPanel(AnalysisPanelBase):
 
         Windows Sandbox targets a specific guest process, so on that backend this first enumerates the live guest processes and lets the
         user pick one via :class:`GuestProcessPickerDialog` before dispatching the dump; ``SandboxBridge.memory_dump`` otherwise rejects the
-        call outright for a missing ``target_pid`` (S17-D10b / audit7 F-0021). QEMU dumps the whole guest and needs no PID, so that path
-        dispatches directly, unchanged from before this picker existed.
+        call outright for a missing ``target_pid``. QEMU dumps the whole guest and needs no PID, so that path
+        dispatches directly.
         """
         if self._bridge is None or self.sandbox_id is None:
             return
@@ -3116,10 +3114,9 @@ class SandboxPanel(AnalysisPanelBase):
     def _on_vnc_port_error(self, exc: object) -> None:
         """Handle a failed VNC port query.
 
-        The previous handler swallowed the failure at debug level without the
-        error text, so a VM Display that silently never connected left no
-        usable evidence anywhere. The failure is now logged at warning level
-        with the real error and mirrored into the console. No dialog is shown:
+        The failure is logged at warning level with the real error and
+        mirrored into the console, so a VM Display that never connected
+        leaves usable evidence. No dialog is shown:
         the query is issued automatically after a create, not by a direct user
         action, and the VM Display tab itself already shows nothing.
 

@@ -795,8 +795,7 @@ class HexPatCompiler:
         ``description``, ``magic``, ``mime``, ``pointer_size``) are honoured by
         the generated static template. Without this step the codegen would
         silently fall back to inert defaults (``little`` endian, generic
-        description, no magic detection), which the audit identified as a
-        codegen-behaviour drift.
+        description, no magic detection).
 
         Args:
             source: HexPat DSL source code.

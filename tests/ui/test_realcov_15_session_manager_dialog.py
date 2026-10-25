@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for :class:`SessionManagerDialog`.
 
-The session-manager dialog was previously untested. These tests back it with
+These tests back it with
 a real :class:`SessionManager` over a real SQLite :class:`SessionStore`,
 create real sessions through the manager, and then exercise the dialog's
 load/delete flows end-to-end:

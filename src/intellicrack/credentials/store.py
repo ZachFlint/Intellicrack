@@ -364,9 +364,9 @@ class CredentialStore:
         """Check if keyring backend is available and functional.
 
         Performs passive inspection of the active keyring backend instead of
-        writing and deleting a probe key.  The previous approach mutated the
-        user's keyring on every initialization, which could collide with
-        legitimate keys named ``intellicrack_test`` and pollute audit logs.
+        writing and deleting a probe key would mutate the user's keyring on
+        every initialization and could collide with legitimate keys named
+        ``intellicrack_test`` and pollute audit logs.
 
         Returns:
             bool: True if keyring is available and the active backend is a

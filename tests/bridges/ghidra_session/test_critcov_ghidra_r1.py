@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Second-pass real-process coverage for the Ghidra bridge launch and shutdown paths.
+"""Real-process coverage for the Ghidra bridge launch and shutdown paths.
 
 Three tests drive the product's own launch code (``start_headless``,
 ``run_headless_batch``) and its ``shutdown`` against a real child process, the
@@ -13,8 +13,7 @@ file the bridge looks for, but no ``Ghidra/application.properties``). PyGhidra's
 launcher rejects such a directory with a ``ValueError`` before any JVM starts,
 so the child exits with code 1 within a couple of seconds and no Ghidra session
 is ever opened. With ``JAVA_HOME`` removed from the environment and no bundled
-``jdk-*`` in that directory, JDK discovery finds nothing, which is the case the
-first-pass files could not produce.
+``jdk-*`` in that directory, JDK discovery finds nothing, which no other test here produces.
 
 The shutdown test additionally saturates the event loop's single-worker default
 executor so that the product's ten-second wait for the terminated process

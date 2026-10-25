@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for the hex editor sections/imports/exports mixin.
 
-The audit (shard 13) lists ``sections.py`` under ``NOT TESTED`` for section
-list population, import/export rendering, file-type auto-detection, and string
-extraction navigation.
+Covers section list population, import/export rendering, file-type
+auto-detection, and string extraction navigation.
 
 These tests open a REAL Windows PE (``kernel32.dll`` from System32) through the
 real :class:`HexEditorBridge`, parse it with the real backend, then render the

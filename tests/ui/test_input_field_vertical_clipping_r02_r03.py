@@ -2,24 +2,24 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the app-wide input-field vertical-clipping fix (R02 + R03).
+"""Gates for the app-wide input-field vertical-clipping fix.
 
 These gates lock in the two-pronged remediation of the systemic defect where
 small ``QLineEdit`` / editable ``QComboBox`` fields dropped into fixed-height
 toolbars had their glyph bottoms clipped:
 
-* **Container fix (R03)** -- every Process-panel sub-tab toolbar now derives its
+* **Container fix** -- every Process-panel sub-tab toolbar derives its
   height from :func:`compute_toolbar_height` (font-metric driven) instead of the
-  retired hardcoded ``_TOOLBAR_HEIGHT = 32``. Reverting any container back to
+  hardcoded ``_TOOLBAR_HEIGHT = 32``. Reverting any container back to
   ``setFixedHeight(32)`` drives the toolbar below both the helper's output and
   its hosted fields' size hints, turning :func:`test_process_panel_toolbars_are_font_metric_derived`
   RED.
-* **QSS floor (R03)** -- the shared ``QLineEdit`` rule now carries a
+* **QSS floor** -- the shared ``QLineEdit`` rule now carries a
   ``min-height`` so a bare field keeps enough height even when a legacy
   fixed-height container tries to squeeze it. Removing the floor lets a short
   container clip the field, turning :func:`test_qss_line_edit_floor_prevents_squeeze`
   RED.
-* **Editable-combo centering (R02)** -- the main toolbar's editable Model combo
+* **Editable-combo centering** -- the main toolbar's editable Model combo
   and the static Provider combo now share one derived height and the inner
   line-edit fills the combo, so the model text is vertically centered rather than
   bottom-low. Reverting the combo min-height / QSS rules turns
@@ -229,8 +229,8 @@ def test_process_panel_input_fields_not_vertically_clipped(themed_qapp: QApplica
 
     Cycles every sub-tab to the front and, for each currently visible input,
     asserts the rendered field height leaves room for the font's full ascent and
-    descent plus the styled chrome (``fontHeight + 14``). This is the end-state
-    invariant the user reported violated on the Device Path field.
+    descent plus the styled chrome (``fontHeight + 14``). This invariant guards
+    against the Device Path field clipping its glyphs.
 
     Args:
         themed_qapp: The QApplication with stylesheet restore.
@@ -262,7 +262,7 @@ def test_qss_line_edit_floor_prevents_squeeze(themed_qapp: QApplication, theme: 
 
     Places a bare styled ``QLineEdit`` inside a deliberately short (30 px)
     fixed-height toolbar -- standing in for a legacy un-migrated container the
-    Python fix does not touch -- and asserts the field still renders at least
+    Python layout code does not touch -- and asserts the field still renders at least
     ``fontHeight + 14`` px. The bundled ``QLineEdit { min-height }`` rule holds it
     open; deleting that rule from the theme lets the short container squeeze the
     field below the threshold, turning this gate RED.
@@ -306,7 +306,7 @@ def test_editable_toolbar_combo_centered_under_theme(themed_qapp: QApplication, 
     stylesheet and asserts the editable combo's inner line-edit is vertically
     centered within the combo and both combos share one height. Removing the
     ``QComboBox#toolbar_combo`` min-height or the inner ``QLineEdit`` rule from a
-    theme pushes the text low and desynchronises the heights, turning the matching
+    theme pushes the text low and desynchronizes the heights, turning the matching
     theme case RED.
 
     Args:
@@ -392,7 +392,7 @@ def test_toolbar_model_combo_centered_and_matches_provider(
 
     Drives the widgets built by ``MainWindow._setup_toolbar`` and asserts the
     editable Model combo's inner line-edit is vertically centered within the combo
-    and shares the Provider combo's height. This gates the R02 fix on the real
+    and shares the Provider combo's height. This gates the fix on the real
     toolbar, not a reconstruction.
 
     Args:

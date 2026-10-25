@@ -2,25 +2,17 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the GUI audit findings M54 and L12 in ``hex_editor.signatures``.
+"""Gates for ``hex_editor.signatures`` database label wrapping, tooltips and result tree sizing.
 
-M54: ``_sig_db_path_label`` was created as ``QLabel("(none)")`` with no
-``setWordWrap(True)`` and no tooltip. Because ``_on_select_sig_db`` sets the
-label's text to an arbitrary, user-controlled filename
-(``Path(db_path).name``), a long descriptive signature-database filename
-either overflowed the narrow side-panel tab or was clipped, with no way to
-recover the full name by hovering. The fix enables word wrap on the label,
-seeds an initial tooltip, and updates the tooltip to the full path whenever a
-database is selected.
+``_sig_db_path_label`` must be created with word wrap and a tooltip. ``_on_select_sig_db`` sets the label's text to an
+arbitrary, user-controlled filename (``Path(db_path).name``), and a long descriptive signature-database filename would
+otherwise overflow the narrow side-panel tab or be clipped, with no way to recover the full name by hovering. The label
+enables word wrap, seeds an initial tooltip, and updates the tooltip to the full path whenever a database is selected.
 
-L12: ``_sig_results_tree`` was configured with ``setRootIsDecorated(False)``
-and ``setAlternatingRowColors(True)`` but no header resize mode and no
-per-item tooltips, even though the "Details" column can hold an arbitrarily
-long YARA namespace/meta/tags repr and "Name" holds unbounded
-signature/rule names from user-supplied database files. The fix sets every
-header section to ``QHeaderView.ResizeMode.ResizeToContents`` (so columns
-grow to fit real content instead of clipping at a fixed default width) and
-sets a full-text tooltip on every populated cell.
+``_sig_results_tree`` must set every header section to ``QHeaderView.ResizeMode.ResizeToContents`` (so columns grow to fit real
+content instead of clipping at a fixed default width) and must set a full-text tooltip on every populated cell. The "Details"
+column can hold an arbitrarily long YARA namespace/meta/tags repr, and "Name" holds unbounded signature/rule names from
+user-supplied database files.
 
 Every test below drives the real ``SignaturesMixin`` implementation (no
 mocks standing in for the mixin logic) under an offscreen ``QApplication``.
@@ -86,8 +78,8 @@ class _SignaturesHost(SignaturesMixin):
 def test_m54_label_has_word_wrap_enabled() -> None:
     """``_sig_db_path_label`` must have word wrap enabled after tab construction.
 
-    Pre-fix the label was built with ``QLabel("(none)")`` and no
-    ``setWordWrap(True)`` call, so ``wordWrap()`` reports Qt's default
+    The label must be built with ``QLabel("(none)")`` plus a
+    ``setWordWrap(True)`` call, otherwise ``wordWrap()`` reports Qt's default
     ``False`` and long filenames paint on a single, overflowing/clipped line.
     """
     host = _SignaturesHost()
@@ -108,8 +100,8 @@ def test_m54_long_filename_grows_taller_at_narrow_width_instead_of_clipping() ->
     several lines at the narrow side-panel width and so report a greater height
     than at a wide width where it fits on one line. The name carries genuine
     word boundaries because ``QLabel`` word wrap breaks at whitespace; without
-    the ``setWordWrap(True)`` fix the height would not grow as the width
-    shrinks, so this assertion is falsified by removing the fix.
+    the ``setWordWrap(True)`` call the height would not grow as the width
+    shrinks, so this assertion is falsified by removing the call.
     """
     host = _SignaturesHost()
     host.build_tab()
@@ -129,7 +121,7 @@ def test_m54_long_filename_grows_taller_at_narrow_width_instead_of_clipping() ->
 def test_m54_initial_tooltip_matches_placeholder_text() -> None:
     """The label must carry a tooltip from construction, before any selection.
 
-    Pre-fix no tooltip was ever attached, so ``toolTip()`` returns the Qt
+    Without an attached tooltip, ``toolTip()`` returns the Qt
     default empty string.
     """
     host = _SignaturesHost()
@@ -145,9 +137,9 @@ def test_m54_selecting_database_sets_tooltip_to_full_path(
 ) -> None:
     """Selecting a database must set the tooltip to the full, un-clipped path.
 
-    Reproduces the finding's failure scenario: a long, descriptive signature
-    database filename. Post-fix the label text is the short display name
-    while the tooltip recovers the full path on hover; pre-fix no tooltip is
+    Reproduces the failure scenario: a long, descriptive signature
+    database filename. The label text is the short display name
+    while the tooltip recovers the full path on hover; without one no tooltip is
     ever set, so ``toolTip()`` stays empty regardless of what was selected.
 
     Args:
@@ -180,7 +172,7 @@ def test_m54_selecting_database_sets_tooltip_to_full_path(
 def test_l12_results_header_resizes_to_contents_and_stretches_last_section() -> None:
     """Every header section must use ``ResizeToContents``, with the last section stretched.
 
-    Pre-fix the header was never touched, so it stayed on Qt's default
+    Left untouched, the header would stay on Qt's default
     ``Interactive`` resize mode with a fixed default section width,
     regardless of how long the populated cell text is.
     """
@@ -206,7 +198,7 @@ def test_l12_name_column_width_grows_to_fit_a_long_signature_name() -> None:
     Populates the tree through the real ``_on_sig_scan_finished`` handler
     with a long rule name (mirroring an unbounded, user-supplied YARA/DIE
     signature name) and asserts the rendered column width is at least as
-    wide as the text itself. Pre-fix, with no resize-mode call, the column
+    wide as the text itself. With no resize-mode call, the column
     stays at Qt's default fixed section width and clips the name.
     """
     host = _SignaturesHost()
@@ -241,7 +233,7 @@ def test_l12_scan_results_populate_full_text_tooltips_for_every_column() -> None
 
     Uses a YARA-style match whose ``details`` string embeds a namespace,
     meta dict, and tags list -- exactly the unbounded-length payload
-    described by the finding. Pre-fix no tooltip is ever set, so hovering
+    that a clipped cell can contain. With no tooltip set, hovering
     over a clipped Name or Details cell reveals nothing.
     """
     host = _SignaturesHost()

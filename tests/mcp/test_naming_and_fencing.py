@@ -121,8 +121,8 @@ class TestSourceLabelFallback:
     """``source_label`` honours its documented fallback.
 
     Regression gate. ``from_canonical_name`` raises ``McpConfigError``, a
-    sibling of ``McpProtocolError``; the original implementation caught only
-    ``McpProtocolError`` and ``ValueError``, so every non-MCP name raised
+    sibling of ``McpProtocolError``; an implementation that caught only
+    ``McpProtocolError`` and ``ValueError``, so every non-MCP name would raise
     instead of returning the namespace the docstring promises.
     """
 

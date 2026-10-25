@@ -65,12 +65,7 @@ class TestTypedDictConstruction:
     """Verify every TypedDict can be constructed with expected fields."""
 
     def test_file_change(self) -> None:
-        """FileChange.operation is set from validate_file_operation output, not the raw alias.
-
-        Falsifiable mutation: rename the ``"created"`` return branch to ``"added"`` in
-        ``validate_file_operation`` — ``canonical_op`` would be ``"added"`` while
-        ``fc["operation"]`` would still be ``"created"``, failing the equality check.
-        """
+        """FileChange.operation is set from validate_file_operation output, not the raw alias."""
         raw_alias = "add"
         canonical_op: str = validate_file_operation(raw_alias)
         assert canonical_op != raw_alias, "oracle must differ from input alias"
@@ -93,12 +88,7 @@ class TestTypedDictConstruction:
         assert size_from_struct == _SAMPLE_SIZE
 
     def test_registry_change(self) -> None:
-        """RegistryChange.operation is set from validate_registry_operation output.
-
-        Falsifiable mutation: rename the ``"deleted"`` return branch to ``"removed"`` in
-        ``validate_registry_operation`` — ``canonical_op`` would be ``"removed"`` while
-        ``rc["operation"]`` would still be ``"deleted"``, failing the equality check.
-        """
+        """RegistryChange.operation is set from validate_registry_operation output."""
         raw_alias = "deletevalue"
         canonical_op: str = validate_registry_operation(raw_alias)
         assert canonical_op != raw_alias, "oracle must differ from input alias"

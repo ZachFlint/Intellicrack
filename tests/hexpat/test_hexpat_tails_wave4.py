@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave 4 HexPat engine tail coverage gates.
+"""HexPat engine tail coverage gates.
 
 Tests error-class span/data_span exact values, function-like macro expansion,
 eval-depth and pattern-limit limit errors, and CRC stdlib against binascii

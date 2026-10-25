@@ -2,17 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D14 at the panel layer: Restart is one bridge operation.
+"""Gates for Restart as one bridge operation at the panel layer.
 
-``SandboxPanel`` used to synthesise a restart by chaining ``bridge.destroy``
-and ``bridge.create`` across four callbacks, so the semantics of a failure
-between the two phases lived in the GUI. The panel now issues a single
-``SandboxBridge.restart`` call and lets the manager own the teardown/recreate
-pair.
+``SandboxPanel`` must issue a single ``SandboxBridge.restart`` call and let the manager own
+the teardown/recreate pair. Chaining ``bridge.destroy`` and ``bridge.create`` across four
+callbacks would move the semantics of a failure between the two phases into the GUI.
 
-The ``qemu_config`` assertion is the S17-D06 regression guard at the panel
-layer: a restart that dropped it would rebuild a QEMU sandbox with no disk
-image.
+The ``qemu_config`` assertion guards the panel layer: a restart that dropped it would
+rebuild a QEMU sandbox with no disk image.
 """
 
 from __future__ import annotations
@@ -191,7 +188,7 @@ def test_restart_threads_the_toolbar_configuration(monkeypatch: pytest.MonkeyPat
 
 @pytest.mark.usefixtures("qapp")
 def test_restart_forwards_the_qemu_config(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A QEMU restart must carry the persisted QEMU configuration (S17-D06).
+    """A QEMU restart must carry the persisted QEMU configuration.
 
     Args:
         monkeypatch: Fixture used to intercept the panel's async dispatch and

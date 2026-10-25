@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S17-D46: the guest must answer to the name it was provisioned with.
+r"""The guest must answer to the name it was provisioned with.
 
 The provisioner declares a ``computer_name`` and emits it into the ``specialize``
 pass, and the finished guest answered to a Windows-generated name instead.
 
-Measured on the live ``windows11-intellicrack-v4-clean`` guest on 2026-08-09,
+Measured on the live ``windows11-intellicrack-v4-clean`` guest,
 which is what rules out every earlier hypothesis. The name is not lost in
 transit: ``$env:COMPUTERNAME.Length`` evaluated *inside* the guest returns 7.
 It is not a rename waiting for a reboot: ``ComputerName``,

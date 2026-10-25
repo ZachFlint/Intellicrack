@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""End-to-end tests for FridaBridge native parity features.
+"""End-to-end tests for FridaBridge native features.
 
 Tests run against real Frida runtime attached to real Windows processes.
 Requires frida-python to be installed.
@@ -279,7 +279,7 @@ class _MockFridaDevice:
 
         Args:
             event: Event name whose callback should be removed.
-            callback: The exact callback object previously passed to :meth:`on`.
+            callback: The exact callback object passed to :meth:`on`.
         """
         callbacks = self._callbacks.get(event)
         if callbacks is not None and callback in callbacks:
@@ -841,7 +841,7 @@ def test_all_function_names_have_methods() -> None:
 
 
 def test_function_count_exact() -> None:
-    """Verify exact function count is 134 (the complete parity-plan implementation).
+    """Verify exact function count is 134.
 
     Falsifiable: adding or removing any function from _FRIDA_FUNCTIONS changes
     the count and fails this test. Using >= would mask deletions.
@@ -871,7 +871,7 @@ def test_no_duplicate_function_names() -> None:
 
 
 def test_new_functions_present() -> None:
-    """Verify all 18 new functions from the parity plan are registered and callable.
+    """Verify the 18 expected functions are registered and callable.
 
     Falsifiable: removing any of the 18 expected function names from the tool
     definition, or making its corresponding method non-callable, fails this test.
@@ -889,7 +889,7 @@ def test_new_functions_present() -> None:
 
 
 def test_fixed_functions_present() -> None:
-    """Verify the three fixed functions use correct names and 'get_memory_ranges' is absent.
+    """Verify enumerate_imports, allocate_memory and get_memory_regions are registered and get_memory_ranges is absent.
 
     Falsifiable: renaming enumerate_imports, allocate_memory, or get_memory_regions
     breaks the 'in names' assertion; restoring get_memory_ranges breaks the 'not in' assert.
@@ -996,17 +996,7 @@ def worker_thread(stalker_bridge: FridaBridge) -> int:
     Creates a thread running x86-64 machine code that loops calling
     Sleep(10) forever (an unconditional jump back to the loop head, not a
     bounded counter), so the thread is guaranteed to still be executing
-    call instructions whenever the test stalker-follows it. The thread's id
-    is taken from the message the worker script sends about itself, not found
-    by listing the process's threads: in the container, following a thread
-    that had been found by a thread listing wedged the agent in a few percent
-    of follows even with the bridge's persistent listing helper, and following
-    a thread learned from its own message did not wedge it once in about 310
-    follows, so these tests follow the second kind. The worker also counts its
-    loop passes into a block of target memory (``COUNTER_ADDRESS_PLACEHOLDER``
-    in the shared script), which this fixture no longer waits on: the
-    measurements showed no difference between a thread followed at once and one
-    that had run its loop dozens of times. The thread is created via a
+    call instructions whenever the test stalker-follows it. The thread id comes from the worker's own message, not from listing the process's threads, because following a thread found by a listing can wedge the Frida agent. The worker counts its loop passes into a block of target memory (``COUNTER_ADDRESS_PLACEHOLDER`` in the shared script), and this fixture does not wait on that counter. The thread is created via a
     persistent script to prevent GC of the code memory while the thread is
     still running, and goes away when the private notepad.exe process is killed
     at teardown.

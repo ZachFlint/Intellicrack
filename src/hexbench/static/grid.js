@@ -91,9 +91,8 @@ function clamp(value, low, high) {
 /**
  * The row-relative caret keys, resolved as arithmetic on the current row width.
  *
- * Every one of these used to read a module constant, which is what fixed the
- * view at sixteen bytes. Taking the width as an argument is what makes the row
- * width a setting; keeping the whole calculation out of the class is what makes
+ * Each of these takes the row width as an argument rather than reading a module
+ * constant. That is what makes the row width a setting; keeping the whole calculation out of the class is what makes
  * it directly executable by the suite that gates it. The result is unclamped -
  * the caller owns the document bounds - and a key that does not move by rows
  * leaves the caret where it is.
@@ -165,11 +164,11 @@ export function normalizeBytesPerRow(value) {
 
 /* The single decision point for "does this key event move the caret between the
    hex and ASCII panes". It is a plain function of the event rather than a case
-   in the keydown switch because Tab used to hold this job, which made the
-   editor a keyboard trap: both Tab and Shift+Tab were swallowed, so a user who
+   in the keydown switch because Tab must not hold this job. A keydown that
+   swallowed Tab and Shift+Tab would make the editor a keyboard trap: a user who
    arrived here without a pointer could not reach the docks, the tab strip or
-   the status bar again. Tab now belongs to the browser, and the pane switch
-   answers to F6 and Ctrl+Tab. */
+   the status bar. Tab belongs to the browser, and the pane switch answers to F6
+   and Ctrl+Tab. */
 function switchesPane(event) {
   if (event.altKey || event.metaKey) {
     return false;
@@ -759,9 +758,19 @@ export class HexGrid {
 
   /* ---------------------------------------------------------------- state */
 
-  /** Point the grid at a document, resetting caches when it has moved on. */
+  /**
+   * Point the grid at a document, resetting caches when it has moved on.
+   *
+   * Replies to concurrent requests can arrive out of order, so a snapshot of
+   * the same document carrying an older generation than the one shown is
+   * ignored: applying it would rewind the cache key and let a window read
+   * before the newer edit be stored as current.
+   */
   setDocument(info) {
     const previous = this.#document;
+    if (info && previous && previous.handle === info.handle && info.generation < previous.generation) {
+      return;
+    }
     this.#document = info;
     if (!info) {
       this.#cache.clear();

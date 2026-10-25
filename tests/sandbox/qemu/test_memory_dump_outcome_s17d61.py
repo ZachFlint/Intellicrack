@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D61: a guest memory dump must report what really happened.
+"""A guest memory dump must report what really happened.
 
 ``QEMUSandbox.dump_memory`` sent ``dump-guest-memory`` synchronously and threw
 away whatever QEMU said about it::

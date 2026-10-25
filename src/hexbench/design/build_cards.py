@@ -10,7 +10,7 @@ per component specimen in ``design/cards``: every card inlines ``static/app.css`
 so it renders under a strict content security policy without a single external
 request, and carries a ``@dsCard`` marker on its first line so a gallery can
 group the files without parsing them. The second is ``design/index.html``, the
-gallery those cards were always missing.
+gallery that indexes those cards.
 
 The gallery holds every specimen on one page and **links** the stylesheet rather
 than inlining it, which is the whole point of it: a card is a frozen copy of the
@@ -509,7 +509,7 @@ _TOAST_SPECIMENS: Final[tuple[tuple[str, str, str, str], ...]] = (
 _RESULT_BANNERS: Final[tuple[tuple[str, str, str, str], ...]] = (
     ("success", "&#10003;", "Saved", "save_as('D:\\work\\kernel32.patched.dll') wrote 1462272 bytes"),
     ("info", "i", "No document required", "list_encodings() is a static method"),
-    ("warning", "!", "Undo history reset", "import_patches_ups replaced the buffer and cleared file_path()"),
+    ("warning", "!", "Document replaced", "import_patches_ups replaced every byte as one undoable edit"),
 )
 
 _RUN_STATES: Final[tuple[tuple[str, str, str, str], ...]] = (
@@ -2301,8 +2301,8 @@ def _card_patches() -> str:
     )
     banner = (
         '<div class="hb-banner is-warning"><span class="hb-banner-glyph">!</span>'
-        '<span class="hb-banner-body"><span class="hb-banner-title">Document replaced and history cleared</span>'
-        '<span class="hb-banner-detail">import_patches_bps rebuilt the buffer, reset the undo stack and cleared file_path(). '
+        '<span class="hb-banner-body"><span class="hb-banner-title">Document replaced</span>'
+        '<span class="hb-banner-detail">import_patches_bps replaced every byte as one undoable edit and kept file_path(). '
         "Every panel bound to this document must be refreshed.</span></span>"
         '<span class="hb-banner-action"><button type="button" class="hb-btn is-sm">Refresh all</button></span></div>'
     )
@@ -2676,7 +2676,13 @@ def _card_diff_minimap() -> str:
     summary = (
         '<div class="hb-row-flex"><span class="hb-badge is-warning">NOT IDENTICAL</span>'
         '<span class="hb-mono hb-secondary">total_differences = 4</span>'
-        '<span class="hb-mono hb-dim">regions = 9</span></div>'
+        '<span class="hb-mono hb-dim">region_count = 9 &middot; change_count = 4 &middot; truncated = false</span></div>'
+    )
+    truncated = (
+        '<div class="hb-banner is-truncated"><span class="hb-banner-glyph">&#8942;</span>'
+        '<span class="hb-banner-body"><span class="hb-banner-title">Showing 100000 of 1048571 regions</span>'
+        '<span class="hb-banner-detail">max_regions listed the first 100000; 948571 more are counted but not listed, '
+        "and every differing byte is in total_differences</span></span></div>"
     )
     frame = (
         '<div class="hb-canvasframe"><div class="hb-canvasframe-header">Diff map'
@@ -2688,8 +2694,10 @@ def _card_diff_minimap() -> str:
     return _section(
         "Diff mini-map",
         "One band per region from <code>diff_files</code>. Each of the four <code>diff_type</code> values gets a colour and a "
-        "glyph, so the map survives greyscale printing and colour blindness. The caret position is tracked by the vertical rule.",
-        f'{frame}<div class="hb-legend">{legend}</div>' + _frame("Summary", summary),
+        "glyph, so the map survives greyscale printing and colour blindness. The caret position is tracked by the vertical rule. "
+        "The engine lists at most <code>max_regions</code> regions and counts the rest, so a result that was cut short says so "
+        "with the truncation banner instead of drawing a map that looks complete.",
+        f'{frame}<div class="hb-legend">{legend}</div>' + _frame("Summary", summary) + _frame("Truncated result", truncated),
     )
 
 
@@ -3147,11 +3155,10 @@ def _sections(stylesheet: str) -> tuple[_Section, ...]:
     holding no specimen is stated instead of silently missing.
 
     How many sections there are is the stylesheet's business, not this module's:
-    the forced-colours block arrived as a thirteenth, and a generator that pinned
-    the count would need editing every time the stylesheet grew a heading it was
-    already free to grow. What is still checked is that the banners run
-    consecutively from one, which catches a duplicated or misnumbered heading,
-    and that each has a note to render beneath it.
+    a generator that pinned the count would need editing every time the
+    stylesheet grew a heading it was already free to grow. What is still checked
+    is that the banners run consecutively from one, which catches a duplicated or
+    misnumbered heading, and that each has a note to render beneath it.
 
     Args:
         stylesheet: Full contents of the canonical stylesheet.

@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit7 F-0001 (config-pyproject): runtime dependencies.
+"""Regression tests for runtime dependencies in ``pyproject.toml``.
 
-The original defect documented in ``audit7.md`` was that
+The guarded defect is that
 ``pyproject.toml`` ``[project].dependencies`` redundantly declared 95+
 development, testing, documentation, and profiling packages as runtime
 requirements. Installing the distribution with ``pip install intellicrack``
@@ -12,8 +12,8 @@ would pull pytest, mypy, bandit, basedpyright, ruff, sphinx, mkdocs, tox,
 nox, twine, and many more packages that have no business in a runtime
 install.
 
-The fix moved every non-runtime package out of ``[project].dependencies``
-into the already-existing ``[project].optional-dependencies`` extras and
+Non-runtime packages belong in the ``[project].optional-dependencies``
+extras and
 ``[dependency-groups]`` tables (``dev``, ``test``, ``docs``, ``profile``).
 The remaining ``[project].dependencies`` entries are the genuine runtime
 imports under ``src/intellicrack/`` plus their version constraints.
@@ -241,10 +241,9 @@ def test_allowlist_present_in_runtime_dependencies() -> None:
 
 
 def test_runtime_dependency_count_is_lean() -> None:
-    """Runtime dependency list must stay small after the F-0001 prune.
+    """Runtime dependency list must stay small.
 
-    Before the fix the list contained 111 entries; after the fix it should
-    contain only genuine runtime requirements. This test fails loudly if a
+    The list must contain only genuine runtime requirements. This test fails loudly if a
     future change re-inflates the list past a sane ceiling, which is the
     most common way the regression would creep back in.
     """

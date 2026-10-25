@@ -43,8 +43,7 @@ _HEADER_MARGIN_V: Final[int] = 4
 _HEADER_SPACING: Final[int] = 4
 # Number of average-width monospace characters a table column must be able to
 # show before it is considered legible; used to derive a per-table minimum
-# section width from the live table font rather than a hard-coded pixel count
-# (S20-D16).
+# section width from the live table font rather than a hard-coded pixel count.
 _MIN_COLUMN_WIDTH_CHARS: Final[int] = 6
 
 
@@ -142,7 +141,7 @@ class BridgeAnalysisPanel(QWidget):
             # width; ElideRight plus the scroll buttons enabled above means a
             # clipped tab degrades to a legible "Str..." with a reachable nav
             # arrow instead of Qt's default of silently shrinking every label
-            # with no indication more tabs exist (S20-D16).
+            # with no indication more tabs exist.
             tab_bar.setElideMode(Qt.TextElideMode.ElideRight)
             tab_bar.setUsesScrollButtons(True)
 
@@ -239,7 +238,7 @@ class BridgeAnalysisPanel(QWidget):
             header_item = table.horizontalHeaderItem(col)
             if header_item is not None:
                 # Keep a truncated column header readable on hover in a narrow
-                # dock (N2).
+                # dock.
                 header_item.setToolTip(header_text)
         table.setAlternatingRowColors(True)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -259,9 +258,9 @@ class BridgeAnalysisPanel(QWidget):
             # the viewport. A Stretch section is instead defined to always
             # fill exactly the remaining viewport width -- it can never
             # overflow, so it can never trigger that scrollbar -- which is why
-            # a Stretch "Value"/"Function" column here used to get crushed
+            # a Stretch "Value"/"Function" column here would get crushed
             # down to its bare minimum section size ("Va...") once the narrow
-            # tool pane left little room for its siblings (S20-D16).
+            # tool pane left little room for its siblings.
             # setMinimumSectionSize floors every column at a font-derived
             # width so a short or empty column never shrinks below legible
             # text.

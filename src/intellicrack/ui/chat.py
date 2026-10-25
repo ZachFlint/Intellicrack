@@ -809,8 +809,7 @@ class ChatPanel(QFrame):
         The created :class:`Message` is tracked as the panel's active
         streaming message until :meth:`finalize_streaming_message` folds the
         orchestrator's completed response into it, so a turn that streams its
-        text never gets a second, duplicate bubble for the same content
-        (S16 duplicate-assistant-bubble fix).
+        text never gets a second, duplicate bubble for the same content.
 
         Returns:
             Callable[[str], None]: Function to call with each text chunk.

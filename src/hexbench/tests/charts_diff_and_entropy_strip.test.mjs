@@ -3,9 +3,9 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates the pixel-level halves of BE-1 (the Diff panel's mini-map) and UX-1
- * (the live Entropy panel's caret strip): both are canvas, per the design
- * handoff's own rule that geometry is the spec and pixels are a sketch, so
+ * Gates the pixel-level halves of the Diff panel's mini-map and the live Entropy
+ * panel's caret strip: both are canvas, per the design system's own rule that
+ * geometry is the spec and pixels are a sketch, so
  * this suite records every drawing call a real render makes and checks the
  * geometry rather than a screenshot.
  *
@@ -244,10 +244,10 @@ function near(actual, expected, tolerance = 1) {
   return Math.abs(actual - expected) <= tolerance;
 }
 
-/* ================================================================== BE-1 */
+/* ================================================================== diff mini-map */
 /* diffTrackChart: the Diff panel's mini-map. Geometry per the design
-   handoff's Diff spec: 34px bands on --hb-surface-inset, positioned by
-   offset, using the diff background tokens plus the A-8 shape marks, and a
+   spec: 34px bands on --hb-surface-inset, positioned by
+   offset, using the diff background tokens plus the shape marks, and a
    2px accent caret line overhanging the bands 2px top and bottom. */
 
 const ADDED_BG = CHART_TOKEN_FALLBACKS.get('--hb-diff-added-bg');
@@ -381,7 +381,7 @@ check(
 
 track.chart.destroy();
 
-/* ================================================================== UX-1 */
+/* ================================================================== entropy strip */
 /* entropyStripChart: the live per-caret Entropy panel body. Spec: a 92px
    canvas strip, a 1px accent vertical line at the caret with a small filled
    "caret" label at the top, and a caption "peak <v> at <offset> - mean <v> -
@@ -487,7 +487,7 @@ check(
   `expected the caret line near x=${(EXPECTED_CARET_X + 0.5).toFixed(1)}, got x=${caretLine ? caretLine.x : '(none)'}`,
 );
 
-/* Clicking the strip moves the caret - UX-1's own done-when line. */
+/* Clicking the strip moves the caret. */
 stripCanvas.dispatch('click', { clientX: 0, clientY: 40 });
 check(
   'clicking the strip calls the seek callback (moves the caret)',

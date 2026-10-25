@@ -3,16 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit 5 u4 / F-0028 - PragmaInfo.eval_depth default handles common patterns.
+"""PragmaInfo.eval_depth default handles common patterns.
 
-Before remediation the default ``eval_depth`` was ``32``. Common
-``parent``-relative and recursive struct patterns from the upstream vendor
-pattern collection (for example ``tiff.hexpat`` which explicitly bumps the
-limit to ``100``) routinely exceed that depth and abort partway through
-evaluation. The remediation lifts the default to a value that handles
-real-world patterns while still bounding accidental unbounded recursion.
+The default ``eval_depth`` must handle common ``parent``-relative and recursive struct
+patterns from the upstream vendor pattern collection (for example ``tiff.hexpat``, which
+bumps the limit to ``100`` explicitly) while still bounding accidental unbounded recursion.
 
-The new default is exposed as ``DEFAULT_EVAL_DEPTH`` in
+The default is exposed as ``DEFAULT_EVAL_DEPTH`` in
 ``intellicrack.core.hexpat.pragma`` so the preprocessor and any other
 consumers share a single source of truth.
 """
@@ -30,7 +27,7 @@ from intellicrack.core.hexpat.preprocessor import HexPatPreprocessor, extract_pr
 
 
 class TestPragmaDefaultEvalDepth:
-    """F-0028: default eval_depth is high enough for common parent/recursive patterns."""
+    """Default eval_depth is high enough for common parent/recursive patterns."""
 
     def test_default_eval_depth_handles_tiff_pattern(self) -> None:
         """The default must clear the bar that ``tiff.hexpat`` sets explicitly.

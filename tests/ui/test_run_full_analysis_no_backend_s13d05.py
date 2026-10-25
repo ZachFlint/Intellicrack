@@ -3,26 +3,24 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for S13-D05: "Run Full Analysis" with no disassembler backend.
+"""Gate for "Run Full Analysis" with no disassembler backend.
 
 ``MainWindow._on_run_full_analysis`` (in ``src/intellicrack/ui/app.py``)
 re-runs the orchestrator's aggregated bridge analysis and, in
-``_on_full_analysis_done``, decides how to report the outcome. Before the
-fix, that decision was made with a bare ``isinstance(result,
-BridgeAnalysisSummary)`` check. ``AnalysisAggregator.aggregate`` (see
+``_on_full_analysis_done``, decides how to report the outcome. A bare
+``isinstance(result, BridgeAnalysisSummary)`` check cannot tell a real result from an
+empty one: ``AnalysisAggregator.aggregate`` (see
 ``src/intellicrack/core/analysis_aggregator.py``) always returns a real
 ``BridgeAnalysisSummary`` -- even when neither Ghidra nor Cutter is
 connected, in which case it falls back to the pre-loaded ``BinaryInfo``
 metadata, appends a "No bridges connected" note, and sets
-``complete=False`` -- so the ``isinstance`` check alone was always true and
-the handler unconditionally reported "Full analysis complete", silently
-presenting a misleading 0-functions result exactly as if the binary
-genuinely had no functions.
+``complete=False``. The ``isinstance`` check is therefore always true, and the handler
+must not report "Full analysis complete" for a misleading 0-functions result that looks
+as if the binary genuinely had no functions.
 
-The fix additionally checks ``result.complete`` (the aggregator's own
-signal that at least one bridge actually contributed data) and, when it is
-``False``, surfaces an actionable "no backend connected" warning instead of
-the "complete" status.
+The handler also checks ``result.complete`` (the aggregator's own signal that at least one
+bridge actually contributed data). When it is ``False``, the handler shows an actionable
+"no backend connected" warning instead of the "complete" status.
 
 This test drives the real ``_run_bridge_analysis`` -> ``AnalysisAggregator``
 pipeline end to end against a real ``BinaryInfo`` (parsed from a genuine
@@ -81,7 +79,7 @@ def window(qapp: QApplication, real_config: Config, real_orchestrator: Orchestra
 
 
 class TestRunFullAnalysisWithNoBackendConnected:
-    """S13-D05: a "0 functions" outcome with no backend must never read as success."""
+    """A "0 functions" outcome with no backend must never read as success."""
 
     def test_no_backend_surfaces_actionable_warning_instead_of_silent_success(
         self,

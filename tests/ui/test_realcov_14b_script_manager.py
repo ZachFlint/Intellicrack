@@ -5,9 +5,7 @@
 
 """Real-backend coverage for :mod:`intellicrack.ui.panels.script_manager`.
 
-The audit found that ``script_manager.py`` had template tests only: the panel's
-save / load / validate / execute workflow was never driven through a real
-backend.
+The panel's save / load / validate / execute workflow runs through a real backend.
 
 These tests wire :class:`ScriptManagerPanel` to a **real**
 :class:`~intellicrack.core.script_gen.ScriptManager` and

@@ -10,8 +10,7 @@ After the container exits, the host driver inspects the bind-mounted
 record contains the exit code, pytest counts, coverage percentage, and
 absolute host paths for every artifact produced by the run. A companion
 helper :func:`print_host_summary` prints the record to the operator's
-console in a format that preserves the information surfaced by the prior
-Windows Sandbox harness.
+console, including counts, duration, and coverage.
 
 Every artifact name carries the run's identity token, so two containers
 running at the same time never write to the same file. The aggregate
@@ -271,7 +270,7 @@ def merge_run_log_into_shared(run_log: Path) -> bool:
 
     Each container writes its own ``test-log_<suffix>.txt`` so two concurrent
     runs never contend for one handle across the Windows bind mount, which
-    previously produced sharing violations. The operator-facing aggregate
+    produces sharing violations. The operator-facing aggregate
     history is preserved by folding the run's log into ``test-log.txt`` once
     the container has exited. Two host drivers can still reach this point at
     the same instant, so a locked destination is retried a bounded number of
@@ -432,9 +431,8 @@ def _status_color(record: SummaryRecord) -> str:
 def print_host_summary(record: SummaryRecord) -> None:
     """Emit a human-readable summary of a run to stdout.
 
-    The output intentionally mirrors and extends the prior Windows Sandbox
-    harness so operators see familiar fields (counts, duration, coverage) plus
-    the new structured artifacts (``latest/``, ``summary.json``).
+    The output reports counts, duration, and coverage plus the structured
+    artifacts (``latest/``, ``summary.json``).
 
     Args:
         record: Summary record to display.

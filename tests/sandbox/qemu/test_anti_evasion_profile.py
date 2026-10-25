@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit7 F-0029: apply_anti_evasion honours profile param.
+"""``apply_anti_evasion`` honours its profile parameter.
 
 The pre-fix code silently accepted any ``profile`` string and reported it back
 in the result dict while applying whichever launch-time profile QEMUConfig was
@@ -18,7 +18,7 @@ The matching-profile case is exercised on a Linux guest. A Linux guest has no
 guest-side hardening step, so the only techniques are the launch-time SMBIOS
 and CPUID arguments - exactly what this test asserts - and the call succeeds
 without an agent. On a Windows guest the same launch-time-only result would now
-be a failure, because S17-D77 makes ``apply_anti_evasion`` refuse to report a
+be a failure, because the guest-side check makes ``apply_anti_evasion`` refuse to report a
 clean success when guest-side hardening was expected but never ran.
 """
 
@@ -42,7 +42,7 @@ from intellicrack.sandbox.qemu import (
 class _AntiEvasionTestSandbox(QEMUSandbox):
     """QEMUSandbox subclass exposing internal state setters for tests.
 
-    Mirrors the pattern used in ``tests/test_audit4/a3_qemu_sandbox`` so that
+    Mirrors the pattern used in the other QEMU sandbox tests so that
     we can drive ``apply_anti_evasion`` without launching a real QEMU process.
     """
 
@@ -104,7 +104,7 @@ def _make_sandbox(
 
 
 class TestF0029AntiEvasionProfileHonoured:
-    """F-0029: apply_anti_evasion must honour the ``profile`` argument."""
+    """``apply_anti_evasion`` must honour the ``profile`` argument."""
 
     def test_matching_profile_returns_success_with_actual_config_techniques(self) -> None:
         """Scenario A: matching profile succeeds and reports real techniques.
@@ -174,7 +174,7 @@ class TestF0029AntiEvasionProfileHonoured:
         Given a sandbox launched with ``anti_evasion_profile='default'`` and a
         caller passing ``profile='hardened'``, the method must raise
         :class:`SandboxError` whose message contains both profile names.
-        Silently returning ``success=True`` (the pre-fix behaviour) is wrong
+        Returning ``success=True`` is wrong
         because SMBIOS/CPUID masking cannot be re-applied post-launch.
         """
         sb = _make_sandbox(anti_evasion_profile="default")

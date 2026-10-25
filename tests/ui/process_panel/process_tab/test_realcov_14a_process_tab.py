@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""FIX UNIT 14a real-data coverage for ``process_panel.process_tab``.
+"""Real-data coverage for ``process_panel.process_tab``.
 
-Audit shard 14 flagged the existing process-tab tests for overriding
-``_refresh_tracked`` with a counter and never driving the real
-``ProcessBridge.list_processes_detailed`` enumeration. These tests wire a real
+Rendering is checked against the real ``ProcessBridge.list_processes_detailed``
+enumeration rather than a counter override of ``_refresh_tracked``. These tests wire a real
 :class:`ProcessBridge` and drive ``ProcessTab._on_refresh`` so the process
 table is populated from the genuine system process snapshot. Assertions check
 real, verifiable values: the running interpreter's own PID must appear, every

@@ -2,13 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit4 C15 (F-0009): hex editor diff tempfile cleanup.
+"""Regression tests: hex editor diff tempfile cleanup.
 
-The defect: ``ComparisonMixin._on_compare`` writes the in-memory document
-snapshot to a ``tempfile.NamedTemporaryFile(..., delete=False)`` and never
-deletes it again. Every diff against an unsaved buffer leaks a file in the
-user's temp directory. The fix tracks the temp path on ``self`` and removes
-it from both the success and error completion handlers.
+``ComparisonMixin._on_compare`` writes the in-memory document snapshot to a
+``tempfile.NamedTemporaryFile(..., delete=False)``. Without cleanup every diff
+against an unsaved buffer would leak a file in the user's temp directory, so
+the mixin tracks the temp path on ``self`` and removes it from both the
+success and error completion handlers.
 
 These tests construct a ``ComparisonMixin``-backed harness, drive the
 internal cleanup logic exactly the way ``_on_compare`` does, and assert

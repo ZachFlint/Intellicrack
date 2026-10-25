@@ -1,6 +1,4 @@
-/* ========================================
-   Intellicrack Light Theme
-   ======================================== */
+/* Intellicrack Light Theme */
 
 /* Main Window */
 QMainWindow {
@@ -601,9 +599,7 @@ QFrame[toolResult="error"] {
     border-left: 3px solid #c62828;
 }
 
-/* ========================================
-   Object Name Styles
-   ======================================== */
+/* Object Name Styles */
 
 /* Panel Title Label */
 QLabel#panel_title {
@@ -887,9 +883,7 @@ QTabWidget#analysis_tabs > QTabBar::tab:hover:!selected {
     background-color: #dde1e7;
 }
 
-/* ========================================
-   Dock Widget
-   ======================================== */
+/* Dock Widget */
 
 QDockWidget {
     titlebar-close-icon: none;
@@ -904,9 +898,7 @@ QDockWidget::title {
     text-align: left;
 }
 
-/* ========================================
-   Message Box
-   ======================================== */
+/* Message Box */
 
 QMessageBox {
     background-color: #eceef2;
@@ -916,9 +908,7 @@ QMessageBox QLabel {
     color: #1a1d21;
 }
 
-/* ========================================
-   Vertical Slider
-   ======================================== */
+/* Vertical Slider */
 
 QSlider::groove:vertical {
     background-color: #c2c8d0;
@@ -946,9 +936,7 @@ QSlider:disabled {
     opacity: 0.5;
 }
 
-/* ========================================
-   Tree Branch Indicators
-   ======================================== */
+/* Tree Branch Indicators */
 
 QTreeWidget::branch:has-children:!has-siblings:closed,
 QTreeView::branch:has-children:!has-siblings:closed,
@@ -966,9 +954,7 @@ QTreeView::branch:open:has-children:has-siblings {
     image: none;
 }
 
-/* ========================================
-   SpinBox Buttons
-   ======================================== */
+/* SpinBox Buttons */
 
 QSpinBox::up-button, QDoubleSpinBox::up-button {
     background-color: #e3e6eb;
@@ -999,9 +985,7 @@ QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
     height: 8px;
 }
 
-/* ========================================
-   ComboBox Down Arrow
-   ======================================== */
+/* ComboBox Down Arrow */
 
 QComboBox::down-arrow {
     border-left: 4px solid transparent;
@@ -1011,17 +995,13 @@ QComboBox::down-arrow {
     height: 0;
 }
 
-/* ========================================
-   ProgressBar Text Color
-   ======================================== */
+/* ProgressBar Text Color */
 
 QProgressBar {
     color: #1a1d21;
 }
 
-/* ========================================
-   Disabled States
-   ======================================== */
+/* Disabled States */
 
 QComboBox:disabled {
     background-color: #e3e6eb;
@@ -1061,9 +1041,7 @@ QLabel:disabled {
     color: #9aa3ad;
 }
 
-/* ========================================
-   Focus States
-   ======================================== */
+/* Focus States */
 
 QTableWidget:focus, QTableView:focus {
     border-color: #0067c0;
@@ -1087,9 +1065,7 @@ QRadioButton:focus {
     outline-offset: 2px;
 }
 
-/* ========================================
-   Additional ObjectName Selectors
-   ======================================== */
+/* Additional ObjectName Selectors */
 
 QLabel#search_status_label {
     color: #5a6370;
@@ -1171,9 +1147,7 @@ QPushButton#execute_button:pressed {
     background-color: #00529c;
 }
 
-/* ========================================
-   Chat Header & Input Bar
-   ======================================== */
+/* Chat Header & Input Bar */
 
 QFrame#chat_header {
     background-color: #ffffff;
@@ -1217,9 +1191,7 @@ QPushButton#chat_send_button:disabled {
     color: #9aa3ad;
 }
 
-/* ========================================
-   Confirmation Dialog
-   ======================================== */
+/* Confirmation Dialog */
 
 QLabel#confirm_header {
     font-size: 14px;
@@ -1294,9 +1266,7 @@ QPushButton#confirm_approve_button:pressed {
     background-color: #00529c;
 }
 
-/* ========================================
-   Preferences Dialog
-   ======================================== */
+/* Preferences Dialog */
 
 QListWidget#preferences_category_list {
     background-color: #e3e6eb;
@@ -1337,9 +1307,7 @@ QWidget#script_manager_panel QPushButton#execute_button {
     padding: 5px 10px;
 }
 
-/* ========================================
-   Process Panel Attach Hint Overlay
-   ======================================== */
+/* Process Panel Attach Hint Overlay */
 
 QWidget#attach_hint_overlay {
     background-color: rgba(236, 238, 242, 0.85);
@@ -1355,9 +1323,7 @@ QLabel#attach_hint_label {
     background-color: rgba(255, 255, 255, 0.95);
 }
 
-/* ========================================
-   Session Tag Chips
-   ======================================== */
+/* Session Tag Chips */
 
 QPushButton#tagChip {
     background-color: #ffffff;
@@ -1377,18 +1343,14 @@ QLabel#tag_empty_label {
     font-style: italic;
 }
 
-/* ========================================
-   Sandbox Limit Spin Boxes
-   ======================================== */
+/* Sandbox Limit Spin Boxes */
 
 QSpinBox#sandbox_timeout_spin,
 QSpinBox#sandbox_memory_spin {
     min-width: 110px;
 }
 
-/* ========================================
-   Chat Markdown View, Notice and Tool Provenance
-   ======================================== */
+/* Chat Markdown View, Notice and Tool Provenance */
 
 QTextBrowser#chat_markdown_view {
     background: transparent;
@@ -1407,9 +1369,7 @@ QLabel#tool_source_badge {
     color: #ef6c00;
 }
 
-/* ========================================
-   Tool Activity
-   ======================================== */
+/* Tool Activity */
 
 QFrame[toolActivityRow="true"] {
     background-color: #f7f8fa;
@@ -1422,9 +1382,7 @@ QLabel#tool_activity_message {
     font-size: 11px;
 }
 
-/* ========================================
-   MCP Consent and Elicitation Dialogs
-   ======================================== */
+/* MCP Consent and Elicitation Dialogs */
 
 QLabel#mcp_consent_header,
 QLabel#mcp_elicit_header {

@@ -2,22 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""GUI audit regression gates for ``intellicrack.ui.panels.hex_editor.transforms``.
+"""Gates for ``intellicrack.ui.panels.hex_editor.transforms`` arithmetic dispatch.
 
-Covers the 2026-07-02 audit finding for ``transforms.py``:
+Covers the arithmetic dispatch in ``transforms.py``:
 
-* H8 -- ``TransformsMixin._on_apply_arithmetic`` previously dispatched both
-  bridge calls (``select_range`` and ``apply_arithmetic_to_selection``)
-  through the *blocking* ``run_bridge_coroutine()``, which calls
-  ``future.result(timeout=None)`` on the calling (Qt main) thread and
-  therefore freezes the GUI event loop for the duration of the native
-  hexcore transform. The fix wraps both bridge calls in a single coroutine
-  that awaits them in sequence and dispatches that coroutine exactly once
-  through the non-blocking ``run_bridge_coroutine_logged``, refreshing the
-  widget from the coroutine's success callback and warning the user from
-  its error callback.
+* ``TransformsMixin._on_apply_arithmetic`` must not dispatch both bridge calls (``select_range`` and
+  ``apply_arithmetic_to_selection``) through the *blocking* ``run_bridge_coroutine()``, which calls
+  ``future.result(timeout=None)`` on the calling (Qt main) thread and would freeze the GUI event loop for the duration of the
+  native hexcore transform. Both bridge calls are wrapped in a single coroutine that awaits them in sequence, dispatched exactly
+  once through the non-blocking ``run_bridge_coroutine_logged``, refreshing the widget from the coroutine's success callback and
+  warning the user from its error callback.
 
-Three independent gates prove the fix, all driving the *real*
+Three independent gates prove the behaviour, all driving the *real*
 ``run_bridge_coroutine_logged``/``BridgeCallWorker`` machinery (no mocking of
 the dispatcher itself) with a bridge stand-in whose coroutines sleep for a
 measurable duration:
@@ -86,9 +82,9 @@ class _SlowArithmeticBridge:
 
     Both methods are genuine coroutine functions (not mocks) so they must be
     driven through an actual event loop -- either by blocking
-    ``future.result()`` on the caller's thread (pre-fix behaviour) or by the
+    ``future.result()`` on the caller's thread (the blocking behaviour) or by the
     persistent background loop thread used by ``run_bridge_coroutine_logged``
-    (post-fix behaviour). Calls are recorded on ``select_calls`` and
+    (the non-blocking behaviour). Calls are recorded on ``select_calls`` and
     ``apply_calls`` respectively.
     """
 
@@ -220,17 +216,17 @@ def _pump_until(qapp: QApplication, predicate: Callable[[], bool], *, timeout_s:
 
 @pytest.mark.usefixtures("qapp")
 class TestH8NonBlockingDispatch:
-    """H8: arithmetic dispatch must not block the calling thread on the bridge."""
+    """Arithmetic dispatch must not block the calling thread on the bridge."""
 
     @staticmethod
     def test_apply_arithmetic_returns_before_slow_bridge_completes(qapp: QApplication) -> None:
         """``_on_apply_arithmetic`` must return long before the bridge chain finishes.
 
-        Regression: pre-fix, ``_on_apply_arithmetic`` called the blocking
+        ``_on_apply_arithmetic`` must not call the blocking
         ``run_bridge_coroutine()`` twice in sequence on the calling thread,
         so the call would not return until both
         ``2 * _BRIDGE_STEP_DELAY_S`` seconds of native-transform latency had
-        elapsed. Post-fix, the single chained coroutine is dispatched
+        elapsed. The single chained coroutine is dispatched
         through ``run_bridge_coroutine_logged``, which starts a background
         ``BridgeCallWorker`` QThread and returns immediately; the method
         call itself must complete in a small fraction of the bridge's
@@ -293,25 +289,25 @@ class TestH8NonBlockingDispatch:
 
 @pytest.mark.usefixtures("qapp")
 class TestH8ErrorSurfacesWarning:
-    """H8: a bridge failure at either chain step must warn without a partial refresh."""
+    """A bridge failure at either chain step must warn without a partial refresh."""
 
     @staticmethod
     def test_select_range_failure_warns_without_dispatching_apply(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """A ``select_range`` failure must warn the user via the async callback, not inline.
 
-        Regression: pre-fix, both bridge calls ran through the blocking
+        Both bridge calls must not run through the blocking
         ``run_bridge_coroutine()`` on the calling thread, so
         ``_on_apply_arithmetic`` would not return until the failing
         ``select_range`` coroutine's full ``_BRIDGE_STEP_DELAY_S`` sleep had
         elapsed *and* the ``except`` block had synchronously invoked
         ``QMessageBox.warning`` -- all before the call returned control to the
-        caller. Post-fix, the coroutine is dispatched via the non-blocking
+        caller. The coroutine is dispatched via the non-blocking
         ``run_bridge_coroutine_logged`` and the warning is only raised later
         from the background chain's error callback once the event loop is
         pumped, so the call itself returns almost immediately with no warning
         recorded yet. Asserting both the near-instant return *and* that no
         warning exists synchronously distinguishes the two implementations;
-        the pre-fix code fails the elapsed-time ceiling and would already have
+        the blocking implementation fails the elapsed-time ceiling and would already have
         one warning recorded by the time the method returns.
 
         Args:
@@ -349,16 +345,16 @@ class TestH8ErrorSurfacesWarning:
     def test_apply_arithmetic_failure_warns_and_skips_refresh(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """An ``apply_arithmetic_to_selection`` failure must warn via the async callback, not inline.
 
-        Regression: pre-fix, ``select_range`` would complete (blocking for
+        With the blocking dispatch, ``select_range`` would complete (blocking for
         ``_BRIDGE_STEP_DELAY_S``) and then ``apply_arithmetic_to_selection``
         would also block for a further ``_BRIDGE_STEP_DELAY_S`` before raising,
         all synchronously on the calling thread, with ``QMessageBox.warning``
-        invoked before ``_on_apply_arithmetic`` returned. Post-fix, the whole
+        invoked before ``_on_apply_arithmetic`` returned. With the worker, the whole
         chained coroutine runs on the background loop and the warning is only
         raised from the error callback once the event loop is pumped, so the
         call returns almost immediately with no warning recorded yet. This
         combination of a sub-ceiling elapsed time *and* an empty ``warnings``
-        list immediately after the call fails against the pre-fix blocking
+        list immediately after the call fails against a blocking
         implementation, which would already have recorded the warning and
         consumed roughly ``2 * _BRIDGE_STEP_DELAY_S`` seconds by that point.
 
@@ -428,11 +424,9 @@ def dispatch_spy(monkeypatch: pytest.MonkeyPatch) -> list[_DispatchCall]:
 
     The spy never awaits the coroutine it is handed (mirroring the real
     dispatcher's non-blocking contract at the call boundary) and closes it
-    immediately to avoid an "unawaited coroutine" warning. Because the
-    pre-fix call site imports ``run_bridge_coroutine`` (not
-    ``run_bridge_coroutine_logged``), patching this name on the module does
-    not even exist pre-fix, so this fixture itself fails against the
-    pre-fix source.
+    immediately to avoid an "unawaited coroutine" warning. A call site that imports ``run_bridge_coroutine`` (not
+    ``run_bridge_coroutine_logged``) would leave this name missing from the module, so patching it would not even exist, and this
+    fixture itself fails against that blocking source.
 
     Args:
         monkeypatch: Pytest monkeypatch fixture.
@@ -463,18 +457,15 @@ def dispatch_spy(monkeypatch: pytest.MonkeyPatch) -> list[_DispatchCall]:
 
 
 class TestH8SingleDispatchWiring:
-    """H8: the call site must issue exactly one non-blocking dispatch."""
+    """The call site must issue exactly one non-blocking dispatch."""
 
     @staticmethod
     def test_exactly_one_dispatch_with_expected_event_and_context(dispatch_spy: list[_DispatchCall]) -> None:
         """The handler must issue exactly one ``run_bridge_coroutine_logged`` call.
 
-        Pre-fix, the handler called the blocking ``run_bridge_coroutine()``
-        twice and never referenced ``run_bridge_coroutine_logged`` at all, so
-        this dispatch would never fire and ``dispatch_spy`` would stay empty
-        (the fixture itself errors first, since the attribute does not exist
-        on the pre-fix module). Post-fix, exactly one dispatch carries both
-        chained bridge calls.
+        The handler must not call the blocking ``run_bridge_coroutine()`` twice, nor skip ``run_bridge_coroutine_logged``.
+        Either would leave ``dispatch_spy`` empty (the fixture itself errors first on a module without the attribute).
+        Exactly one dispatch must carry both chained bridge calls.
 
         Args:
             dispatch_spy: Fixture capturing every ``run_bridge_coroutine_logged`` call.

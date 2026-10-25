@@ -2,16 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S17-D44's Verify clause: what ``--skip-content-verify`` still skips.
+r"""Gates for the Verify clause: what ``--skip-content-verify`` still skips.
 
-S17-D44 replaced a hardwired ``w11\amd64`` driver tuple with an enumeration of
+The provisioner replaced a hardwired ``w11\amd64`` driver tuple with an enumeration of
 the virtio medium's real layout, and recorded two consequences as unproven. The
 second was that ``--skip-content-verify`` had narrowed: it no longer skips the
 *virtio* medium, only the Windows install medium. That narrowing was justified
 in the flag's own help text with "the answer file's WinPE driver paths are
 enumerated from its real layout".
 
-S18-D26 then made that justification false. Setup aborts on an answer file that
+The justification no longer holds. Setup aborts on an answer file that
 names sixty driver paths, so the provisioner now stages one package per driver
 onto the answer medium it authors and names that one folder once per candidate
 drive letter. The rendered ``DriverPaths`` block is therefore a function of the
@@ -47,7 +47,7 @@ carrying no ``w11`` family still yields a bootable driver selection.
 :mod:`tests.sandbox.qemu.test_winpe_driver_staging_s18d26` already gates one
 package per driver, a driver the medium lacks being skipped, and the refusal of
 a medium without ``viostor``; every medium it builds carries a ``w11`` family,
-which is exactly the case S17-D44's Verify clause excludes.
+which is exactly the case the Verify clause excludes.
 """
 
 from __future__ import annotations
@@ -513,7 +513,7 @@ def test_the_flag_leaves_the_install_medium_unmounted(tmp_path: Path) -> None:
 def test_nothing_but_the_install_medium_verification_hangs_off_the_flag() -> None:
     """The flag reaches one inspection, and the virtio medium is not it.
 
-    S17-D44 narrowed the flag deliberately, and the narrowing is what makes
+    The flag is narrowed deliberately, and the narrowing is what makes
     the answer medium authorable at all. A change that re-widened it - letting
     an operator skip the virtio medium too - would author an answer medium
     carrying no boot-critical driver files, and Setup would find no disk. This
@@ -580,12 +580,12 @@ def test_the_help_text_gives_a_reason_the_code_still_honours(tmp_path: Path) -> 
 
 
 def test_a_medium_with_no_w11_family_still_yields_one_real_package_per_driver(tmp_path: Path) -> None:
-    """The case S17-D44's Verify clause names, minus the guest that installs it.
+    """The case the Verify clause names, minus the guest that installs it.
 
     Every driver the sandbox builds a device for must be staged from the newest
     family the medium really carries, and the boot-critical check must accept
     the result. A selection that fell back to ``w11`` would name directories
-    that do not exist on this medium, which is the defect S17-D44 was filed for.
+    that do not exist on this medium, which is the defect this gate guards against.
 
     Args:
         tmp_path: Per-test temporary directory.
@@ -624,9 +624,9 @@ def test_families_the_preference_list_never_heard_of_are_still_staged(tmp_path: 
 
 
 class TestTheMediumIsMountedExactlyOnce:
-    """The S17-D44 follow-up regression: the medium mounted twice, then thrice.
+    """Regression: the medium mounted twice, then thrice.
 
-    S17-D44 established that verification does not mount the medium twice by
+    Verification alone does not mount the medium twice by
     itself. It said nothing about staging, which mounted the same medium
     again to copy the boot-critical drivers, and a third time whenever the
     bundled QEMU tree lacked GLib's spawn helpers - the "mounted three times"

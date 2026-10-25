@@ -49,7 +49,7 @@ _SPACING: Final[int] = 4
 _SHUTDOWN_TIMEOUT_S: Final[float] = 10.0
 # Derived from the status bar's own contents margins (0 px top/bottom) plus
 # breathing room around the label text, mirroring the styled QLineEdit's
-# vertical padding in theme_manager.py (D42).
+# vertical padding in theme_manager.py.
 _STATUS_BAR_VERTICAL_PADDING: Final[int] = 12
 
 _HINT_NO_BRIDGE: Final[str] = "Process bridge unavailable\nConnect a process bridge to use this tab"
@@ -61,8 +61,7 @@ def _compute_status_bar_height(widget: QWidget) -> int:
 
     Combines ``widget``'s current font metrics with a fixed vertical
     padding so the status labels are never clipped at larger fonts or
-    DPI/accessibility scaling, instead of a hardcoded fixed height
-    (D42).
+    DPI/accessibility scaling, instead of a hardcoded fixed height.
 
     Args:
         widget: The widget whose font metrics anchor the computation

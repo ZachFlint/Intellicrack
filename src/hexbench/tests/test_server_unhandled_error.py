@@ -5,15 +5,14 @@
 
 """An exception that escapes ``Application.handle`` must still answer the client.
 
-``BenchRequestHandler._serve`` used to call ``server.application.handle(request)``
-with no surrounding ``try``/``except``. If that call ever raised instead of
-returning a :class:`~hexbench.api.Response` -- a bug in routing reached before
-a response is built, say -- the exception propagated out of ``do_GET``/``do_POST``,
-``socketserver`` caught it far above the handler and routed it only to
-``BenchHTTPServer.handle_error``, which appends a line to the server's private
-log ring and never touches the client's socket. The caller saw the TCP
-connection reset with zero bytes of response, with no way to tell a bug from a
-network failure.
+``BenchRequestHandler._serve`` must answer the client when
+``server.application.handle(request)`` raises instead of returning a
+:class:`~hexbench.api.Response` -- a bug in routing reached before a response is
+built, say. An exception left to propagate out of ``do_GET``/``do_POST`` is caught
+far above the handler by ``socketserver``, which routes it only to
+``BenchHTTPServer.handle_error``. That appends a line to the server's private log
+ring and never touches the client's socket, so the caller sees the TCP connection
+reset with zero bytes of response and no way to tell a bug from a network failure.
 
 This is exercised over a real loopback socket, serving a real
 :class:`~hexbench.api.Application` subclass whose public ``handle`` raises --
@@ -29,7 +28,7 @@ import socket
 import threading
 import unittest
 from contextlib import ExitStack
-from typing import TYPE_CHECKING, Final, override
+from typing import TYPE_CHECKING, Final, NoReturn, override
 
 from hexbench.api import Application
 from hexbench.jobs import JobQueue
@@ -39,7 +38,7 @@ from hexbench.tests._support import PACKAGE_ROOT, SESSION_TOKEN, Assertions
 
 
 if TYPE_CHECKING:
-    from hexbench.api import Request, Response
+    from hexbench.api import Request
 
 
 _HOST: Final = "127.0.0.1"
@@ -60,7 +59,7 @@ class _FailingApplication(Application):
     """A real application whose routing blows up before any response is built."""
 
     @override
-    def handle(self, request: Request) -> Response:
+    def handle(self, request: Request) -> NoReturn:
         """Fail the way a routing bug would, instead of answering.
 
         Args:

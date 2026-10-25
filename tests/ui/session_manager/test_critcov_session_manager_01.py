@@ -641,8 +641,6 @@ def make_dialog(qtbot: QtBot) -> Generator[Callable[..., SessionManagerDialog]]:
 def test_flow_layout_ignores_none_and_counts_real_items(qtbot: QtBot) -> None:
     """Adding ``None`` to the flow layout leaves its item count unchanged, adding an item raises it by one.
 
-    Product change that fails it: flow layout ``addItem`` (session_manager.py:107) drop the ``None`` guard so ``None`` is appended.
-
     Args:
         qtbot: pytest-qt bot.
     """
@@ -661,9 +659,6 @@ def test_flow_layout_set_geometry_stores_rect_wraps_chips_and_skips_spacers(qtbo
 
     A spacer is placed first, so a layout that counted it would push the first chip away from the top-left corner. The width is
     narrower than any chip, so every chip after the first wraps to a new row one chip height plus the vertical gap lower.
-
-    Product change that fails it: ``_do_layout`` (session_manager.py:229) replace ``continue`` with ``pass`` so the spacer takes part in
-    the layout.
 
     Args:
         qtbot: pytest-qt bot.
@@ -691,8 +686,6 @@ def test_flow_layout_minimum_size_is_widest_chip_plus_margins(qtbot: QtBot) -> N
 
     The longer tag is added first, so a loop that kept only the last item would report the narrower chip.
 
-    Product change that fails it: ``minimumSize`` (session_manager.py:204) replace ``expandedTo`` with ``boundedTo``.
-
     Args:
         qtbot: pytest-qt bot.
     """
@@ -710,8 +703,6 @@ def test_flow_layout_minimum_size_is_widest_chip_plus_margins(qtbot: QtBot) -> N
 
 def test_chip_widget_rejected_tag_warns_and_keeps_input(qtbot: QtBot, shown: _Log) -> None:
     """A tag the session rejects raises a warning with the session's message and stays in the input box.
-
-    Product change that fails it: ``_on_add_clicked`` (session_manager.py:395) remove the ``return`` so the input is cleared.
 
     Args:
         qtbot: pytest-qt bot.
@@ -737,8 +728,6 @@ def test_chip_widget_rejected_tag_warns_and_keeps_input(qtbot: QtBot, shown: _Lo
 def test_chip_widget_duplicate_tag_clears_input_without_chip_or_signal(qtbot: QtBot) -> None:
     """Adding a tag the session already has clears the input but creates no chip and emits nothing.
 
-    Product change that fails it: ``_on_add_clicked`` (session_manager.py:397) replace ``if added:`` with ``if True:``.
-
     Args:
         qtbot: pytest-qt bot.
     """
@@ -760,8 +749,6 @@ def test_chip_widget_duplicate_tag_clears_input_without_chip_or_signal(qtbot: Qt
 def test_chip_click_for_tag_removed_elsewhere_keeps_chip_and_emits_nothing(qtbot: QtBot) -> None:
     """Clicking a chip whose tag the session no longer holds changes nothing.
 
-    Product change that fails it: ``_on_chip_clicked`` (session_manager.py:414) remove the ``return`` so the chip is dropped anyway.
-
     Args:
         qtbot: pytest-qt bot.
     """
@@ -781,8 +768,6 @@ def test_chip_click_for_tag_removed_elsewhere_keeps_chip_and_emits_nothing(qtbot
 
 def test_chip_click_after_session_cleared_does_nothing(qtbot: QtBot) -> None:
     """A click on a stale chip after the widget lost its session neither raises nor touches the old session.
-
-    Product change that fails it: ``_on_chip_clicked`` (session_manager.py:411) remove the ``return`` so ``None.remove_tag`` raises.
 
     Args:
         qtbot: pytest-qt bot.
@@ -804,8 +789,6 @@ def test_chip_click_after_session_cleared_does_nothing(qtbot: QtBot) -> None:
 
 def test_chip_click_for_tag_without_chip_still_removes_tag_and_signals(qtbot: QtBot) -> None:
     """A tag added to the session behind the widget's back is removed and reported even though it has no chip.
-
-    Product change that fails it: ``_on_chip_clicked`` (session_manager.py:416) replace ``if chip_btn is not None:`` with ``if True:``.
 
     Args:
         qtbot: pytest-qt bot.
@@ -830,9 +813,6 @@ def test_chip_click_for_tag_without_chip_still_removes_tag_and_signals(qtbot: Qt
 def test_dialog_without_manager_edits_tags_without_persisting(make_dialog: Callable[..., SessionManagerDialog], sessions_dir: Path) -> None:
     """With only a live session wired, adding a tag changes the session and writes nothing.
 
-    Product change that fails it: ``_on_tags_changed`` (session_manager.py:685) change the guard to ``if session is None`` so the
-    missing manager is dereferenced.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -849,10 +829,7 @@ def test_dialog_without_manager_edits_tags_without_persisting(make_dialog: Calla
 
 
 def test_elided_detail_shows_full_text_when_label_has_no_width() -> None:
-    """A label with zero width shows the whole text, a narrow one elides it, and both keep the full text as tooltip.
-
-    Product change that fails it: ``_set_elided_detail`` (session_manager.py:713) replace ``width > 0`` with ``True``.
-    """
+    """A label with zero width shows the whole text, a narrow one elides it, and both keep the full text as tooltip."""
     label = QLabel()
     text = "a-very-long-model-identifier-v2"
     set_detail = _method(SessionManagerDialog, "_set_elided_detail")
@@ -875,8 +852,6 @@ def test_sidecar_listing_reads_normalizes_and_sorts_files(make_dialog: Callable[
 
     Covers a file without id or name (the file stem is used), a text date that is not a date (replaced by the current time), dates that
     are not text (shown as a dash and sorted last), invalid JSON, a directory named like a session file and a non-JSON file.
-
-    Product change that fails it: ``_read_session_file`` (session_manager.py:853) set ``session_data["id"] = "x"`` instead of the stem.
 
     Args:
         make_dialog: Dialog factory.
@@ -958,9 +933,6 @@ def test_refresh_after_sidecar_directory_vanished_lists_nothing(
 ) -> None:
     """Refreshing after the sidecar directory was removed empties the table and does not recreate the directory.
 
-    Product change that fails it: ``_load_sessions_from_disk`` (session_manager.py:882) replace ``return`` with
-    ``self.SESSIONS_DIR.mkdir()``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -984,8 +956,6 @@ def test_manager_listing_failure_falls_back_to_sidecar_files(
 ) -> None:
     """When the manager cannot list sessions, the dialog lists the sidecar files instead.
 
-    Product change that fails it: ``_load_sessions`` (session_manager.py:794) narrow the handler to ``except KeyError``.
-
     Args:
         scripted: Scriptable session manager.
         make_dialog: Dialog factory.
@@ -1005,8 +975,6 @@ def test_manager_rows_with_text_dates_and_foreign_objects(
     make_dialog: Callable[..., SessionManagerDialog],
 ) -> None:
     """Text timestamps are shown truncated in the table and in full in the details, and non-metadata rows become placeholders.
-
-    Product change that fails it: ``_load_sessions`` (session_manager.py:812) replace ``created_at[:16]`` with ``created_at``.
 
     Args:
         scripted: Scriptable session manager.
@@ -1040,8 +1008,6 @@ def test_update_details_formats_text_dates_binaries_and_recent_messages(make_dia
     """The details panel shows text dates as given, lists binaries and previews the last three messages shortened.
 
     Of the last three entries one is not a message, one is longer than the preview limit and one has an empty body and no role.
-
-    Product change that fails it: ``_update_details`` (session_manager.py:1031) replace the ``...`` suffix with an empty string.
 
     Args:
         make_dialog: Dialog factory.
@@ -1090,8 +1056,6 @@ def test_update_details_formats_text_dates_binaries_and_recent_messages(make_dia
 def test_update_details_without_dates_binaries_or_messages_shows_placeholders(make_dialog: Callable[..., SessionManagerDialog]) -> None:
     """Missing or mistyped fields show dashes and ``N/A`` and no recent-message section.
 
-    Product change that fails it: ``_update_details`` (session_manager.py:992) replace the ``"-"`` placeholder with an empty string.
-
     Args:
         make_dialog: Dialog factory.
     """
@@ -1123,8 +1087,6 @@ def test_selection_change_ignores_missing_name_item_and_unknown_id(
 ) -> None:
     """A selection change for a row without a name cell, or whose id is not in the list, leaves the details alone.
 
-    Product change that fails it: ``_on_selection_changed`` (session_manager.py:956) remove the ``name_item is None`` check.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -1155,8 +1117,6 @@ def test_selection_change_ignores_missing_name_item_and_unknown_id(
 def test_double_click_loads_the_session_under_the_cursor(make_dialog: Callable[..., SessionManagerDialog], sessions_dir: Path) -> None:
     """Double-clicking a listed session restores it: the dialog announces the id and closes with acceptance.
 
-    Product change that fails it: ``_on_double_click`` (session_manager.py:976) replace the body with ``return``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -1177,8 +1137,6 @@ def test_double_click_loads_the_session_under_the_cursor(make_dialog: Callable[.
 
 def test_load_without_selection_does_nothing(make_dialog: Callable[..., SessionManagerDialog], sessions_dir: Path, shown: _Log) -> None:
     """Loading with no row selected opens no dialog and announces nothing.
-
-    Product change that fails it: ``_load_selected_session`` (session_manager.py:1054) replace ``return`` with ``pass``.
 
     Args:
         make_dialog: Dialog factory.
@@ -1202,8 +1160,6 @@ def test_load_with_missing_name_cell_does_nothing(
     shown: _Log,
 ) -> None:
     """Loading when the selected row has lost its name cell asks nothing and announces nothing.
-
-    Product change that fails it: ``_load_selected_session`` (session_manager.py:1058) remove the ``name_item is None`` check.
 
     Args:
         make_dialog: Dialog factory.
@@ -1231,8 +1187,6 @@ def test_load_of_active_session_is_refused_with_notice(
 ) -> None:
     """Loading the session that is already active shows a notice and neither asks for confirmation nor loads.
 
-    Product change that fails it: ``_load_selected_session`` (session_manager.py:1062) replace ``==`` with ``!=``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -1253,8 +1207,6 @@ def test_load_of_active_session_is_refused_with_notice(
 @pytest.mark.usefixtures("decline")
 def test_load_declined_by_user_does_nothing(make_dialog: Callable[..., SessionManagerDialog], sessions_dir: Path, shown: _Log) -> None:
     """Answering No to the load confirmation keeps the dialog open and announces nothing.
-
-    Product change that fails it: ``_load_selected_session`` (session_manager.py:1077) replace ``!=`` with ``==``.
 
     Args:
         make_dialog: Dialog factory.
@@ -1283,8 +1235,6 @@ def test_sidecar_load_restores_valid_messages_into_chat_panel(
 
     The file holds a message with a good timestamp, one without a timestamp, one with an unparseable timestamp, one with an unknown role,
     one with a non-text body and one entry that is not an object; only the first three are restored.
-
-    Product change that fails it: ``_load_session_from_disk`` (session_manager.py:1207) replace ``messages.append(message)`` with ``pass``.
 
     Args:
         qtbot: pytest-qt bot.
@@ -1334,9 +1284,6 @@ def test_sidecar_load_with_non_list_messages_restores_empty_history(
 ) -> None:
     """A sidecar whose ``messages`` is not a list still loads, with an empty history.
 
-    Product change that fails it: ``_load_session_from_disk`` (session_manager.py:1208) replace ``elif messages_raw is not None:`` with
-    ``elif False:`` and iterate the text.
-
     Args:
         qtbot: pytest-qt bot.
         make_dialog: Dialog factory.
@@ -1369,9 +1316,6 @@ def test_sidecar_load_tolerates_parent_without_chat_or_binary_hooks(
 ) -> None:
     """Restoring into a parent whose chat panel lacks the message methods and which has no binary hook does not fail.
 
-    Product change that fails it: ``_restore_session_to_ui`` (session_manager.py:1336) replace ``if callable(clear_messages):`` with
-    ``if True:``.
-
     Args:
         qtbot: pytest-qt bot.
         make_dialog: Dialog factory.
@@ -1399,8 +1343,6 @@ def test_sidecar_load_tolerates_parent_without_chat_or_binary_hooks(
 def test_sidecar_load_of_vanished_session_warns(make_dialog: Callable[..., SessionManagerDialog], sessions_dir: Path, shown: _Log) -> None:
     """Loading a selected session that is no longer in the listing warns and announces nothing.
 
-    Product change that fails it: ``_load_session_from_disk`` (session_manager.py:1198) replace ``return`` with ``pass``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -1422,8 +1364,6 @@ def test_sidecar_load_of_vanished_session_warns(make_dialog: Callable[..., Sessi
 @pytest.mark.parametrize("role", ["user", "assistant", "system", "tool"])
 def test_message_from_disk_dict_accepts_every_role_and_parses_timestamp(role: str) -> None:
     """Each of the four roles is accepted and the ISO timestamp is parsed.
-
-    Product change that fails it: ``_message_from_disk_dict`` (session_manager.py:1234) drop ``"tool"`` from the accepted roles.
 
     Args:
         role: Message role under test.
@@ -1448,8 +1388,6 @@ def test_message_from_disk_dict_accepts_every_role_and_parses_timestamp(role: st
 def test_message_from_disk_dict_uses_current_time_without_valid_timestamp(extra: dict[str, object]) -> None:
     """A missing or invalid timestamp is replaced by the current time.
 
-    Product change that fails it: ``_message_from_disk_dict`` (session_manager.py:1237) initialize ``timestamp`` to ``datetime.min``.
-
     Args:
         extra: Timestamp field(s) added to an otherwise valid message.
     """
@@ -1473,8 +1411,6 @@ def test_message_from_disk_dict_uses_current_time_without_valid_timestamp(extra:
 )
 def test_message_from_disk_dict_rejects_invalid_entries(data: dict[str, object]) -> None:
     """Entries without a valid role and text content are rejected.
-
-    Product change that fails it: ``_message_from_disk_dict`` (session_manager.py:1234) replace ``or`` with ``and``.
 
     Args:
         data: Message dictionary as stored in a sidecar file.
@@ -1505,10 +1441,7 @@ def _full_binary(path: str, name: str) -> dict[str, object]:
 
 
 def test_active_binary_defaults_to_last_entry_and_honors_explicit_index() -> None:
-    """The active binary is the last entry unless ``active_binary_index`` selects another, with every field carried over.
-
-    Product change that fails it: ``_active_binary_from_disk_session`` (session_manager.py:1265) replace ``len(binaries) - 1`` with ``0``.
-    """
+    """The active binary is the last entry unless ``active_binary_index`` selects another, with every field carried over."""
     first = _full_binary("C:/tools/first.exe", "first.exe")
     second = _full_binary("C:/tools/second.exe", "second.exe")
     pick = _method(SessionManagerDialog, "_active_binary_from_disk_session")
@@ -1535,10 +1468,7 @@ def test_active_binary_defaults_to_last_entry_and_honors_explicit_index() -> Non
 
 
 def test_binary_info_from_disk_dict_defaults_missing_or_mistyped_fields() -> None:
-    """Fields that are missing or of the wrong type fall back to neutral values.
-
-    Product change that fails it: ``_binary_info_from_disk_dict`` (session_manager.py:1304) default ``file_type`` to ``""``.
-    """
+    """Fields that are missing or of the wrong type fall back to neutral values."""
     data: dict[str, object] = {
         "path": "C:/x/a.exe",
         "name": "a.exe",
@@ -1584,8 +1514,6 @@ def test_binary_info_from_disk_dict_defaults_missing_or_mistyped_fields() -> Non
 def test_active_binary_is_none_for_unusable_session_data(session_data: dict[str, object]) -> None:
     """Session data without a usable active binary yields ``None``.
 
-    Product change that fails it: ``_active_binary_from_disk_session`` (session_manager.py:1266) replace ``0 <= index`` with ``-1 <= index``.
-
     Args:
         session_data: Sidecar session dictionary.
     """
@@ -1594,8 +1522,6 @@ def test_active_binary_is_none_for_unusable_session_data(session_data: dict[str,
 
 def test_delete_without_selection_does_nothing(make_dialog: Callable[..., SessionManagerDialog], sessions_dir: Path, shown: _Log) -> None:
     """Deleting with no row selected asks nothing and removes nothing.
-
-    Product change that fails it: ``_delete_session`` (session_manager.py:1355) replace ``return`` with ``pass``.
 
     Args:
         make_dialog: Dialog factory.
@@ -1618,8 +1544,6 @@ def test_delete_with_missing_name_cell_does_nothing(
 ) -> None:
     """Deleting when the selected row has lost its name cell asks nothing and removes nothing.
 
-    Product change that fails it: ``_delete_session`` (session_manager.py:1359) remove the ``name_item is None`` check.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -1639,8 +1563,6 @@ def test_delete_with_missing_name_cell_does_nothing(
 
 def test_delete_of_active_session_is_refused(make_dialog: Callable[..., SessionManagerDialog], sessions_dir: Path, shown: _Log) -> None:
     """The active session cannot be deleted: a warning is shown, no question is asked and the file stays.
-
-    Product change that fails it: ``_delete_session`` (session_manager.py:1364) replace ``==`` with ``!=``.
 
     Args:
         make_dialog: Dialog factory.
@@ -1663,8 +1585,6 @@ def test_delete_of_active_session_is_refused(make_dialog: Callable[..., SessionM
 @pytest.mark.usefixtures("decline")
 def test_delete_declined_by_user_keeps_file(make_dialog: Callable[..., SessionManagerDialog], sessions_dir: Path, shown: _Log) -> None:
     """Answering No to the delete confirmation keeps the session file and announces nothing.
-
-    Product change that fails it: ``_delete_session`` (session_manager.py:1379) replace ``!=`` with ``==``.
 
     Args:
         make_dialog: Dialog factory.
@@ -1690,8 +1610,6 @@ def test_delete_sidecar_session_removes_file_announces_and_refreshes(
     sessions_dir: Path,
 ) -> None:
     """Confirming the deletion of a sidecar session removes its file, announces the id and drops the row.
-
-    Product change that fails it: ``_delete_session_from_disk`` (session_manager.py:1469) replace ``session_file.unlink()`` with ``pass``.
 
     Args:
         make_dialog: Dialog factory.
@@ -1721,8 +1639,6 @@ def test_delete_sidecar_session_that_cannot_be_unlinked_warns_and_keeps_row(
 
     The listed file is replaced by a directory of the same name after the table was built, which cannot be unlinked.
 
-    Product change that fails it: ``_delete_session_from_disk`` (session_manager.py:1481) replace ``return False`` with ``return True``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -1749,8 +1665,6 @@ def test_delete_sidecar_session_that_cannot_be_unlinked_warns_and_keeps_row(
 def test_delete_sidecar_for_missing_file_reports_success(make_dialog: Callable[..., SessionManagerDialog], shown: _Log) -> None:
     """Deleting a sidecar session whose file is already gone counts as success without any warning.
 
-    Product change that fails it: ``_delete_session_from_disk`` (session_manager.py:1485) replace ``return True`` with ``return False``.
-
     Args:
         make_dialog: Dialog factory.
         shown: Recorded dialogs.
@@ -1767,9 +1681,6 @@ def test_delete_row_the_manager_no_longer_has_warns(
     wait_for: Callable[[_Entry], _Log],
 ) -> None:
     """Deleting a listed session that the store already lost warns that it could not be deleted.
-
-    Product change that fails it: ``_on_delete_session_succeeded`` (session_manager.py:1419) replace ``if not deleted:`` with
-    ``if deleted:``.
 
     Args:
         manager: Real session manager.
@@ -1798,8 +1709,6 @@ def test_delete_failure_in_manager_warns_with_error_text(
 ) -> None:
     """A deletion that raises in the manager is reported with the error text.
 
-    Product change that fails it: ``_on_delete_session_failed`` (session_manager.py:1441) drop ``{error_obj}`` from the message.
-
     Args:
         scripted: Scriptable session manager.
         make_dialog: Dialog factory.
@@ -1822,9 +1731,6 @@ def test_load_session_missing_from_store_warns_not_found(
     wait_for: Callable[[_Entry], _Log],
 ) -> None:
     """Loading a listed session the store has since lost warns that it was not found and announces nothing.
-
-    Product change that fails it: ``_on_load_session_succeeded`` (session_manager.py:1148) replace ``result is None`` with
-    ``result is not None``.
 
     Args:
         manager: Real session manager.
@@ -1852,8 +1758,6 @@ def test_load_failure_in_manager_warns_with_error_text(
 ) -> None:
     """A load that raises in the manager is reported with the error text and announces nothing.
 
-    Product change that fails it: ``_on_load_session_failed`` (session_manager.py:1178) drop ``{error_obj}`` from the message.
-
     Args:
         scripted: Scriptable session manager.
         make_dialog: Dialog factory.
@@ -1876,8 +1780,6 @@ def test_load_failure_in_manager_warns_with_error_text(
 def test_load_result_without_message_list_is_reported_malformed(make_dialog: Callable[..., SessionManagerDialog], shown: _Log) -> None:
     """A load result whose ``messages`` is not a list is reported as malformed and the dialog stays open.
 
-    Product change that fails it: ``_on_load_session_succeeded`` (session_manager.py:1154) replace ``not isinstance`` with ``isinstance``.
-
     Args:
         make_dialog: Dialog factory.
         shown: Recorded dialogs.
@@ -1899,9 +1801,6 @@ def test_manager_dispatchers_do_nothing_without_a_manager(
     shown: _Log,
 ) -> None:
     """The manager-backed load, delete and import entry points are no-ops on a dialog that has no manager.
-
-    Product change that fails it: ``_delete_session_via_manager`` (session_manager.py:1399) replace ``return`` with
-    ``self._on_session_deleted(session_id)``.
 
     Args:
         make_dialog: Dialog factory.
@@ -1926,9 +1825,6 @@ def test_manager_dispatchers_do_nothing_without_a_manager(
 def test_export_without_selection_asks_to_select(make_dialog: Callable[..., SessionManagerDialog], shown: _Log) -> None:
     """Exporting with no row selected asks the user to select a session.
 
-    Product change that fails it: ``_export_session`` (session_manager.py:1493) replace ``if not selected_rows:`` with
-    ``if selected_rows:``.
-
     Args:
         make_dialog: Dialog factory.
         shown: Recorded dialogs.
@@ -1946,8 +1842,6 @@ def test_export_with_missing_name_cell_does_nothing(
     shown: _Log,
 ) -> None:
     """Exporting when the selected row has lost its name cell shows nothing.
-
-    Product change that fails it: ``_export_session`` (session_manager.py:1503) remove the ``name_item is None`` check.
 
     Args:
         make_dialog: Dialog factory.
@@ -1972,9 +1866,6 @@ def test_export_of_row_without_session_data_warns(
 ) -> None:
     """Exporting a row whose id is not in the listing warns that the session data is missing.
 
-    Product change that fails it: ``_export_session`` (session_manager.py:1509) replace ``session_data is None`` with
-    ``session_data is not None``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -1994,8 +1885,6 @@ def test_export_of_row_without_session_data_warns(
 
 def test_export_cancelled_picker_writes_nothing(make_dialog: Callable[..., SessionManagerDialog], sessions_dir: Path, shown: _Log) -> None:
     """Cancelling the save picker exports nothing and shows no message.
-
-    Product change that fails it: ``_export_session`` (session_manager.py:1525) replace ``if path:`` with ``if True:``.
 
     Args:
         make_dialog: Dialog factory.
@@ -2020,8 +1909,6 @@ def test_export_writes_json_file_and_suggests_sanitized_name(
     tmp_path: Path,
 ) -> None:
     """Exporting writes the session as JSON with ISO dates, messages and extras, and suggests a file-safe name.
-
-    Product change that fails it: ``_prepare_export_data`` (session_manager.py:1614) drop the ``patches`` copy.
 
     Args:
         make_dialog: Dialog factory.
@@ -2076,8 +1963,6 @@ def test_export_to_unwritable_path_warns(
 ) -> None:
     """An export whose destination cannot be written warns and does not claim success.
 
-    Product change that fails it: ``_export_session`` (session_manager.py:1528) narrow the handler to ``except TypeError``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -2099,10 +1984,7 @@ def test_export_to_unwritable_path_warns(
 
 
 def test_prepare_export_data_serializes_dates_messages_and_extras() -> None:
-    """Dates become ISO text, text dates are kept, message objects are flattened to their attributes and extras pass through.
-
-    Product change that fails it: ``_prepare_export_data`` (session_manager.py:1607) replace ``msg_item.__dict__`` with ``{}``.
-    """
+    """Dates become ISO text, text dates are kept, message objects are flattened to their attributes and extras pass through."""
     created = datetime(2020, 3, 1, 10, 0, tzinfo=UTC)
     message = Message(role="assistant", content="yo", timestamp=created)
     data: dict[str, object] = {
@@ -2142,10 +2024,7 @@ def test_prepare_export_data_serializes_dates_messages_and_extras() -> None:
 
 
 def test_prepare_export_data_omits_absent_and_blank_fields() -> None:
-    """Blank dates, a non-list ``messages`` and absent extras are left out of the export.
-
-    Product change that fails it: ``_prepare_export_data`` (session_manager.py:1590) replace ``elif created_at:`` with ``else:``.
-    """
+    """Blank dates, a non-list ``messages`` and absent extras are left out of the export."""
     data: dict[str, object] = {"created_at": None, "updated_at": "", "messages": "not-a-list"}
 
     result = cast("dict[str, object]", _method(SessionManagerDialog, "_prepare_export_data")(data))
@@ -2169,8 +2048,6 @@ def test_import_with_cancelled_picker_does_nothing(
 ) -> None:
     """Cancelling the open picker imports nothing and shows no message.
 
-    Product change that fails it: ``_import_session`` (session_manager.py:1631) replace ``if not path_str:`` with ``if False:``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -2192,8 +2069,6 @@ def test_import_sidecar_with_invalid_json_warns(
     tmp_path: Path,
 ) -> None:
     """Importing a file that is not valid JSON into the sidecar store warns and stores nothing.
-
-    Product change that fails it: ``_import_to_disk`` (session_manager.py:1796) replace ``return`` with ``pass``.
 
     Args:
         make_dialog: Dialog factory.
@@ -2223,8 +2098,6 @@ def test_import_sidecar_from_unreadable_path_warns(
 ) -> None:
     """Importing from a path that cannot be read into the sidecar store warns and stores nothing.
 
-    Product change that fails it: ``_import_to_disk`` (session_manager.py:1797) narrow the handler to ``except FileNotFoundError``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -2253,9 +2126,6 @@ def test_import_sidecar_with_non_object_json_warns(
 ) -> None:
     """Importing a JSON array into the sidecar store warns about the format and stores nothing.
 
-    Product change that fails it: ``_import_to_disk`` (session_manager.py:1802) replace ``not isinstance(raw_data, dict)`` with
-    ``isinstance(raw_data, dict)``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -2282,8 +2152,6 @@ def test_import_sidecar_without_id_uses_file_stem_and_lists_session(
     tmp_path: Path,
 ) -> None:
     """A file without id and name is stored under its stem, stamped with the import time and listed.
-
-    Product change that fails it: ``_import_to_disk`` (session_manager.py:1811) set ``import_data["name"]`` to an empty string.
 
     Args:
         make_dialog: Dialog factory.
@@ -2319,8 +2187,6 @@ def test_import_sidecar_duplicate_declined_keeps_existing(
 ) -> None:
     """Declining the replace prompt for a duplicate id leaves the stored session untouched.
 
-    Product change that fails it: ``_import_to_disk`` (session_manager.py:1815) replace ``return`` with ``pass``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -2348,9 +2214,6 @@ def test_import_sidecar_duplicate_confirmed_replaces_session(
     tmp_path: Path,
 ) -> None:
     """Confirming the replace prompt for a duplicate id overwrites the stored session and refreshes the list.
-
-    Product change that fails it: ``_import_to_disk`` (session_manager.py:1814) replace ``not self._confirm_replace(candidate_id)`` with
-    ``self._confirm_replace(candidate_id)``.
 
     Args:
         make_dialog: Dialog factory.
@@ -2382,8 +2245,6 @@ def test_import_sidecar_write_failure_warns(
 
     A directory already occupies the file name the imported session would be stored under.
 
-    Product change that fails it: ``_import_to_disk`` (session_manager.py:1824) replace ``return`` with ``pass``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -2413,8 +2274,6 @@ def test_import_via_manager_missing_file_warns(
 ) -> None:
     """Importing a file that does not exist warns that it was not found and stores nothing.
 
-    Product change that fails it: ``_peek_session_id`` (session_manager.py:1757) replace ``return False, None`` with ``return True, None``.
-
     Args:
         manager: Real session manager.
         make_dialog: Dialog factory.
@@ -2440,8 +2299,6 @@ def test_import_via_manager_invalid_json_warns(
     tmp_path: Path,
 ) -> None:
     """Importing a file that is not valid JSON warns and stores nothing.
-
-    Product change that fails it: ``_peek_session_id`` (session_manager.py:1761) replace ``return False, None`` with ``return True, None``.
 
     Args:
         manager: Real session manager.
@@ -2471,8 +2328,6 @@ def test_import_via_manager_unreadable_path_warns(
 ) -> None:
     """Importing from a path that cannot be read warns and stores nothing.
 
-    Product change that fails it: ``_peek_session_id`` (session_manager.py:1765) replace ``return False, None`` with ``return True, None``.
-
     Args:
         manager: Real session manager.
         make_dialog: Dialog factory.
@@ -2500,8 +2355,6 @@ def test_import_via_manager_non_object_json_warns(
     tmp_path: Path,
 ) -> None:
     """Importing a JSON array warns about the format and stores nothing.
-
-    Product change that fails it: ``_peek_session_id`` (session_manager.py:1769) replace ``return False, None`` with ``return True, None``.
 
     Args:
         manager: Real session manager.
@@ -2539,8 +2392,6 @@ def test_peek_session_id_reads_wrapped_and_flat_files(
 ) -> None:
     """The session id is read from the wrapped or the flat layout, and is ``None`` when absent or not text.
 
-    Product change that fails it: ``_peek_session_id`` (session_manager.py:1772) replace ``outer.get("session", outer)`` with ``outer``.
-
     Args:
         make_dialog: Dialog factory.
         tmp_path: Pytest temporary directory.
@@ -2563,8 +2414,6 @@ def test_import_via_manager_duplicate_declined_keeps_stored_session(
     tmp_path: Path,
 ) -> None:
     """Declining the replace prompt for a stored id leaves the stored session as it was.
-
-    Product change that fails it: ``_import_via_manager`` (session_manager.py:1661) replace ``return`` with ``pass``.
 
     Args:
         manager: Real session manager.
@@ -2604,8 +2453,6 @@ def test_import_via_manager_duplicate_confirmed_replaces_stored_session(
 ) -> None:
     """Confirming the replace prompt for a stored id replaces the stored session with the file's content.
 
-    Product change that fails it: ``_import_via_manager`` (session_manager.py:1662) replace ``replace = True`` with ``replace = False``.
-
     Args:
         manager: Real session manager.
         make_dialog: Dialog factory.
@@ -2641,9 +2488,6 @@ def test_import_via_manager_stale_listing_reports_conflict_as_invalid_file(
 ) -> None:
     """When the id was stored after the dialog listed sessions, the manager's conflict error is shown as an invalid session file.
 
-    Product change that fails it: ``_on_import_via_manager_failed`` (session_manager.py:1701) replace ``isinstance(error_obj, ValueError)``
-    with ``isinstance(error_obj, KeyError)``.
-
     Args:
         manager: Real session manager.
         make_dialog: Dialog factory.
@@ -2665,8 +2509,6 @@ def test_import_via_manager_stale_listing_reports_conflict_as_invalid_file(
 
 def test_import_failure_slot_words_each_error_kind(make_dialog: Callable[..., SessionManagerDialog], shown: _Log, tmp_path: Path) -> None:
     """The import failure handler words a missing file, a bad session file and any other error differently.
-
-    Product change that fails it: ``_on_import_via_manager_failed`` (session_manager.py:1700) replace ``{path}`` with ``{error_obj}``.
 
     Args:
         make_dialog: Dialog factory.
@@ -2691,8 +2533,6 @@ def test_import_failure_slot_words_each_error_kind(make_dialog: Callable[..., Se
 def test_get_selected_session_id_follows_selection(make_dialog: Callable[..., SessionManagerDialog], sessions_dir: Path) -> None:
     """The selected id is ``None`` without a selection or without a name cell and the row's id otherwise.
 
-    Product change that fails it: ``get_selected_session_id`` (session_manager.py:1862) return ``None`` instead of ``session_id``.
-
     Args:
         make_dialog: Dialog factory.
         sessions_dir: Sidecar directory.
@@ -2711,10 +2551,7 @@ def test_get_selected_session_id_follows_selection(make_dialog: Callable[..., Se
 
 
 def test_new_session_dialog_defaults_and_strips_inputs() -> None:
-    """The new-session dialog suggests a timestamped name and returns the entered texts without surrounding blanks.
-
-    Product change that fails it: ``get_description`` (session_manager.py:1926) drop ``.strip()``.
-    """
+    """The new-session dialog suggests a timestamped name and returns the entered texts without surrounding blanks."""
     before = datetime.now(tz=UTC)
     dialog = NewSessionDialog()
     after = datetime.now(tz=UTC)
@@ -2743,8 +2580,6 @@ def test_new_session_dialog_defaults_and_strips_inputs() -> None:
 )
 def test_new_session_dialog_buttons_accept_or_reject(button: QDialogButtonBox.StandardButton, result: QDialog.DialogCode) -> None:
     """Ok accepts the new-session dialog and Cancel rejects it.
-
-    Product change that fails it: ``_on_accepted`` (session_manager.py:1910) replace ``self.accept()`` with ``self.reject()``.
 
     Args:
         button: Standard button to click.

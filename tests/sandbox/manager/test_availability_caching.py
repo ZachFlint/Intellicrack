@@ -2,10 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for F-0024 and F-0032: availability caching in SandboxManager.
+"""Tests for availability caching in SandboxManager.
 
-Each test is designed to FAIL against the original (uncached) implementation
-and PASS with the caching fix in place.
+Each test fails if probe results are not cached.
 """
 
 from __future__ import annotations
@@ -26,10 +25,6 @@ from intellicrack.sandbox.manager import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 _ALL_TYPES: tuple[SandboxType, SandboxType] = ("windows", "qemu")
 
@@ -70,13 +65,8 @@ def _inject_cache(manager: SandboxManager, sandbox_type: SandboxType, entry: Ava
     manager.availability_cache[sandbox_type] = entry
 
 
-# ---------------------------------------------------------------------------
-# F-0024: get_available_types caches probes
-# ---------------------------------------------------------------------------
-
-
 class TestGetAvailableTypesSubprocessCalledOnce:
-    """F-0024: Repeated calls to get_available_types must not re-run subprocesses."""
+    """Repeated calls to get_available_types must not re-run subprocesses."""
 
     def test_probe_called_once_per_type_across_five_calls(self) -> None:
         """Five calls to get_available_types trigger exactly one real probe per type.
@@ -85,16 +75,6 @@ class TestGetAvailableTypesSubprocessCalledOnce:
         subprocess or OS check executes on the first call. The cache then
         serves cached results on calls 2-5. The counter records how many
         times the real implementation is invoked.
-
-        Falsifiability: if the caching logic in _get_type_available is
-        removed so that _probe_type is called unconditionally on every
-        get_available_types() call, the counter would reach 5 for each type
-        and the assertions would go red. If the cache returned a different
-        list on any of the five calls (e.g. due to a re-probe with a
-        different result), the consistency assertion would go red.
-        Crucially, the expected value comes from the real first-call result,
-        not from a fake probe, so a bug that hardcodes the probe return value
-        would also be caught.
         """
         manager = _make_manager()
         probe_counter: dict[SandboxType, int] = {"windows": 0, "qemu": 0}
@@ -133,13 +113,6 @@ class TestGetAvailableTypesSubprocessCalledOnce:
         Uses the REAL _probe_type wrapped by a delegating counter so the
         actual OS availability check runs exactly once. Expected values are
         derived from the real first-call result, not from a fake return.
-
-        Falsifiability: removing the cache causes the counter to exceed 1 and
-        the assertion fails. If the cache returned a different list on call 2
-        or 3 (e.g. after a re-probe that flipped the result), the equality
-        assertion against the baseline would fail. The availability_cache dict
-        must contain entries for every known type with the correct available
-        flag after the run.
         """
         manager = _make_manager()
         probe_calls: dict[SandboxType, int] = {"windows": 0, "qemu": 0}
@@ -182,13 +155,8 @@ class TestGetAvailableTypesSubprocessCalledOnce:
             )
 
 
-# ---------------------------------------------------------------------------
-# F-0032: WindowsSandbox.is_available result is cached (success path)
-# ---------------------------------------------------------------------------
-
-
 class TestIsAvailableCachesSuccess:
-    """F-0032: A successful availability probe must be cached indefinitely."""
+    """A successful availability probe must be cached indefinitely."""
 
     def test_success_entry_not_re_probed_even_when_ancient(self) -> None:
         """A successful cache entry is never re-probed regardless of age.
@@ -254,21 +222,6 @@ class TestIsAvailableCachesSuccess:
         from availability_cache itself after the call, not from a fake
         constant), its timestamp falls within the measured test window, and
         the probe ran exactly once.
-
-        Falsifiability: four independently-verifiable properties are checked.
-
-        1. Both type keys are present — if _get_type_available never writes
-           to the cache, property 1 fails.
-        2. The available flag matches what the real probe returned — if the
-           cache writes the wrong flag (e.g. always True regardless of probe
-           result), the consistency check between available and real_result
-           fails because get_available_types only includes types where the
-           probe returned True.
-        3. probed_at falls within the measured test window — a stale or
-           fabricated timestamp fails the bounded inequality.
-        4. The probe ran exactly once — re-probing on the same call fails
-           this assertion; a no-op cache that never calls the probe also
-           fails because count would be 0.
         """
         manager = _make_manager()
         probe_calls: dict[SandboxType, int] = {"windows": 0, "qemu": 0}
@@ -313,13 +266,8 @@ class TestIsAvailableCachesSuccess:
             )
 
 
-# ---------------------------------------------------------------------------
-# F-0032: Failure probe re-runs after TTL expires (clock injection, no freezegun)
-# ---------------------------------------------------------------------------
-
-
 class TestIsAvailableReProbesFailureAfterTtl:
-    """F-0032: Failed probe must be re-tried after FAILURE_CACHE_TTL_SECONDS seconds."""
+    """Failed probe must be re-tried after FAILURE_CACHE_TTL_SECONDS seconds."""
 
     def test_failure_entry_not_expired_within_ttl(self) -> None:
         """A fresh failed cache entry is not expired within its TTL."""
@@ -386,11 +334,6 @@ class TestIsAvailableReProbesFailureAfterTtl:
         assert probe_calls.count("windows") == 1, (
             f"After TTL expiry a new probe must be triggered. Probe count was {probe_calls.count('windows')}."
         )
-
-
-# ---------------------------------------------------------------------------
-# invalidate_availability_cache forces re-probe
-# ---------------------------------------------------------------------------
 
 
 class TestInvalidateCacheForcesReProbe:

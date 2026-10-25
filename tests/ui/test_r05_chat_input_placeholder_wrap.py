@@ -2,15 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the R05 chat-input placeholder clipping fix.
+"""Gate for the chat-input placeholder clipping fix.
 
-``_ChatTextEdit`` previously called ``setPlaceholderText`` with the long hint
+``_ChatTextEdit`` must not rely on ``setPlaceholderText`` for the long hint
 "Type a message... (Enter to send, Shift+Enter for newline)". Qt's built-in
 ``QTextEdit`` placeholder is drawn as a single hard-clipped line, so at any
 width narrower than the full hint the tail -- "...Shift+Enter for newline)"
--- was cut off and never visible.
+-- is cut off and never visible.
 
-The fix removes the native ``setPlaceholderText`` call and has
+The widget removes the native ``setPlaceholderText`` call and has
 ``_ChatTextEdit`` paint its own placeholder, word-wrapped to the viewport
 width via a real ``QTextLayout``, only while the document is empty and the
 widget is unfocused. This gate builds the real
@@ -98,7 +98,7 @@ def test_placeholder_wraps_to_multiple_lines_within_viewport(qapp: QApplication)
 def test_native_placeholder_text_is_not_set(qapp: QApplication) -> None:
     """The text edit must not carry Qt's own single-line placeholder text.
 
-    Guards against a fix that draws the wrapped placeholder but leaves the
+    Guards against an implementation that draws the wrapped placeholder but leaves the
     plain ``setPlaceholderText`` call in place, which would make Qt paint its
     clipped single-line placeholder underneath the custom one.
 

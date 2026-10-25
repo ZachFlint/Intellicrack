@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for x64dbg bridge event callback system (Fix 6).
+"""Tests for x64dbg bridge event callback system.
 
 Validates:
 - Event callback registration and unregistration

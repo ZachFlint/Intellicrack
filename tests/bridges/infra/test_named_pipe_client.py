@@ -3,11 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 regression tests for ``NamedPipeClient``.
+"""Regression tests for ``NamedPipeClient``.
 
-Covers the U2 finding set for ``src/intellicrack/bridges/named_pipe_client.py``:
-F-0010, F-0013, F-0014, F-0015, F-0016, F-0017, F-0019, F-0020, F-0021, F-0023,
-F-0024, F-0029, F-0032, F-0039, F-0040, F-0042. The tests stub the synchronous
+Covers ``src/intellicrack/bridges/named_pipe_client.py``.
+ The tests stub the synchronous
 Win32 boundary (``_open_handle``, ``_close_handle``, ``_read_exact_sync``,
 ``_write_sync``) with an in-process pipe stand-in so the locking, dispatch,
 cancellation, lifecycle and diagnostics logic can be exercised cross-platform
@@ -322,37 +321,33 @@ async def _run_responder(
         await asyncio.sleep(0.005)
 
 
-# ---------------------------------------------------------------------------
-# F-0023 - Default pipe name now per-process
-# ---------------------------------------------------------------------------
+# Default pipe name now per-process
 
 
 def test_default_pipe_name_includes_pid() -> None:
-    """Default pipe name embeds the connector pid (F-0023)."""
+    """Default pipe name embeds the connector pid."""
     name = _default_pipe_name()
     assert name == rf"\\.\pipe\intellicrack_x64dbg_{os.getpid()}"
 
 
 def test_pipe_config_default_uses_factory() -> None:
-    """``PipeConfig`` default ``pipe_name`` matches the factory output (F-0023)."""
+    """``PipeConfig`` default ``pipe_name`` matches the factory output."""
     a = PipeConfig()
     b = PipeConfig()
     assert a.pipe_name == b.pipe_name == _default_pipe_name()
 
 
 def test_pipe_config_user_override_preserved() -> None:
-    """User-supplied ``pipe_name`` overrides the per-pid default (F-0023)."""
+    """User-supplied ``pipe_name`` overrides the per-pid default."""
     cfg = PipeConfig(pipe_name=r"\\.\pipe\custom-target")
     assert cfg.pipe_name == r"\\.\pipe\custom-target"
 
 
-# ---------------------------------------------------------------------------
-# F-0024 - Share mode now read+write
-# ---------------------------------------------------------------------------
+# Share mode now read+write
 
 
 def test_share_constants_match_win32_values() -> None:
-    """Module exposes the canonical FILE_SHARE_* values (F-0024)."""
+    """Module exposes the canonical FILE_SHARE_* values."""
     assert FILE_SHARE_READ == 0x00000001
     assert FILE_SHARE_WRITE == 0x00000002
 
@@ -364,7 +359,7 @@ def test_share_constants_match_win32_values() -> None:
 def test_open_handle_passes_shared_read_write_to_createfilew(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``_open_handle`` calls ``CreateFileW`` with ``FILE_SHARE_READ | FILE_SHARE_WRITE`` (F-0024).
+    """``_open_handle`` calls ``CreateFileW`` with ``FILE_SHARE_READ | FILE_SHARE_WRITE``.
 
     Observes the real ``dwShareMode`` argument the production code passes to
     the Win32 ``CreateFileW`` entry point rather than grepping the source. The
@@ -429,9 +424,7 @@ def test_open_handle_passes_shared_read_write_to_createfilew(
     assert captured_share_modes == [0x3]
 
 
-# ---------------------------------------------------------------------------
-# F-0032 - Platform predicate consistency
-# ---------------------------------------------------------------------------
+# Platform predicate consistency
 
 
 @pytest.mark.asyncio
@@ -439,7 +432,7 @@ async def test_no_os_name_nt_predicate_in_module(
     monkeypatch: pytest.MonkeyPatch,
     fake_pipe: _FakePipe,
 ) -> None:
-    """Platform guard uses ``sys.platform`` consistently, not ``os.name`` (F-0032).
+    """Platform guard uses ``sys.platform`` consistently, not ``os.name``.
 
     Forces the Cygwin disagreement scenario where ``sys.platform != "win32"``
     is ``True`` but ``os.name != "nt"`` is ``False``:
@@ -491,9 +484,7 @@ async def test_no_os_name_nt_predicate_in_module(
             await client.connect()
 
 
-# ---------------------------------------------------------------------------
-# F-0042 - Expanded error hint coverage
-# ---------------------------------------------------------------------------
+# Expanded error hint coverage
 
 
 @pytest.mark.parametrize(
@@ -501,7 +492,7 @@ async def test_no_os_name_nt_predicate_in_module(
     [2, 3, 5, 6, 21, 109, 230, 231, 232, 233, 535, 536],
 )
 def test_pipe_error_hints_cover_common_codes(code: int) -> None:
-    """Hint table covers each common pipe-related Win32 error (F-0042)."""
+    """Hint table covers each common pipe-related Win32 error."""
     hint = NamedPipeClient.format_error_hint(code)
     assert isinstance(hint, str), f"missing hint for error {code}"
     assert hint, f"empty hint for error {code}"
@@ -512,9 +503,7 @@ def test_format_error_hint_returns_none_for_unknown_code() -> None:
     assert NamedPipeClient.format_error_hint(999_999) is None
 
 
-# ---------------------------------------------------------------------------
-# F-0010 / F-0019 - id allocator under lock + wraparound
-# ---------------------------------------------------------------------------
+# id allocator under lock + wraparound
 
 
 @pytest.mark.asyncio
@@ -526,7 +515,7 @@ async def test_concurrent_send_command_ids_are_unique(
     fake_pipe: _FakePipe,
     connected_client: NamedPipeClient,
 ) -> None:
-    """Concurrent ``send_command`` calls receive distinct, monotonic ids (F-0010)."""
+    """Concurrent ``send_command`` calls receive distinct, monotonic ids."""
     server_log: list[int] = []
 
     async def server_loop() -> None:
@@ -559,7 +548,7 @@ async def test_concurrent_send_command_ids_are_unique(
     reason="connect() hard-requires Windows named-pipe support",
 )
 async def test_request_id_wraps_at_int31_max(connected_client: NamedPipeClient) -> None:
-    """The id counter wraps at ``2 ** 31 - 1`` so it never overflows (F-0019)."""
+    """The id counter wraps at ``2 ** 31 - 1`` so it never overflows."""
     setattr(connected_client, "_next_id", 0x7FFFFFFE)
     allocate: Callable[[], Any] = getattr(connected_client, "_allocate_request_id")
     first = await allocate()
@@ -571,9 +560,7 @@ async def test_request_id_wraps_at_int31_max(connected_client: NamedPipeClient) 
     assert third == 2
 
 
-# ---------------------------------------------------------------------------
-# F-0014 / F-0020 / F-0021 - Event handler isolation + lock split
-# ---------------------------------------------------------------------------
+# Event handler isolation + lock split
 
 
 @pytest.mark.asyncio
@@ -584,7 +571,7 @@ async def test_request_id_wraps_at_int31_max(connected_client: NamedPipeClient) 
 async def test_event_handler_exception_does_not_break_request_stream(
     fake_pipe: _FakePipe,
 ) -> None:
-    """A handler that raises does not corrupt subsequent requests (F-0014).
+    """A handler that raises does not corrupt subsequent requests.
 
     Uses a custom structlog processor to deterministically observe the
     ``pipe_event_handler_error`` event regardless of which thread emits it.
@@ -695,7 +682,7 @@ async def _exchange_and_assert_handler_error(
 async def test_event_handler_runs_outside_write_lock(
     fake_pipe: _FakePipe,
 ) -> None:
-    """Event handler does not hold the write lock while running (F-0020/F-0021)."""
+    """Event handler does not hold the write lock while running."""
     handler_started = threading.Event()
     release_handler = threading.Event()
 
@@ -770,7 +757,7 @@ async def _drive_slow_handler_exchange(
 
 
 def test_dispatch_event_safe_isolates_exceptions() -> None:
-    """``_dispatch_event_safe`` swallows handler exceptions and logs them (F-0014).
+    """``_dispatch_event_safe`` swallows handler exceptions and logs them.
 
     Validates the diagnostic surface using ``structlog.testing.capture_logs``
     rather than fd-level capture so the assertion is not subject to thread
@@ -797,7 +784,7 @@ def test_dispatch_event_safe_isolates_exceptions() -> None:
 
 
 def test_separate_write_lock_and_id_lock_present() -> None:
-    """Client carries both ``_write_lock`` and ``_id_lock`` (F-0021)."""
+    """Client carries both ``_write_lock`` and ``_id_lock``."""
     client = NamedPipeClient()
     write_lock = getattr(client, "_write_lock")
     id_lock = getattr(client, "_id_lock")
@@ -806,14 +793,12 @@ def test_separate_write_lock_and_id_lock_present() -> None:
     assert write_lock is not id_lock
 
 
-# ---------------------------------------------------------------------------
-# F-0013 / F-0039 - send_command Raises clauses
-# ---------------------------------------------------------------------------
+# send_command Raises clauses
 
 
 @pytest.mark.asyncio
 async def test_send_command_raises_tool_error_when_not_connected() -> None:
-    """``send_command`` raises ``ToolError`` immediately when the pipe is not connected (F-0013/F-0039).
+    """``send_command`` raises ``ToolError`` immediately when the pipe is not connected.
 
     Drives the real ``send_command`` code path against a freshly-constructed
     ``NamedPipeClient`` whose ``_handle`` is ``None`` and asserts that
@@ -828,9 +813,7 @@ async def test_send_command_raises_tool_error_when_not_connected() -> None:
         await client.send_command("probe")
 
 
-# ---------------------------------------------------------------------------
-# F-0015 / F-0040 - close() waits for in-flight, docstring describes pool
-# ---------------------------------------------------------------------------
+# close() waits for in-flight, docstring describes pool
 
 
 @pytest.mark.asyncio
@@ -841,7 +824,7 @@ async def test_send_command_raises_tool_error_when_not_connected() -> None:
 async def test_close_fails_pending_send_command(
     connected_client: NamedPipeClient,
 ) -> None:
-    """``close()`` resolves pending ``send_command`` futures with ``ToolError`` (F-0015)."""
+    """``close()`` resolves pending ``send_command`` futures with ``ToolError``."""
     send_task = asyncio.create_task(connected_client.send_command("never-answered"))
     await asyncio.sleep(0.05)
     await connected_client.close()
@@ -859,7 +842,7 @@ async def test_close_waits_for_inflight_write(
     fake_pipe: _FakePipe,
     connected_client: NamedPipeClient,
 ) -> None:
-    """``close()`` does not race ahead of an in-flight write (F-0015)."""
+    """``close()`` does not race ahead of an in-flight write."""
     write_started = threading.Event()
     release_write = threading.Event()
 
@@ -903,7 +886,7 @@ async def test_close_waits_for_inflight_write(
 async def test_close_dispatches_handle_close_via_thread_pool(
     fake_pipe: _FakePipe,
 ) -> None:
-    """``close()`` dispatches the handle-close through ``asyncio.to_thread`` (F-0040).
+    """``close()`` dispatches the handle-close through ``asyncio.to_thread``.
 
     Connects a client using the in-memory pipe transport and then records
     whether the underlying ``_close_handle`` method is invoked from a worker
@@ -956,9 +939,7 @@ async def test_close_is_idempotent(connected_client: NamedPipeClient) -> None:
     assert not connected_client.is_connected
 
 
-# ---------------------------------------------------------------------------
-# F-0016 - Cancelled connect closes the leaked handle
-# ---------------------------------------------------------------------------
+# Cancelled connect closes the leaked handle
 
 
 @pytest.mark.asyncio
@@ -969,7 +950,7 @@ async def test_close_is_idempotent(connected_client: NamedPipeClient) -> None:
 async def test_cancelled_connect_closes_handle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A cancelled connect closes the handle returned by ``CreateFileW`` (F-0016)."""
+    """A cancelled connect closes the handle returned by ``CreateFileW``."""
     closed: list[int] = []
     open_started = threading.Event()
     release_open = threading.Event()
@@ -1047,7 +1028,7 @@ async def _run_cancelled_connect_reap(
 async def test_timed_out_connect_closes_handle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A timed-out connect also reaps the leaked handle (F-0016)."""
+    """A timed-out connect also reaps the leaked handle."""
     closed: list[int] = []
     open_started = threading.Event()
     release_open = threading.Event()
@@ -1114,9 +1095,7 @@ async def _run_timed_out_connect_reap(
         await asyncio.sleep(0.01)
 
 
-# ---------------------------------------------------------------------------
-# F-0017 - _close_handle inspects CloseHandle's BOOL return
-# ---------------------------------------------------------------------------
+# _close_handle inspects CloseHandle's BOOL return
 
 
 @pytest.mark.skipif(
@@ -1126,7 +1105,7 @@ async def _run_timed_out_connect_reap(
 def test_close_handle_logs_when_closehandle_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A failing ``CloseHandle`` emits ``pipe_close_handle_failed`` (F-0017).
+    """A failing ``CloseHandle`` emits ``pipe_close_handle_failed``.
 
     Drives the real close path with ``CloseHandle`` forced to return the Win32
     failure sentinel (``BOOL`` zero) and asserts the production code inspects
@@ -1171,9 +1150,7 @@ def test_close_handle_logs_when_closehandle_fails(
     assert record.get("handle") == _FAKE_HANDLE
 
 
-# ---------------------------------------------------------------------------
-# F-0029 - Routine pipe writes logged at DEBUG, not INFO
-# ---------------------------------------------------------------------------
+# Routine pipe writes logged at DEBUG, not INFO
 
 
 @pytest.mark.skipif(
@@ -1183,12 +1160,12 @@ def test_close_handle_logs_when_closehandle_fails(
 def test_write_sync_logs_routine_chunk_at_debug_not_info(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Routine pipe writes log ``pipe_write_chunk`` at DEBUG, never INFO (F-0029).
+    """Routine pipe writes log ``pipe_write_chunk`` at DEBUG, never INFO.
 
     Drives the real synchronous write loop with ``WriteFile`` forced to report
     a full successful write, captures the structured log stream, and asserts
     the per-chunk progress record is emitted at ``debug`` level. The oracle is
-    the F-0029 contract: high-frequency routine I/O must not pollute INFO. A
+    the contract: high-frequency routine I/O must not pollute INFO. A
     regression that promoted the chunk record to INFO would surface a
     ``pipe_write_chunk`` entry with ``log_level == "info"`` and fail here.
 
@@ -1245,11 +1222,11 @@ def test_write_sync_logs_routine_chunk_at_debug_not_info(
 async def test_connect_close_lifecycle_logs_at_info(
     fake_pipe: _FakePipe,
 ) -> None:
-    """A real connect/close cycle logs the four lifecycle events at INFO (F-0029).
+    """A real connect/close cycle logs the four lifecycle events at INFO.
 
     Captures the structured log stream across an actual ``connect`` followed by
     ``close`` (driving the in-memory transport seam) and asserts the four
-    lifecycle records each appear at ``info`` level. The oracle is the F-0029
+    lifecycle records each appear at ``info`` level. The oracle is the
     contract: lifecycle transitions are significant and must stay at INFO while
     routine I/O drops to DEBUG. A regression that demoted any of these to debug
     would leave its record missing from the INFO set and fail this test.
@@ -1274,9 +1251,7 @@ async def test_connect_close_lifecycle_logs_at_info(
         assert expected in info_events, f"{expected} must be logged at INFO"
 
 
-# ---------------------------------------------------------------------------
 # Round-trip: send_command happy path through fake pipe
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -1323,16 +1298,14 @@ async def test_send_command_round_trip(
     assert response["echo"] == "ping"
 
 
-# ---------------------------------------------------------------------------
-# F16 - _fail_pending drains abandoned futures so exceptions are never leaked
-# ---------------------------------------------------------------------------
+# _fail_pending drains abandoned futures so exceptions are never leaked
 
 
 @pytest.mark.asyncio
 async def test_fail_pending_drains_abandoned_future_exception() -> None:
-    """``_fail_pending`` prevents an "exception was never retrieved" leak (F16).
+    """``_fail_pending`` prevents an "exception was never retrieved" leak.
 
-    Simulates the exact race the F16 leak came from: a ``send_command``
+    Simulates the race behind unretrieved-exception leaks: a ``send_command``
     caller's own outer timeout (the x64dbg bridge's ``COMMAND_TIMEOUT``)
     abandons its future - dropping every reference to it - a moment before
     the background reader records a fatal pipe failure and calls

@@ -2,12 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for S17-D10b: ``SandboxBridge.list_guest_processes``.
+"""Tests for ``SandboxBridge.list_guest_processes``.
 
-The Sandbox panel offered "Memory Dump" on the Windows Sandbox backend but
-never supplied ``target_pid``, so ``SandboxBridge.memory_dump`` rejected
-every Windows instance outright. ``list_guest_processes`` is the new
-bridge-level call the GUI's process picker uses to discover a valid PID
+``list_guest_processes`` is the bridge-level call the GUI's process picker uses to discover a valid PID
 before calling ``memory_dump``. These tests drive the real
 :class:`SandboxBridge` and a real :class:`SandboxManager` (via
 ``register_existing_sandbox``), matching the convention in

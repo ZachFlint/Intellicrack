@@ -3,20 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit-1 regression tests for HexEditorBridge bottom-half findings.
+"""Tests for HexEditorBridge bottom-half behavior in ``src/intellicrack/bridges/hex_editor.py``.
 
-Each test in this module is associated with one or more F-#### findings
-from ``audit1.md`` for ``src/intellicrack/bridges/hex_editor.py``
-(lines 3950+). The tests use a real ``intellicrack_hexcore.HexDocument``
-where applicable so the bridge methods exercise their genuine code
-paths rather than mocks. Tests for paths that do not require a
-backing document (the disabled ``run_python_script``, validation in
-``base_convert``, etc.) call the bridge methods directly. Where tests
-operate on the disk, they use :func:`tempfile.NamedTemporaryFile` so
-no fixture data is checked into the repository.
-
-All tests are designed to fail on the unfixed code path (e.g., before
-the F-#### remediation lands) and pass after it.
+Each test uses a real ``intellicrack_hexcore.HexDocument`` where applicable, so the bridge methods exercise their genuine code paths rather than mocks. Tests for paths that do not require a backing document (the disabled ``run_python_script``, validation in ``base_convert``, etc.) call the bridge methods directly. Where tests operate on the disk, they use :func:`tempfile.NamedTemporaryFile` so no fixture data is checked into the repository.
 """
 
 from __future__ import annotations
@@ -240,9 +229,7 @@ def _open_doc(bridge: HexEditorBridge, data: bytes) -> Path:
     return path
 
 
-# ---------------------------------------------------------------------------
-# F-0001 / F-0045 / F-0059 / F-0060 - run_python_script disabled
-# ---------------------------------------------------------------------------
+# run_python_script disabled
 
 
 class TestRunPythonScriptDisabled:
@@ -282,9 +269,7 @@ class TestRunPythonScriptDisabled:
         assert not marker.exists()
 
 
-# ---------------------------------------------------------------------------
-# F-0002 - set_va_base raises when backend lacks add_va_mapping
-# ---------------------------------------------------------------------------
+# set_va_base raises when backend lacks add_va_mapping
 
 
 class _DocWithoutVAMapping:
@@ -325,7 +310,7 @@ class _DocWithoutVAMapping:
 
 
 class TestSetVaBaseRaisesWithoutBackend:
-    """F-0002: set_va_base must not lie about success."""
+    """set_va_base must not lie about success."""
 
     def test_set_va_base_raises_when_backend_missing(self, bridge: HexEditorBridge) -> None:
         """Calling set_va_base on a backend without add_va_mapping fails.
@@ -338,13 +323,11 @@ class TestSetVaBaseRaisesWithoutBackend:
             _run(bridge.set_va_base(0, 0x400000, 4096))
 
 
-# ---------------------------------------------------------------------------
-# F-0003 - set_chunk_size / set_memory_budget honest failure
-# ---------------------------------------------------------------------------
+# set_chunk_size / set_memory_budget honest failure
 
 
 class TestChunkAndBudgetHonest:
-    """F-0003: backend hint setters fail loud when unsupported."""
+    """Backend hint setters fail loud when unsupported."""
 
     def test_set_chunk_size_raises_without_doc(self, bridge: HexEditorBridge) -> None:
         """set_chunk_size with no document raises RuntimeError.
@@ -386,13 +369,11 @@ class TestChunkAndBudgetHonest:
             _run(bridge.set_memory_budget(1 << 20))
 
 
-# ---------------------------------------------------------------------------
-# F-0009 - chunked MD5 streaming
-# ---------------------------------------------------------------------------
+# chunked MD5 streaming
 
 
 class TestStreamingMd5:
-    """F-0009: MD5 must not require the full file in memory."""
+    """MD5 must not require the full file in memory."""
 
     def test_streaming_md5_matches_oneshot(self, bridge: HexEditorBridge) -> None:
         """Streaming and single-shot MD5 agree on identical data.
@@ -419,13 +400,11 @@ class TestStreamingMd5:
         assert digest_a == digest_b
 
 
-# ---------------------------------------------------------------------------
-# F-0010 - ClamAV NDB wildcard scanner
-# ---------------------------------------------------------------------------
+# ClamAV NDB wildcard scanner
 
 
 class TestClamAvNdbWildcards:
-    """F-0010: NDB ``??`` and ``*`` tokens preserve their semantics."""
+    """NDB ``??`` and ``*`` tokens preserve their semantics."""
 
     def test_question_mark_pair_matches_any_byte(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A ``??`` token matches any single byte.
@@ -473,13 +452,11 @@ class TestClamAvNdbWildcards:
         assert results == []
 
 
-# ---------------------------------------------------------------------------
-# F-0011 / F-0043 - DIE scanner shape validation
-# ---------------------------------------------------------------------------
+# DIE scanner shape validation
 
 
 class TestDieScannerShapeValidation:
-    """F-0011 + F-0043: DIE scanner rejects non-array databases cleanly."""
+    """DIE scanner rejects non-array databases cleanly."""
 
     def test_dict_db_raises_type_error(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Dict-shaped JSON DB raises TypeError, not AttributeError.
@@ -508,13 +485,11 @@ class TestDieScannerShapeValidation:
             _run(bridge.scan_die_signatures(str(db_path)))
 
 
-# ---------------------------------------------------------------------------
-# F-0012 - list_process_regions Windows guard
-# ---------------------------------------------------------------------------
+# list_process_regions Windows guard
 
 
 class TestListProcessRegionsPlatform:
-    """F-0012: list_process_regions enforces Windows-only contract."""
+    """list_process_regions enforces Windows-only contract."""
 
     def test_non_windows_raises(self, bridge: HexEditorBridge, monkeypatch: pytest.MonkeyPatch) -> None:
         """When ``os.name != 'nt'`` the method raises RuntimeError.
@@ -533,9 +508,7 @@ class TestListProcessRegionsPlatform:
             _run(bridge.list_process_regions(1))
 
 
-# ---------------------------------------------------------------------------
-# F-0015 - PE checksum offset constants
-# ---------------------------------------------------------------------------
+# PE checksum offset constants
 
 
 def _make_minimal_pe() -> bytes:
@@ -564,7 +537,7 @@ def _make_minimal_pe() -> bytes:
 
 
 class TestPeChecksumOffsetConstants:
-    """F-0015: PE checksum offset uses named constants and parses fine."""
+    """PE checksum offset uses named constants and parses fine."""
 
     def test_verify_pe_checksum_uses_constants(self, bridge: HexEditorBridge) -> None:
         """verify_pe_checksum returns offset = lfanew + 4 + 20 + 64.
@@ -577,13 +550,11 @@ class TestPeChecksumOffsetConstants:
         assert result["offset"] == 0x80 + 4 + 20 + 64
 
 
-# ---------------------------------------------------------------------------
-# F-0018 - arithmetic fallback raises on missing key
-# ---------------------------------------------------------------------------
+# arithmetic fallback raises on missing key
 
 
 class TestArithmeticFallbackMissingKey:
-    """F-0018: xor/and/or with empty key must raise, not no-op."""
+    """xor/and/or with empty key must raise, not no-op."""
 
     def test_fallback_xor_missing_key_raises(self) -> None:
         """The pure-Python helper rejects xor without a key."""
@@ -591,9 +562,7 @@ class TestArithmeticFallbackMissingKey:
             _call_apply_arithmetic_fallback(bytearray(b"abc"), "xor", b"", 1)
 
 
-# ---------------------------------------------------------------------------
-# F-0023 / F-0025 - Mach-O VA + bookmarks
-# ---------------------------------------------------------------------------
+# Mach-O VA + bookmarks
 
 
 def _make_minimal_macho_64() -> bytes:
@@ -631,7 +600,7 @@ def _make_minimal_macho_64() -> bytes:
 
 
 class TestMachoVa:
-    """F-0023 / F-0025: Mach-O is detected for VA + bookmarks."""
+    """Mach-O is detected for VA + bookmarks."""
 
     def test_macho_va_detection(self, bridge: HexEditorBridge) -> None:
         """auto_detect_va_mappings returns the segment for Mach-O 64.
@@ -655,13 +624,11 @@ class TestMachoVa:
         assert "Mach-O Header" in labels, bookmarks
 
 
-# ---------------------------------------------------------------------------
-# F-0026 - PE bookmark transactional rollback
-# ---------------------------------------------------------------------------
+# PE bookmark transactional rollback
 
 
 class TestPeBookmarkRollback:
-    """F-0026: a failed bookmark generation rolls back partial state."""
+    """A failed bookmark generation rolls back partial state."""
 
     def test_truncated_pe_does_not_leak_bookmarks(self, bridge: HexEditorBridge) -> None:
         """A PE with garbage section count rolls back its bookmarks.
@@ -699,13 +666,11 @@ class TestPeBookmarkRollback:
         assert after == before, f"expected rollback to restore {before}, got {after}"
 
 
-# ---------------------------------------------------------------------------
-# F-0027 - display/color mode validation
-# ---------------------------------------------------------------------------
+# display/color mode validation
 
 
 class TestDisplayColorModeValidation:
-    """F-0027: invalid mode strings raise ValueError."""
+    """Invalid mode strings raise ValueError."""
 
     def test_set_display_mode_rejects_unknown(self, bridge: HexEditorBridge) -> None:
         """Bogus display mode rejected.
@@ -726,13 +691,11 @@ class TestDisplayColorModeValidation:
             _run(bridge.set_color_mode("rainbow"))
 
 
-# ---------------------------------------------------------------------------
-# F-0028 - snap_to_alignment nearest
-# ---------------------------------------------------------------------------
+# snap_to_alignment nearest
 
 
 class TestSnapToAlignmentNearest:
-    """F-0028: snap_to_alignment selects the nearest boundary."""
+    """snap_to_alignment selects the nearest boundary."""
 
     def test_snap_rounds_up(self, bridge: HexEditorBridge) -> None:
         """A cursor closer to the higher boundary snaps up.
@@ -755,13 +718,11 @@ class TestSnapToAlignmentNearest:
         assert result == 0x100
 
 
-# ---------------------------------------------------------------------------
-# F-0029 / F-0040 - UTF-16LE scanner
-# ---------------------------------------------------------------------------
+# UTF-16LE scanner
 
 
 class TestUtf16Scanner:
-    """F-0029 + F-0040: UTF-16LE string scanner improvements."""
+    """UTF-16LE string scanner improvements."""
 
     def test_python_fallback_finds_odd_aligned(self) -> None:
         """The pure-Python fallback detects odd-aligned UTF-16 strings."""
@@ -791,13 +752,11 @@ class TestUtf16Scanner:
             assert "￾" not in r["content"], results
 
 
-# ---------------------------------------------------------------------------
-# F-0030 - BPS encoder emits more than just SourceRead/TargetRead
-# ---------------------------------------------------------------------------
+# BPS encoder emits more than just SourceRead/TargetRead
 
 
 class TestBpsEncoderRichOpcodes:
-    """F-0030: encoder must emit SourceCopy / TargetCopy where useful."""
+    """Encoder must emit SourceCopy / TargetCopy where useful."""
 
     def test_round_trip_with_relocated_block(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Round-trip a target that relocates a long source run.
@@ -818,13 +777,11 @@ class TestBpsEncoderRichOpcodes:
         assert rebuilt == target
 
 
-# ---------------------------------------------------------------------------
-# F-0031 - toggle_bit Rust path emits the same logs as fallback
-# ---------------------------------------------------------------------------
+# toggle_bit Rust path emits the same logs as fallback
 
 
 class TestToggleBitLogParity:
-    """F-0031: toggle_bit emits ``bit_toggled`` / ``file_written`` logs.
+    """toggle_bit emits ``bit_toggled`` / ``file_written`` logs.
 
     The events are emitted via ``_logger`` whose underlying handler is
     ``structlog``; the test captures the rendered output via
@@ -848,13 +805,11 @@ class TestToggleBitLogParity:
         assert "bit_toggled" in events
 
 
-# ---------------------------------------------------------------------------
-# F-0042 - BPS export streaming
-# ---------------------------------------------------------------------------
+# BPS export streaming
 
 
 class TestBpsExportStreaming:
-    """F-0042: BPS export does not load source via ``read_bytes()``.
+    """BPS export does not load source via ``read_bytes()``.
 
     The fallback path is intentionally exercised here to verify the
     streaming source loader works for both Rust-backed and pure-Python
@@ -877,13 +832,11 @@ class TestBpsExportStreaming:
         assert original_export[:4] == b"BPS1"
 
 
-# ---------------------------------------------------------------------------
-# F-0044 - ClamAV unknown suffix rejected
-# ---------------------------------------------------------------------------
+# ClamAV unknown suffix rejected
 
 
 class TestClamavUnsupportedSuffix:
-    """F-0044: dispatch rejects unsupported ClamAV file kinds."""
+    """Dispatch rejects unsupported ClamAV file kinds."""
 
     def test_ldb_rejected(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A ``.ldb`` file is refused with a clear ValueError.
@@ -912,13 +865,11 @@ class TestClamavUnsupportedSuffix:
             _run(bridge.scan_clamav_signatures(str(bogus)))
 
 
-# ---------------------------------------------------------------------------
-# F-0047 - base_convert validates input
-# ---------------------------------------------------------------------------
+# base_convert validates input
 
 
 class TestBaseConvertValidation:
-    """F-0047: base_convert raises a typed ValueError on bad input."""
+    """base_convert raises a typed ValueError on bad input."""
 
     def test_rejects_unparseable_decimal(self) -> None:
         """A non-numeric string raises ValueError with explanation."""
@@ -931,13 +882,11 @@ class TestBaseConvertValidation:
             _run(HexEditorBridge.base_convert("0", from_base="dec"))
 
 
-# ---------------------------------------------------------------------------
-# F-0050 - export_annotated_html escape
-# ---------------------------------------------------------------------------
+# export_annotated_html escape
 
 
 class TestHtmlExportXssDefence:
-    """F-0050: HTML export escapes labels/colors and rejects XSS."""
+    """HTML export escapes labels/colors and rejects XSS."""
 
     def test_malicious_color_replaced(self, bridge: HexEditorBridge) -> None:
         """A non-conforming colour is replaced with the safe fallback.
@@ -968,13 +917,11 @@ class TestHtmlExportXssDefence:
         assert "&lt;script&gt;" in html_str
 
 
-# ---------------------------------------------------------------------------
-# F-0053 - fpdf availability
-# ---------------------------------------------------------------------------
+# fpdf availability
 
 
 class TestFpdfAvailability:
-    """F-0053: missing fpdf2 surfaces an actionable ToolError."""
+    """Missing fpdf2 surfaces an actionable ToolError."""
 
     def test_pdf_export_without_fpdf_raises_tool_error(
         self,
@@ -1021,13 +968,11 @@ class TestFpdfAvailability:
             _run(bridge.export_annotated_pdf(str(out)))
 
 
-# ---------------------------------------------------------------------------
-# F-0055 - open_process_memory closes prior document
-# ---------------------------------------------------------------------------
+# open_process_memory closes prior document
 
 
 class TestOpenProcessMemoryClosesPrior:
-    """F-0055: open_process_memory rejects when host is non-Windows."""
+    """open_process_memory rejects when host is non-Windows."""
 
     def test_non_windows_raises(self, bridge: HexEditorBridge, monkeypatch: pytest.MonkeyPatch) -> None:
         """On non-Windows the call raises before touching state.

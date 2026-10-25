@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D13: the bundled QEMU tools directory must follow the install.
+"""The bundled QEMU tools directory must follow the install.
 
-``QEMUSandbox.TOOLS_PATH`` used to be the literal ``D:/Intellicrack/tools/qemu``
+``QEMUSandbox.TOOLS_PATH`` must not be the literal ``D:/Intellicrack/tools/qemu``
 - one developer's checkout - so on every other installation ``_find_qemu`` never
 looked at the bundled QEMU at all.
 
@@ -106,7 +106,7 @@ class TestToolsPathDerivesFromTheProjectRoot:
     ) -> None:
         """Relocating the project root relocates the bundled tools directory.
 
-        This is the S17-D13 gate. With the hardcoded absolute path the copy
+        With the hardcoded absolute path the copy
         resolves ``D:/Intellicrack/tools/qemu`` regardless of the root, which
         is not under ``tmp_path`` on any machine.
 

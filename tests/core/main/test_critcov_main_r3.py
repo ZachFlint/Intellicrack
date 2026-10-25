@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Third-pass coverage for the application entry point, built from facts measured in the test container.
+"""Coverage for the application entry point, built from facts measured in the test container.
 
 Saved provider instances run in the pytest process against a redirected state root. Everything that
 needs a process of its own runs in a child interpreter this module starts: a second Qt application

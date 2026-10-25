@@ -11,8 +11,7 @@ to wait out Frida's own timeout, swallow it, unload the script and return an emp
 unfollow had worked. These tests check the contract against an agent that answers, one that stopped
 answering, and one whose script reports a failure.
 
-None of them follows a thread. A followed thread that is never instrumented produces no event, which is a
-known Frida remainder (PD-103) that made a test depending on a live trace fail about once in 350 follows.
+None of them follows a thread. A followed thread that is never instrumented produces no event, which is a known Frida limitation that made a test depending on a live trace fail about once in 350 follows.
 The subject here is what the bridge does with the agent's answer, so each test registers a real loaded
 script in the bridge's Stalker bookkeeping by hand, with the acknowledgement already given, never given,
 or carrying an error, and makes the agent stop answering with a real script that spins. Real traces are

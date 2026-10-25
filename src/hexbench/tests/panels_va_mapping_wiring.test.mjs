@@ -3,7 +3,7 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates BE-2: wiring add_va_mapping and remove_va_mapping into the VA panel,
+ * Gates the VA mapping wiring: add_va_mapping and remove_va_mapping in the VA panel,
  * and showing the virtual address beside the caret's file offset in the
  * status bar when a mapping covers it.
  *
@@ -12,7 +12,7 @@
  * caret moved before the reply arrived) must never overwrite a fresher
  * reading, and "no mapping covers this offset" - which the engine reports as
  * `null`, not an error - must hide the item rather than print a placeholder,
- * per UX-3's rule that an unmeasured value is absent, never a dash. The panel
+ * per the status bar's rule that an unmeasured value is absent, never a dash. The panel
  * and markup wiring these pure functions feed cannot be exercised the same
  * way without reconstructing api.js's HTTP layer and a live document, so
  * those parts are read as text, the same technique panels_document_scope and
@@ -253,7 +253,7 @@ check(
   'vaMappingsPanel(env) is no longer passed to bench.registerPanel, or its id changed',
 );
 
-/* Per the correction recorded for this stage: list_va_mappings returns plain
+/* list_va_mappings returns plain
  * (file_offset, virtual_address, length) triples - intellicrack-hexcore/src/lib.rs
  * carries no per-mapping section, protection or backing-module field, and the
  * catalogue exposes no operation that could derive one. A "Section" column

@@ -2,9 +2,8 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave 5 falsifiable gates for model_loader, gpu_pci_resources, and xpu_utils.
+"""Falsifiable gates for model_loader, gpu_pci_resources, and xpu_utils.
 
-Covers group-08-report Section 10 findings 21-26, 29-31, and 32-43.
 Every gate is falsified by the named one-line production mutation.
 """
 
@@ -43,9 +42,7 @@ _GIB: int = 1024 * 1024 * 1024
 _IS_WINDOWS: bool = sys.platform == "win32"
 
 
-# ---------------------------------------------------------------------------
 # Private-function call helpers
-# ---------------------------------------------------------------------------
 
 
 def _free_model_resources(loaded_model: LoadedModel) -> None:
@@ -321,9 +318,7 @@ def _call_get_windows_gpu_info() -> list[dict[str, str]]:
     return fn()
 
 
-# ---------------------------------------------------------------------------
 # Shared test infrastructure
-# ---------------------------------------------------------------------------
 
 
 class _EvalObj:
@@ -499,9 +494,7 @@ def _make_fake_pm(result: _FakeProcResult) -> type:
     return _FakePM
 
 
-# ---------------------------------------------------------------------------
-# Finding 21 — ModelCache._make_key uses '::' separator
-# ---------------------------------------------------------------------------
+# ModelCache._make_key uses '::' separator
 
 
 class TestModelCacheMakeKey:
@@ -511,7 +504,7 @@ class TestModelCacheMakeKey:
     def test_double_colon_separator_matches_report_oracle() -> None:
         """_make_key('m','float16','xpu') must equal 'm::float16::xpu'.
 
-        Oracle: the group-08-report row specifies ``assert ModelCache._make_key("m","float16","xpu") == "m::float16::xpu"``; the ``::``
+        Oracle: the expected key format is ``assert ModelCache._make_key("m","float16","xpu") == "m::float16::xpu"``; the ``::``
         join is the only separator consistent with that example.
         Mutation: changing ``::`` to ``:`` yields ``"m:float16:xpu"``, failing ``== "m::float16::xpu"``.
         """
@@ -532,9 +525,7 @@ class TestModelCacheMakeKey:
         assert make_key("m", "float16", "xpu") != make_key("m", "xpu", "float16")
 
 
-# ---------------------------------------------------------------------------
-# Finding 22 — _free_model_resources: gc.collect + attribute deletion
-# ---------------------------------------------------------------------------
+# _free_model_resources: gc.collect + attribute deletion
 
 
 class TestFreeModelResources:
@@ -575,9 +566,7 @@ class TestFreeModelResources:
         assert not hasattr(loaded, "tokenizer")
 
 
-# ---------------------------------------------------------------------------
-# Finding 23 — _unload_model: exception path swallowed and logged
-# ---------------------------------------------------------------------------
+# _unload_model: exception path swallowed and logged
 
 
 class TestUnloadModelExceptionPath:
@@ -621,9 +610,7 @@ class TestUnloadModelExceptionPath:
         assert any(e["event"] == "model_unload_failed" for e in warning_events)
 
 
-# ---------------------------------------------------------------------------
-# Finding 24 — _load_xpu_model_impl: ImportError when deps missing
-# ---------------------------------------------------------------------------
+# _load_xpu_model_impl: ImportError when deps missing
 
 
 class TestLoadXpuModelImplMissingDeps:
@@ -643,9 +630,7 @@ class TestLoadXpuModelImplMissingDeps:
             _load_xpu_model_impl(config=config, dtype_str="float16", start_time=time.perf_counter(), cache=None)
 
 
-# ---------------------------------------------------------------------------
-# Finding 25 — load_model_for_cpu: cache-hit and error paths
-# ---------------------------------------------------------------------------
+# load_model_for_cpu: cache-hit and error paths
 
 
 class TestLoadModelForCpu:
@@ -687,9 +672,7 @@ class TestLoadModelForCpu:
             load_model_for_cpu(config)
 
 
-# ---------------------------------------------------------------------------
-# Finding 26 — _load_cpu_model_impl: quantization and dtype dispatch
-# ---------------------------------------------------------------------------
+# _load_cpu_model_impl: quantization and dtype dispatch
 
 
 class TestLoadCpuModelImplQuantization:
@@ -803,9 +786,7 @@ class TestLoadCpuModelImplQuantization:
         assert result.dtype == "float32"
 
 
-# ---------------------------------------------------------------------------
-# Finding 29 — _locate_devnode: success vs failure against real cfgmgr32
-# ---------------------------------------------------------------------------
+# _locate_devnode: success vs failure against real cfgmgr32
 
 
 @pytest.mark.skipif(not _IS_WINDOWS, reason="cfgmgr32 is Windows-only")
@@ -847,9 +828,7 @@ class TestLocateDevnode:
         assert devinst > 0
 
 
-# ---------------------------------------------------------------------------
-# Finding 30 — _read_descriptor_bytes: zero-size and error-code paths
-# ---------------------------------------------------------------------------
+# _read_descriptor_bytes: zero-size and error-code paths
 
 
 @pytest.mark.skipif(not _IS_WINDOWS, reason="cfgmgr32 WINFUNCTYPE callbacks require Windows")
@@ -1009,9 +988,7 @@ class TestReadDescriptorBytes:
         assert result == payload
 
 
-# ---------------------------------------------------------------------------
-# Finding 31 — _enumerate_bars_for_log_conf: ResType_MEM vs ResType_MemLarge
-# ---------------------------------------------------------------------------
+# _enumerate_bars_for_log_conf: ResType_MEM vs ResType_MemLarge
 
 
 @pytest.mark.skipif(not _IS_WINDOWS, reason="cfgmgr32 WINFUNCTYPE callbacks require Windows")
@@ -1112,9 +1089,7 @@ class TestEnumerateBarsForLogConf:
         assert calls.get(mem_large_type, 0) >= 1, "MEM_LARGE type iterator must have been attempted"
 
 
-# ---------------------------------------------------------------------------
-# Finding 32 — _get_device_name_from_sycl: name extraction and error fallback
-# ---------------------------------------------------------------------------
+# _get_device_name_from_sycl: name extraction and error fallback
 
 
 class TestGetDeviceNameFromSycl:
@@ -1155,9 +1130,7 @@ class TestGetDeviceNameFromSycl:
         assert not result
 
 
-# ---------------------------------------------------------------------------
-# Finding 33 — _query_windows_gpus: malformed JSON and subprocess failure
-# ---------------------------------------------------------------------------
+# _query_windows_gpus: malformed JSON and subprocess failure
 
 
 class TestQueryWindowsGpus:
@@ -1228,9 +1201,7 @@ class TestQueryWindowsGpus:
         assert set(entries[0].keys()) == {"name", "pnp_device_id", "driver_version"}
 
 
-# ---------------------------------------------------------------------------
-# Finding 35 — _extract_torch_xpu_properties: exact field extraction
-# ---------------------------------------------------------------------------
+# _extract_torch_xpu_properties: exact field extraction
 
 
 class TestExtractTorchXpuProperties:
@@ -1268,9 +1239,7 @@ class TestExtractTorchXpuProperties:
         assert device_name == "Pre-existing Name"
 
 
-# ---------------------------------------------------------------------------
-# Finding 36 — _enrich_from_windows_gpus: early-return and WMI enrichment
-# ---------------------------------------------------------------------------
+# _enrich_from_windows_gpus: early-return and WMI enrichment
 
 
 class TestEnrichFromWindowsGpus:
@@ -1315,9 +1284,7 @@ class TestEnrichFromWindowsGpus:
         assert dev_id == "e20b"
 
 
-# ---------------------------------------------------------------------------
-# Finding 37 — _build_xpu_device_info: XPUDeviceInfo field assembly
-# ---------------------------------------------------------------------------
+# _build_xpu_device_info: XPUDeviceInfo field assembly
 
 
 class TestBuildXpuDeviceInfo:
@@ -1375,9 +1342,7 @@ class TestBuildXpuDeviceInfo:
         assert result is None
 
 
-# ---------------------------------------------------------------------------
-# Finding 39 — clear_xpu_cache: no-op on no-XPU, empty_cache called on XPU
-# ---------------------------------------------------------------------------
+# clear_xpu_cache: no-op on no-XPU, empty_cache called on XPU
 
 
 class TestClearXpuCache:
@@ -1410,9 +1375,7 @@ class TestClearXpuCache:
         assert len(calls) == 1
 
 
-# ---------------------------------------------------------------------------
-# Finding 40 — _pick_primary_arc_gpu: picks GPU with larger BAR
-# ---------------------------------------------------------------------------
+# _pick_primary_arc_gpu: picks GPU with larger BAR
 
 
 class TestPickPrimaryArcGpu:
@@ -1464,9 +1427,7 @@ class TestPickPrimaryArcGpu:
         assert _call_pick_primary_arc_gpu(gpus) is None
 
 
-# ---------------------------------------------------------------------------
-# Finding 41 — _check_intel_driver: True/False based on driver_version presence
-# ---------------------------------------------------------------------------
+# _check_intel_driver: True/False based on driver_version presence
 
 
 class TestCheckIntelDriver:
@@ -1509,9 +1470,7 @@ class TestCheckIntelDriver:
         assert len(msg) > 0
 
 
-# ---------------------------------------------------------------------------
-# Finding 42 — _validate_xpu_device: RuntimeError on tensor-op failure
-# ---------------------------------------------------------------------------
+# _validate_xpu_device: RuntimeError on tensor-op failure
 
 
 class TestValidateXpuDevice:
@@ -1545,9 +1504,7 @@ class TestValidateXpuDevice:
         _call_validate_xpu_device(fake_torch, device)
 
 
-# ---------------------------------------------------------------------------
-# Finding 43 — _query_xpu_memory: fallback to get_xpu_device_info when total=0
-# ---------------------------------------------------------------------------
+# _query_xpu_memory: fallback to get_xpu_device_info when total=0
 
 
 class TestQueryXpuMemory:

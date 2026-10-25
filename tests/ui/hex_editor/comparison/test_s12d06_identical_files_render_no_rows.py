@@ -2,12 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression test for defect S12-D06 (A2): spurious row on identical files.
+"""Regression test: no spurious row on identical files.
 
-The defect: ``_on_diff_finished`` computed ``diff_region_rows(regions)``
-unconditionally and populated the results tree from it regardless of the
-``files_identical`` flag returned by the engine. ``diff_region_rows`` only
-drops a region whose ``diff_type`` string equals ``MATCH_DIFF_TYPE``
+``_on_diff_finished`` must not populate the results tree from
+``diff_region_rows(regions)`` regardless of the ``files_identical`` flag
+returned by the engine. ``diff_region_rows`` only drops a region whose ``diff_type`` string equals ``MATCH_DIFF_TYPE``
 ("match"); any whole-file region that arrived with a differently-serialized
 diff type would render as a spurious row even though the "Files are
 identical" banner was correct.

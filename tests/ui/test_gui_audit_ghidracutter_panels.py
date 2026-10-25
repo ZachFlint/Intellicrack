@@ -3,13 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""GUI audit regression tests for the Ghidra and Cutter analysis panels.
+"""Tests for the Ghidra and Cutter analysis panels.
 
-Covers the remaining Ghidra/Cutter findings:
+Covers these Ghidra/Cutter behaviours:
 
-* M15 -- ``GhidraPanel._apply_cfg`` must call the graph view's ``fit_to_view``
+* ``GhidraPanel._apply_cfg`` must call the graph view's ``fit_to_view``
   after ``load_graph`` so a new CFG is fitted instead of keeping prior zoom.
-* M17 -- the function filter must debounce via a single-shot timer instead of
+* The function filter must debounce via a single-shot timer instead of
   issuing one bridge query per keystroke (both panels).
 * block_clicked -- clicking a CFG block must navigate: Ghidra disassembles the
   block address and switches to the disassembly tab; Cutter seeks to it.
@@ -173,16 +173,15 @@ def _patch_dispatch(module: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None
 
 @pytest.mark.usefixtures("qapp")
 class TestApplyCfgFitsView:
-    """M15: _apply_cfg must fit the graph view after loading a new CFG."""
+    """_apply_cfg must fit the graph view after loading a new CFG."""
 
     @staticmethod
     def test_apply_cfg_calls_fit_to_view(monkeypatch: pytest.MonkeyPatch) -> None:
         """Loading basic blocks into the CFG view must trigger fit_to_view once.
 
-        Regression: Ghidra loaded the graph but never fitted it, so a new CFG
-        inherited the previous function's zoom and scroll. Cutter already fits;
-        Ghidra must match. Reverting the fix removes the fit_to_view call and
-        drops the recorder count to zero.
+        Ghidra loaded the graph but never fitted it, so a new CFG inherited the
+        previous function's zoom and scroll. Cutter already fits, and Ghidra must
+        match it. Without a fit_to_view call the recorder count stays at zero.
         """
         panel = GhidraPanel()
         assert isinstance(panel._cfg_view, CFGGraphView)
@@ -196,15 +195,15 @@ class TestApplyCfgFitsView:
 
 @pytest.mark.usefixtures("qapp")
 class TestFilterDebounce:
-    """M17: rapid typing must produce one query after the pause, not one per key."""
+    """Rapid typing must produce one query after the pause, not one per key."""
 
     @staticmethod
     def test_ghidra_filter_is_debounced(monkeypatch: pytest.MonkeyPatch) -> None:
         """Ten keystrokes must issue zero queries until the debounce timer fires.
 
-        Regression: ``textChanged`` was wired straight to ``_on_refresh_functions``,
+        ``textChanged`` must not be wired straight to ``_on_refresh_functions``,
         firing a full bridge RPC per keystroke (10 concurrent, out-of-order
-        queries). The fix debounces through a single-shot timer. Without it, the
+        queries). The filter must debounce through a single-shot timer. Without it, the
         ``get_functions_calls == []`` assertion sees 10 calls and fails.
 
         Args:
@@ -258,8 +257,8 @@ class TestBlockClickNavigation:
     def test_ghidra_block_click_disassembles_and_switches_tab(monkeypatch: pytest.MonkeyPatch) -> None:
         """A Ghidra CFG block click must disassemble its address and show the disasm tab.
 
-        Regression: ``block_clicked`` was emitted but connected nowhere, so
-        clicking a block did nothing. The fix wires it to a navigation handler.
+        ``block_clicked`` must be connected to a handler, since otherwise
+        clicking a block does nothing. It must be wired to a navigation handler.
 
         Args:
             monkeypatch: Pytest monkeypatch fixture for patching the dispatcher.
@@ -310,8 +309,8 @@ class TestEsilLatchReset:
     def test_binary_load_resets_esil_latch() -> None:
         """Loading a new binary via the panel hook must reset the ESIL latch.
 
-        Regression: the latch stayed True across binaries, so ESIL eval/step ran
-        against the previous binary's memory layout. The load hook now resets it.
+        The latch must not stay True across binaries, since ESIL eval/step would run
+        against the previous binary's memory layout. The load hook resets it.
         """
         panel = CutterPanel()
         panel._esil_tab._esil_initialised = True
@@ -372,10 +371,10 @@ class TestGhidraDeletePromptStaticTemplate:
     def test_delete_prompt_tr_source_is_static() -> None:
         """The delete confirmation must call tr on a static format template.
 
-        Regression: ``self.tr(f"Delete function '{name}' at 0x{addr:X}?")`` passed
-        a runtime-built string to tr, so the interpolated address became part of
-        the translation key and defeated i18n. The fix translates a static
-        template and substitutes afterwards. This inspects the module source so
+        ``self.tr(f"Delete function '{name}' at 0x{addr:X}?")`` must not pass
+        a runtime-built string to tr, since the interpolated address would become part of
+        the translation key and defeat i18n. The text must come from a static
+        template with substitution afterwards. This inspects the module source so
         reintroducing the f-string turns the test red.
         """
         source_path = ghidra_module.__file__

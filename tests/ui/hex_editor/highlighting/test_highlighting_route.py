@@ -2,13 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for F-0002 (highlight rules route through bridge) and F-0015 (single update call).
+"""Tests for highlight rules routing through the bridge and a single widget update on refresh.
 
-F-0002: GUI add/remove operations must route through HexEditorBridge.add_highlight_rule /
+GUI add/remove operations must route through HexEditorBridge.add_highlight_rule /
 remove_highlight_rule rather than writing to the widget directly.  The widget must be updated
 via the state_holder HIGHLIGHT_RULE_ADDED / HIGHLIGHT_RULE_REMOVED notification path.
 
-F-0015: refresh_pattern_highlights must call _hex_widget.update() exactly once per invocation.
+refresh_pattern_highlights must call _hex_widget.update() exactly once per invocation.
 """
 
 from __future__ import annotations
@@ -548,7 +548,7 @@ def qapp() -> QApplication:
 
 
 class TestAddHighlightRoutesThoughBridge:
-    """F-0002: _on_add_highlight_rule must dispatch to bridge.add_highlight_rule.
+    """_on_add_highlight_rule must dispatch to bridge.add_highlight_rule.
 
     Two distinct gates are exercised:
 
@@ -706,7 +706,7 @@ class TestAddHighlightRoutesThoughBridge:
 
 
 class TestRemoveHighlightRoutesThoughBridge:
-    """F-0002: _on_remove_highlight_rule must dispatch to bridge.remove_highlight_rule.
+    """_on_remove_highlight_rule must dispatch to bridge.remove_highlight_rule.
 
     Two distinct gates are exercised:
 
@@ -882,7 +882,7 @@ class TestRemoveHighlightRoutesThoughBridge:
 
 
 class TestListHighlightsSeedsWidget:
-    """F-0002: seed_highlights_from_bridge must populate widget from bridge state."""
+    """seed_highlights_from_bridge must populate widget from bridge state."""
 
     def test_list_highlights_seeds_widget(
         self,
@@ -953,7 +953,7 @@ class TestListHighlightsSeedsWidget:
 
 
 class TestRefreshPatternHighlightsCallsUpdateOnce:
-    """F-0015: refresh_pattern_highlights must call _hex_widget.update() exactly once."""
+    """refresh_pattern_highlights must call _hex_widget.update() exactly once."""
 
     def test_refresh_pattern_highlights_calls_update_once(self, qapp: QApplication) -> None:
         """Verify that refresh_pattern_highlights calls update() exactly once and applies offsets.

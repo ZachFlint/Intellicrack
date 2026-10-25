@@ -3,14 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit7 F-0031 regression tests for ``QEMUSandbox._wait_for_logs_stable``.
+"""Regression tests for ``QEMUSandbox._wait_for_logs_stable``.
 
 These tests verify that the readiness check correctly waits until the
 monitoring log files have stopped growing, replacing the prior hardcoded
 ``asyncio.sleep(2)`` in ``run_binary``.
 
 The growth being watched here is a file on the host side of the share, which is
-where the guest writes its logs on the virtio-9p transport. Since S17-D69 the
+where the guest writes its logs on the virtio-9p transport. Since the
 FAT transport - every Windows host - exposes that share read-only and the guest
 writes to its own disk instead, so the sizes are read out of the guest over the
 agent rather than stat'ed here; that path is gated in
@@ -54,7 +54,7 @@ def posix_host(monkeypatch: pytest.MonkeyPatch) -> None:
 class _TestQEMUSandbox(QEMUSandbox):
     """QEMUSandbox subclass that exposes private state and method for tests.
 
-    This is the same pattern used by the audit4 QEMU sandbox tests: a
+    This is the same pattern used by the other QEMU sandbox tests: a
     subclass adds public accessors for state owned by the parent class so
     that tests can interact with private members without triggering
     ``reportPrivateUsage`` from basedpyright.

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S18-D06: a failed start must not leave a VM or its overlay behind.
+r"""A failed start must not leave a VM or its overlay behind.
 
 ``QEMUSandbox.start`` calls ``_cleanup`` when a later step fails, and the launch
 itself is not that step - by the time the guest agent is being attached the VM

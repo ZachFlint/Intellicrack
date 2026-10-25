@@ -2,15 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit4 C7 (F-0003): hex editor bookmarks notify state holder.
+"""Hex editor bookmark add and remove notify the state holder.
 
-These tests guard against the regression where :meth:`BookmarksMixin._on_add_bookmark`
-and :meth:`BookmarksMixin._on_remove_bookmark` mutated the document's bookmark
-metadata without calling :meth:`HexDocumentState.notify_data_modified`. Bridge
-subscribers (AI tools, peer GUIs) only learn about document state changes
-through the state-holder event bus; if the panel adds or removes a bookmark
-without firing ``notify_data_modified``, those subscribers analyse stale
-annotated state after a GUI bookmark operation.
+:meth:`BookmarksMixin._on_add_bookmark` and :meth:`BookmarksMixin._on_remove_bookmark`
+must call :meth:`HexDocumentState.notify_data_modified` after mutating the document's
+bookmark metadata. Bridge subscribers (AI tools, peer GUIs) only learn about document
+state changes through the state-holder event bus, so a bookmark operation that skips
+the notify leaves them analysing stale annotated state.
 
 The add-path tests drive the *real* production handler
 :meth:`BookmarksMixin._on_add_bookmark` end to end, faking only the two Qt modal
@@ -128,9 +126,8 @@ class _RecordingState(HexDocumentState):
 class _RaisingState(HexDocumentState):
     """A real :class:`HexDocumentState` whose ``notify_data_modified`` always raises.
 
-    Used to prove the panel never dispatches a bookmark notification when no
-    usable state holder is attached: if the production guard were removed and
-    the handler dispatched anyway, the raise would surface as a test failure.
+    Turns any dispatch into a test failure, so a test can assert that no
+    notification reaches an attached holder.
     """
 
     @override
@@ -422,11 +419,10 @@ class TestAddBookmarkNotifies:
 
         The handler runs end to end with ``state_holder=None``: the bookmark
         must still be created in the document (proving the handler body
-        executed) and no exception may escape. The notify guard itself is then
-        proven falsifiable by first attaching a :class:`_RaisingState` (a real
-        holder whose ``notify_data_modified`` always raises) and confirming the
-        helper does dispatch to it, then clearing the holder to None and
-        confirming the helper short-circuits silently.
+        executed) and no exception may escape. The notify helper is then
+        checked directly: a :class:`_RaisingState` (a real holder whose
+        ``notify_data_modified`` always raises) must receive the dispatch, and
+        clearing the holder to None must make the helper short-circuit silently.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
@@ -588,12 +584,7 @@ class TestRemoveBookmarkNotifies:
 
 @pytest.mark.usefixtures("qapp")
 class TestBookmarksModuleSourceContainsNotifyMarkers:
-    """Static guard: the bookmarks module must reference the notify helper.
-
-    Prevents the regression from sneaking back in via a refactor that
-    removes the notify calls without replacing them with the bridge's own
-    dispatch.
-    """
+    """Static check: the bookmarks module must reference the notify helper and both source literals."""
 
     @staticmethod
     def test_bookmarks_module_references_notify_helper() -> None:

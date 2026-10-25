@@ -119,7 +119,7 @@ function offsetText(value) {
 
 function banner(kind, title, detail) {
   const node = element('div', `hb-banner is-${kind}`);
-  const glyph = { error: '!', warning: '△', success: '✓', info: 'i' }[kind] ?? 'i';
+  const glyph = { error: '!', warning: '△', success: '✓', info: 'i', truncated: '⋮' }[kind] ?? 'i';
   node.appendChild(decorativeGlyph(glyph, 'hb-banner-glyph'));
   const body = element('div', 'hb-banner-body');
   body.appendChild(element('div', 'hb-banner-title', title));
@@ -1036,16 +1036,43 @@ function diffTone(kind) {
   return DIFF_TONES.get(kind) ?? '';
 }
 
+/**
+ * How many of a comparison's regions came back in the list, and how many the
+ * engine counted.
+ *
+ * The engine lists at most `max_regions` regions and counts the rest, so the
+ * two differ exactly when the result was cut short. A result from an engine
+ * that does not report `region_count` is taken to be complete.
+ *
+ * @param {object} value A `diff_bytes`/`diff_files` result.
+ * @returns {{listed: number, counted: number, unlisted: number}} Regions in the
+ *     list, regions the engine produced, and the difference between them.
+ */
+export function regionAccounting(value) {
+  const listed = Array.isArray(value?.regions) ? value.regions.length : 0;
+  const counted = Number.isSafeInteger(value?.region_count) ? Math.max(value.region_count, listed) : listed;
+  return { listed, counted, unlisted: counted - listed };
+}
+
 function renderDiff(name, result, ctx) {
   const value = result.value ?? {};
   const regions = Array.isArray(value.regions) ? value.regions : [];
   const root = element('div', 'hb-stack');
 
+  const { counted, unlisted } = regionAccounting(value);
+
   root.appendChild(banner(
     value.files_identical ? 'success' : 'warning',
     value.files_identical ? 'The two inputs are identical' : `${value.total_differences} difference${value.total_differences === 1 ? '' : 's'}`,
-    `${regions.length} region${regions.length === 1 ? '' : 's'} in the alignment.`,
+    `${counted} region${counted === 1 ? '' : 's'} in the alignment.`,
   ));
+  if (unlisted > 0) {
+    root.appendChild(banner(
+      'truncated',
+      `Showing ${regions.length} of ${counted} regions`,
+      `${unlisted} more are counted but not listed, and every differing byte is in the total above. Pass a larger max_regions to list more, or a larger min_match to merge nearby changes.`,
+    ));
+  }
 
   const focus = (region) => {
     ctx.select(region.offset_a ?? 0, Math.max(1, region.length ?? 1));

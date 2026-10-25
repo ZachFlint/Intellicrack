@@ -2,48 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave-5 falsifiable gates for FridaBridge — advanced instrumentation band.
+"""Falsifiable gates for FridaBridge advanced instrumentation.
 
-Closes the 35 STILL-OPEN findings from the Group-04 report:
-
-    #1   is_available
-    #5   detach(kill_spawned)
-    #6   get_hooks
-    #7   execute_script (public surface)
-    #8   unload_all_scripts
-    #9   set_message_handler
-    #11  resume_child — error-path match=
-    #13  post_message
-    #14  eternalize_script
-    #16  create_cancellable
-    #17  cancel
-    #20  enumerate_symbols
-    #21  load_module
-    #22  find_module_by_address
-    #23  find_functions_matching
-    #24  disassemble_instruction
-    #25  get_backtrace
-    #26  set_exception_handler
-    #27  revert_hook
-    #28  flush_interceptor
-    #29  call_system_function
-    #30  stalker_add_call_probe
-    #31  stalker_remove_call_probe
-    #32  enumerate_applications
-    #33  inject_library_file
-    #34  inject_library_blob
-    #46  create_cmodule
-    #64  cloak_add_thread
-    #65  cloak_remove_thread
-    #66  cloak_add_range
-    #67  cloak_remove_range
-    #68  monitor_path
-    #69  stop_monitor
-    #70  enumerate_exports not-found error path (match=)
-    #71  stalker_follow / stalker_unfollow — deterministic offline gate
-
-Every test drives the real production code path.  Frida transport is replaced
-by in-file fake doubles.  No unittest.mock is used.  Every assertion is on an
+Every test drives the real production code path. Frida transport is replaced
+by in-file fake doubles. No unittest.mock is used. Every assertion is on an
 exact, independently-computed value.
 """
 
@@ -75,9 +37,7 @@ if TYPE_CHECKING:
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-# ---------------------------------------------------------------------------
 # Oracle constants — chosen independently of the production code
-# ---------------------------------------------------------------------------
 
 _ATTACH_PID: int = 7777
 _PROBE_ADDRESS: int = 0xABC0_0000
@@ -122,9 +82,7 @@ _STALKER_CALL_EVENT: dict[str, object] = {
 _STALKER_TID: int = 9999
 
 
-# ---------------------------------------------------------------------------
 # Minimal fake Frida doubles
-# ---------------------------------------------------------------------------
 
 
 class _FakeScriptW5:
@@ -345,7 +303,7 @@ class _FakeFileMonitor:
 class _StalkerInjectScript:
     """Fake Frida script that injects stalker events synchronously during load().
 
-    Used by the deterministic stalker_follow/stalker_unfollow gate (#71) to
+    Used by the deterministic stalker_follow/stalker_unfollow gate to
     avoid any ``time.sleep`` / wall-clock dependency.  On ``load()``, the script
     delivers a ``stalker_started`` message and one ``stalker_batch`` containing
     known events to the registered handler.  ``_set_event_threadsafe`` then
@@ -451,9 +409,7 @@ class _StalkerSession:
         """No-op detach."""
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 
 def _run(coro: Coroutine[object, object, object]) -> object:
@@ -586,11 +542,6 @@ def _patch_exec(bridge: FridaBridge, fixed_result: dict[str, object]) -> list[st
     return captured
 
 
-# ---------------------------------------------------------------------------
-# Finding #1 — is_available()
-# ---------------------------------------------------------------------------
-
-
 def test_is_available_returns_true_when_device_accessible() -> None:
     """``is_available()`` returns True when ``frida.get_local_device`` succeeds.
 
@@ -635,11 +586,6 @@ def test_is_available_returns_false_when_device_raises_oserror() -> None:
         setattr(frida, "get_local_device", original)
 
 
-# ---------------------------------------------------------------------------
-# Finding #5 — detach(kill_spawned)
-# ---------------------------------------------------------------------------
-
-
 def test_detach_calls_session_detach_exactly_once_and_clears_session() -> None:
     """``detach()`` calls session.detach() once and sets ``bridge._session`` to None.
 
@@ -652,11 +598,6 @@ def test_detach_calls_session_detach_exactly_once_and_clears_session() -> None:
     assert sess.detach_calls == 1, f"session.detach() must be called once, got {sess.detach_calls}"
     session_after = _get(bridge, "_session")
     assert session_after is None, f"bridge._session must be None after detach, got {session_after!r}"
-
-
-# ---------------------------------------------------------------------------
-# Finding #6 — get_hooks()
-# ---------------------------------------------------------------------------
 
 
 def test_get_hooks_returns_hook_with_correct_id_and_target() -> None:
@@ -673,11 +614,6 @@ def test_get_hooks_returns_hook_with_correct_id_and_target() -> None:
     assert len(result) == 1, f"get_hooks() must return 1 hook, got {len(result)}"
     assert result[0].id == hook_id, f"hook id mismatch: {result[0].id!r} != {hook_id!r}"
     assert result[0].target == "0x10001000", f"hook target mismatch: {result[0].target!r}"
-
-
-# ---------------------------------------------------------------------------
-# Finding #7 — execute_script(script)
-# ---------------------------------------------------------------------------
 
 
 def test_execute_script_returns_str_of_canned_result() -> None:
@@ -705,11 +641,6 @@ def test_execute_script_raises_on_error_payload() -> None:
         _run(bridge.execute_script("bad_js()"))
 
 
-# ---------------------------------------------------------------------------
-# Finding #8 — unload_all_scripts()
-# ---------------------------------------------------------------------------
-
-
 def test_unload_all_scripts_clears_scripts_dict_and_calls_unload_on_each() -> None:
     """``unload_all_scripts()`` empties ``_scripts`` and calls unload() on every script.
 
@@ -728,11 +659,6 @@ def test_unload_all_scripts_clears_scripts_dict_and_calls_unload_on_each() -> No
     assert len(scripts_after) == 0, f"_scripts must be empty after unload_all, got {len(scripts_after)} entries"
     assert s1.unload_calls == 1, f"script s1 unload() must be called once, got {s1.unload_calls}"
     assert s2.unload_calls == 1, f"script s2 unload() must be called once, got {s2.unload_calls}"
-
-
-# ---------------------------------------------------------------------------
-# Finding #9 — set_message_handler(handler)
-# ---------------------------------------------------------------------------
 
 
 def test_dispatch_message_calls_registered_handler_with_exact_dict() -> None:
@@ -763,17 +689,10 @@ def test_dispatch_message_calls_registered_handler_with_exact_dict() -> None:
     assert delivered[0] == expected, f"dispatched payload mismatch: {delivered[0]!r} != {expected!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #11 — resume_child(pid) error path with match=
-# ---------------------------------------------------------------------------
-
-
 def test_resume_child_raises_toolerror_matching_child_gating_failed() -> None:
     """``resume_child()`` raises ToolError whose message matches 'child gating'.
 
-    The bare ``pytest.raises(ToolError)`` in the existing test accepts *any*
-    ToolError; this gate pins the exact message so a different ToolError
-    (e.g. 'not attached') would not satisfy the assertion.
+    Pins the exact message with match= so a different ToolError does not satisfy the assertion.
 
     Falsifiable: if the except block raises ToolError('not attached') instead
     of ToolError('child gating operation failed') the match= pattern rejects it.
@@ -782,11 +701,6 @@ def test_resume_child_raises_toolerror_matching_child_gating_failed() -> None:
     bridge, _, _ = _build_attached_bridge_with_device(dev)
     with pytest.raises(ToolError, match=r"child gating operation failed"):
         _run(bridge.resume_child(99999))
-
-
-# ---------------------------------------------------------------------------
-# Finding #13 — post_message(script_id, message)
-# ---------------------------------------------------------------------------
 
 
 def test_post_message_posts_parsed_json_to_script() -> None:
@@ -817,11 +731,6 @@ def test_post_message_unknown_script_id_raises_toolerror() -> None:
         _run(bridge.post_message("nonexistent", json.dumps({"x": 1})))
 
 
-# ---------------------------------------------------------------------------
-# Finding #14 — eternalize_script(script_id)
-# ---------------------------------------------------------------------------
-
-
 def test_eternalize_script_calls_eternalize_and_removes_from_registry() -> None:
     """``eternalize_script()`` calls ``script.eternalize()`` once and removes from ``_scripts``.
 
@@ -840,11 +749,6 @@ def test_eternalize_script_calls_eternalize_and_removes_from_registry() -> None:
     assert script_id not in scripts, "script_id must be removed from _scripts after eternalize, still present"
 
 
-# ---------------------------------------------------------------------------
-# Finding #16 — create_cancellable()
-# ---------------------------------------------------------------------------
-
-
 def test_create_cancellable_registers_token_in_cancellables() -> None:
     """``create_cancellable()`` stores a real ``frida.Cancellable`` under the returned id.
 
@@ -859,11 +763,6 @@ def test_create_cancellable_registers_token_in_cancellables() -> None:
     assert len(token_id) > 0, f"create_cancellable must return non-empty str id, got {token_id!r}"
     cancellables = _get_dict(bridge, "_cancellables")
     assert token_id in cancellables, f"returned id {token_id!r} must be registered in _cancellables, keys={list(cancellables)!r}"
-
-
-# ---------------------------------------------------------------------------
-# Finding #17 — cancel(cancellable_id)
-# ---------------------------------------------------------------------------
 
 
 def test_cancel_known_id_returns_true_and_removes_token() -> None:
@@ -894,10 +793,6 @@ def test_cancel_unknown_id_returns_false() -> None:
     assert result is False, f"cancel(unknown_id) must return False, got {result!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #20 — enumerate_symbols(module_name)
-# ---------------------------------------------------------------------------
-
 _SYM_NAME: str = "CreateFileW"
 _SYM_TYPE: str = "function"
 
@@ -927,11 +822,6 @@ def test_enumerate_symbols_embeds_module_name_and_parses_canned_symbols() -> Non
     assert result[0].address == _SYM_ADDRESS, f"symbol address mismatch: {result[0].address:#x} != {_SYM_ADDRESS:#x}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #21 — load_module(path)
-# ---------------------------------------------------------------------------
-
-
 def test_load_module_embeds_module_load_in_js_and_parses_result() -> None:
     """``load_module()`` emits 'Module.load' in JS and returns parsed ModuleInfo.
 
@@ -956,11 +846,6 @@ def test_load_module_embeds_module_load_in_js_and_parses_result() -> None:
     assert result.name == _MODULE_NAME, f"module name mismatch: {result.name!r} != {_MODULE_NAME!r}"
     assert result.base_address == _MODULE_BASE, f"base address mismatch: {result.base_address:#x} != {_MODULE_BASE:#x}"
     assert result.size == _MODULE_SIZE, f"module size mismatch: {result.size} != {_MODULE_SIZE}"
-
-
-# ---------------------------------------------------------------------------
-# Finding #22 — find_module_by_address(address)
-# ---------------------------------------------------------------------------
 
 
 def test_find_module_by_address_embeds_address_and_parses_module_info() -> None:
@@ -1000,10 +885,6 @@ def test_find_module_by_address_returns_none_when_not_found() -> None:
     assert result is None, f"find_module_by_address must return None when not found, got {result!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #23 — find_functions_matching(pattern)
-# ---------------------------------------------------------------------------
-
 _FUNC_PATTERN: str = "CreateFile*"
 _FUNC_ADDR: int = 0x7FFE_5678
 
@@ -1036,10 +917,6 @@ def test_find_functions_matching_embeds_pattern_and_parses_addresses() -> None:
     assert result[0].address == _FUNC_ADDR, f"address mismatch: {result[0].address:#x} != {_FUNC_ADDR:#x}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #24 — disassemble_instruction(address)
-# ---------------------------------------------------------------------------
-
 _INSN_MNEMONIC: str = "mov"
 _INSN_OP_STR: str = "eax, ecx"
 _INSN_STRING: str = "mov eax, ecx"
@@ -1070,10 +947,6 @@ def test_disassemble_instruction_parses_mnemonic_and_operands() -> None:
     assert result.address == _INSN_ADDRESS, f"address mismatch: {result.address:#x}"
     assert result.size == _INSN_SIZE, f"size mismatch: {result.size}"
 
-
-# ---------------------------------------------------------------------------
-# Finding #25 — get_backtrace(context_address, backtracer)
-# ---------------------------------------------------------------------------
 
 _BT_FRAME_ADDR: int = 0x7FFE_ABCD
 
@@ -1106,11 +979,6 @@ def test_get_backtrace_embeds_backtracer_type_and_parses_frames() -> None:
     assert result[0].address == _BT_FRAME_ADDR, f"frame address mismatch: {result[0].address:#x} != {_BT_FRAME_ADDR:#x}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #26 — set_exception_handler()
-# ---------------------------------------------------------------------------
-
-
 def test_set_exception_handler_embeds_process_set_exception_handler_and_registers() -> None:
     """``set_exception_handler()`` emits 'Process.setExceptionHandler' in JS and registers.
 
@@ -1134,11 +1002,6 @@ def test_set_exception_handler_embeds_process_set_exception_handler_and_register
     assert result_id in scripts, f"script_id {result_id!r} must be in _scripts"
 
 
-# ---------------------------------------------------------------------------
-# Finding #27 — revert_hook(target)
-# ---------------------------------------------------------------------------
-
-
 def test_revert_hook_embeds_interceptor_revert_in_js() -> None:
     """``revert_hook()`` emits 'Interceptor.revert' in JS and returns True.
 
@@ -1151,11 +1014,6 @@ def test_revert_hook_embeds_interceptor_revert_in_js() -> None:
     result = cast("bool", _run(bridge.revert_hook("0x10001000")))
     assert "Interceptor.revert" in captured[0], f"'Interceptor.revert' must appear in JS; source={captured[0]!r}"
     assert result is True, f"revert_hook must return True on success, got {result!r}"
-
-
-# ---------------------------------------------------------------------------
-# Finding #28 — flush_interceptor()
-# ---------------------------------------------------------------------------
 
 
 def test_flush_interceptor_embeds_interceptor_flush_in_js() -> None:
@@ -1171,10 +1029,6 @@ def test_flush_interceptor_embeds_interceptor_flush_in_js() -> None:
     assert "Interceptor.flush()" in captured[0], f"'Interceptor.flush()' must appear in JS; source={captured[0]!r}"
     assert result is True, f"flush_interceptor must return True on success, got {result!r}"
 
-
-# ---------------------------------------------------------------------------
-# Finding #29 — call_system_function(address, ...)
-# ---------------------------------------------------------------------------
 
 _SYSCALL_VALUE: int = 12345
 _SYSCALL_ERRNO: int = 5
@@ -1208,10 +1062,6 @@ def test_call_system_function_embeds_system_function_and_parses_syscall_result()
     assert result.last_error == _SYSCALL_LAST_ERROR, f"last_error mismatch: {result.last_error} != {_SYSCALL_LAST_ERROR}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #30 — stalker_add_call_probe(address, callback_code)
-# ---------------------------------------------------------------------------
-
 _PROBE_CALLBACK: str = "console.log('probe hit');"
 
 
@@ -1234,11 +1084,6 @@ def test_stalker_add_call_probe_embeds_add_call_probe_and_registers_probe() -> N
     assert str(_PROBE_ADDRESS) in source, f"address decimal {_PROBE_ADDRESS} must appear in JS; source={source!r}"
     probes = _get_dict(bridge, "_call_probes")
     assert result_id in probes, f"probe_id {result_id!r} must be in _call_probes, keys={list(probes)!r}"
-
-
-# ---------------------------------------------------------------------------
-# Finding #31 — stalker_remove_call_probe(probe_id)
-# ---------------------------------------------------------------------------
 
 
 def test_stalker_remove_call_probe_removes_probe_and_script_from_registries() -> None:
@@ -1272,10 +1117,6 @@ def test_stalker_remove_call_probe_unknown_id_returns_false() -> None:
     assert result is False, f"remove unknown probe must return False, got {result!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #32 — enumerate_applications()
-# ---------------------------------------------------------------------------
-
 _APP_IDENTIFIER: str = "com.example.testapp"
 _APP_NAME: str = "TestApp"
 _APP_PID: int = 5678
@@ -1299,11 +1140,6 @@ def test_enumerate_applications_parses_identifier_name_and_pid() -> None:
     assert result[0].pid == _APP_PID, f"pid mismatch: {result[0].pid}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #33 — inject_library_file(pid, path, entrypoint, data)
-# ---------------------------------------------------------------------------
-
-
 def test_inject_library_file_passes_correct_args_to_device_and_returns_id() -> None:
     """``inject_library_file()`` passes pid/path/entrypoint/data to device and returns the ID.
 
@@ -1321,11 +1157,6 @@ def test_inject_library_file_passes_correct_args_to_device_and_returns_id() -> N
     assert dev.inject_file_calls[0] == (_INJECT_PID, _LIB_PATH, _LIB_ENTRYPOINT, _LIB_DATA), (
         f"call args mismatch: {dev.inject_file_calls[0]!r}"
     )
-
-
-# ---------------------------------------------------------------------------
-# Finding #34 — inject_library_blob(pid, blob_hex, entrypoint, data)
-# ---------------------------------------------------------------------------
 
 
 def test_inject_library_blob_passes_decoded_bytes_to_device() -> None:
@@ -1349,11 +1180,6 @@ def test_inject_library_blob_passes_decoded_bytes_to_device() -> None:
     assert blob_bytes == _LIB_BLOB_BYTES, f"blob bytes mismatch: {blob_bytes!r} != {_LIB_BLOB_BYTES!r}"
     assert ep == _LIB_ENTRYPOINT, f"entrypoint mismatch: {ep!r}"
     assert data == _LIB_DATA, f"data mismatch: {data!r}"
-
-
-# ---------------------------------------------------------------------------
-# Finding #46 — create_cmodule(code, symbols)
-# ---------------------------------------------------------------------------
 
 
 def test_create_cmodule_embeds_new_cmodule_in_js_and_returns_registered_script_id() -> None:
@@ -1396,11 +1222,6 @@ def test_create_cmodule_embeds_new_cmodule_in_js_and_returns_registered_script_i
     assert script_id in scripts, f"script_id {script_id!r} must be registered in _scripts"
 
 
-# ---------------------------------------------------------------------------
-# Finding #64 — cloak_add_thread(thread_id)
-# ---------------------------------------------------------------------------
-
-
 def test_cloak_add_thread_embeds_cloak_add_thread_with_tid_decimal() -> None:
     """``cloak_add_thread()`` emits 'Cloak.addThread' with the thread_id as decimal.
 
@@ -1417,11 +1238,6 @@ def test_cloak_add_thread_embeds_cloak_add_thread_with_tid_decimal() -> None:
         f"'Cloak.addThread({_CLOAK_THREAD_ID})' must appear in JS; source={captured[0]!r}"
     )
     assert result is True, f"cloak_add_thread must return True, got {result!r}"
-
-
-# ---------------------------------------------------------------------------
-# Finding #65 — cloak_remove_thread(thread_id)
-# ---------------------------------------------------------------------------
 
 
 def test_cloak_remove_thread_embeds_cloak_remove_thread_with_tid_decimal() -> None:
@@ -1441,11 +1257,6 @@ def test_cloak_remove_thread_embeds_cloak_remove_thread_with_tid_decimal() -> No
     assert result is True, f"cloak_remove_thread must return True, got {result!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #66 — cloak_add_range(address, size)
-# ---------------------------------------------------------------------------
-
-
 def test_cloak_add_range_embeds_cloak_add_range_with_address_and_size() -> None:
     """``cloak_add_range()`` emits 'Cloak.addRange' with address and size as decimals.
 
@@ -1463,11 +1274,6 @@ def test_cloak_add_range_embeds_cloak_add_range_with_address_and_size() -> None:
     assert result is True, f"cloak_add_range must return True, got {result!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #67 — cloak_remove_range(address, size)
-# ---------------------------------------------------------------------------
-
-
 def test_cloak_remove_range_embeds_cloak_remove_range_with_address_and_size() -> None:
     """``cloak_remove_range()`` emits 'Cloak.removeRange' with address and size as decimals.
 
@@ -1481,11 +1287,6 @@ def test_cloak_remove_range_embeds_cloak_remove_range_with_address_and_size() ->
     assert str(_CLOAK_ADDRESS) in captured[0], f"address decimal {_CLOAK_ADDRESS} must appear in JS; source={captured[0]!r}"
     assert str(_CLOAK_SIZE) in captured[0], f"size decimal {_CLOAK_SIZE} must appear in JS; source={captured[0]!r}"
     assert result is True, f"cloak_remove_range must return True, got {result!r}"
-
-
-# ---------------------------------------------------------------------------
-# Finding #68 — monitor_path(path)
-# ---------------------------------------------------------------------------
 
 
 def test_monitor_path_registers_monitor_id_and_enables_monitoring() -> None:
@@ -1528,11 +1329,6 @@ def test_monitor_path_registers_monitor_id_and_enables_monitoring() -> None:
         setattr(frida, "FileMonitor", original_fm)
 
 
-# ---------------------------------------------------------------------------
-# Finding #69 — stop_monitor(monitor_id)
-# ---------------------------------------------------------------------------
-
-
 def test_stop_monitor_calls_disable_and_removes_monitor_from_registry() -> None:
     """``stop_monitor()`` returns True, calls disable(), and removes the id from _file_monitors.
 
@@ -1563,16 +1359,10 @@ def test_stop_monitor_unknown_id_returns_false() -> None:
     assert result is False, f"stop_monitor(unknown) must return False, got {result!r}"
 
 
-# ---------------------------------------------------------------------------
-# Finding #70 — enumerate_exports not-found error path with match=
-# ---------------------------------------------------------------------------
-
-
 def test_enumerate_exports_module_not_found_raises_toolerror_matching_not_found() -> None:
     """``enumerate_exports()`` raises ToolError matching 'module not found' for absent modules.
 
-    The bare ``pytest.raises(ToolError)`` in the existing test accepts any
-    ToolError; this gate pins the exact message constant ``_ERR_MODULE_NOT_FOUND``.
+    Pins the exact message constant ``_ERR_MODULE_NOT_FOUND`` with match=, so a different ToolError does not satisfy the assertion.
 
     Falsifiable: if the branch raises ToolError('export not found') instead of
     ToolError('module not found') the match= pattern rejects it.
@@ -1583,16 +1373,10 @@ def test_enumerate_exports_module_not_found_raises_toolerror_matching_not_found(
         _run(bridge.enumerate_exports("this_module_is_not_loaded_zyx.dll"))
 
 
-# ---------------------------------------------------------------------------
-# Finding #71 — stalker_follow / stalker_unfollow — deterministic offline gate
-# ---------------------------------------------------------------------------
-
-
 def test_stalker_follow_unfollow_collects_events_deterministically() -> None:
     """``stalker_follow`` / ``stalker_unfollow`` collect events without any time.sleep.
 
-    Replaces ``time.sleep(1.0)`` from the existing test_frida_bridge.py tests with
-    a deterministic synchronisation: the fake session delivers ``stalker_started``
+    The fake session delivers ``stalker_started``
     and a ``stalker_batch`` payload during ``script.load()`` (on the thread-pool
     thread), which is exactly how the real Frida runtime delivers events.
 

@@ -3,8 +3,8 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates A-3: the menu bar has to implement the keyboard its `menubar` role has
- * been announcing (WCAG 2.1.1).
+ * Gates the menu bar's keyboard contract: the bar has to implement the keyboard
+ * its `menubar` role has been announcing (WCAG 2.1.1).
  *
  * `bindMenubarKeys` is a module-level function of a bar element and a small
  * controller, so it is bound to a real (small) node model here and driven with

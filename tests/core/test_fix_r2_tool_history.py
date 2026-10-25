@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 19: a cancelled turn leaves no call without its result, and an unpaired history is never sent.
+"""A cancelled turn leaves no call without its result, and an unpaired history is never sent.
 
 The gates run the real orchestrator against a real MCP server over stdio and a real OpenAI SDK client talking to a loopback endpoint.
 A turn cancelled between two tool calls, and one cancelled while its tool is still running, both leave the session as it was, and the

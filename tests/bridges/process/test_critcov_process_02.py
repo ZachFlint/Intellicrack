@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Critical-coverage tests for the ProcessBridge privilege, handle, PEB/TEB, context, SEH and enumeration paths.
+"""Coverage tests for the ProcessBridge privilege, handle, PEB/TEB, context, SEH and enumeration paths.
 
 Every test drives the real Win32 APIs through a real ``ProcessBridge``. Processes are touched only
 when they are children the test itself starts (a Python interpreter or ``cmd.exe`` blocked on stdin),

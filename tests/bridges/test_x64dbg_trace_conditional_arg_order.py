@@ -5,42 +5,13 @@
 
 """Regression gates for the conditional-trace command framing (name and argument order).
 
-x64dbg's documented ``TraceIntoConditional``/``ticnd`` and
-``TraceOverConditional``/``tocnd`` commands (help.x64dbg.com tracing
-commands) take ``arg1`` as the required break condition - tracing stops
-the instant it evaluates to a value other than 0 - and ``[arg2]`` as the
-optional maximum step count the debugger honours before giving up,
-regardless of the condition.
+x64dbg's documented ``TraceIntoConditional``/``ticnd`` and ``TraceOverConditional``/``tocnd`` commands (help.x64dbg.com tracing commands) take ``arg1`` as the required break condition, which stops tracing as soon as it evaluates to a value other than 0, and ``[arg2]`` as the optional maximum step count the debugger honours regardless of the condition.
 
-``X64DbgBridge.trace_into``/``trace_over`` used to build the command with
-those two positions swapped: ``f"TraceIntoConditional {max_steps}"``
-with ``condition`` appended, quoted, only when the caller supplied one.
-Every real call site in this codebase (the Trace panel's "Trace
-Into"/"Trace Over" buttons, and every pre-existing test in this suite)
-omits ``condition``, so the command x64dbg actually received was a bare
-integer such as ``"TraceIntoConditional 50000"``. x64dbg parses a lone
-argument as the BREAK CONDITION, and any nonzero value is "a value other
-than 0", so tracing stopped after the very first instruction instead of
-running up to ``max_steps``. The bug was invisible to every prior test
-because none of them inspect the ``exec`` command text the bridge
-actually sends - they only assert on the parsed return value.
+``X64DbgBridge.trace_into`` and ``trace_over`` must place the step count in the ``arg2`` position. A lone integer in ``arg1`` is parsed as the break condition, and any nonzero value stops the trace after the first instruction. Every call site in this codebase omits ``condition``, so the command x64dbg receives must carry the always-false sentinel ``0`` as the condition. These tests inspect the exact ``exec`` command text the bridge sends, because asserting only on the parsed return value cannot detect this framing.
 
-These tests script an in-process fake pipe client that records every
-``(command, params)`` pair the bridge emits and assert on the exact
-``exec`` command string, so a reversion to the swapped argument order -
-or any framing that lets ``max_steps`` land in the condition slot -
-fails loudly instead of passing silently.
+These tests script an in-process fake pipe client that records every ``(command, params)`` pair the bridge emits and assert on the exact ``exec`` command string, so any reversion to the swapped argument order, or any framing that lets ``max_steps`` land in the condition slot, fails loudly instead of passing silently.
 
-The same fake-pipe machinery gates ``X64DbgBridge.step_count``, which
-runs a fixed number of steps by issuing a bounded conditional trace with
-the always-false break condition ``0``. Its defect was a different
-shape: the ``0``-then-count argument order was already correct, but the
-command *name* was ``tic``/``toc``, which x64dbg registers nowhere (only
-``ticnd``/``tocnd`` and the full ``TraceIntoConditional``/
-``TraceOverConditional`` names exist), so a real plugin rejected the
-command as unknown and no stepping ran. :class:`TestStepCountCommandName`
-pins the exact documented command name alongside the ``0``-then-count
-argument order.
+The same fake-pipe machinery gates ``X64DbgBridge.step_count``, which runs a fixed number of steps by issuing a bounded conditional trace with the always-false break condition ``0``. The command name must be the full ``TraceIntoConditional`` or ``TraceOverConditional`` (or ``ticnd``/``tocnd``); ``tic`` and ``toc`` are not registered in x64dbg. :class:`TestStepCountCommandName` pins the exact documented command name alongside the ``0``-then-count argument order.
 """
 
 from __future__ import annotations
@@ -69,9 +40,7 @@ class _FakePipeClient:
     ``sent`` instance list and returns the response produced by the
     caller-supplied ``responder`` callable. The ``is_connected``
     property always returns ``True`` so the bridge never attempts a
-    real reconnect. Reproduced here rather than imported from
-    ``test_x64dbg_wave2b_trace.py``, since that file belongs to a
-    different domain and must not be modified or depended on.
+    real reconnect. The fake is defined locally so this module does not depend on another test module.
     """
 
     def __init__(
@@ -231,8 +200,7 @@ class TestTraceIntoConditionalArgumentOrder:
 
     Per help.x64dbg.com, ``TraceIntoConditional``/``ticnd`` takes
     ``arg1`` (the required break condition, stop-on-nonzero) then
-    ``[arg2]`` (the optional max step count) - not the reverse the
-    wrapper used to send.
+    ``[arg2]`` (the optional max step count) - not the reverse order.
     """
 
     async def test_condition_occupies_arg1_and_max_steps_occupies_arg2(
@@ -268,19 +236,10 @@ class TestTraceIntoConditionalArgumentOrder:
     ) -> None:
         """No condition supplied still traces up to max_steps, not a single instruction.
 
-        The original defect sent a bare ``"TraceIntoConditional
-        50000"``: x64dbg parses a lone argument as the CONDITION, and
-        any nonzero value is "other than 0", so tracing stopped after
-        one instruction. The fix sends the documented always-false
-        sentinel ``0`` as the condition (x64dbg's own Conditional
-        Tracing feature defines the break condition's default as ``0``,
-        meaning the debuggee never breaks on it) so ``max_steps``
-        genuinely gates the trace.
+        A bare ``"TraceIntoConditional 50000"`` is parsed by x64dbg with the lone argument as the CONDITION, and any nonzero value is "other than 0", so tracing stops after one instruction. The bridge sends the documented always-false sentinel ``0`` as the condition (x64dbg's own Conditional Tracing feature defines the break condition's default as ``0``, meaning the debuggee never breaks on it), so ``max_steps`` gates the trace.
 
         Independent oracle: ``"TraceIntoConditional 0, 50000"``.
-        Mutation caught: reverting to the old framing sends
-        ``"TraceIntoConditional 50000"`` (no comma, no second argument)
-        instead, which fails every assertion below.
+        Mutation caught: reverting to the bare framing sends ``"TraceIntoConditional 50000"`` (no comma, no second argument) instead, which fails every assertion below.
 
         Args:
             bridge: Fixture bridge instance.
@@ -346,7 +305,7 @@ class TestTraceOverConditionalArgumentOrder:
         instruction.
 
         Independent oracle: ``"TraceOverConditional 0, 50000"``.
-        Mutation caught: reverting to the old framing sends
+        Mutation caught: a bare framing sends
         ``"TraceOverConditional 50000"`` (no comma, no second argument)
         instead, which fails every assertion below.
 
@@ -371,14 +330,7 @@ class TestTraceOverConditionalArgumentOrder:
 class TestStepCountCommandName:
     """Command-name gates for ``step_count`` against the real conditional-trace contract.
 
-    ``step_count`` runs a fixed number of steps by issuing a bounded
-    conditional trace with the always-false break condition ``0``:
-    ``TraceIntoConditional 0, <count>`` (into) or
-    ``TraceOverConditional 0, <count>`` (over). It used to send ``tic 0,
-    <count>`` / ``toc 0, <count>``, but ``tic``/``toc`` are registered
-    nowhere in x64dbg as command names or aliases (only ``ticnd``/
-    ``tocnd`` and the full names are, per help.x64dbg.com), so a real
-    plugin rejected them as unknown commands and no stepping occurred.
+    ``step_count`` runs a fixed number of steps by issuing a bounded conditional trace with the always-false break condition ``0``: ``TraceIntoConditional 0, <count>`` (into) or ``TraceOverConditional 0, <count>`` (over). ``tic`` and ``toc`` are registered nowhere in x64dbg as command names or aliases (only ``ticnd``/``tocnd`` and the full names are, per help.x64dbg.com), so the bridge must not send them.
     """
 
     async def test_into_sends_traceintoconditional_with_condition_zero_then_count(

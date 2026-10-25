@@ -139,9 +139,8 @@ _PENDING_PEN_WIDTH: Final[float] = 1.5
 _ACTIVE_PEN_WIDTH: Final[float] = 2.0
 _VERSION_ALPHA: Final[int] = 153
 
-# --- Splash artwork generation (build_splash_image) -------------------------
-#
-# Used both to (re)generate the shipped splash.png / icons/splash.png assets
+# build_splash_image is used both to (re)generate the shipped splash.png /
+# icons/splash.png assets
 # and to regression-test that the shipped assets match. The canonical
 # "Intellicrack" wordmark is composited from a frozen PNG asset rather than
 # shaped live, so the pixel output is deterministic across machines and font

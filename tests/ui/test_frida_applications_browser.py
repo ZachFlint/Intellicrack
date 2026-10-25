@@ -3,17 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for finding T2-8b: the Frida panel's application browser.
+"""Tests for the Frida panel's application browser.
 
-``FridaBridge.enumerate_applications`` and its ``ToolFunction`` were already
-real and correct, but a human operator of the Frida panel had no GUI control
-to list installed applications at all -- the primary way to target an
-app-model process that is not yet running (the process browser only shows
-already-running processes). This adds a reachable "Applications" tab beside
-the existing "Processes" tab, wired through ``run_bridge_coroutine_logged``
-following the established process-browser pattern, with the same
-select-to-target flow for a running instance and a clear, non-misleading
-fallback for an application that has no running instance to attach to.
+``FridaBridge.enumerate_applications`` and its ``ToolFunction`` are real and correct, but the Frida panel must expose a
+reachable control to list installed applications, the primary way to target an app-model process that is not yet running (the
+process browser only shows already-running processes). The panel has an "Applications" tab beside the existing "Processes" tab,
+wired through ``run_bridge_coroutine_logged`` following the established process-browser pattern, with the same select-to-target
+flow for a running instance and a clear, non-misleading fallback for an application that has no running instance to attach to.
 
 Tests drive the real ``FridaPanel`` widget: the tab/table/button widgets are
 inspected directly (proving the control is actually reachable, not merely
@@ -120,11 +116,9 @@ def synchronous_dispatch(monkeypatch: pytest.MonkeyPatch) -> list[Coroutine[obje
 def test_applications_tab_is_reachable_beside_processes_tab() -> None:
     """Verify the Applications browser exists as a real, reachable tab.
 
-    Falsifiable: before this fix, ``FridaPanel`` had no ``_target_tabs``,
-    ``_application_table``, or ``_refresh_apps_btn`` attributes at all --
-    the process browser was the sole widget in that pane -- so this
-    construction and these attribute/type/tab-label assertions fail
-    against the pre-fix panel.
+    Falsifiable: a panel lacking the ``_target_tabs``, ``_application_table``, and
+    ``_refresh_apps_btn`` attributes, where the process browser is the sole widget in that pane, fails
+    this construction and these attribute/type/tab-label assertions.
     """
     panel = FridaPanel()
     try:
@@ -155,8 +149,7 @@ def test_populate_application_table_renders_identifier_name_and_pid() -> None:
     ``_on_application_double_click`` relies on that exact convention to
     decide whether a row can be attached to directly.
 
-    Falsifiable: before this fix, no such callback or table existed at
-    all, so constructing the panel and reading ``_application_table``
+    Falsifiable: without that callback and table, constructing the panel and reading ``_application_table``
     raises ``AttributeError``; a naive implementation rendering ``"0"``
     for a stopped application would fail the empty-PID assertion.
     """
@@ -195,8 +188,7 @@ def test_double_click_running_application_targets_and_attaches(monkeypatch: pyte
     ``_on_attach`` is monkeypatched to a spy so this test verifies routing
     without needing a real attachable process.
 
-    Falsifiable: before this fix, no ``_on_application_double_click``
-    handler existed (``AttributeError``); a broken routing that forgets to
+    Falsifiable: without an ``_on_application_double_click`` handler (``AttributeError``), a broken routing that forgets to
     call ``_on_attach`` or writes the wrong value would fail these
     assertions instead.
 

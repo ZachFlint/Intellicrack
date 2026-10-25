@@ -2,16 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-02 GUI audit fixes in ``script_manager``.
+"""Gates for ``script_manager`` splitter collapsing and script list tooltips.
 
-Each test targets one audit finding and fails against the pre-fix behaviour:
+Each test targets one defect and fails against the defective behaviour:
 
-* ``M62``: the script list/editor ``QSplitter`` must have
+* The script list/editor ``QSplitter`` must have
   ``childrenCollapsible() is False``, matching the codebase's established
-  fix (``app.py``, ``cutter_panel.py``, ``ghidra_panel.py``, ...), so
+  pattern (``app.py``, ``cutter_panel.py``, ``ghidra_panel.py``, ...), so
   dragging the handle toward the left edge cannot hide the entire script
   list and type filter.
-* ``L14``: ``ScriptListWidget._refresh_list`` must attach a tooltip
+* ``ScriptListWidget._refresh_list`` must attach a tooltip
   carrying the full, un-elided ``"[Type] Name"`` text to every list item,
   so a long user-entered script name that Qt visually elides in the
   narrow (140-250px) left panel can still be read by hovering the item.
@@ -34,12 +34,12 @@ _LONG_SCRIPT_NAME = "License Validation Bypass For XYZ Application version Two"
 def test_m62_splitter_children_not_collapsible(qapp: QApplication) -> None:
     """The script list/editor splitter must disable child collapsing.
 
-    Pre-fix, ``splitter`` was constructed with no
-    ``setChildrenCollapsible(False)`` call, so Qt's default
+    ``splitter`` must be constructed with
+    ``setChildrenCollapsible(False)`` call, since Qt's default
     ``childrenCollapsible=True`` let the handle be dragged (via
     ``moveSplitter``) past the left panel's minimum size hint, collapsing
     it -- and the entire script list plus type filter combo -- to zero
-    width. Post-fix, ``childrenCollapsible()`` is ``False`` and Qt clamps
+    width. With ``childrenCollapsible()`` as ``False``, Qt clamps
     the drag to the left pane's minimum size instead of collapsing it.
 
     Args:
@@ -72,9 +72,9 @@ def test_m62_splitter_children_not_collapsible(qapp: QApplication) -> None:
 def test_m62_left_panel_widget_stays_visible_after_extreme_drag(qapp: QApplication) -> None:
     """Even an extreme handle drag must leave the script list widget visible.
 
-    Exercises the concrete downstream consequence of the M62 defect: with
+    Exercises the concrete downstream consequence of the splitter defect: with
     collapsing enabled, the ``ScriptListWidget`` inside the left panel would
-    be reduced to zero width and disappear from view. Post-fix it keeps a
+    be reduced to zero width and disappear from view. It must keep a
     positive width.
 
     Args:
@@ -122,9 +122,9 @@ def _make_list_with_long_name(qapp: QApplication) -> ScriptListWidget:
 def test_l14_long_script_name_gets_full_tooltip(qapp: QApplication) -> None:
     """A long script name gets a tooltip carrying the full, un-elided text.
 
-    Pre-fix, ``_refresh_list`` never called ``item.setToolTip(...)``, so
-    ``QListWidgetItem.toolTip()`` was empty and hovering an elided item
-    revealed nothing. Post-fix the tooltip equals the full ``"[Type] Name"``
+    ``_refresh_list`` must call ``item.setToolTip(...)``, otherwise
+    ``QListWidgetItem.toolTip()`` would be empty and hovering an elided item
+    revealed nothing. The tooltip must equal the full ``"[Type] Name"``
     string.
 
     Args:
@@ -171,7 +171,7 @@ def test_l14_display_text_is_actually_elided_at_narrow_width(qapp: QApplication)
 def test_l14_tooltip_survives_filter_refresh(qapp: QApplication) -> None:
     """The tooltip is rebuilt correctly when ``_refresh_list`` reruns on filter change.
 
-    ``_refresh_list`` clears and rebuilds every item, so the tooltip fix
+    ``_refresh_list`` clears and rebuilds every item, so the tooltip
     must not be a one-off applied only at initial population.
 
     Args:

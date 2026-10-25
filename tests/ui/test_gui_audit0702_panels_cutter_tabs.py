@@ -2,15 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the 2026-07-02 GUI audit findings in ``cutter_tabs``.
+"""Gates for the ``cutter_tabs`` add-flag status labels and type-browser column sizing.
 
-* ``M19``: ``FlagsTab`` add-flag validation and RPC-error status text must be
-  written to the dedicated ``_add_result_label`` next to the Add Flag row,
-  never to ``_resolve_result_label`` (which belongs to the unrelated Resolve
-  Address row), and a successful add must clear any stale add-flag message.
-* ``L6``: ``TypeBrowserTab``'s tree header must resize the Name column with
-  ``ResizeToContents`` so long type/struct/enum names are not squeezed by the
-  stretched Details column.
+* ``FlagsTab`` add-flag validation and RPC-error status text must be written to the dedicated
+  ``_add_result_label`` next to the Add Flag row, never to ``_resolve_result_label`` (which belongs to the unrelated
+  Resolve Address row), and a successful add must clear any stale add-flag message.
+* ``TypeBrowserTab``'s tree header must resize the Name column with ``ResizeToContents``, so long type/struct/enum
+  names are not squeezed by the stretched Details column.
 """
 
 from __future__ import annotations
@@ -49,14 +47,13 @@ def _make_flags_tab(qapp: QApplication) -> FlagsTab:
 
 
 class TestM19AddFlagStatusLabel:
-    """M19: add-flag status text must land on the Add row's own label."""
+    """Add-flag status text must land on the Add row's own label."""
 
     def test_m19_empty_name_writes_to_add_label_not_resolve_label(self, qapp: QApplication) -> None:
         """Empty-name validation failure updates ``_add_result_label`` only.
 
-        Pre-fix this wrote "Enter a name and a valid address" into
-        ``_resolve_result_label`` (the Resolve Address row's label), so this
-        assertion on ``_add_result_label`` would fail before the fix.
+        The message must not be written into ``_resolve_result_label`` (the Resolve Address row's label), so this
+        assertion on ``_add_result_label`` would fail against such a regression.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -96,7 +93,7 @@ class TestM19AddFlagStatusLabel:
     def test_m19_invalid_size_writes_to_add_label_not_resolve_label(self, qapp: QApplication) -> None:
         """Invalid-size validation failure updates ``_add_result_label`` only.
 
-        Pre-fix this branch also wrote into ``_resolve_result_label``.
+        This branch must not also write into ``_resolve_result_label``.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -118,7 +115,7 @@ class TestM19AddFlagStatusLabel:
     def test_m19_add_flag_error_writes_to_add_label_and_leaves_resolve_label_untouched(self, qapp: QApplication) -> None:
         """An RPC failure updates ``_add_result_label`` and leaves the resolve label alone.
 
-        Pre-fix, ``_on_add_flag_error`` overwrote whatever was in
+        ``_on_add_flag_error`` must not overwrite whatever is in
         ``_resolve_result_label`` (e.g. a genuine resolve-address result),
         which is exactly the cross-contamination this test forbids.
 
@@ -146,11 +143,8 @@ class TestM19AddFlagStatusLabel:
     ) -> None:
         """A successful add clears a stale add-flag message from its own label.
 
-        Pre-fix, ``_on_add_flag_success`` never cleared any label (the error
-        path wrote into ``_resolve_result_label``, and success touched
-        neither), so a stale "Add failed: ..." message would persist
-        indefinitely. This asserts the now-owned ``_add_result_label`` is
-        cleared, and that the unrelated resolve label is left as-is.
+        ``_on_add_flag_success`` must clear a stale "Add failed: ..." message, which would otherwise persist
+        indefinitely. This asserts that ``_add_result_label`` is cleared, and that the unrelated resolve label is left as-is.
 
         ``_on_add_flag_success`` unconditionally ends with a call to
         ``self._fetch_flags()``, which issues a live RPC through
@@ -186,14 +180,13 @@ class TestM19AddFlagStatusLabel:
 
 
 class TestL6TypeBrowserHeaderResize:
-    """L6: the Name column resizes to fit content instead of being squeezed."""
+    """The Name column resizes to fit content instead of being squeezed."""
 
     def test_l6_name_column_uses_resize_to_contents_mode(self, qapp: QApplication) -> None:
         """The tree header's Name column (0) is in ``ResizeToContents`` mode.
 
-        Pre-fix no resize mode was ever set, so column 0 stayed at the
-        header's default ``Interactive`` mode; this assertion fails against
-        that pre-fix code.
+        Without a resize mode set, column 0 would stay at the header's default ``Interactive`` mode, and this
+        assertion fails against that code.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -211,12 +204,10 @@ class TestL6TypeBrowserHeaderResize:
     def test_l6_long_name_is_not_squeezed_by_stretched_details_column(self, qapp: QApplication) -> None:
         """A long type name widens column 0 instead of being clipped to a fixed width.
 
-        Pre-fix, column 0 stayed at the header's fixed default section width
-        (roughly 100px) regardless of content because no resize mode was set
-        and the trailing "Details" column absorbed all remaining space via
-        ``stretchLastSection``; the long name would be squeezed/elided. Post
-        fix, ``ResizeToContents`` grows column 0 to fit the widest item, so
-        its rendered width tracks the actual text width.
+        Column 0 must not stay at the header's fixed default section width (roughly 100px) regardless of content, which
+        happens when no resize mode is set and the trailing "Details" column absorbs all remaining space via
+        ``stretchLastSection``; the long name would be squeezed or elided. ``ResizeToContents`` grows column 0 to fit the
+        widest item, so its rendered width tracks the actual text width.
 
         Args:
             qapp: The shared QApplication fixture.

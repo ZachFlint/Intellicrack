@@ -3,9 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-object coverage for the fifth slice of ``intellicrack.bridges.ghidra``.
+"""Real-object coverage for ``intellicrack.bridges.ghidra``.
 
-The slice is what ``test_critcov_ghidra_01`` left uncovered in the analysis
+The slice covers the analysis
 accessors: the architecture resolution table, the payload checks of
 ``decompile``, ``search_bytes`` and the metadata sweep, and the handlers that
 wrap an unexpected failure of the remote exchange or of a readback.

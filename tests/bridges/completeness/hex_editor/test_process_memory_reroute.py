@@ -3,14 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L1/L3 gate tests for the hex-editor process-memory region listing (row #70).
+"""L1/L3 gate tests for the hex-editor process-memory region listing.
 
-Covers ``audit/bridge-completeness/agent-09-hex-editor.md`` row #70:
-``process_memory.py``'s "List Regions" button previously called
+Covers
+``process_memory.py``'s "List Regions" button calls
 ``hexcore.HexDocument.list_process_memory_regions`` (a native Rust
 classmethod) directly, bypassing ``HexEditorBridge.list_process_regions``
-entirely. The remediation routes ``ProcessMemoryDialog._on_list_regions``
-through ``run_bridge_coroutine_logged(self._bridge.list_process_regions(pid))``
+entirely. The dialog routes ``ProcessMemoryDialog._on_list_regions`` through ``run_bridge_coroutine_logged(self._bridge.list_process_regions(pid))``
 when a bridge is attached on Windows, with a local ``ctypes``/``/proc``
 fallback preserved for the no-bridge/non-Windows cases.
 
@@ -102,7 +101,7 @@ class TestListRegionsDialogRoutesThroughBridge:
         Falsifiable: the dialog is attached to a ``RecordingHexEditorBridge``
         whose ``list_process_regions`` override records each call (and still
         delegates to the real Rust implementation via ``super()``). If
-        ``_on_list_regions`` were reverted to the pre-remediation path that
+        ``_on_list_regions`` were reverted to the unrouted path that
         calls ``hexcore.HexDocument.list_process_memory_regions`` directly,
         the recording override would never fire and
         ``list_process_regions_calls`` would stay empty, turning this red --

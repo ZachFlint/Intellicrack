@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
-"""Regression tests for F-0008: dead _ips.py module removal.
+"""Regression tests for the removal of the dead ``_ips.py`` module.
 
 Verifies that the dead-code module is gone, and that both live IPS code
 paths (bridge._build_ips_from_patches and HexDocument.export_patches_ips)
@@ -193,7 +193,7 @@ class _FakeDocument:
 
 
 class TestDeadModuleRemoved:
-    """Regression guard: importing the deleted _ips module must raise ModuleNotFoundError."""
+    """Importing the deleted _ips module must raise ModuleNotFoundError."""
 
     def test_ips_module_import_raises_module_not_found(self) -> None:
         """Verify that importing the deleted module raises ModuleNotFoundError."""
@@ -217,12 +217,6 @@ class TestDeadModuleRemoved:
         The oracle is independent: ``bytes.find`` on the same payload locates
         the needle at offset 8; the production function must return exactly
         ``[(8, 3)]``.
-
-        Falsifiability proof — one-line mutation that makes this test FAIL:
-            In ``src/intellicrack/ui/panels/hex_editor/search.py``, change
-            ``return [(r[0], r[1]) for r in raw]`` to
-            ``return [(r[0] + 1, r[1]) for r in raw]`` — the offset 9 != 8
-            assertion fails immediately.
         """
         mod = importlib.import_module("intellicrack.ui.panels.hex_editor")
         execute_text_search = getattr(mod, "execute_text_search")
@@ -251,13 +245,6 @@ class TestDeadModuleRemoved:
 
         The oracle is independent: ``struct.pack`` places the value at a
         known byte offset; the production fallback must find it there.
-
-        Falsifiability proof — one-line mutation that makes this test FAIL:
-            In ``src/intellicrack/ui/panels/hex_editor/search.py``, change
-            ``if min_val <= fval <= max_val:`` to
-            ``if min_val < fval <= max_val:`` — the exact-value equality
-            case is excluded, no match is returned, ``len(results) == 0``
-            and the assertion ``results[0][0] == 4`` fails.
         """
         mod = importlib.import_module("intellicrack.ui.panels.hex_editor")
         execute_numeric_search = getattr(mod, "execute_numeric_search")
@@ -296,12 +283,9 @@ class TestDeadModuleRemoved:
         Checks that the live package namespace contains no ``_ips`` attribute,
         proving the dead module was not accidentally re-introduced as a binding.
 
-        This is intentionally a namespace-absence check and is kept as a
-        companion to the two behavioral gates above, not as a standalone
-        behavioral test.  It remains falsifiable: adding
-        ``from intellicrack.ui.panels.hex_editor import _ips`` to any file
-        re-imported by the package ``__init__`` will cause this assertion to
-        fail.
+        This is a namespace-absence check rather than a behavioral test.
+        Re-importing ``_ips`` from any module the package ``__init__`` loads
+        would make this assertion fail.
         """
         mod = importlib.import_module("intellicrack.ui.panels.hex_editor")
         assert not hasattr(mod, "_ips")

@@ -2,16 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Real-gate tests for TransformPipeline nodes (Group 06 Wave 5).
+r"""Real-gate tests for TransformPipeline nodes.
 
 Covers:
-  S7-13 — ``TransformPipeline`` mid-pipeline step error propagation: a step-2
+  ``TransformPipeline`` mid-pipeline step error propagation: a step-2
            ``TransformParamError`` propagates; not silently swallowed.
-  S7-14 — ``TransformPipeline.to_dict`` / ``from_dict`` (UNTESTABLE: methods
-           do not exist in the production class).
-  S7-18 — ``RustTransformNode`` param coercion: non-hex even-length string
-           param must raise ``TransformParamError`` (PD-010 RED-BY-DESIGN).
-  S7-19 — ``RegexReplaceNode`` with ``str`` type replacement: hex-string param
+``RustTransformNode`` param coercion: non-hex even-length string
+           param must raise ``TransformParamError``.
+  ``RegexReplaceNode`` with ``str`` type replacement: hex-string param
            ``"41"`` is correctly converted to ``b"\x41"`` (= ``b"A"``).
 """
 
@@ -30,7 +28,7 @@ from intellicrack.core.transform_pipeline import (
 
 
 class TestTransformPipelineMidStepError:
-    """Gate for S7-13: TransformParamError from step 2 propagates through execute()."""
+    """Gate for TransformParamError from step 2 propagates through execute()."""
 
     def test_step_two_error_propagates(self) -> None:
         """TransformParamError from step 2 is not caught by the pipeline execute loop.
@@ -83,9 +81,7 @@ class TestTransformPipelineMidStepError:
 
 
 class TestRustTransformNodeInvalidParams:
-    """Gate for S7-18: RustTransformNode raises TransformParamError for invalid params.
-
-    PD-010 RED-BY-DESIGN.
+    """Gate for RustTransformNode raises TransformParamError for invalid params.
 
     The production code (transform_pipeline.py ~L340) silently UTF-8 encodes
     a non-hex even-length string param instead of raising ``TransformParamError``.
@@ -96,13 +92,13 @@ class TestRustTransformNodeInvalidParams:
     the Rust hexcore (transforms.rs, TRANSFORM_LIST), accepts any non-empty
     ``key`` bytes, and is available in the ``xor`` category.  Passing a
     non-hex string ``"GG"`` (``G`` is not a hexdigit) as ``key`` is the
-    precise input that exercises the PD-010 coercion bug.
+    precise input that exercises the coercion bug.
     """
 
     def test_non_hex_even_length_string_raises_transform_param_error(self) -> None:
         """Non-hex even-length string param must raise TransformParamError.
 
-        This test is RED-BY-DESIGN (PD-010): the production code checks
+        This test is RED-BY-DESIGN: the production code checks
         ``is_hex = len(val) > 0 and len(val) % 2 == 0 and all(c in hexdigits …)``
         for string params.  ``"GG"`` is even-length but ``G ∉ hexdigits``, so
         ``is_hex`` is False and the code silently does ``val.encode('utf-8')``
@@ -136,7 +132,7 @@ class TestRustTransformNodeInvalidParams:
         code checks ``len(val) % 2 == 0`` as part of ``is_hex``; an odd-length
         string like ``"A"`` fails that check so ``is_hex`` is False and the code
         reaches ``val.encode('utf-8')`` → ``b"A"`` (a valid 1-byte key for
-        ``xor_repeating``), making this also RED-BY-DESIGN (PD-010).  Skips if
+        ``xor_repeating``), making this also RED-BY-DESIGN.  Skips if
         hexcore is absent.
         """
         node = RustTransformNode("xor_repeating", transform_category="xor")
@@ -153,7 +149,7 @@ class TestRustTransformNodeInvalidParams:
 
 
 class TestRegexReplaceNodeStrReplacement:
-    """Gate for S7-19: RegexReplaceNode correctly handles str type replacement."""
+    """Gate for RegexReplaceNode correctly handles str type replacement."""
 
     def test_hex_str_replacement_converts_to_bytes(self) -> None:
         r"""Hex string replacement '41' is converted to b'\x41' (= b'A').

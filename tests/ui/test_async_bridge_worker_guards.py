@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the shared worker-liveness guards (S19-R08 root cause).
+"""Falsifiable gates for the shared worker-liveness guards.
 
 ``GenericCallableWorker`` wires ``finished -> deleteLater``
 (``ui/panels/hex_editor``'s worker sites all rely on this), so once a worker
@@ -10,9 +10,9 @@ finishes and the event loop processes the deferred delete, callers keep only a
 dangling sip wrapper. Probing that wrapper with ``QThread.isRunning`` raises
 ``RuntimeError: wrapped C/C++ object ... has been deleted`` rather than
 returning ``False`` -- the exact crash that aborted ``_load_file_impl`` mid
-file-switch (S19-R08).
+file-switch.
 
-The whole-class fix centralises every re-arm probe onto two helpers in
+Every re-arm probe is centralised onto two helpers in
 ``ui/panels/async_bridge.py``:
 
 * :func:`worker_is_running` -- report liveness, treating both ``None`` and a
@@ -23,9 +23,9 @@ The whole-class fix centralises every re-arm probe onto two helpers in
 These tests drive the real helpers against a **genuinely destroyed** real
 ``GenericCallableWorker`` C++ object (not a mock): the worker runs to
 completion, its ``deleteLater`` is pumped through the event loop until the
-wrapper is dangling, and only then are the helpers exercised. Reverting either
-helper's ``try/except RuntimeError`` to a bare ``isRunning()``/``deleteLater()``
-turns these RED -- the destroyed-wrapper probe propagates ``RuntimeError``.
+wrapper is dangling, and only then are the helpers exercised. Replacing either
+helper's ``try/except RuntimeError`` with a bare ``isRunning()``/``deleteLater()``
+fails these tests: the destroyed-wrapper probe propagates ``RuntimeError``.
 """
 
 from __future__ import annotations
@@ -151,7 +151,7 @@ class TestWorkerIsRunning:
     def test_deleted_wrapper_reports_not_running_instead_of_raising(qapp: QApplication) -> None:
         """A destroyed-C++ wrapper is reported as not running, never raising.
 
-        This is the S19-R08 gate: reverting the ``try/except RuntimeError`` in
+        This covers the dangling-wrapper case: removing the ``try/except RuntimeError`` in
         ``worker_is_running`` makes this raise ``RuntimeError`` (dangling
         wrapper) instead of returning ``False``.
 
@@ -174,7 +174,7 @@ class TestDiscardWorker:
     def test_deleted_wrapper_is_swallowed_not_raised(qapp: QApplication) -> None:
         """Discarding an already-destroyed wrapper must not raise.
 
-        Reverting the ``try/except RuntimeError`` in ``discard_worker`` makes
+        Removing the ``try/except RuntimeError`` in ``discard_worker`` makes
         the second ``deleteLater`` on the dangling wrapper raise
         ``RuntimeError``.
 

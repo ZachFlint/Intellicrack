@@ -297,7 +297,7 @@ async def test_wait_for_bridge_port_raises_after_polling_closed_port() -> None:
 
 
 def test_wait_for_bridge_port_default_timeout_covers_cold_jvm_boot() -> None:
-    """The default port-wait budget must tolerate a cold Windows JVM boot (F-1).
+    """The default port-wait budget must tolerate a cold Windows JVM boot.
 
     A cold first boot of the JVM plus Ghidra, PyGhidra and the ``jfx_bridge``
     import on Windows (with antivirus scanning the freshly written classes) can

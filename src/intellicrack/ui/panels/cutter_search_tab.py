@@ -8,7 +8,7 @@ Provides a self-contained Qt widget exposing every native rizin search and byte/
 covered by the regex string-search box or the ROP-gadget search tab: byte pattern search (``/xj``), wildcard byte pattern search (``/xj``
 with ``..`` wildcards), literal string search (``/xj`` on UTF-8-encoded text), assembly instruction pattern search (``/aj``), cryptographic
 constant search (``/cj``), magic signature search (``/mj``), numeric value search (``/vj``), byte comparison (``c``), and disassembly
-comparison against another file (``cD``/``cCj``), all driven by the ``CutterBridge`` search surface (``cutter.py:2150-2200,3684-3862``).
+comparison against another file (``cD``/``cCj``), all driven by the ``CutterBridge`` search surface.
 """
 
 from __future__ import annotations
@@ -139,7 +139,7 @@ class SearchTab(QWidget):
         # The header label and mode selector are bundled into one fixed-height,
         # horizontally scrollable row via make_control_row() rather than added
         # as separate widgets/layouts: when the surrounding sub-tab pane is
-        # squeezed short (S20-D21), a plain QVBoxLayout lets Qt shrink both
+        # squeezed short, a plain QVBoxLayout lets Qt shrink both
         # down toward zero height, hiding the "Search" title and making the
         # Mode combo (Wildcard/String/Assembly/Crypto/Magic/Numeric) impossible
         # to reach. A control row backed by a fixed-height QScrollArea cannot

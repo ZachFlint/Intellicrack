@@ -42,7 +42,7 @@ class HexDocumentLike(Protocol):
         Returns:
             list[int]: List of byte values.
         """
-        ...  # protocol body
+        ...
 
     def length(self) -> int:
         """Get the total length of the document in bytes.
@@ -50,7 +50,7 @@ class HexDocumentLike(Protocol):
         Returns:
             int: Document length.
         """
-        ...  # protocol body
+        ...
 
 
 class BookmarkLike(Protocol):
@@ -77,7 +77,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
             offset: Byte offset to write at.
             data: Bytes to write.
         """
-        ...  # protocol body
+        ...
 
     def list_templates(self) -> list[tuple[str, str]]:
         """List available templates.
@@ -85,7 +85,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         Returns:
             list[tuple[str, str]]: List of (name, description) tuples.
         """
-        ...  # protocol body
+        ...
 
     def list_templates_detailed(self) -> list[object]:
         """List templates with full detail objects.
@@ -93,7 +93,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         Returns:
             list[object]: List of template detail objects.
         """
-        ...  # protocol body
+        ...
 
     def register_json_template(self, name: str, json_str: str) -> None:
         """Register a JSON-defined template.
@@ -102,7 +102,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
             name: Template name.
             json_str: JSON string defining the template.
         """
-        ...  # protocol body
+        ...
 
     def remove_template(self, name: str) -> None:
         """Remove a registered template.
@@ -110,7 +110,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         Args:
             name: Template name to remove.
         """
-        ...  # protocol body
+        ...
 
     def export_template_json(self, name: str) -> str:
         """Export a template as a JSON string.
@@ -121,7 +121,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         Returns:
             str: JSON representation of the template.
         """
-        ...  # protocol body
+        ...
 
     def inspect_at(self, offset: int) -> dict[str, object]:
         """Inspect data at the given offset.
@@ -132,7 +132,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         Returns:
             dict[str, object]: Inspection results.
         """
-        ...  # protocol body
+        ...
 
 
 @runtime_checkable
@@ -155,7 +155,7 @@ class CompiledYaraRules(Protocol):
         Returns:
             list[object]: List of match result objects.
         """
-        ...  # protocol body
+        ...
 
 
 __all__: list[str] = [
@@ -1671,7 +1671,7 @@ class ModelInfo:
         input_cost_per_1m_tokens: Cost per 1M input tokens.
         output_cost_per_1m_tokens: Cost per 1M output tokens.
         capabilities: The model's full capability record, when one has been
-            resolved. The scalar fields above are the historical view of the
+            resolved. The scalar fields above are a flat view of the
             same facts and stay populated, so nothing that reads them breaks;
             the record carries everything they cannot express -- which wire
             format the model speaks, which field takes its output limit, what

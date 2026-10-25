@@ -2,13 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Fourth-pass critical-coverage test for the x64dbg bridge's module snapshot walker.
+"""Coverage test for the x64dbg bridge's module snapshot walker.
 
-The walker is a static method that takes the ``kernel32`` binding, the snapshot handle and the record layout as arguments, so it runs
-here against a real Toolhelp snapshot made by the test. The expectation rests on a measurement in the test container: a snapshot made
-with ``TH32CS_SNAPPROCESS`` holds no module records, so ``Module32FirstW`` returns FALSE with ``ERROR_NO_MORE_FILES`` (18).
-
-Probe key: ``first_0x2_Module32FirstW`` (``ok`` false, ``gle`` 18).
+The walker is a static method that takes the ``kernel32`` binding, the snapshot handle and the record layout as arguments, so it runs here against a real Toolhelp snapshot made by the test. The expectation rests on a measurement in the test container: a snapshot made with ``TH32CS_SNAPPROCESS`` holds no module records, so ``Module32FirstW`` returns FALSE with ``ERROR_NO_MORE_FILES`` (18).
 """
 
 from __future__ import annotations

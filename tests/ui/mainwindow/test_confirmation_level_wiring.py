@@ -2,15 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the confirmation-level setting reaching the orchestrator.
+"""Gates for the confirmation level reaching the orchestrator.
 
 The Preferences dialog offers a three-way confirmation level (never / only
-destructive / every call) and persists it correctly, but nothing forwarded it
-to the object that acts on it. ``MainWindow._on_preferences_changed`` only
-swapped its own ``Config`` copy, and the toolbar's binary auto-approve button
-was the sole caller of ``Orchestrator.set_confirmation_level`` -- hardcoding
-``DESTRUCTIVE`` whenever it was switched off, which silently discarded a user
-who had chosen ``ALL`` or ``NONE``.
+destructive / every call) and persists it. The level must also reach the object
+that acts on it, the orchestrator. ``MainWindow._on_preferences_changed`` must
+forward it through ``Orchestrator.set_confirmation_level``, and the toolbar's
+binary auto-approve button must restore the user's configured level rather than a
+hardcoded ``DESTRUCTIVE``, which would silently discard a user who had chosen ``ALL`` or ``NONE``.
 
 Everything here is driven through the real ``MainWindow``, the real
 ``Orchestrator`` and the real ``PreferencesDialog`` signal; the assertion is on
@@ -126,8 +125,8 @@ def test_auto_approve_off_restores_the_configured_level(
 ) -> None:
     """Toggling auto-approve on then off must return to the user's own choice.
 
-    The button is an override, not a second setting. Switching it off used to
-    stamp ``DESTRUCTIVE`` unconditionally, quietly downgrading a configured
+    The button is an override, not a second setting. Switching it off must not
+    stamp ``DESTRUCTIVE`` unconditionally, which would quietly downgrade a configured
     ``ALL``.
 
     Args:

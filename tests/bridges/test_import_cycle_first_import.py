@@ -3,26 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for the bridges/core import cycle.
+"""Tests that guard against the circular import between ``intellicrack.bridges.base`` and ``intellicrack.core.tools``.
 
-Guards against re-introducing the circular import between
-``intellicrack.bridges.base`` and ``intellicrack.core.tools``. The cycle
-only manifests when a bridge submodule is imported as the *first* import
-in a fresh interpreter (before ``intellicrack.core`` is loaded), so every
-assertion here runs in an isolated subprocess whose single statement is
-the import under test. An in-process import cannot reproduce the failure
-because the test session's own ``conftest`` has already imported
-``intellicrack.core`` and warmed the module cache.
+The cycle only manifests when a bridge submodule is imported as the *first* import in a fresh interpreter (before ``intellicrack.core`` is loaded), so every assertion here runs in an isolated subprocess whose single statement is the import under test. An in-process import cannot reproduce the failure, because the test session's own ``conftest`` has already imported ``intellicrack.core`` and warmed the module cache.
 
-The historical failure was::
+The failure looks like::
 
-    ImportError: cannot import name 'TOOL_CAPABILITY_MAP' from partially
-    initialized module 'intellicrack.bridges.base'
+    ImportError: cannot import name 'TOOL_CAPABILITY_MAP' from partially initialized module 'intellicrack.bridges.base'
 
-raised when ``intellicrack.core.__init__`` eagerly imported
-``intellicrack.core.tools`` (which imports back from the still-executing
-``intellicrack.bridges.base``) while resolving ``get_logger`` for the
-bridge base module.
+It is raised when ``intellicrack.core.__init__`` eagerly imports ``intellicrack.core.tools`` (which imports back from the still-executing ``intellicrack.bridges.base``) while resolving ``get_logger`` for the bridge base module.
 """
 
 from __future__ import annotations
@@ -98,9 +87,9 @@ def test_bridge_module_imports_as_first_import(module_name: str) -> None:
 
 
 def test_tool_capability_map_available_after_first_bridge_import() -> None:
-    """The originally-failing symbol resolves after a fresh bridge import.
+    """The symbol resolves after a fresh bridge import.
 
-    Reproduces the precise historical failure: importing a bridge first,
+    Reproduces the failure: importing a bridge first,
     then reading ``TOOL_CAPABILITY_MAP`` off the partially-loaded
     ``bridges.base``. The subprocess prints the map size and exits 0 only
     when the module finished initializing.

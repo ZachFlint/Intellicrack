@@ -3,38 +3,19 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable recovery tests for the x64dbg named-pipe transport (F16 follow-up).
+"""Falsifiable recovery tests for the x64dbg named-pipe transport.
 
-The F16 transport-recovery fix has several coupled halves, each gated here
-against the genuine Win32 named-pipe kernel transport (a standalone server
-child process hosts a real pipe; no transport call is mocked):
+Each recovery behaviour is gated against the genuine Win32 named-pipe kernel transport. A standalone server child process hosts a real pipe, and no transport call is mocked:
 
-* ``NamedPipeClient.is_connected`` must report ``False`` once the background
-  reader records a fatal failure - for example when the server drops the
-  connection - even though the OS handle is still open, so callers
-  re-establish the pipe instead of reusing a dead transport.
-* ``X64DbgBridge._send_pipe_command`` must tear down a dead pipe client and
-  reconnect on the next command rather than wedging on the stale client.
-* ``NamedPipeClient.connect`` must serialise concurrent callers so two
-  coroutines racing to open the same client never both drive
-  ``CreateFileW`` against the plugin's single-instance pipe (the loser would
-  otherwise collide with ``ERROR_PIPE_BUSY``).
-* The background reader loop must wait indefinitely for the *next* frame to
-  start rather than bounding that idle gap by the per-read I/O timeout, since
-  a connected peer legitimately stays silent for an unbounded time between
-  events (for example while a debuggee runs between breakpoints).
-* ``X64DbgBridge._connect`` must serialise concurrent reconnect attempts so
-  two commands that simultaneously discover a dead pipe do not both try to
-  reopen the plugin's single-instance pipe.
+* ``NamedPipeClient.is_connected`` reports ``False`` once the background reader records a fatal failure, for example when the server drops the connection, even though the OS handle is still open. Callers re-establish the pipe instead of reusing a dead transport.
+* ``X64DbgBridge._send_pipe_command`` tears down a dead pipe client and reconnects on the next command rather than wedging on the stale client.
+* ``NamedPipeClient.connect`` serialises concurrent callers so that two coroutines racing to open the same client never both drive ``CreateFileW`` against the plugin's single-instance pipe. The loser would otherwise collide with ``ERROR_PIPE_BUSY``.
+* The background reader loop waits indefinitely for the next frame to start rather than bounding that idle gap by the per-read I/O timeout. A connected peer legitimately stays silent for an unbounded time between events, for example while a debuggee runs between breakpoints.
+* ``X64DbgBridge._connect`` serialises concurrent reconnect attempts so that two commands which discover a dead pipe at the same time do not both reopen the plugin's single-instance pipe.
 
-Several tests exercise a real server drop: the ``drop_after_one`` server mode
-replies to a single command and then closes its endpoint, so the client's
-blocking ``ReadFile`` fails with a broken pipe and the production reader loop
-records the failure - exactly the idle/interactive drop the fix targets.
+Several tests exercise a real server drop: the ``drop_after_one`` server mode replies to a single command and then closes its endpoint, so the client's blocking ``ReadFile`` fails with a broken pipe and the production reader loop records the failure.
 
-Access to non-public members is funnelled through ``getattr`` / ``setattr`` so
-the file satisfies ``basedpyright``'s ``reportPrivateUsage`` rule without inline
-suppressions.
+Access to non-public members is funnelled through ``getattr`` / ``setattr`` so the file satisfies ``basedpyright``'s ``reportPrivateUsage`` rule without inline suppressions.
 """
 
 from __future__ import annotations
@@ -274,7 +255,7 @@ def test_bridge_reconnects_after_server_drop() -> None:
 
     The first command connects to a server that replies once and drops. After
     the reader records the failure, a second server is hosted on the same
-    endpoint and a second command is issued. The fixed bridge tears down the
+    endpoint and a second command is issued. The bridge tears down the
     dead client and reconnects, so the second command returns a real result.
 
     Falsifiability: reverting the ``_send_pipe_command`` teardown (so a
@@ -294,9 +275,7 @@ def test_bridge_reconnects_after_server_drop() -> None:
         asyncio.run(_close_bridge(bridge))
 
 
-# ---------------------------------------------------------------------------
-# Concurrent connect() serialises to a single real CreateFileW (F16)
-# ---------------------------------------------------------------------------
+# Concurrent connect() serialises to a single real CreateFileW
 
 
 async def _drive_concurrent_connect(pipe_name: str, open_calls: list[int]) -> None:
@@ -332,7 +311,7 @@ async def _drive_concurrent_connect(pipe_name: str, open_calls: list[int]) -> No
 
 
 def test_concurrent_connect_calls_open_handle_exactly_once() -> None:
-    """Two concurrent ``connect()`` calls race to a single real handle-open (F16).
+    """Two concurrent ``connect()`` calls race to a single real handle-open.
 
     Drives two overlapping ``connect()`` coroutines on the same
     ``NamedPipeClient`` against a genuine single-instance Win32 named pipe
@@ -363,9 +342,7 @@ def test_concurrent_connect_calls_open_handle_exactly_once() -> None:
     assert len(open_calls) == 1, f"expected exactly one real _open_handle call, saw {len(open_calls)}"
 
 
-# ---------------------------------------------------------------------------
-# Reader loop survives an idle gap longer than io_timeout (F16)
-# ---------------------------------------------------------------------------
+# Reader loop survives an idle gap longer than io_timeout
 
 _IDLE_IO_TIMEOUT_S = 0.5
 _IDLE_GAP_DEADLINE_S = srv.IDLE_DELAY_SECONDS + 6.0
@@ -422,7 +399,7 @@ async def _drive_idle_gap_scenario(pipe_name: str) -> None:
 
 
 def test_reader_loop_survives_idle_gap_past_io_timeout() -> None:
-    """Idle gaps longer than ``io_timeout`` do not kill the reader loop (F16).
+    """Idle gaps longer than ``io_timeout`` do not kill the reader loop.
 
     Configures a short ``io_timeout`` (0.5s) and drives a real server that
     replies once and then stays silent for four times that long before
@@ -449,9 +426,7 @@ def test_reader_loop_survives_idle_gap_past_io_timeout() -> None:
         _terminate_server(server)
 
 
-# ---------------------------------------------------------------------------
-# Bridge-level concurrent reconnect after a drop is serialised (F16)
-# ---------------------------------------------------------------------------
+# Bridge-level concurrent reconnect after a drop is serialised
 
 
 async def _drive_concurrent_bridge_reconnect(bridge: X64DbgBridge, pipe_name: str) -> None:
@@ -489,7 +464,7 @@ async def _drive_concurrent_bridge_reconnect(bridge: X64DbgBridge, pipe_name: st
 
 
 def test_bridge_concurrent_reconnect_after_drop_serialises_to_one_connect() -> None:
-    """Two commands racing a dead pipe both survive the reconnect (F16).
+    """Two commands racing a dead pipe both survive the reconnect.
 
     After the first server drops the connection, two ``_send_pipe_command``
     calls are launched concurrently against a fresh single-instance server on

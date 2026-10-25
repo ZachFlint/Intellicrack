@@ -56,7 +56,7 @@ def _shared_processors() -> list[Processor]:
     name before the formatter strips meta keys.
 
     The frame-walking ``_add_call_info`` processor is intentionally
-    omitted because the originating frame is no longer accurate by the
+    omitted because the originating frame is not accurate by the
     time the formatter runs on the handler thread; the viewer instead
     reads ``module`` / ``funcName`` / ``lineno`` directly from the
     ``LogRecord`` in :func:`from_logging_record`.

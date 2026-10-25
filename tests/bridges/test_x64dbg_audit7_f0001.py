@@ -3,19 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit7 F-0001 regression tests for ``intellicrack.bridges.x64dbg``.
+"""Verification tests for the ``intellicrack.bridges.x64dbg`` fire-and-forget wrappers.
 
-Each of the nineteen fire-and-forget wrappers historically returned
-``{"success": True}`` without checking that the underlying x64dbg
-operation actually succeeded. The bridge now adds a verification step
-per wrapper (label/comment readback, ``bp_list`` enabled-state poll,
-``thread_detail`` state poll, ``status`` ``is_running`` poll,
-``script.iserror()`` register check, and ``plugin_list`` /
-``plugin.find()`` presence check).
+Each wrapper verifies the underlying x64dbg operation rather than returning ``{"success": True}`` unconditionally. Verification steps include label and comment readback, ``bp_list`` enabled-state polling, ``thread_detail`` state polling, ``status`` ``is_running`` polling, the ``script.iserror()`` register check, and ``plugin_list`` / ``plugin.find()`` presence checks.
 
-The tests script an in-process fake pipe client to replay deterministic
-plugin responses so the wrappers' verification paths can be exercised
-without launching x64dbg.exe.
+The tests script an in-process fake pipe client to replay deterministic plugin responses, so the wrappers' verification paths run without launching x64dbg.exe.
 """
 
 from __future__ import annotations
@@ -142,14 +134,12 @@ def bridge() -> X64DbgBridge:
     return X64DbgBridge()
 
 
-# ---------------------------------------------------------------------------
 # set_label / set_comment - readback compare
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 class TestSetLabelVerification:
-    """F-0001: ``set_label`` reads ``lbl_list`` back and compares text."""
+    """``set_label`` reads ``lbl_list`` back and compares text."""
 
     async def test_set_label_success_after_readback_matches(self, bridge: X64DbgBridge) -> None:
         """When the readback returns the expected text, the wrapper verifies.
@@ -223,7 +213,7 @@ class TestSetLabelVerification:
 
 @pytest.mark.asyncio
 class TestSetCommentVerification:
-    """F-0001: ``set_comment`` reads ``cmt_list`` back and compares text."""
+    """``set_comment`` reads ``cmt_list`` back and compares text."""
 
     async def test_set_comment_success_after_readback_matches(self, bridge: X64DbgBridge) -> None:
         """When the readback returns the expected text, the wrapper verifies.
@@ -269,14 +259,12 @@ class TestSetCommentVerification:
             await bridge.set_comment(_COMMENT_ADDR, "loop body")
 
 
-# ---------------------------------------------------------------------------
 # enable_breakpoint / disable_breakpoint - bp_list state poll
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 class TestEnableDisableBreakpointVerification:
-    """F-0001: ``enable_breakpoint`` / ``disable_breakpoint`` poll ``bp_list``."""
+    """``enable_breakpoint`` / ``disable_breakpoint`` poll ``bp_list``."""
 
     async def test_enable_breakpoint_success(self, bridge: X64DbgBridge) -> None:
         """When ``bp_list`` reports ``enabled=True``, the wrapper verifies.
@@ -394,14 +382,12 @@ class TestEnableDisableBreakpointVerification:
             await bridge.disable_breakpoint(_BP_ADDR)
 
 
-# ---------------------------------------------------------------------------
 # suspend_thread / resume_thread / switch_thread / set_thread_name
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 class TestThreadWrappersVerification:
-    """F-0001: thread wrappers poll ``thread_detail`` for the post-condition."""
+    """Thread wrappers poll ``thread_detail`` for the post-condition."""
 
     async def test_suspend_thread_success(self, bridge: X64DbgBridge) -> None:
         """When ``thread_detail`` reports ``suspended=True`` for the tid, verify.
@@ -590,14 +576,12 @@ class TestThreadWrappersVerification:
             await bridge.set_thread_name(_TID, _THREAD_NAME)
 
 
-# ---------------------------------------------------------------------------
 # trace_into / trace_over / step_count / animate_start / animate_stop
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 class TestTraceAndAnimateVerification:
-    """F-0001: trace/animate wrappers poll ``status`` for is_running flip."""
+    """Trace and animate wrappers poll ``status`` for is_running flip."""
 
     async def test_trace_into_success(self, bridge: X64DbgBridge) -> None:
         """``status`` reports running=True after ``TraceIntoConditional``.
@@ -841,7 +825,7 @@ class TestTraceAndAnimateVerification:
 
 @pytest.mark.asyncio
 class TestScriptWrappersVerification:
-    """F-0001: script wrappers query the ``script.iserror()`` register."""
+    """Script wrappers query the ``script.iserror()`` register."""
 
     async def test_script_load_success_when_iserror_clear(self, bridge: X64DbgBridge) -> None:
         """``script.iserror()`` returns 0 -> verified True.
@@ -1006,7 +990,7 @@ class TestScriptWrappersVerification:
 
 @pytest.mark.asyncio
 class TestPluginWrappersVerification:
-    """F-0001: plugin wrappers verify via ``plugin_list`` / ``plugin.find()``."""
+    """Plugin wrappers verify via ``plugin_list`` / ``plugin.find()``."""
 
     async def test_plugin_load_success_via_plugin_list(self, bridge: X64DbgBridge) -> None:
         """``plugin_list`` lists the loaded plugin -> verified True.
@@ -1120,20 +1104,14 @@ class TestPluginWrappersVerification:
             await bridge.plugin_unload(_PLUGIN_NAME)
 
 
-# ---------------------------------------------------------------------------
 # Sanity: no wrapper returns a bare {"success": True} dict
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_no_wrapper_returns_bare_success_dict(bridge: X64DbgBridge) -> None:
     """Each verified wrapper exposes a ``verified`` boolean in its return.
 
-    The regression target is the audit7 F-0001 finding: a wrapper that
-    just returns ``{"success": True}`` masks plugin failures. The new
-    bridge contract always carries a ``verified`` key. This test
-    rejects the failure mode wholesale by checking every fire-and-
-    forget wrapper now produces a result dict with ``verified``.
+    A wrapper that returns ``{"success": True}`` alone masks plugin failures, so the bridge contract always carries a ``verified`` key. This test rejects that failure mode for every fire-and-forget wrapper by checking that each produces a result dict with ``verified``.
 
     Args:
         bridge: Fixture bridge instance.

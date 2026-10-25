@@ -2,12 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for S14-D02 (PID filtering) and S14-D05 (raw system query sizing).
+"""Tests for process-list PID filtering and raw system query sizing.
 
 Exercises ``ProcessBridge`` against the real Windows process snapshot and
 ``NtQuerySystemInformation`` APIs. No mocks: every assertion is derived from
-live process enumeration or a live kernel query, so a regression in either
-defect fix causes a genuine test failure.
+live process enumeration or a live kernel query, so a regression in either behaviour causes a genuine test failure.
 """
 
 from __future__ import annotations
@@ -97,7 +96,7 @@ async def process_bridge() -> AsyncGenerator[ProcessBridge]:
 
 
 class TestS14D02PidFilter:
-    """S14-D02: the process list filter must match by PID as well as by name."""
+    """The process list filter must match by PID as well as by name."""
 
     async def test_numeric_filter_matches_real_pid(self, process_bridge: ProcessBridge) -> None:
         """Filtering by the current process's PID must return that process's row.
@@ -162,7 +161,7 @@ class TestS14D02PidFilter:
 
 
 class TestS14D05RawQuerySizing:
-    """S14-D05: ``query_system_info`` must size retries from the kernel's return_length hint."""
+    """``query_system_info`` must size retries from the kernel's return_length hint."""
 
     async def test_fixed_size_class_zero_returns_valid_basic_information(
         self,

@@ -2,23 +2,22 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for GUI-audit finding H2 in ``_tail_reader``.
+"""Gate for the log tail reader's ``stop()`` and initial-load worker lifetime.
 
-H2 — ``LogFileTailReader.stop()`` used to block the GUI thread with a
-synchronous ``self._initial_worker.wait(2000)`` and, worse, left the
-:class:`~intellicrack.ui.log_viewer._tail_reader.InitialLoadWorker`
+``LogFileTailReader.stop()`` must not block the GUI thread with a
+synchronous ``self._initial_worker.wait(2000)``, and the
+:class:`~intellicrack.ui.log_viewer._tail_reader.InitialLoadWorker` must not be
 parented to the reader (``parent=self``). ``LogViewerWindow`` calls
 ``stop()`` from both ``_on_reload_from_disk`` and ``closeEvent`` and then
 calls ``self._tail_reader.deleteLater()`` on the reader; while the worker
-was still a Qt child of the reader, that deferred deletion cascaded into
-the still-running ``QThread`` and aborted the process ("QThread: Destroyed
+was still a Qt child of the reader, that deferred deletion would cascade into
+the still-running ``QThread`` and abort the process ("QThread: Destroyed
 while thread is still running").
 
-The fix removes the ``parent=`` argument (so the worker's lifetime is
-independent of the reader), makes the worker self-delete via
-``worker.finished.connect(worker.deleteLater)``, and replaces the blocking
-``wait()`` in ``stop()`` with a non-blocking detach that disconnects the
-reader's slots from the worker's signals instead of waiting for it.
+The worker has no ``parent=`` argument, so its lifetime is independent of the reader.
+It self-deletes via ``worker.finished.connect(worker.deleteLater)``, and ``stop()`` never calls the
+blocking ``wait()``: it performs a non-blocking detach that disconnects the reader's slots from the
+worker's signals instead of waiting for the worker.
 
 Each test below drives real ``QThread`` objects (no mocks) and uses a
 deterministic ``time.sleep`` inside a real ``InitialLoadWorker`` subclass to
@@ -129,8 +128,8 @@ def _attach_worker(reader: LogFileTailReader, worker: InitialLoadWorker) -> None
 def test_h2_initial_worker_created_without_parent(qtbot: QtBot, tmp_path: Path) -> None:
     """The historical-load worker must not be parented to the reader.
 
-    Pre-fix, ``start()`` constructed ``InitialLoadWorker(..., parent=self)``,
-    so a ``deleteLater()`` on the reader (as ``LogViewerWindow`` issues from
+    ``start()`` must not construct ``InitialLoadWorker(..., parent=self)``, because
+    a ``deleteLater()`` on the reader (as ``LogViewerWindow`` issues from
     both ``_on_reload_from_disk`` and ``closeEvent``) cascades Qt's
     parent-child destruction into the still-running ``QThread``. The check
     below is made immediately after ``start()`` returns, before any signal
@@ -164,9 +163,8 @@ def test_h2_initial_worker_created_without_parent(qtbot: QtBot, tmp_path: Path) 
 def test_h2_worker_self_deletes_after_finishing(qtbot: QtBot, tmp_path: Path) -> None:
     """The worker must self-delete via ``finished -> deleteLater`` when done.
 
-    Pre-fix, ``finished`` was only connected to the reader's
-    ``_on_initial_finished`` slot, so a completed worker was never scheduled
-    for deletion on its own; it lingered until the parent reader itself was
+    ``finished`` must also reach ``deleteLater``, not only the reader's
+    ``_on_initial_finished`` slot. Otherwise a completed worker lingers, unscheduled for deletion, until the parent reader itself is
     destroyed. If ``worker.destroyed`` never fires, ``waitUntil`` below times
     out and the test fails.
 
@@ -196,11 +194,11 @@ def test_h2_worker_self_deletes_after_finishing(qtbot: QtBot, tmp_path: Path) ->
 def test_h2_stop_does_not_block_gui_thread_for_running_worker(qtbot: QtBot, tmp_path: Path) -> None:
     """``stop()`` must return promptly instead of waiting on a running worker.
 
-    Pre-fix ``stop()`` executed ``self._initial_worker.wait(2000)`` whenever
-    ``isRunning()`` was true. With the worker's real body delayed by
+    ``stop()`` must not execute ``self._initial_worker.wait(2000)`` whenever
+    ``isRunning()`` is true. With the worker's real body delayed by
     ``_SLOW_WORKER_DELAY_S`` (0.5 s), that call would block the calling
     (GUI) thread for roughly that long before returning, and the worker
-    would already be finished by the time ``stop()`` returned. Post-fix,
+    would already be finished by the time ``stop()`` returned. Instead,
     ``stop()`` merely disconnects and detaches, so it returns almost
     instantly and the worker is still running immediately afterward.
 
@@ -233,13 +231,13 @@ def test_h2_stop_does_not_block_gui_thread_for_running_worker(qtbot: QtBot, tmp_
 def test_h2_stop_detaches_signals_before_late_worker_finishes(qtbot: QtBot, tmp_path: Path) -> None:
     """A worker that finishes after ``stop()`` must not mutate the reader.
 
-    Pre-fix, ``stop()`` never disconnected the worker's signals from the
-    reader's slots. Because the pre-fix ``wait(2000)`` call blocked the GUI
-    thread without pumping its own event loop, the worker's queued
-    cross-thread signals were only delivered *after* ``stop()`` returned and
+    ``stop()`` must disconnect the worker's signals from the
+    reader's slots. A blocking ``wait(2000)`` would hold the GUI
+    thread without pumping its own event loop, so the worker's queued
+    cross-thread signals would only be delivered *after* ``stop()`` returned and
     the test resumed pumping events -- so the reader still absorbed
     ``record_emitted``/``initial_load_complete`` and updated ``_last_offset``
-    from a worker it had supposedly stopped. Post-fix, those slots are
+    from a worker it had supposedly stopped. Those slots must be
     disconnected inside ``stop()``, so a late-finishing worker's signals are
     silently dropped and none of that state changes.
 

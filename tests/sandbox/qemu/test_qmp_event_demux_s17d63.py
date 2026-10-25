@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D63: a QMP reply must be told apart from an asynchronous event.
+"""A QMP reply must be told apart from an asynchronous event.
 
 QMP is not a bare request/response protocol. QEMU pushes events onto the same
 socket whenever the machine changes state, and they interleave with replies.
@@ -21,7 +21,7 @@ front of its reply::
 Two consequences, both gated below. The command itself reports a success QEMU
 never sent; and the stream stays one frame behind for the life of the
 connection, so every later command is handed the previous command's answer.
-That is what turned the S17-D59 snapshot work into "QEMU stopped reporting job
+That is what turned snapshot work into "QEMU stopped reporting job
 ... before it finished": ``snapshot-save`` emits ``JOB_STATUS_CHANGE`` ahead of
 its reply, and the follow-up ``query-jobs`` then read a frame that listed no
 jobs at all.

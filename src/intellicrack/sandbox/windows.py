@@ -82,11 +82,11 @@ _SANDBOX_INSTALL_STATE_ENABLED = "1"
 _DISPATCHER_STARTUP_TIMEOUT = 120
 _DISPATCHER_POLL_INTERVAL = 0.5
 # The dispatcher-ready wait is adaptive rather than a single fixed timeout: it
-# starts with the same budget as before for a normal-speed boot, but extends
-# itself every time real evidence of guest progress appears (the logon
-# command having actually run, or a monitor having produced its first log),
-# up to a hard ceiling that covers a genuinely slow Windows Sandbox cold boot
-# observed live on this host to outlast the previous fixed 120s budget.
+# starts with the normal-speed boot budget, but extends itself every time real
+# evidence of guest progress appears (the logon command having actually run,
+# or a monitor having produced its first log), up to a hard ceiling that
+# covers a genuinely slow Windows Sandbox cold boot, observed live on this
+# host to outlast a fixed 120s budget.
 _DISPATCHER_READY_MAX_CEILING_S: Final[float] = 600.0
 _DISPATCHER_READY_PROGRESS_EXTENSION_S: Final[float] = 90.0
 _WORKER_PID_POLL_INTERVAL = 1.0
@@ -96,12 +96,11 @@ _PROCESS_WAIT_TIMEOUT = 10
 # the compute system is released as part of that same unwind. Measured live on
 # 26100: an idle guest that had just finished its logon command took 26.6s to
 # take the session and the VM down together, and a guest still busy with its
-# first boot took several minutes. The previous 30s budget therefore expired
-# mid-teardown even in the good case, and the force kill that followed is what
-# left the VM resident - a killed session never completes the unwind that
-# releases it. The budget is now long enough for the slow case, and costs
-# nothing when the close is quick because the wait ends as soon as the process
-# exits.
+# first boot took several minutes. A 30s budget would expire mid-teardown even
+# in the good case, and the force kill that followed would leave the VM
+# resident - a killed session never completes the unwind that releases it. The
+# budget is long enough for the slow case, and costs nothing when the close is
+# quick because the wait ends as soon as the process exits.
 _GRACEFUL_CLOSE_TIMEOUT = 300
 _TASKKILL_TIMEOUT = 30
 _MONITOR_START_TIMEOUT = 30
@@ -110,9 +109,9 @@ _RESULT_POLL_INTERVAL = 0.25
 # Measured on a real Windows Sandbox run: the ten surviving collectors' logs
 # reached the host across a 21-second spread after the target finished
 # (dll/file at +0s, kernel_object/process at +1s, resource/service at +2s,
-# registry at +5s, network at +21s). The previous three-second budget expired
-# before the last four had written anything, which is exactly why the Registry
-# Changes tab came back empty for a run that had made registry changes.
+# registry at +5s, network at +21s). A three-second budget would expire before
+# the last four had written anything, leaving the Registry Changes tab empty
+# for a run that had made registry changes.
 _MONITOR_QUIESCENCE_CEILING_S: Final[float] = 60.0
 # A collector with nothing to report never creates its log at all, so the fleet
 # is also considered settled once no further log has appeared for this long.
@@ -270,10 +269,11 @@ def select_close_targets(windows: Iterable[TopLevelWindow], target_pid: int) -> 
     ``MSCTFIME UI`` windows, the RDP sound and clipboard sinks, a timer window
     and a GUID-named one. Closing is therefore restricted to visible windows.
 
-    Selecting them all was not merely untidy. The caller treats "a close was
-    posted" as "the sandbox was asked to close", and a post to any one of the
-    invisible helpers satisfied that test, so the caller could report having
-    asked a session to close when the shell window never received anything.
+    Selecting them all would be wrong, not merely untidy. The caller treats "a
+    close was posted" as "the sandbox was asked to close", and a post to any one
+    of the invisible helpers would satisfy that test, so the caller could report
+    having asked a session to close when the shell window never received
+    anything.
 
     Args:
         windows: Top-level windows to choose from, in any order.
@@ -693,12 +693,12 @@ class WindowsSandbox(SandboxBase):
     async def _exe_on_path(exe: str) -> bool:
         """Report whether an executable resolves on ``PATH``.
 
-        The search is done in this process. It used to be delegated to a
-        ``where`` child process, which made a lookup fail with a timeout
-        whenever that process took more than ten seconds to start on a loaded
-        machine, and which ran whatever ``where.exe`` the working directory
-        held, because the working directory is searched before the system
-        directory when a program is started by name.
+        The search is done in this process rather than by a ``where`` child
+        process, which would make a lookup fail with a timeout whenever that
+        process took more than ten seconds to start on a loaded machine, and
+        which would run whatever ``where.exe`` the working directory held,
+        because the working directory is searched before the system directory
+        when a program is started by name.
 
         Args:
             exe: Executable filename to look up.
@@ -992,8 +992,8 @@ class WindowsSandbox(SandboxBase):
         launcher exit is fatal, and an exit code of ``0x800706d9`` is mapped to
         the same actionable message the failure dialog produces -- from a clean
         process state the launcher reports that condition as an exit code
-        rather than a dialog, so without this mapping it surfaced only as a bare
-        ``-2147023143``.
+        rather than a dialog, so without this mapping it would surface only as a
+        bare ``-2147023143``.
 
         Raises:
             SandboxError: If the launcher exited non-zero, or a Windows Sandbox
@@ -1352,11 +1352,10 @@ class WindowsSandbox(SandboxBase):
         compute system down, and the worker exits when it does - taking
         ``vmmemWindowsSandbox`` with it. That teardown is not instant, so the
         worker is given time to go on its own before anything is forced. Doing
-        it the other way round is what leaked the VM: the worker was killed
-        while HCS was still unwinding, and a killed worker never completes the
-        teardown that releases the VM. It is also not a process this account
-        can kill - the attempt returns access denied - so forcing it first cost
-        the teardown and achieved nothing.
+        it the other way round leaks the VM: a worker killed while HCS is still
+        unwinding never completes the teardown that releases the VM. It is also
+        not a process this account can kill - the attempt returns access denied
+        - so forcing it first costs the teardown and achieves nothing.
 
         Args:
             process_manager: Active :class:`ProcessManager` used to issue
@@ -1516,7 +1515,7 @@ class WindowsSandbox(SandboxBase):
         ``self.process`` is the launcher, which exits on its own the moment it
         has handed the session off. Waiting on the launcher therefore says
         nothing about the session and reports success while the session is
-        still up - which is what made the caller escalate to a force kill and
+        still up - which would make the caller escalate to a force kill and
         leave the VM resident.
 
         Args:
@@ -1838,10 +1837,10 @@ class WindowsSandbox(SandboxBase):
 
         The dispatcher is written to a folder of its own. ``start_monitors.cmd``
         starts every script in the monitor folder, so a dispatcher staged there
-        was started twice, once by the bootstrap and once by the launcher. Each
-        copy keeps its own record of the triggers it has handled, so both took
-        every command: commands ran twice, and the two copies overwrote and
-        locked each other's output and exit-code files.
+        would be started twice, once by the bootstrap and once by the launcher.
+        Each copy keeps its own record of the triggers it has handled, so both
+        would take every command: commands would run twice, and the two copies
+        would overwrite and lock each other's output and exit-code files.
 
         Raises:
             SandboxError: If sandbox paths are not initialized.
@@ -2469,9 +2468,9 @@ class WindowsSandbox(SandboxBase):
         continuously, so their logs never stop growing while the sandbox lives -
         and a collector that has not written yet has no file at all, which
         contributes zero bytes and reads as perfectly stable. Waiting for the
-        aggregate to hold still therefore returned almost immediately, before
-        four of the collectors had written a single byte, and their tabs came
-        back empty for a run that had genuinely made those changes.
+        aggregate to hold still would therefore return almost immediately,
+        before four of the collectors had written a single byte, leaving their
+        tabs empty for a run that had genuinely made those changes.
 
         What is waited on instead is the set of collectors that have produced a
         log. It stops as soon as every survivor the launcher recorded has one,
@@ -2743,10 +2742,10 @@ class WindowsSandbox(SandboxBase):
     async def apply_anti_evasion(self, profile: str = "default") -> dict[str, Any]:
         r"""Apply anti-evasion techniques to make the sandbox less detectable.
 
-        Drops the previous volatile ``HKLM:\HARDWARE\DESCRIPTION\*`` registry
-        writes (audit7 F-0013): those keys live in a volatile hive that the
-        kernel rebuilds at boot, so the writes never reach evasive samples that
-        actually query ``Get-CimInstance Win32_ComputerSystem`` / ``Win32_BIOS``.
+        Does not write the volatile ``HKLM:\HARDWARE\DESCRIPTION\*`` registry
+        keys: they live in a volatile hive that the kernel rebuilds at boot, so
+        such writes never reach evasive samples that actually query
+        ``Get-CimInstance Win32_ComputerSystem`` / ``Win32_BIOS``.
         Instead a MOF file is generated from the active anti-evasion profile,
         compiled into the CIMV2 namespace with ``mofcomp.exe``, and verified
         with ``Get-CimInstance`` to confirm the spoofed values are now returned.
@@ -2954,7 +2953,7 @@ class WindowsSandbox(SandboxBase):
         ``OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, $targetPid)``
         and passes that handle (not ``GetCurrentProcess()``) to
         ``MiniDumpWriteDump`` so the resulting dump describes the sample under
-        analysis instead of the PowerShell host itself (audit7 F-0021). The
+        analysis instead of the PowerShell host itself. The
         process handle is always closed in the PowerShell ``finally`` block.
         The dump file is then copied back to the host via the shared folder.
 
@@ -3065,7 +3064,7 @@ class WindowsSandbox(SandboxBase):
         the JSON payload it returns with :func:`parse_guest_process_list`.
         Used by the Sandbox panel's guest process picker so a user can
         choose a ``target_pid`` for :meth:`dump_memory` without already
-        knowing a guest PID (S17-D10b).
+        knowing a guest PID.
 
         Returns:
             list[GuestProcessInfo]: Every process observed in the guest at

@@ -3,4 +3,4 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit5 unit U3 (core-hexpat) regression tests."""
+"""Regression tests for the hexpat core."""

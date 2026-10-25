@@ -3,18 +3,18 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 U7 tests for ``kernel_object_monitor.ps1`` remediation.
+"""Tests for ``kernel_object_monitor.ps1`` behavior.
 
-Validates the three findings tracked against
+Validates the following behavior of
 ``src/intellicrack/sandbox/scripts/kernel_object_monitor.ps1``:
 
-* F-0021 - the polling loop must catch transient kernel objects that
-  exist for far less than the legacy 3 second cadence.
-* F-0022 - ``OpenProcess(PROCESS_DUP_HANDLE)`` failures must be logged
-  with the explicit ``GetLastError`` code instead of being swallowed.
-* F-0023 - ``SeDebugPrivilege`` adjustment must be attempted at startup
-  and any failure (including non-admin runs) must be surfaced clearly to
-  the operator instead of silently degrading inspection coverage.
+* The polling loop catches transient kernel objects that exist for far less than
+  a 3 second cadence.
+* ``OpenProcess(PROCESS_DUP_HANDLE)`` failures are logged with the explicit
+  ``GetLastError`` code instead of being swallowed.
+* ``SeDebugPrivilege`` adjustment is attempted at startup, and any failure
+  (including non-admin runs) is surfaced to the operator instead of silently
+  degrading inspection coverage.
 
 The tests run the real script under ``pwsh`` against the live Windows
 kernel object table and the current process token. They are skipped on
@@ -47,7 +47,7 @@ _LOG_NAME: Final[str] = "kernel_object_monitor.log"
 _ERR_LOG_NAME: Final[str] = "kernel_object_monitor.errors.log"
 _LIFECYCLE_LOG_NAME: Final[str] = "kernel_object_monitor.lifecycle.log"
 # 400 ms: long enough for the 100 ms monitor to observe within a single poll
-# cycle, but shorter than the legacy 3 s cadence that F-0021 gates against.
+# cycle, but shorter than the 3 s cadence the poll gate guards against.
 _TRANSIENT_MUTEX_LIFETIME_MS: Final[int] = 2000
 _FAST_POLL_INTERVAL_MS: Final[int] = 100
 _SYSTEM_PID: Final[int] = 4
@@ -136,14 +136,14 @@ def _terminate(proc: Popen[str]) -> tuple[str, str, int | None]:
 
 
 def test_script_file_exists() -> None:
-    """The remediated script must exist on disk."""
+    """The script must exist on disk."""
     assert _SCRIPT_PATH.is_file(), f"missing script: {_SCRIPT_PATH}"
 
 
 def test_script_uses_millisecond_poll() -> None:
-    """F-0021 source-level guard: poll cadence must be milliseconds.
+    """Source-level guard: poll cadence must be milliseconds.
 
-    The remediated script must accept ``-PollIntervalMilliseconds`` and
+    The script must accept ``-PollIntervalMilliseconds`` and
     use ``Start-Sleep -Milliseconds`` rather than the original
     ``-Seconds 3`` loop which deterministically missed transient kernel
     objects.
@@ -155,7 +155,7 @@ def test_script_uses_millisecond_poll() -> None:
 
 
 def test_script_logs_openprocess_lasterror() -> None:
-    """F-0022 source-level guard: GetLastError must be logged on failure.
+    """Source-level guard: GetLastError must be logged on failure.
 
     The script must read ``Marshal::GetLastWin32Error`` after each
     failed ``OpenProcess`` call and surface the error code to the error
@@ -169,7 +169,7 @@ def test_script_logs_openprocess_lasterror() -> None:
 
 
 def test_script_attempts_sedebugprivilege() -> None:
-    """F-0023 source-level guard: SeDebugPrivilege must be requested.
+    """Source-level guard: SeDebugPrivilege must be requested.
 
     The script must call ``OpenProcessToken`` /
     ``LookupPrivilegeValueW`` / ``AdjustTokenPrivileges`` and emit a
@@ -198,7 +198,7 @@ def _is_admin() -> bool:
 
 
 def test_script_logs_sedebug_failure_when_non_admin(tmp_path: Path) -> None:
-    """F-0023 runtime check: non-admin runs must log the privilege failure.
+    """Non-admin runs must log the privilege failure.
 
     When the script is launched without admin rights the privilege
     adjustment must produce an explicit error log entry rather than
@@ -263,7 +263,7 @@ def _wait_for_log_marker(
 
 
 def test_script_logs_openprocess_failure_for_system_pid(tmp_path: Path) -> None:
-    """F-0022 runtime check: System PID failures must be logged.
+    """System PID failures must be logged.
 
     Without ``SeDebugPrivilege`` the call to ``OpenProcess`` against the
     System process (PID 4) deterministically fails. The script must log
@@ -316,11 +316,10 @@ def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> Popen[s
     bounded window - rather than sequentially - gives the 100 ms monitor many
     full sweep cycles in which every handle is continuously present, so a
     genuinely fast monitor reliably enumerates them without timing flakiness.
-    The total window (2 000 ms) is still strictly shorter than the legacy
-    3 000 ms cadence that F-0021 gates against: a 3 s monitor whose next sweep
-    after object creation fires 3 s later sees all three handles already gone
-    and records nothing, so the test fails under that regression.  Using a
-    finite, named three-mutex set makes an empty log unambiguously a monitor
+    The total window (2 000 ms) is shorter than a 3 s cadence: a 3 s monitor
+    whose next sweep after object creation fires 3 s later sees all three handles
+    already gone and records nothing, so the test fails under that regression.
+    Using a finite, named three-mutex set makes an empty log unambiguously a monitor
     failure rather than a naming collision.
 
     Args:
@@ -493,24 +492,17 @@ def _run_mutex_helper_and_collect(
 
 
 def test_script_captures_transient_mutex(tmp_path: Path) -> None:
-    """F-0021 runtime check: transient kernel objects must be captured.
+    """Transient kernel objects must be captured.
 
     The helper creates three named mutexes and holds them simultaneously for
     ``_TRANSIENT_MUTEX_LIFETIME_MS`` (2 000 ms) before releasing them. The
     monitor is started with ``poll_ms=_FAST_POLL_INTERVAL_MS`` (100 ms), so it
     sweeps the continuously-present handles many times within that window.
 
-    Falsifiability proof: revert ``Start-Sleep -Milliseconds
-    $PollIntervalMilliseconds`` in ``kernel_object_monitor.ps1`` back to
-    ``Start-Sleep -Seconds 3``.  With 3 s polling the next sweep after the
-    handles are created fires only after the 2 000 ms window has elapsed and
-    all three mutexes are gone; the log contains no matching entry; the
-    PID-keyed assertion below raises AssertionError.
-
     The independent oracle is the helper PID (``helper_proc.pid``): the
     log line format is ``<ts>|Mutant|<name>|<owner_pid>|<proc_name>|created``.
     We locate lines whose fourth pipe-delimited field equals the helper
-    PID — a value that is never injected into the monitor and is only
+    PID, a value that is never injected into the monitor and is only
     present in the log if the monitor independently observed the mutex
     handle owned by that process.
 

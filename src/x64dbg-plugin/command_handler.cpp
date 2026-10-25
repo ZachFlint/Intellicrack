@@ -234,7 +234,7 @@ uint16_t read_u16_le(const uint8_t* buf, size_t buf_len, size_t off) {
     return value;
 }
 
-// Extract the "address" string value using the legacy positional scan, but
+// Extract the "address" string value using the positional scan, but
 // bounds-check every index so a malformed params object produces a clean
 // failure instead of a std::out_of_range from substr(npos), then validate the
 // token with valid_hex_address before it can reach DbgCmdExec.

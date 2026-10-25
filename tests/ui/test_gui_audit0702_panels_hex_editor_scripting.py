@@ -2,25 +2,22 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the GUI audit finding H32 in ``hex_editor.scripting``.
+"""Gate for the scripting highlighter's theme-driven token colours in ``hex_editor.scripting``.
 
-H32: ``_PythonSyntaxHighlighter._build_rules()`` hardcoded a VSCode "Dark+"
-palette (``#569CD6``, ``#4EC9B0``, ``#B5CEA8``, ``#C586C0``, ``#CE9178``,
-``#6A9955``) for keyword/builtin/number/decorator/string/comment tokens and
-never consulted :class:`ThemeManager`, so several tokens -- most severely
-numeric literals -- were nearly invisible against the light theme's white
-``QPlainTextEdit`` background, and the highlighter never reacted to a live
-theme switch.
+``_PythonSyntaxHighlighter._build_rules()`` must not hardcode a VSCode "Dark+" palette (``#569CD6``, ``#4EC9B0``, ``#B5CEA8``, ``#C586C0``, ``#CE9178``,
+``#6A9955``) for keyword/builtin/number/decorator/string/comment tokens. It must consult :class:`ThemeManager`, since a hardcoded
+palette can leave tokens (most severely numeric literals) nearly invisible against the light theme's white ``QPlainTextEdit``
+background, and the highlighter must react to a live theme switch.
 
 These tests drive the real :class:`_PythonSyntaxHighlighter` attached to a
 real ``QTextDocument`` under an offscreen ``QApplication`` and read back the
 actual character formats Qt applied, rather than inspecting private rule
-tables. They fail against the pre-fix code because:
+tables. They fail against a hardcoded palette, because:
 
 * the hardcoded light-theme-adjacent colours never matched
   ``ThemeManager.get_analysis_colors()`` values (which differ from theme to
   theme), so the theme-driven-colour assertions would fail outright;
-* the pre-fix light-theme number colour (the hardcoded ``#B5CEA8``) is
+* the hardcoded light-theme number colour (``#B5CEA8``) is
   near-invisible against a white background, so the contrast assertion
   would fail;
 * with no ``theme_changed`` subscription, switching the live theme left the
@@ -105,15 +102,15 @@ def _luminance(color: QColor) -> float:
 
 
 class TestH32ThemeAwareTokenColors:
-    """H32: token colours are resolved from ThemeManager, not hardcoded."""
+    """Token colours are resolved from ThemeManager, not hardcoded."""
 
     def test_h32_number_literal_matches_theme_operand_immediate(self, qapp: QApplication) -> None:
         """The ``0x1A2B`` numeric literal is coloured with the theme's operand_immediate colour.
 
-        Pre-fix the number format was hardcoded to ``QColor("#B5CEA8")``
+        The number format must not be hardcoded to ``QColor("#B5CEA8")``
         regardless of theme; this asserts the rendered colour tracks
         ``ThemeManager.get_analysis_colors()["operand_immediate"]`` in both
-        themes, which only holds once the fix resolves colours live.
+        themes, which only holds when colours resolve live.
 
         Args:
             qapp: The shared offscreen QApplication fixture.
@@ -164,8 +161,8 @@ class TestH32ThemeAwareTokenColors:
     def test_h32_light_theme_number_contrast_is_adequate(self, qapp: QApplication) -> None:
         """The light-theme number colour must contrast with a white editor background.
 
-        Pre-fix the hardcoded ``#B5CEA8`` pale-green number colour computed
-        to roughly a 1.7:1 contrast ratio against white and was effectively
+        The hardcoded ``#B5CEA8`` pale-green number colour would compute
+        to roughly a 1.7:1 contrast ratio against white and be effectively
         unreadable; the theme-resolved light colour must clear a real
         readability threshold.
 

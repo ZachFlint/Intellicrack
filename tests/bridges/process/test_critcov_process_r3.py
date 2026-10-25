@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Third-pass critical-coverage tests for the process bridge: 32-bit targets, stack depth and registry value size.
+r"""coverage tests for the process bridge: 32-bit targets, stack depth and registry value size.
 
 Every test that touches another process drives the real Win32 APIs against a child the test starts itself: a 32-bit
 ``cmd.exe`` from the ``SysWOW64`` directory blocked in ``pause`` on an open stdin pipe, or a Python interpreter blocked

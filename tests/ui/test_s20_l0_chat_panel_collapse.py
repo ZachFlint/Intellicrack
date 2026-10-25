@@ -2,16 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S20-D14/S20-D16 (shell half): the Chat pane must collapse and restore.
+"""Gate for the Chat pane collapse and restore in the main window.
 
-Before the fix, the main splitter's ``setChildrenCollapsible(False)`` made
-the Chat pane un-collapsible, so it permanently occupied its minimum width
-even while empty, crushing every embedded tool panel into the remaining
-splitter space with no way to reclaim that width (S20-D14/S20-D16). This
-test drives the real ``MainWindow`` splitter and asserts that toggling the
-Chat pane collapses it to zero width, hands that freed width to the tool
-panel, and that toggling again restores a nonzero Chat width -- proving the
-pane is genuinely recoverable, not a one-way collapse.
+A ``setChildrenCollapsible(False)`` on the main splitter would make the Chat pane
+un-collapsible, so it would keep its minimum width even while empty and crush every
+embedded tool panel into the remaining splitter space with no way to reclaim that width.
+This test drives the real ``MainWindow`` splitter and asserts that toggling the Chat pane
+collapses it to zero width, hands that freed width to the tool panel, and that toggling
+again restores a nonzero Chat width, proving the pane is genuinely recoverable and not a
+one-way collapse.
 """
 
 from __future__ import annotations
@@ -110,9 +109,8 @@ def test_toggle_chat_panel_collapses_to_zero_and_frees_width_to_tool_panel(
 def test_toggle_chat_panel_is_restorable_after_collapse(shell_window: MainWindow) -> None:
     """A second toggle after collapsing must restore a nonzero Chat pane width.
 
-    A pane the user can collapse but never get back is a regression in its
-    own right (D14/D16): this asserts the toggle is genuinely a two-way
-    control, not a one-shot collapse.
+    A pane the user can collapse but never get back is a regression in its own right. This
+    asserts the toggle is genuinely a two-way control, not a one-shot collapse.
 
     Args:
         shell_window: A real, shown ``MainWindow``.

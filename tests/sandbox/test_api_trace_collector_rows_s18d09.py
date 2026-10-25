@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for S18-D09: the API tracer's own rows are not API calls.
+"""The API tracer's own rows are not API calls.
 
 ``api_trace.ps1`` has no channel but its own data log in which to announce
 that it started, that it stopped, and that it failed, so it writes all
@@ -14,7 +14,7 @@ turned a collector which had captured nothing at all - its trace session
 died before processing a single event - into an API Calls tab reporting
 two calls, named ``ERROR`` and ``STOP``.
 
-The injection monitor's identical rows were already skipped (S17-D78);
+The injection monitor's identical rows were already skipped;
 the API tracer's were not.
 
 Nothing here restates what the guest writes. The log writers and the call

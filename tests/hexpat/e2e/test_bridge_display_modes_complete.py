@@ -41,7 +41,7 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
 
 
 class TestDisplayModesExtended:
-    """Tests for display mode set/get roundtrip for modes not covered previously."""
+    """Tests for display mode set/get roundtrip for modes not otherwise covered."""
 
     def test_set_hex16_be_returns_true_and_persists_state(
         self,

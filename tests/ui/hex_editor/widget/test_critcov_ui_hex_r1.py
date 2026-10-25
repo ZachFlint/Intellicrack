@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Second-pass coverage for the hex editor panels, the session manager and the tool configuration dialog.
+"""Coverage for the hex editor panels, the session manager and the tool configuration dialog.
 
 Every test drives production code with real objects: real mixin hosts built on real Qt widgets, a genuine ``HexDocument``, a real
 ``HexEditorBridge``, signature databases written under ``tmp_path`` and loopback HTTP servers from ``tests/_helpers``. Expected values are

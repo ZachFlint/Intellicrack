@@ -5,12 +5,11 @@
 
 """Real-backend regression test for CutterBridge ``search_bytes_wildcard``.
 
-This module covers the sibling of defect S15-D05: ``search_bytes_wildcard``
+This module covers a sibling of the ``search_bytes`` defect: ``search_bytes_wildcard``
 parsed rizin's ``/xj`` wildcard-search JSON hits with the wrong top-level key
 (``offset``) instead of the real ``address`` key, so every hit's address
 silently collapsed to the ``0`` default even though the hit count was correct.
-The fix mirrors the one already applied to the adjacent ``search_bytes``
-method.
+The fix mirrors the one applied to ``search_bytes``.
 
 Exactly like ``test_cutter_rop_project_bytes_s15.py``, these tests drive a
 genuine rizin/radare2 backend against a real, on-disk System32 PE binary --
@@ -93,7 +92,7 @@ async def pe_bridge() -> AsyncIterator[CutterBridge]:
 
 
 class TestSearchBytesWildcardS15D05B:
-    """S15-D05 (sibling): wildcard byte-search hits must report real addresses."""
+    """Wildcard byte-search hits must report real addresses."""
 
     async def test_wildcard_addresses_are_real_and_match_independent_oracle(
         self,

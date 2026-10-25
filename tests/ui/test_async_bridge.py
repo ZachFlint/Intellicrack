@@ -347,9 +347,9 @@ class TestBridgeCallWorker:
 
         Bad credentials, rate limits and unreachable bridges all reach this
         handler as ``IntellicrackError`` subclasses and are handed to the
-        caller's ``on_error`` for display. Logging every one of them through
-        ``logger.exception`` stamped a full traceback under a generic
-        "worker failed" event, which buried the tracebacks that mean something.
+        caller's ``on_error`` for display. Logging each one through ``logger.exception``
+        would stamp a full traceback under a generic "worker failed" event, which would
+        bury the tracebacks that mean something.
 
         Args:
             qapp: Qt application fixture used to pump the event loop.

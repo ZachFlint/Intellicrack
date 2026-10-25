@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for audit defect S14-D15 (region/module count labels show total, not filtered).
+"""Tests for region/module count labels, which must show the filtered (visible) count.
 
 Covers ``MemoryTab`` (``src/intellicrack/ui/panels/process_panel/memory_tab.py``)
 and ``ModulesTab`` (``src/intellicrack/ui/panels/process_panel/modules_tab.py``):
@@ -11,19 +11,12 @@ after a filter is applied to the Regions table or the Modules tree, the
 "N regions" / "N modules" count label must reflect the currently VISIBLE
 row count, not the unfiltered backing-list total.
 
-S14-D16 (attach auto-popup Regions dialog shows raw hex Protection/State and
-defaults the read to a MEM_FREE row) is NOT covered here. That popup is built
-in ``MainWindow._on_process_regions_listed`` in ``src/intellicrack/ui/app.py``,
-not in ``memory_tab.py`` or ``modules_tab.py`` -- confirmed by a full read of
-both files plus a repository-wide search for the dialog construction site.
-Neither file contains a Protection/State decode helper to reuse: the Region
-Map's readable Protection/State text comes from the bridge's
-``get_memory_map(resolve_names=True)`` call already returning decoded
-strings, not from any local decode routine. Since the task scope for this
-change was restricted to ``memory_tab.py``, ``modules_tab.py``, and this test
-file (with ``bridges/process.py`` and all other source files explicitly
-out of bounds), S14-D16 could not be fixed here and is intentionally left
-untested rather than faked against code these two files do not contain.
+The attach auto-popup Regions dialog (raw hex Protection/State, and a read defaulted to a
+MEM_FREE row) is not covered here. That popup is built in
+``MainWindow._on_process_regions_listed`` in ``src/intellicrack/ui/app.py``, not in
+``memory_tab.py`` or ``modules_tab.py``. Neither file contains a Protection/State decode
+helper: the Region Map's readable text comes from the bridge's
+``get_memory_map(resolve_names=True)`` call, which already returns decoded strings.
 """
 
 from __future__ import annotations
@@ -59,7 +52,7 @@ def memory_tab(qapp: QApplication) -> MemoryTab:
     """Create a real ``MemoryTab`` instance for testing.
 
     Args:
-        qapp: QApplication fixture -- required to ensure Qt is initialised.
+        qapp: QApplication fixture -- required to ensure Qt is initialized.
 
     Returns:
         MemoryTab: A fresh ``MemoryTab`` widget.
@@ -73,7 +66,7 @@ def modules_tab(qapp: QApplication) -> ModulesTab:
     """Create a real ``ModulesTab`` instance for testing.
 
     Args:
-        qapp: QApplication fixture -- required to ensure Qt is initialised.
+        qapp: QApplication fixture -- required to ensure Qt is initialized.
 
     Returns:
         ModulesTab: A fresh ``ModulesTab`` widget.
@@ -200,7 +193,7 @@ def _capture_dispatch(
 
 
 class TestRegionCountReflectsFilteredRows:
-    """S14-D15: MemoryTab's '_region_count' label tracks visible, not total, rows."""
+    """MemoryTab's '_region_count' label tracks visible, not total, rows."""
 
     def test_filter_updates_region_count_to_visible_rows(self, memory_tab: MemoryTab) -> None:
         """Applying a filter that hides rows updates the count to the visible total.
@@ -209,7 +202,7 @@ class TestRegionCountReflectsFilteredRows:
         contains "ntdll", then drives the filter through the real
         ``_on_region_filter_changed`` slot (the production ``textChanged``
         handler) and asserts the label shows the filtered count -- not the
-        4-row unfiltered total that a reverted fix would leave in place.
+        4-row unfiltered total that a regression would leave in place.
 
         Args:
             memory_tab: MemoryTab fixture.
@@ -266,9 +259,9 @@ class TestRegionCountReflectsFilteredRows:
         dispatches ``bridge.get_memory_map`` through
         ``run_bridge_coroutine_async`` (faked here to capture ``on_success``),
         and the captured callback is invoked with 5 synthetic region objects.
-        Only 2 belong to "target.dll". A reverted fix that sets the label from
+        Only 2 belong to "target.dll". A regression that sets the label from
         ``len(typed_result)`` before applying the filter would leave the label
-        at "5 regions"; the fixed code must show "2 regions".
+        at "5 regions"; the code must show "2 regions".
 
         Args:
             memory_tab: MemoryTab fixture.
@@ -332,7 +325,7 @@ class TestRegionCountReflectsFilteredRows:
 
 
 class TestModuleCountReflectsFilteredRows:
-    """S14-D15: ModulesTab's '_mod_count' label tracks visible, not total, rows."""
+    """ModulesTab's '_mod_count' label tracks visible, not total, rows."""
 
     def test_filter_updates_module_count_to_visible_rows(self, modules_tab: ModulesTab) -> None:
         """Applying a filter that hides tree items updates the count to the visible total.
@@ -372,8 +365,8 @@ class TestModuleCountReflectsFilteredRows:
         Exercises ``_refresh_modules`` end-to-end via a faked
         ``run_bridge_coroutine_async`` capturing ``on_success``, then invokes
         it with 4 synthetic module objects while a "target" filter is set that
-        matches only 1 of them. A reverted fix would leave the label at
-        "4 modules"; the fixed code must show "1 modules".
+        matches only 1 of them. A regression would leave the label at
+        "4 modules"; the code must show "1 modules".
 
         Args:
             modules_tab: ModulesTab fixture.

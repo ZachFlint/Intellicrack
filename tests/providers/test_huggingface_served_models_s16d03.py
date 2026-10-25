@@ -3,13 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for HuggingFace served-model catalog filtering (S16-D03).
+"""Regression tests for HuggingFace served-model catalog filtering.
 
-Before this fix, ``HuggingFaceProvider.list_models`` returned the raw Hub
-text-generation catalog with no regard for which of those models the
-configured token's HuggingFace Inference Providers actually serve for chat
-completion. Requesting an unserved model produced an opaque HTTP 400
-(``model_not_supported`` / an empty bad-request body) with no guidance.
+``HuggingFaceProvider.list_models`` must return only the models that the
+configured token's HuggingFace Inference Providers serve for chat completion.
+The raw Hub text-generation catalog includes models that no provider serves,
+and requesting one produces an opaque HTTP 400 (``model_not_supported`` / an
+empty bad-request body) with no guidance.
 
 These tests validate two independent, falsifiable properties of the fix:
 

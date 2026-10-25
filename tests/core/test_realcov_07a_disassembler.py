@@ -4,19 +4,16 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-binary coverage tests for ``intellicrack.core.disassembler``.
 
-These tests address audit shard 07 findings for ``disassembler.py``:
+Real-binary coverage for ``disassembler.py``:
 
-* The audit flagged that ``auto_detect_arch`` was only ever exercised with a
-  mocked ``detect_format_and_arch`` return tuple (test_disassembler.py:55-94).
-  The tests here run the REAL detection chain on REAL PE / ELF / Mach-O
-  binaries and assert the resulting capstone ``(arch, mode)`` pair.
-* The audit noted ``disassemble()`` has no direct unit test that decodes real
-  machine code. The tests here extract the real ``.text`` section from a real
-  PE and a real ELF, disassemble it with capstone, and assert that genuine
-  x86-64 mnemonics are produced.
-* The audit noted ``get_disassembler()`` singleton reuse, RISC-V conditional
-  availability, and ``get_supported_architectures()`` were untested. Those are
-  covered here against the real installed capstone build.
+* ``auto_detect_arch`` runs the REAL detection chain on REAL PE / ELF / Mach-O
+  binaries and asserts the resulting capstone ``(arch, mode)`` pair, rather than a
+  mocked ``detect_format_and_arch`` return tuple.
+* ``disassemble()`` decodes real machine code: the ``.text`` section of a real PE
+  and a real ELF is disassembled with capstone, and genuine x86-64 mnemonics are
+  asserted.
+* ``get_disassembler()`` singleton reuse, RISC-V conditional availability, and
+  ``get_supported_architectures()`` are checked against the real installed capstone build.
 
 No mocks are used: every assertion is driven by a real binary and the real
 capstone engine.

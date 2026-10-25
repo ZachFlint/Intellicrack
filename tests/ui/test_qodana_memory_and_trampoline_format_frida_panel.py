@@ -3,23 +3,22 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for the memory-op address formatting in ``frida_panel``.
+"""Gates for the memory-op address formatting in ``frida_panel``.
 
-Covers three 2026-09-20 Qodana findings in ``FridaPanel``:
+Covers three address-handling cases in ``FridaPanel``:
 
-* ``PyStringFormatInspection`` on ``_on_write_memory``: the parsed ``addr``
+* ``_on_write_memory``: the parsed ``addr``
   (``int | None``) is read again inside an ``on_success`` closure handed to
   ``run_bridge_coroutine_logged``; the guard above the closure narrows it in
   the enclosing scope but static analysis cannot prove that survives into the
-  closure. The handler now rebinds the narrowed value to an explicitly
+  closure. The handler rebinds the narrowed value to an explicitly
   ``int``-typed local (``resolved_addr``) before the closure and the bridge
   call.
-* The same finding on ``_on_copy_memory`` for both ``src`` and ``dst``
+* ``_on_copy_memory``: the same pattern for both ``src`` and ``dst``
   (rebound to ``resolved_src``/``resolved_dst``).
-* ``PyStringFormatInspection`` (``Any | None``) on
-  ``_on_replace_function_fast_installed``: ``getattr(result,
+* ``_on_replace_function_fast_installed``: ``getattr(result,
   "original_trampoline", None)`` on a bare ``object`` yields ``Any | None``
-  with no guarantee the attribute is actually an ``int``. The handler now
+  with no guarantee the attribute is actually an ``int``. The handler
   uses ``isinstance(trampoline, int)`` instead of an ``is not None`` check,
   which is a genuine runtime guard against a malformed or wrong-shaped
   result, not just a type-checker satisfaction.
@@ -59,7 +58,7 @@ class _RecordingFridaBridge:
     """Stand-in bridge recording exactly which arguments each call forwarded."""
 
     def __init__(self) -> None:
-        """Initialise an empty call log per method name."""
+        """Initialize an empty call log per method name."""
         self.calls: dict[str, tuple[object, ...]] = {}
 
     async def write_memory(self, address: int, data: bytes) -> int:
@@ -161,7 +160,7 @@ def test_copy_memory_renders_narrowed_addresses_and_forwards_them(
 ) -> None:
     """``_on_copy_memory``'s success closure formats both real parsed addresses in order.
 
-    Regression target: the src/dst rebind must not swap the two values --
+    The src/dst rebind must not swap the two values --
     the bridge call and the rendered message must each show src and dst in
     their original, non-transposed positions.
 
@@ -210,7 +209,7 @@ def test_replace_function_fast_installed_skips_non_int_trampoline_without_crashi
 ) -> None:
     """A malformed result whose ``original_trampoline`` is not an int must not crash or render it.
 
-    Regression target: reverting the ``isinstance(trampoline, int)`` guard
+    Reverting the ``isinstance(trampoline, int)`` guard
     back to a bare ``is not None`` check would let this non-int value reach
     ``f"...:X}"`` and raise ``TypeError`` (formatting an ``Any``-typed,
     non-numeric value with a hex format spec).

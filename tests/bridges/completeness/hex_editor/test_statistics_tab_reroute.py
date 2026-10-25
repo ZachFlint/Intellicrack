@@ -3,10 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L3 regression gate for T2-7(b): the hex-editor Statistics tab must route through the bridge.
+"""L3 gate: the hex-editor Statistics tab must route through the bridge.
 
-Prior to this fix ``StatisticsMixin._update_statistics`` and
-``_on_show_digram_matrix`` always dispatched a background worker that called
+``StatisticsMixin._update_statistics`` and
+``_on_show_digram_matrix`` dispatch a background worker that calls
 the shared ``HexDocument`` directly (``byte_statistics``, ``entropy_map``,
 ``byte_distribution_full``, ``byte_type_distribution``,
 ``content_classification``, ``digram_matrix``), bypassing
@@ -15,7 +15,7 @@ the shared ``HexDocument`` directly (``byte_statistics``, ``entropy_map``,
 ``get_byte_distribution``/``get_byte_type_distribution``/
 ``get_content_classification``/``get_digram_matrix``) entirely.
 
-The fix adds ``compute_statistics_via_bridge`` / ``compute_digram_matrix_via_bridge``
+``compute_statistics_via_bridge`` / ``compute_digram_matrix_via_bridge``
 and routes ``_update_statistics`` / ``_on_show_digram_matrix`` to them whenever
 a bridge is attached, falling back to the original document-direct functions
 otherwise.

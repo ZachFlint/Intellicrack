@@ -7,7 +7,7 @@
 The helpers are functionally identical to their bridge counterparts but
 emit log records under the ``core.hexpat.parse_helpers`` logger. These
 tests confirm both the happy path and the debug-logging contract so the
-hexpat runtime never silently swallows parse failures again.
+hexpat runtime never silently swallows parse failures.
 """
 
 from __future__ import annotations

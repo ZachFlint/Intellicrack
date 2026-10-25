@@ -2,16 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit5 u6 ToolOutputPanel fixes.
+"""Regression tests for ToolOutputPanel population and sandbox wiring.
 
 Covers:
-    F-0005: ``FunctionListPanel`` is populated by ``update_bridge_analysis``
+    ``FunctionListPanel`` is populated by ``update_bridge_analysis``
         and ``XRefPanel`` is populated by an active static-analysis bridge
         when a function/xref is selected.
-    F-0021: ``wire_sandbox_backend`` actually wires the supplied sandbox
+    ``wire_sandbox_backend`` actually wires the supplied sandbox
         (and optional manager) into a real ``SandboxBridge`` and forwards
         it to ``wire_sandbox_bridge`` instead of being a deprecation no-op.
-    F4: ``_select_static_analysis_bridge`` probes bridge health (connected
+    ``_select_static_analysis_bridge`` probes bridge health (connected
         + binary loaded) instead of unconditionally preferring Cutter, so
         an unhealthy/erroring Cutter bridge does not starve the xref panel
         when a healthy Ghidra bridge holds the real cross-reference data.
@@ -59,7 +59,7 @@ class _RecordingAnalysisPanel:
     """Lightweight stand-in for ``BridgeAnalysisPanel``.
 
     The real panel calls ``setProperty(..., value=True)`` in its setup which
-    breaks under the bundled PyQt6 build; for the F-0005 regression tests the
+    breaks under the bundled PyQt6 build; for the function-list population tests the
     function-list population behaviour is what matters, so this recorder just
     captures the analysis summary without touching Qt internals.
     """
@@ -254,7 +254,7 @@ def _make_function(name: str, address: int) -> FunctionInfo:
 
 @pytest.mark.usefixtures("qapp")
 class TestF0005FunctionListPopulation:
-    """F-0005: FunctionListPanel must be populated when bridge analysis updates."""
+    """FunctionListPanel must be populated when bridge analysis updates."""
 
     @staticmethod
     def test_update_bridge_analysis_populates_function_list() -> None:
@@ -322,7 +322,7 @@ class TestF0005FunctionListPopulation:
 
 @pytest.mark.usefixtures("qapp")
 class TestF0005XRefPopulation:
-    """F-0005: XRefPanel must be populated from a static-analysis bridge."""
+    """XRefPanel must be populated from a static-analysis bridge."""
 
     @staticmethod
     def test_function_selection_populates_xref_panel(qapp: QCoreApplication) -> None:
@@ -505,13 +505,13 @@ class _FakeGhidraXrefRemote:
 
 @pytest.mark.usefixtures("qapp")
 class TestF4HealthAwareBridgeSelection:
-    """F4: xref bridge selection must probe health, not just non-``None``-ness."""
+    """Xref bridge selection must probe health, not just non-``None``-ness."""
 
     @staticmethod
     def test_ghidra_selected_over_unhealthy_erroring_cutter(qapp: QCoreApplication) -> None:
         """A connected-but-unloaded, erroring Cutter must not starve xrefs.
 
-        Reproduces the F4 root cause: the Cutter panel has initialized its
+        Reproduces the root cause: the Cutter panel has initialized its
         backend (``state.connected = True``, mirroring the panel being
         open) but no binary was ever loaded through this bridge instance
         (``state.binary_loaded`` stays ``False``), and querying it raises --
@@ -603,7 +603,7 @@ class TestF4HealthAwareBridgeSelection:
 
 @pytest.mark.usefixtures("qapp")
 class TestF0021SandboxBackendWiring:
-    """F-0021: ``wire_sandbox_backend`` must actually wire the panel."""
+    """``wire_sandbox_backend`` must actually wire the panel."""
 
     @staticmethod
     def test_wires_sandbox_to_pending_bridge() -> None:

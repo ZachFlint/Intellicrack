@@ -101,7 +101,7 @@ Name: "qemu\debianguest"; Description: "Ready-to-run Debian sandbox guest image 
 ; Clear install-managed trees before files are copied so upgrades never leave
 ; stale files shadowing new ones on PYTHONPATH, and so deselecting a component
 ; (for example the multi-GB ML overlay merged into the runtime site-packages)
-; actually removes it. All user-writable state now lives under %LOCALAPPDATA%,
+; actually removes it. All user-writable state lives under %LOCALAPPDATA%,
 ; never under {app}, so nothing here can touch credentials, config, logs, or data.
 Type: filesandordirs; Name: "{app}\runtime"
 Type: filesandordirs; Name: "{app}\app\src"

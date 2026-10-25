@@ -3,14 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for GUI audit finding M5 (sandbox availability probe).
+"""Tests for the sandbox availability probe.
 
-Finding M5: ``tools.py`` constructed a throwaway ``SandboxConfigDialog()`` on the
+``tools.py`` constructed a throwaway ``SandboxConfigDialog()`` on the
 GUI thread solely to call ``is_sandbox_available()``. That dialog's ``__init__``
 ran a blocking ``powershell ... Get-CimInstance`` probe synchronously, and the
 leaked dialog was never disposed - repeated on every Sandbox tab add.
 
-These tests assert the fix:
+These tests assert that:
 
 * ``tools.py`` obtains availability via the standalone
   ``is_windows_sandbox_available`` function, without constructing any QDialog.
@@ -47,7 +47,7 @@ _WORKER_JOIN_MS: Final[int] = 30_000
 
 
 class TestTabAddUsesExtractedCheck:
-    """M5: the Sandbox tab-add path must not construct a dialog to probe availability."""
+    """The Sandbox tab-add path must not construct a dialog to probe availability."""
 
     @staticmethod
     def test_create_sandbox_panel_uses_function_not_dialog(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -97,7 +97,7 @@ class TestTabAddUsesExtractedCheck:
 
 
 class TestDialogInitNonBlocking:
-    """M5: the dialog constructor must not run the PowerShell probe synchronously."""
+    """The dialog constructor must not run the PowerShell probe synchronously."""
 
     @staticmethod
     def test_init_dispatches_probe_off_thread(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -144,7 +144,7 @@ class TestDialogInitNonBlocking:
 
 
 class TestAvailabilityFunction:
-    """M5: the standalone availability function and its caching."""
+    """The standalone availability function and its caching."""
 
     @staticmethod
     def test_is_available_returns_bool_without_dialog(monkeypatch: pytest.MonkeyPatch) -> None:

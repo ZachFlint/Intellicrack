@@ -3,20 +3,19 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for the Ghidra share of S20-D14/S20-D16/S20-D17 -- clipped tab bars.
+"""Gate for clipped tab bars on the Ghidra panel.
 
 ``GhidraPanel._create_code_tabs`` and ``GhidraPanel._create_data_tabs``
 (src/intellicrack/ui/panels/ghidra_panel.py) build the Decompiled/
 Disassembly/PCode/CFG code-tab strip and the 18-tab bottom detail strip. At
 narrow widths Qt's own ``QTabBar`` overflow degrades to pixel-wide scroll
-arrows with no indication of what the remaining tabs are named, which the
-audit records as unusable (S20-D14/S20-D16/S20-D17).
+arrows with no indication of what the remaining tabs are named, which makes them
+unusable.
 
-The fix reuses the Process panel's already-established
-``install_tab_overflow`` helper
-(``intellicrack.ui.panels.process_panel.tab_overflow``) on both tab widgets:
-it adds a corner ``QToolButton`` whose menu lists every tab by name and jumps
-straight to it on one click, regardless of how the tab bar itself renders.
+Both tab widgets reuse the Process panel's ``install_tab_overflow`` helper
+(``intellicrack.ui.panels.process_panel.tab_overflow``). It adds a corner
+``QToolButton`` whose menu lists every tab by name and jumps straight to it on one
+click, regardless of how the tab bar itself renders.
 
 Every assertion drives the real corner button and menu installed on a live,
 fully constructed ``GhidraPanel`` under an offscreen ``QApplication`` -- no

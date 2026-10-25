@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Offline test gates for OllamaProvider transforms (wave2d remediation).
+"""Offline test gates for OllamaProvider transforms.
 
-Covers operations that had zero offline coverage per section-09 audit:
+Covers operations with no offline coverage:
 _parse_chat_response (local NDJSON and cloud OpenAI paths), _parse_ollama_tool_calls,
 _accumulate_native_tool_call_deltas, _finalize_native_tool_calls,
 _record_usage_from_chunk, _record_usage_from_openai_payload,

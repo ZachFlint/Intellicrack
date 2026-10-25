@@ -2,19 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S17-D14 at the bridge layer: ``SandboxBridge.restart``.
+"""Gates at the bridge layer: ``SandboxBridge.restart``.
 
-The panel used to synthesise a restart from ``bridge.destroy`` followed by
-``bridge.create``, so there was no restart operation any other caller (the AI
-orchestrator, a headless workflow, a future panel) could reuse. These tests
+``SandboxBridge.restart`` is one operation that any caller (the AI orchestrator, a headless workflow, a future panel) can reuse. These tests
 drive the real :class:`SandboxBridge` against a real :class:`SandboxManager`
 whose backend factory yields the real
 :class:`~tests.sandbox.conftest.LocalProcessSandbox`, so the restart performs
 genuine work: the original sandbox's real work directory is removed and the
 replacement's real work directory exists.
 
-The ``qemu_config`` forwarding assertion is the S17-D06 regression guard at the
-bridge layer: a restart that dropped it would rebuild a QEMU sandbox with no
+The ``qemu_config`` forwarding assertion guards the bridge layer: a restart that dropped it would rebuild a QEMU sandbox with no
 disk image.
 """
 

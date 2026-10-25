@@ -3,13 +3,10 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L1/L2/L3 gate tests for the hex-editor Search-and-Replace feature (row #9).
+"""L1/L2/L3 gate tests for the hex-editor Search-and-Replace feature.
 
-Covers ``audit/bridge-completeness/agent-09-hex-editor.md`` row #9:
-``replace_bytes`` (``hex_editor.py:5329``) was fully implemented and
-registered but had zero GUI reachability -- no "Replace" affordance existed
-anywhere in ``ui/panels/hex_editor/search.py``. The remediation added
-toolbar Replace/Replace All controls (``panel.py``) wired to
+Covers
+The toolbar Replace/Replace All controls (``panel.py``) wired to
 ``SearchMixin._on_replace``/``_on_replace_all`` (``search.py``), which
 dispatch through ``run_bridge_coroutine(bridge.replace_bytes(...))`` for
 Hex/Text/Numeric modes.
@@ -144,8 +141,7 @@ class TestReplaceBytesDispatchL2:
         """Dispatching via ``ToolRegistry.execute_tool_call`` performs the real replace.
 
         Falsifiable: if the tool-def's ``function_name`` did not match the
-        ``replace_bytes`` attribute (the historical
-        ``disassemble``/``disassemble_at`` class of bug), ``getattr`` inside
+        ``replace_bytes`` attribute (as with ``disassemble``/``disassemble_at``), ``getattr`` inside
         ``execute_tool_call`` would resolve to ``None`` and this call would
         raise ``ToolError`` for an unknown function instead of mutating the
         real document.

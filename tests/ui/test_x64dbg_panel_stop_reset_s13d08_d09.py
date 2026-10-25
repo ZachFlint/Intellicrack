@@ -3,16 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for S13-D08 and S13-D09 in the x64dbg panel.
+"""Falsifiable gates for the x64dbg panel's stop reset and scrollable layout.
 
-S13-D09: stopping a debug session left the disassembly view and registers
-table showing the previous debuggee's stale data. The stop-success path
-must clear both so the panel never implies a process is still attached.
+Stopping a debug session must clear the disassembly view and registers table, so the panel never
+shows the previous debuggee's stale data or implies a process is still attached.
 
-S13-D08: the panel's native content (Disassembly/Registers row plus the
-bottom-tab tables) is taller than most docked areas, and the layout had no
-scrollbar, so the bottom rows were silently clipped. The content must be
-hosted in a QScrollArea that can actually scroll vertically.
+The panel's native content (Disassembly/Registers row plus the bottom-tab tables) is taller than most
+docked areas. It must be hosted in a QScrollArea that can scroll vertically, so the bottom rows are
+never silently clipped.
 """
 
 from __future__ import annotations

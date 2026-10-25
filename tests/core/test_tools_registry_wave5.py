@@ -2,16 +2,16 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real-gate tests for ToolRegistry typed getters and enum values (Group 06 Wave 5).
+"""Real-gate tests for ToolRegistry typed getters and enum values.
 
 Covers:
-  S7-16 — ``initialize_tool(GHIDRA)`` / ``initialize_tool(X64DBG)`` invokes the
+  ``initialize_tool(GHIDRA)`` / ``initialize_tool(X64DBG)`` invokes the
            installer path and forwards the returned ``Path`` to ``bridge.initialize``.
-  S7-17 — Typed getter ``ToolError`` messages contain the exact ``_ERR_BRIDGE_NA``
+  Typed getter ``ToolError`` messages contain the exact ``_ERR_BRIDGE_NA``
            constant text; ``pytest.raises(ToolError)`` without ``match=`` is insufficient.
-  S8-12 — ``ConfirmationLevel`` enum member ``.value`` strings are exactly
+  ``ConfirmationLevel`` enum member ``.value`` strings are exactly
            ``"none"`` / ``"destructive"`` / ``"all"``; complete member set verified.
-  S8-13 — ``ToolChoiceMode`` enum member ``.value`` strings are exactly
+  ``ToolChoiceMode`` enum member ``.value`` strings are exactly
            ``"auto"`` / ``"none"`` / ``"required"`` / ``"specific"``; complete
            member set verified.
 """
@@ -178,7 +178,7 @@ class _WrongTypeBridge(ToolBridgeBase):
 
 
 class TestInitializeToolInstallerPath:
-    """Gate for S7-16: initialize_tool(GHIDRA/X64DBG) calls installer then bridge.initialize."""
+    """Gate for initialize_tool(GHIDRA/X64DBG) calls installer then bridge.initialize."""
 
     def test_initialize_tool_ghidra_invokes_installer_and_bridge(
         self,
@@ -280,7 +280,7 @@ class TestInitializeToolInstallerPath:
 
 
 class TestTypedGetterErrorMessages:
-    """Gate for S7-17: typed getters raise ToolError with exact message text."""
+    """Gate for typed getters raise ToolError with exact message text."""
 
     def _make_empty_registry(self, tmp_path: Path) -> ToolRegistry:
         """Create a ToolRegistry with no bridges registered.
@@ -388,7 +388,7 @@ class TestTypedGetterErrorMessages:
 
 
 class TestConfirmationLevelEnumValues:
-    """Gate for S8-12: ConfirmationLevel member .value strings are exact wire-format constants."""
+    """Gate for ConfirmationLevel member .value strings are exact wire-format constants."""
 
     def test_none_value(self) -> None:
         """ConfirmationLevel.NONE.value == 'none'.
@@ -430,7 +430,7 @@ class TestConfirmationLevelEnumValues:
 
 
 class TestToolChoiceModeEnumValues:
-    """Gate for S8-13: ToolChoiceMode member .value strings are exact wire-format constants."""
+    """Gate for ToolChoiceMode member .value strings are exact wire-format constants."""
 
     def test_auto_value(self) -> None:
         """ToolChoiceMode.AUTO.value == 'auto'.

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Critical-coverage tests for ``intellicrack.providers.ollama``.
+"""Tests for ``intellicrack.providers.ollama``.
 
 Every test drives the real :class:`~intellicrack.providers.ollama.OllamaProvider` against loopback HTTP servers that speak the Ollama
 wire formats: ``/api/tags``, ``/api/show``, ``/api/ps``, ``/api/generate``, ``/api/pull`` and the NDJSON ``/api/chat`` stream for a local

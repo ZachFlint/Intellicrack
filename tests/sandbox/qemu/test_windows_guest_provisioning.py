@@ -872,7 +872,7 @@ class TestAnswerFileGeneration:
         assert _texts(shell, "OOBE/HideOnlineAccountScreens") == ["true"]
 
     def test_oobe_pass_settles_the_locale_so_oobe_asks_nothing(self) -> None:
-        """OOBE must get its own locale component, not just Setup's (S17-D40).
+        """OOBE must get its own locale component, not just Setup's.
 
         ``Microsoft-Windows-International-Core-WinPE`` in the ``windowsPE`` pass
         only settles Setup's own UI. OOBE reads the non-WinPE component in the

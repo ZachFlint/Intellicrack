@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Shared machinery for gates that boot a real Windows guest under QEMU.
 
-Two S17 defects - the WHPX CPU model (S17-D36) and the WHPX interrupt chip
-(S17-D37) - can only be gated by starting real Windows installation media and
+Two defects - the WHPX CPU model and the WHPX interrupt chip - can only be gated by starting real Windows installation media and
 watching what the guest actually does. Neither is observable from the command
 line alone: both produce a perfectly well-formed argv that a Windows kernel
 then refuses to run on. This module holds everything those gates share so the

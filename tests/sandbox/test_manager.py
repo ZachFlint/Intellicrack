@@ -53,6 +53,7 @@ def _in_memory_sandbox_factory(*args: object, **kwargs: object) -> InMemorySandb
 
     Returns:
         InMemorySandbox: A fresh in-memory sandbox instance.
+
     """
     del args, kwargs
     return InMemorySandbox()
@@ -67,6 +68,7 @@ def _route_backends_to_memory(monkeypatch: pytest.MonkeyPatch) -> None:
 
     Args:
         monkeypatch: Pytest fixture that restores the real backends afterwards.
+
     """
     monkeypatch.setattr(manager_module, "WindowsSandbox", _in_memory_sandbox_factory)
     monkeypatch.setattr(manager_module, "QEMUSandbox", _in_memory_sandbox_factory)
@@ -93,6 +95,7 @@ class _TestableManager:
 
         Returns:
             list[Any]: List of instance objects.
+
         """
         return list(self._instances.values())
 
@@ -102,6 +105,7 @@ class _TestableManager:
 
         Returns:
             int: Number of running sandboxes.
+
         """
         return sum(inst.sandbox.state.status == "running" for inst in self._instances.values())
 
@@ -124,6 +128,7 @@ class _TestableManager:
 
         Raises:
             SandboxError: If max instances reached.
+
         """
         async with self._lock:
             if len(self._instances) >= self._max_instances:
@@ -146,6 +151,7 @@ class _TestableManager:
 
         Returns:
             _TestInstance | None: Instance or None.
+
         """
         return self._instances.get(instance_id)
 
@@ -157,6 +163,7 @@ class _TestableManager:
 
         Raises:
             SandboxError: If instance not found.
+
         """
         async with self._lock:
             if instance_id not in self._instances:
@@ -191,6 +198,7 @@ class _TestableManager:
 
         Returns:
             tuple[_TestInstance, ExecutionReport]: Instance and report.
+
         """
         inst = await self.create(auto_start=True)
         inst.binary_path = binary_path
@@ -212,6 +220,7 @@ class _TestableManager:
 
         Returns:
             int: Number of instances cleaned up.
+
         """
         now = datetime.now(UTC)
         stale_ids: list[str] = []
@@ -228,6 +237,7 @@ class _TestableManager:
 
         Returns:
             dict[str, object]: Status dictionary.
+
         """
         return {
             "max_instances": self._max_instances,
@@ -251,6 +261,7 @@ class _TestInstance:
     Args:
         sandbox: The sandbox implementation.
         binary_path: Optional binary being analyzed.
+
     """
 
     _counter: int = 0
@@ -274,6 +285,7 @@ class _TestInstance:
 
         Returns:
             SandboxState: Current sandbox state.
+
         """
         return self.sandbox.state
 
@@ -443,14 +455,9 @@ class TestManagerProperties:
         an alias of the list would reflect the clear() and the second assertion would
         fail.
 
-        Falsifiable mutation: in src/intellicrack/sandbox/manager.py line 148, change
-        ``return list(self._instances.values())`` to
-        ``return list(self._instances.values())[:] = list(...)`` or simply return the
-        dict values directly -- clear() on the returned object empties the live view so
-        len(second_list) becomes 0, failing the assertion.
-
         Args:
             monkeypatch: Pytest fixture routing the manager's backends to InMemorySandbox.
+
         """
         _route_backends_to_memory(monkeypatch)
         mgr = SandboxManager(max_instances=5)
@@ -482,15 +489,9 @@ class TestManagerCreate:
         instance was stored under its own ID by the real manager, not merely returned as a
         transient object.
 
-        Falsifiable mutation 1: in src/intellicrack/sandbox/manager.py SandboxInstance.__init__,
-        change ``self.id = str(uuid4())`` to ``self.id = "bad"`` -- the hyphen-position
-        assertions fail because "bad" has no hyphens at positions 8/13/18/23.
-        Falsifiable mutation 2: in SandboxManager.create(), remove
-        ``self._instances[instance.id] = instance`` -- ``await mgr.get(inst.id)`` returns
-        None so ``found is inst`` fails.
-
         Args:
             monkeypatch: Pytest fixture routing the manager's backends to InMemorySandbox.
+
         """
         _route_backends_to_memory(monkeypatch)
         mgr = SandboxManager(max_instances=5)
@@ -632,16 +633,9 @@ class TestManagerStatus:
         entry uses the key ``'type'`` (not ``'sandbox_type'``) with value ``'windows'``, and
         whose ``'id'`` matches the created instance's UUID.
 
-        Falsifiable mutation 1: in src/intellicrack/sandbox/manager.py get_status(), change
-        ``'max_instances': self._max_instances`` to ``'max_instances': 0`` -- the
-        ``status["max_instances"] == 5`` assertion fails.
-        Falsifiable mutation 2: rename the instance-entry key ``'type'`` to ``'sandbox_type'``
-        -- ``entry["type"]`` raises KeyError, failing the assertion.
-        Falsifiable mutation 3: replace ``self.active_count`` with the constant ``0`` --
-        ``status["active_count"] == 1`` fails because one running instance exists.
-
         Args:
             monkeypatch: Pytest fixture routing the manager's backends to InMemorySandbox.
+
         """
         _route_backends_to_memory(monkeypatch)
         mgr = SandboxManager(max_instances=5)

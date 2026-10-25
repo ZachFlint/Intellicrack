@@ -318,8 +318,8 @@ class TestSessionManagerOperations:
         The manager is closed on teardown so its auto-save worker thread is
         stopped rather than left running past the test. A leaked auto-save
         thread does not itself block interpreter shutdown (it is a daemon), but
-        leaving background workers running is the class of defect that produced
-        the whole-suite shutdown hang, so fixtures clean up after themselves.
+        leaving background workers running is the class of defect behind whole-suite
+        shutdown hangs, so fixtures clean up after themselves.
 
         Args:
             tmp_path: Pytest temporary directory.
@@ -541,7 +541,7 @@ class TestBridgeLoopShutdownDrain:
 
         Reproduces the real shutdown-crash path: a ``BridgeCallWorker`` is still
         executing a coroutine on the persistent bridge loop when the application
-        begins shutting down. The fixed ``_drain_and_stop_bridge_loop`` first
+        begins shutting down. ``_drain_and_stop_bridge_loop`` first
         drains the worker (waiting for its OS thread to finish) and only then
         stops the loop, so no ``QThread`` is destroyed mid-flight. Were the drain
         step removed, ``shutdown_bridge_loop`` would stop the loop while the

@@ -88,7 +88,7 @@ class TestContextBudgetCountsToolTraffic:
         """A history whose weight is entirely in results gets trimmed.
 
         This is the regression the budget change exists for: such a history
-        previously measured as free and was never trimmed at all.
+        would otherwise measure as free and never be trimmed.
         """
         messages = [Message(role="system", content="system prompt")]
         messages.extend(_tool_message("z" * 8000) for _ in range(12))

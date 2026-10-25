@@ -3,7 +3,7 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates A-1: the hex view must not be a keyboard trap (WCAG 2.1.2).
+ * Gates the hex view's keyboard contract: it must not be a keyboard trap (WCAG 2.1.2).
  *
  * grid.js imports api.js, which resolves its session token from `document` and
  * `window` at module load, so the module cannot be imported under plain node.

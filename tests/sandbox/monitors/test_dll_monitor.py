@@ -3,19 +3,18 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 U6 tests for ``dll_monitor.ps1`` remediation.
+"""Tests for ``dll_monitor.ps1`` behavior.
 
-Validates the three fixes applied to
+Validates the following behavior of
 ``src/intellicrack/sandbox/scripts/dll_monitor.ps1``:
 
-* F-0018 - the file-mode logman session that collided with the realtime
-  TraceEventSession is removed; only the realtime path remains.
-* F-0019 - events whose payload field set is unrecognised are recorded
-  as ``dll_event_unparsed`` diagnostic lines instead of being silently
-  dropped.
-* F-0020 - when ETW is unavailable and the script falls back to WMI it
-  emits both a ``Write-Warning`` line and a structured
-  ``etw_unavailable_falling_back_to_wmi`` diagnostic record.
+* Only the realtime ``TraceEventSession`` path runs. No file-mode logman session
+  is created, so it cannot collide with the realtime session.
+* Events whose payload field set is unrecognised are recorded as
+  ``dll_event_unparsed`` diagnostic lines instead of being silently dropped.
+* When ETW is unavailable and the script falls back to WMI, it emits both a
+  ``Write-Warning`` line and a structured ``etw_unavailable_falling_back_to_wmi``
+  diagnostic record.
 
 Tests run the real script under ``pwsh`` against the live filesystem
 and Windows ETW/WMI subsystems. They are skipped on non-Windows
@@ -199,15 +198,15 @@ def _spawn_dll_load_helper(pwsh: str) -> Popen[str]:
 
 
 def test_script_file_exists() -> None:
-    """The remediated script must exist on disk."""
+    """The script must exist on disk."""
     assert _SCRIPT_PATH.is_file(), f"missing script: {_SCRIPT_PATH}"
 
 
 def test_script_no_longer_creates_file_mode_logman_session() -> None:
-    """F-0018: file-mode ``logman create trace`` invocation must be gone.
+    """The script must not invoke file-mode ``logman create trace``.
 
-    The remediated script uses only realtime ``TraceEventSession``; any
-    use of ``logman`` would re-introduce the session-name collision.
+    The script uses only the realtime ``TraceEventSession``. Any use of
+    ``logman`` would reintroduce the session-name collision.
     """
     text = _SCRIPT_PATH.read_text(encoding="utf-8")
     assert "logman" not in text, "dll_monitor.ps1 must not invoke logman; realtime-only after F-0018"
@@ -215,11 +214,11 @@ def test_script_no_longer_creates_file_mode_logman_session() -> None:
 
 
 def test_script_logs_unparsed_events_instead_of_silently_returning() -> None:
-    """F-0019: the image-load handler must log ``dll_event_unparsed``.
+    """The image-load handler must log ``dll_event_unparsed``.
 
-    The remediated script must call ``Write-DllDiagnostic`` with
-    ``dll_event_unparsed`` whenever a payload field set is unrecognised
-    so future tuning has data, instead of silently ``return``ing.
+    The script must call ``Write-DllDiagnostic`` with ``dll_event_unparsed``
+    whenever a payload field set is unrecognised, so future tuning has data,
+    instead of silently ``return``ing.
     """
     text = _SCRIPT_PATH.read_text(encoding="utf-8")
     assert "dll_event_unparsed" in text, "expected dll_event_unparsed diagnostic category after F-0019"
@@ -227,9 +226,9 @@ def test_script_logs_unparsed_events_instead_of_silently_returning() -> None:
 
 
 def test_script_emits_structured_unparsed_record_to_main_log() -> None:
-    """F-0019 (audit7): unparsed events must reach the main log too.
+    """Unparsed events must reach the main log too.
 
-    The remediated handler does not stop at a diagnostic-log entry.
+    The handler does not stop at a diagnostic-log entry.
     When the payload schema is unrecognised it now also writes a
     structured record to ``dll_monitor.log`` with ``image_path=`` empty,
     the raw ``event_id``, and the observed ``payload_schema`` so the
@@ -245,7 +244,7 @@ def test_script_emits_structured_unparsed_record_to_main_log() -> None:
 
 
 def test_script_auto_extends_payload_field_candidates() -> None:
-    """F-0019 (audit7): observed payload fields must be auto-cached.
+    """Observed payload fields must be auto-cached.
 
     The handler must dynamically extend the candidate field name lists
     so subsequent events with non-default payload schemas are parsed
@@ -260,7 +259,7 @@ def test_script_auto_extends_payload_field_candidates() -> None:
 
 
 def test_script_logs_etw_fallback_warning() -> None:
-    """F-0020: the WMI fallback must surface a structured warning.
+    """The WMI fallback must surface a structured warning.
 
     Both a ``Write-Warning`` and an
     ``etw_unavailable_falling_back_to_wmi`` diagnostic line are
@@ -272,7 +271,7 @@ def test_script_logs_etw_fallback_warning() -> None:
 
 
 def test_script_emits_fallback_diagnostic_when_etw_unavailable(tmp_path: Path) -> None:
-    """F-0020 runtime check: forcing ETW unavailability triggers the diagnostic.
+    """Forcing ETW unavailability triggers the diagnostic.
 
     We force ``Test-TraceEventAvailable`` to fail by running a poisoned
     copy of the script that returns ``$false`` from that helper, and
@@ -357,10 +356,6 @@ def _main_log_has_structured_record(log_text: str) -> bool:
     one such line to be present so that a silently-emptied
     ``Write-DllRecord`` body is detected.
 
-    Documented mutation: empty the body of ``Write-DllRecord`` in
-    ``dll_monitor.ps1`` so it never calls ``Add-Content``.  The main log
-    remains empty and this function returns ``False``.
-
     Args:
         log_text: Full text of ``dll_monitor.log``.
 
@@ -378,21 +373,13 @@ def _diag_has_monitoring_evidence(diag_text: str) -> bool:
     """Return whether *diag_text* contains a monitoring-phase diagnostic entry.
 
     The diagnostic log receives a ``lifecycle_started`` entry at script
-    startup (``dll_monitor.ps1`` line 498, via ``Write-DllLifecycle``),
-    before any monitoring logic runs.  That entry alone does not constitute
-    evidence that the monitoring path executed; it is produced even if the
-    entire monitoring body is a no-op.
+    startup (via ``Write-DllLifecycle``), before any monitoring logic runs.
+    That entry alone does not constitute evidence that the monitoring path
+    executed; it is produced even if the entire monitoring body is a no-op.
 
     This function returns ``True`` only when at least one entry from
     :data:`_MONITORING_DIAG_CATEGORIES` is present, which requires the
     monitoring path (ETW or WMI fallback) to have run.
-
-    Documented mutation: remove the ``Invoke-WmiFallback`` call body in
-    ``dll_monitor.ps1`` so it never calls ``Write-DllDiagnostic`` with
-    ``etw_unavailable_falling_back_to_wmi``, AND empty ``Write-DllRecord``
-    so no parsed events reach the main log.  Then no monitoring-phase
-    category is written to the diag log and this function returns ``False``
-    even though ``lifecycle_started`` is still present.
 
     Args:
         diag_text: Full text of ``dll_monitor.diag.log``.
@@ -425,16 +412,6 @@ def test_smoke_script_runs_and_writes_logs(tmp_path: Path) -> None:
     positive-evidence set, because it is written before any monitoring
     code runs and thus cannot demonstrate that the monitoring path
     executed.
-
-    Documented falsifying mutation: in ``dll_monitor.ps1`` empty the body
-    of ``Write-DllRecord`` (so it never calls ``Add-Content``) and remove
-    the ``Write-DllDiagnostic`` call inside ``Invoke-WmiFallback`` (so
-    ``etw_unavailable_falling_back_to_wmi`` is never written to the diag
-    log).  With those two changes the main log is empty and the diag log
-    contains only ``lifecycle_started`` / ``lifecycle_stopped`` entries;
-    neither ``_main_log_has_structured_record`` nor
-    ``_diag_has_monitoring_evidence`` returns ``True``, and the assertion
-    fails.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
@@ -478,15 +455,15 @@ def test_smoke_script_runs_and_writes_logs(tmp_path: Path) -> None:
 
 
 def test_etw_load_event_is_captured_when_admin(tmp_path: Path) -> None:
-    """F-0019 runtime check: a real DLL load should not be silently dropped.
+    """A real DLL load should not be silently dropped.
 
     When the test runner has administrator rights, the realtime
     ``TraceEventSession`` path must produce either a parsed
     ``dll_monitor.log`` line for the helper's image loads or, if the
     payload format is unexpected for this Windows build, a
     ``dll_event_unparsed`` diagnostic. A completely empty log directory
-    (no main log, no diagnostic log) would indicate F-0019 has
-    regressed. The script is pointed at the vendored TraceEvent assemblies
+    (no main log, no diagnostic log) would indicate that events are being
+    silently dropped. The script is pointed at the vendored TraceEvent assemblies
     through ``TRACE_EVENT_DLL_DIR``, the way a guest has them staged beside
     it, so the realtime path is what runs.
 
@@ -523,8 +500,8 @@ def test_etw_load_event_is_captured_when_admin(tmp_path: Path) -> None:
     # script logs an explicit ``etw_unavailable_falling_back_to_wmi``
     # diagnostic and the WMI ``Win32_ModuleLoadTrace`` fallback likewise
     # depends on the NT kernel trace, which such hosts do not deliver. That
-    # diagnostic proves the monitor did not silently drop events - the exact
-    # F-0019 regression - so the capability gap is a skip, not a failure.
+    # diagnostic proves the monitor did not silently drop events, so the capability gap
+    # is a skip, not a failure.
     # A genuine silent drop produces no diagnostic and still fails below.
     if "etw_unavailable_falling_back_to_wmi" in diag_text:
         pytest.skip(

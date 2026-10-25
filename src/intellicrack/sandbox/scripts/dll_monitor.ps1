@@ -114,7 +114,7 @@ function Write-DllLine {
     # The host collects these logs off the guest while the run is still going,
     # and qemu-guest-agent opens them for reading without sharing writes, so
     # for as long as it holds a handle no writer can open the file at all.
-    # Add-Content simply lost the record when that happened. Holding a handle
+    # Add-Content would silently lose the record when that happens. Holding a handle
     # open instead is worse - it locks the collector out of the file for the
     # whole run - so the file is opened for as short a time as possible and the
     # collision is waited out rather than dropped. The lock keeps the ETW
@@ -298,9 +298,9 @@ function Test-TraceEventAvailable {
     try {
         # GetType only ever finds a type in an assembly that is already loaded,
         # so probing before Import-TraceEventAssembly runs answers "no" in every
-        # fresh PowerShell - which is what silently pinned this collector to the
-        # WMI fallback and its base-0x0 records. The load is attempted first and
-        # its failure reason recorded, then the probe confirms the type resolved.
+        # fresh PowerShell, which silently pins this collector to the WMI fallback
+        # and its base-0x0 records. The load is attempted first and its failure
+        # reason recorded, then the probe confirms the type resolved.
         if (-not (Import-TraceEventAssembly)) { return $false }
         $type = [System.Type]::GetType('Microsoft.Diagnostics.Tracing.Session.TraceEventSession, Microsoft.Diagnostics.Tracing.TraceEvent', $false)
         return ($null -ne $type)
@@ -578,9 +578,9 @@ function Invoke-RealtimeDllMonitor {
         # one call ("result type 'System.Boolean' ... not compatible with ...
         # 'System.Object' expected by the call site") on both PowerShell editions
         # and both source types, while the Boolean EnableProvider above binds
-        # normally. Until this was fixed the realtime trace never ran and every
-        # record in dll_monitor.log came from the WMI fallback instead, which is
-        # why the base address and event id of each one was zero (S18-D08).
+        # normally. Without psbase the realtime trace never runs and every record
+        # in dll_monitor.log comes from the WMI fallback, whose base address and
+        # event id are zero.
         $source.psbase.Process() | Out-Null
     } finally {
         if ($null -ne $script:StopMonitorTimer) {

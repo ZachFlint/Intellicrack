@@ -73,7 +73,7 @@ _SELECTED_KEY_INTERPOLATION: Final[str] = "$([regex]::Escape($WizardSelectedKey)
 _SHOULD_PROCESS: Final[str] = "$PSCmdlet.ShouldProcess("
 
 # Every parameter the stager must expose, with the default that reproduces the
-# behaviour it had before the parameters existed.
+# behaviour of the unparameterised script.
 _EXPECTED_PARAMETERS: Final[dict[str, str]] = {
     "SkipJdkDownload": "switch",
     "SkipGuestImage": "switch",
@@ -327,7 +327,7 @@ def core_runtime_gate(tmp_path_factory: pytest.TempPathFactory) -> ModuleType:
     return module
 
 
-# --- Item 14: the parameter surface and -WhatIf ------------------------------
+# the parameter surface and -WhatIf
 
 
 def test_stage_script_declares_the_documented_parameter_surface() -> None:
@@ -349,7 +349,7 @@ def test_stage_script_defaults_reproduce_the_previous_behaviour() -> None:
     r"""Real gate: running the stager with no arguments builds what it always built.
 
     A switch defaults to false, so the skips are inert. The two valued parameters
-    must carry the literals the script used before they were parameterised -- a
+    must carry the literals the default run uses -- a
     release hexcore build and four download attempts. Changing either default
     silently changes what an unqualified ``pwsh packaging\stage.ps1`` produces.
     """
@@ -369,10 +369,10 @@ def test_stage_script_defaults_reproduce_the_previous_behaviour() -> None:
 
 
 def test_release_profile_still_builds_hexcore_with_release() -> None:
-    """The default profile appends ``--release`` exactly as the unparameterised call did.
+    """The default profile appends ``--release`` exactly as the unparameterised call does.
 
-    The stager previously ran ``maturin build --release`` unconditionally; the
-    parameterised form must still do so for the default, or a release stage would
+    The default stager run uses ``maturin build --release``; the
+    parameterised form must keep that default, or a release stage would
     silently ship a debug hexcore.
     """
     script = strip_here_strings(read_stage_script())
@@ -407,14 +407,14 @@ def test_destructive_and_generating_steps_are_wrapped_in_shouldprocess() -> None
     )
 
 
-# --- Item 12: PyInstaller --clean --------------------------------------------
+# PyInstaller --clean
 
 
 def test_launchers_are_built_from_a_clean_pyinstaller_cache() -> None:
     """Real gate: a stale PyInstaller cache cannot mask a launcher or spec change.
 
     Without ``--clean`` a changed spec (the version resource, for one) can be
-    served from a cached analysis, so the shipped exe silently predates the fix.
+    served from a cached analysis, so the shipped exe silently predates the spec change.
     """
     script = strip_here_strings(read_stage_script())
     invocations = re.findall(r"&\s*pixi\s+run\s+pyinstaller\s+([^\r\n]*)", script)
@@ -423,7 +423,7 @@ def test_launchers_are_built_from_a_clean_pyinstaller_cache() -> None:
         assert "--clean" in invocation, f"pyinstaller is invoked without --clean: {invocation.strip()!r}"
 
 
-# --- Item 11: the SHA-256 manifest --------------------------------------------
+# the SHA-256 manifest
 
 
 def test_checksum_manifest_is_written_outside_the_staged_tree() -> None:
@@ -466,7 +466,7 @@ def test_checksum_manifest_is_reproducible_and_bom_free() -> None:
     )
 
 
-# --- Item 13: the wizard-image freshness preflight ----------------------------
+# the wizard-image freshness preflight
 
 
 def test_wizard_preflight_still_parses_the_real_generator() -> None:
@@ -547,7 +547,7 @@ def test_wizard_preflight_fails_the_build_rather_than_warning() -> None:
     assert "generate_banners.ps1" in body, "the staleness failure does not tell the packager how to regenerate the images"
 
 
-# --- Item 9: the core-runtime gate --------------------------------------------
+# the core-runtime gate
 
 
 def test_core_runtime_gate_demands_only_unconditional_imports(core_runtime_gate: ModuleType, tmp_path: Path) -> None:

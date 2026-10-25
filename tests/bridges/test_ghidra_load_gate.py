@@ -3,27 +3,23 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate for the Ghidra Load-before-headless P2 fix.
+"""Falsifiable gate for the Ghidra Load-before-headless connect check.
 
-Before this fix, clicking "Connect" succeeded even when no headless/GUI
-Ghidra bridge server was listening on the target port: the upstream
-``ghidra_bridge.GhidraBridge`` client is lazy and never touches the network
-in its constructor unless a ``namespace`` is supplied, so
-:meth:`GhidraBridge.initialize` reported ``state.connected`` /
-``state.tool_running`` as ``True`` on a bridge that had never actually
-talked to a server. The panel's toolbar sync then enabled "Load Binary",
-and clicking it triggered the first real RPC call, which performed the
-deferred socket connect and raised a raw ``ConnectionRefusedError``
-(``[WinError 10061] ... actively refused it``) wrapped only as
-``"Remote execution failed: ..."``.
+Clicking "Connect" must not report a bridge as ready when no bridge server is listening on the
+target port. The upstream ``ghidra_bridge.GhidraBridge`` client is lazy: its constructor does not
+touch the network unless a ``namespace`` is supplied. Without an explicit probe,
+:meth:`GhidraBridge.initialize` reports ``state.connected`` and ``state.tool_running`` as ``True``
+for a bridge that has never talked to a server, the panel enables "Load Binary", and the first real
+RPC call raises a raw ``ConnectionRefusedError`` that is wrapped only as ``"Remote execution failed:
+..."``.
 
-:meth:`GhidraBridge.initialize` now performs a real TCP liveness probe
-(:meth:`GhidraBridge._probe_bridge_port`) before reporting the bridge as
-connected, so a bridge server that never started is caught at Connect time
-with clear guidance instead of leaking the raw OS error out of Load.
+:meth:`GhidraBridge.initialize` performs a real TCP liveness probe
+(:meth:`GhidraBridge._probe_bridge_port`) before reporting the bridge as connected, so a bridge
+server that never started is reported at Connect time with clear guidance instead of a raw OS error
+from Load.
 
-These gates exercise the real ``GhidraBridge`` and ``GhidraPanel`` objects
-against a genuinely closed TCP port (no server, no mocks).
+These gates exercise the real ``GhidraBridge`` and ``GhidraPanel`` objects against a genuinely
+closed TCP port (no server, no mocks).
 """
 
 from __future__ import annotations
@@ -126,10 +122,9 @@ class TestInitializeGatesOnRealLivenessProbe:
     async def test_initialize_raises_clear_message_when_bridge_unreachable() -> None:
         """Connect must fail with clear guidance, not a raw WinError, when nothing listens.
 
-        Falsifiable: reverting the ``_probe_bridge_port`` gate in
-        ``GhidraBridge.initialize`` makes the lazy ``ghidra_bridge.GhidraBridge``
-        client construction succeed unconditionally, so no ``ToolError`` is
-        raised here and this test goes red.
+        Falsifiable: without the ``_probe_bridge_port`` gate in
+        ``GhidraBridge.initialize``, the lazy ``ghidra_bridge.GhidraBridge`` client construction
+        succeeds unconditionally, so no ``ToolError`` is raised here and this test fails.
         """
         bridge = GhidraBridge()
         closed_port = _reserve_closed_port()
@@ -164,10 +159,9 @@ class TestPanelBlocksLoadBeforeBridgeIsReady:
         driver so the panel's real ``_on_connect`` / ``_on_connect_error`` /
         ``_sync_toolbar_state`` code paths run in-thread.
 
-        Falsifiable: reverting the ``initialize`` liveness-probe gate makes
-        Connect succeed against the dead port, which flips the Load button
-        enabled and makes ``panel.load_binary`` proceed instead of
-        short-circuiting, so this test goes red.
+        Falsifiable: without the ``initialize`` liveness-probe gate, Connect succeeds against the
+        dead port, which enables the Load button and lets ``panel.load_binary`` proceed instead of
+        short-circuiting, so this test fails.
 
         Args:
             monkeypatch: Pytest monkeypatch fixture for patching the bridge

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 32: the running application offers servers the active session's folders, and MCP Settings edits them.
+"""The running application offers servers the active session's folders, and MCP Settings edits them.
 
 The service gate assembles the real MCP service over private configuration, trust, approval and credential files, makes a stored
 session with a loaded binary and an operator folder current in the real orchestrator, and starts a real ``MCPServer`` on each protocol

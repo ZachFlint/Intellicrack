@@ -3,29 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave-2b trace and run-control gates for ``intellicrack.bridges.x64dbg``.
+"""Trace and run-control gates for ``intellicrack.bridges.x64dbg``.
 
-Covers the trace, step, and navigation family that had no prior real coverage:
-``trace_start``, ``trace_stop``, ``get_trace_record``, ``execute_til_return``,
-``skip_instruction``, ``set_ip``, and ``goto_address``.
+Covers the trace, step and navigation methods ``trace_start``, ``trace_stop``, ``get_trace_record``, ``execute_til_return``, ``skip_instruction``, ``set_ip`` and ``goto_address``.
 
-The following operations are in scope per the assignment but already carry
-REAL gates in earlier audit files; they are excluded here to prevent
-duplicate coverage:
+``trace_into``, ``trace_over``, ``step_count``, ``animate_start``, ``animate_stop`` and ``run_to`` are covered by the audit test modules and are not repeated here.
 
-* ``trace_into``   — TestTraceAndAnimateVerification in test_x64dbg_audit7_f0001.py
-* ``trace_over``   — TestTraceAndAnimateVerification in test_x64dbg_audit7_f0001.py
-* ``step_count``   — TestTraceAndAnimateVerification in test_x64dbg_audit7_f0001.py
-* ``animate_start`` — TestTraceAndAnimateVerification in test_x64dbg_audit7_f0001.py
-* ``animate_stop``  — TestTraceAndAnimateVerification in test_x64dbg_audit7_f0001.py
-* ``run_to``        — TestRunToVerification in test_x64dbg_audit6.py
-
-Each test in this file drives the real bridge method against an in-process
-``_FakePipeClient`` that records sent ``(command, params)`` pairs and returns
-scripted responses.  Assertions check BOTH the exact command framing the
-bridge emitted AND the parsed return value it produced from the canned
-response.  Every oracle value is derived from an independent constant
-defined in this file, never re-computed via the production code under test.
+Each test in this file drives the real bridge method against an in-process ``_FakePipeClient`` that records sent ``(command, params)`` pairs and returns scripted responses. Assertions check both the exact command framing the bridge emitted and the parsed return value it produced from the canned response. Every oracle value is derived from an independent constant defined in this file, never re-computed via the production code under test.
 """
 
 from __future__ import annotations
@@ -172,29 +156,18 @@ def _always_ok(
 class TestTraceStart:
     """Command-framing gates for ``trace_start`` against its real x64dbg contract.
 
-    x64dbg exposes no ``TraceSetCondition`` command under any name or
-    alias, ``TraceSetLog`` only ever takes ``[log text]``/``[log
-    condition]`` (never an address), and ``StartRunTrace``'s file-name
-    argument is required, not optional (help.x64dbg.com). The oracle for
-    every assertion below is that real command shape, derived
-    independently from the known inputs - never the fabricated,
-    address-gated framing this class used to pin.
+    x64dbg exposes no ``TraceSetCondition`` command under any name or alias. ``TraceSetLog`` takes only ``[log text]`` and ``[log condition]``, never an address, and ``StartRunTrace``'s file-name argument is required, not optional (help.x64dbg.com). The oracle for every assertion below is that real command shape, derived independently from the known inputs.
     """
 
     async def test_no_params_emits_only_start_run_trace(
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """No address/condition/log_text still opens a real, argument-complete trace.
+        """No address, condition or log text still opens a real, argument-complete trace.
 
-        ``StartRunTrace``'s file-name argument is required, not optional
-        (help.x64dbg.com StartRunTrace) - the bare, argument-less
-        ``"StartRunTrace"`` this test used to pin never actually opened a
-        trace file.
+        ``StartRunTrace``'s file-name argument is required, not optional (help.x64dbg.com StartRunTrace), so a bare, argument-less ``"StartRunTrace"`` never opens a trace file.
 
-        Mutation caught: reverting to a bare ``"StartRunTrace"`` command,
-        or emitting more than the one exec call, fails the assertions
-        below.
+        Mutation caught: reverting to a bare ``"StartRunTrace"`` command, or emitting more than the one exec call, fails the assertions below.
 
         Args:
             bridge: Fixture bridge instance.
@@ -219,19 +192,11 @@ class TestTraceStart:
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """Address + log_text sends a real, address-free quoted TraceSetLog, then StartRunTrace.
+        """Log text with an address sends an address-free quoted ``TraceSetLog``, then ``StartRunTrace``.
 
-        ``TraceSetLog``'s only two arguments are ``[log text]`` and
-        ``[log condition]`` (help.x64dbg.com TraceSetLog) - it never
-        takes an address, unlike the fabricated
-        ``f"TraceSetLog {hex(_TRACE_ADDR)}, {_TRACE_LOG_TEXT}"`` framing
-        this test used to pin. ``address`` only folds into the generated
-        trace file name, never into the ``TraceSetLog`` command itself.
+        ``TraceSetLog``'s only two arguments are ``[log text]`` and ``[log condition]`` (help.x64dbg.com TraceSetLog). It never takes an address, so ``address`` only folds into the generated trace file name, never into the ``TraceSetLog`` command itself.
 
-        Mutation caught: reintroducing the address into the
-        ``TraceSetLog`` command, leaving the log text unquoted, or
-        emitting the two commands out of order fails the assertions
-        below.
+        Mutation caught: reintroducing the address into the ``TraceSetLog`` command, leaving the log text unquoted, or emitting the two commands out of order fails the assertions below.
 
         Args:
             bridge: Fixture bridge instance.
@@ -254,20 +219,11 @@ class TestTraceStart:
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """Address + condition with no log_text raises instead of faking a command.
+        """Address with a condition and no log text raises instead of faking a command.
 
-        x64dbg exposes no ``TraceSetCondition`` command under any name or
-        alias (help.x64dbg.com tracing command index) - the
-        ``f"TraceSetCondition {hex(_TRACE_ADDR)}, {_TRACE_CONDITION}"``
-        string this test used to pin was never real. Supplying
-        ``address`` must not smuggle a bare condition past the guard:
-        ``TraceSetLog`` cannot carry a condition without also carrying
-        log text, and ``StartRunTrace`` takes no condition at all, so
-        this raises before anything is sent.
+        x64dbg exposes no ``TraceSetCondition`` command under any name or alias (help.x64dbg.com tracing command index), so no such exec may be sent. Supplying ``address`` must not smuggle a bare condition past the guard: ``TraceSetLog`` cannot carry a condition without also carrying log text, and ``StartRunTrace`` takes no condition at all, so this raises before anything is sent.
 
-        Mutation caught: reintroducing an address-gated branch that
-        sends ``TraceSetCondition`` (or any command) instead of raising
-        fails both assertions below.
+        Mutation caught: reintroducing an address-gated branch that sends ``TraceSetCondition`` (or any command) instead of raising fails both assertions below.
 
         Args:
             bridge: Fixture bridge instance.
@@ -281,20 +237,11 @@ class TestTraceStart:
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """Address + condition + log_text -> TraceSetLog carrying the condition, then StartRunTrace.
+        """Address, condition and log text send ``TraceSetLog`` carrying the condition, then ``StartRunTrace``.
 
-        x64dbg has no command that binds a condition to ``trace_start``
-        on its own, so a supplied ``condition`` only takes effect as
-        ``TraceSetLog``'s second (log-condition) argument once
-        ``log_text`` is also present - never as a separate
-        ``TraceSetCondition`` exec, and never as a third command. This
-        test used to pin a three-command ``TraceSetLog``,
-        ``TraceSetCondition``, ``StartRunTrace`` sequence built from
-        command framing that was never real.
+        x64dbg has no command that binds a condition to ``trace_start`` on its own, so a supplied ``condition`` takes effect only as ``TraceSetLog``'s second (log-condition) argument, once ``log_text`` is also present. It is never sent as a separate ``TraceSetCondition`` exec or as a third command.
 
-        Mutation caught: splitting the condition back out into its own
-        command, dropping it from ``TraceSetLog``, or emitting a third
-        command fails the assertions below.
+        Mutation caught: splitting the condition back out into its own command, dropping it from ``TraceSetLog``, or emitting a third command fails the assertions below.
 
         Args:
             bridge: Fixture bridge instance.
@@ -317,18 +264,11 @@ class TestTraceStart:
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """log_text with no address still issues TraceSetLog, not just a bare StartRunTrace.
+        """Log text with no address still issues ``TraceSetLog``, not just a bare ``StartRunTrace``.
 
-        The old ``if address is not None and log_text is not None``
-        guard silently dropped ``log_text`` whenever no address was
-        supplied - exactly the case the Trace tab's Condition/Log
-        inputs always hit, since that tab carries no address field.
-        ``TraceSetLog`` never took an address to begin with, so there is
-        nothing left to gate on.
+        The Trace tab's Condition and Log inputs never supply an address, so no address-based guard may be placed around ``TraceSetLog``. ``TraceSetLog`` takes no address, so there is nothing to gate on.
 
-        Mutation caught: reintroducing any address-based guard around
-        the ``TraceSetLog`` call collapses this back to a single
-        ``StartRunTrace`` and fails the count/content assertions below.
+        Mutation caught: reintroducing any address-based guard around the ``TraceSetLog`` call collapses this back to a single ``StartRunTrace`` and fails the count and content assertions below.
 
         Args:
             bridge: Fixture bridge instance.
@@ -353,18 +293,11 @@ class TestTraceStart:
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """A bare condition with no log_text and no address raises, not a silent trace.
+        """A bare condition with no log text and no address raises, not a silent trace.
 
-        This is the exact silent-success defect the fix closes: an
-        operator supplies only a Condition. ``TraceSetLog`` cannot carry
-        a condition without log text, and ``StartRunTrace`` accepts no
-        condition at all, so there is no real command left to bind this
-        to - the bridge must raise here instead of falling through to an
-        unconditional, successfully-reported trace.
+        An operator who supplies only a Condition must not get a successfully reported, unconditional trace. ``TraceSetLog`` cannot carry a condition without log text, and ``StartRunTrace`` accepts no condition at all, so there is no real command left to bind this to. The bridge must raise here instead of falling through to an unconditional trace.
 
-        Mutation caught: reverting to the old silent-drop behavior sends
-        a bare ``StartRunTrace`` and reports success instead of raising,
-        so ``pytest.raises`` fails and ``fake.sent`` is non-empty.
+        Mutation caught: a silent-drop regression sends a bare ``StartRunTrace`` and reports success instead of raising, so ``pytest.raises`` fails and ``fake.sent`` is non-empty.
 
         Args:
             bridge: Fixture bridge instance.
@@ -900,8 +833,7 @@ class TestSetIp:
         """``instruction_pointer`` in the return dict equals ``hex(address)``.
 
         Independent oracle: ``hex(_TRACE_ADDR)``.
-        Mutation caught: returning the old register value instead of the
-        input address yields a different hex string.
+        Mutation caught: returning the pre-call register value instead of the input address yields a different hex string.
 
         Args:
             bridge: Fixture bridge instance.

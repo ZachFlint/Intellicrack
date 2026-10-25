@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for audit F3/F18 (detach) and N2 (dock readability).
+"""Gates for panel detach, re-dock and analysis table header readability.
 
-* **F3 / F18** -- a detached tool panel must render its body immediately in the
+* **Detach / re-dock** -- a detached tool panel must render its body immediately in the
   floating window (not stay blank until re-dock), and re-docking must restore
   the tab at its original position (not append it at the end).
-* **N2** -- analysis table headers carry tooltips so a header truncated in a
+* **Headers** -- analysis table headers carry tooltips so a header truncated in a
   narrow dock stays readable on hover.
 
 Tests drive the real ``ToolOutputPanel`` / ``BridgeAnalysisPanel`` widgets.
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 @pytest.mark.usefixtures("qapp")
 class TestDetachRedock:
-    """F3/F18 detach and re-dock behaviours."""
+    """Detach and re-dock behaviours."""
 
     @staticmethod
     def test_detached_panel_body_is_visible_immediately() -> None:
@@ -77,7 +77,7 @@ class TestDetachRedock:
 
 @pytest.mark.usefixtures("qapp")
 def test_analysis_table_headers_carry_tooltips(qapp: QApplication) -> None:
-    """N2: analysis table headers must expose their full label via tooltip.
+    """Analysis table headers must expose their full label via tooltip.
 
     Args:
         qapp: The shared QApplication fixture.

@@ -3,17 +3,16 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Cutter detached-panel splitter and sub-tab clipping fix (S20-D21).
+"""Falsifiable gates for the Cutter detached-panel splitter and sub-tab clipping.
 
-Guards three real defects the live audit reproduced against the docked/detached
-Cutter panel: the top/bottom outer splitter had no genuine minimum height on
-its sub-tab pane, so an ordinary window resize could squeeze it to a sliver;
-the outer splitter's proportions were never persisted, so a user's dragged
-layout did not survive a redock/relaunch; and the Advanced Search mode row and
-the Debugger attach/step row were built as bare ``QHBoxLayout``s with no floor,
-so they could be compressed to zero height or have their leftmost controls
-clipped off-screen. Every assertion below exercises real Qt widget geometry
-and real ``QSettings`` round-trips, never a stubbed value.
+Guards three defects in the docked/detached Cutter panel. The top/bottom outer
+splitter must give its sub-tab pane a genuine minimum height, so an ordinary window
+resize cannot squeeze it to a sliver; the outer splitter's proportions must be
+persisted, so a dragged layout survives a redock or relaunch; and the Advanced
+Search mode row and the Debugger attach/step row must have a floor, so they cannot
+be compressed to zero height or have their leftmost controls clipped off-screen.
+Every assertion below exercises real Qt widget geometry and real ``QSettings``
+round-trips, never a stubbed value.
 """
 
 from __future__ import annotations
@@ -68,7 +67,7 @@ class TestCutterOuterSplitterMinimumHeight:
 
         A ``QSplitter`` only honours a child's real ``minimumHeight()``
         property as a resize floor; sizes seeded via ``setSizes()`` alone are
-        not enough (S20-D21). This asserts the actual Qt property, not a
+        not enough. This asserts the actual Qt property, not a
         splitter size hint.
         """
         panel = CutterPanel()
@@ -87,11 +86,11 @@ class TestCutterOuterSplitterMinimumHeight:
     def test_extreme_top_heavy_resize_cannot_collapse_data_tabs_pane() -> None:
         """An extreme top-heavy resize must not squeeze the data-tabs pane below its floor.
 
-        Reproduces the S20-D21 repro directly: a ``MoveWindow``/resize handing
+        Reproduces the squeezed-sub-tab case directly: a ``MoveWindow``/resize handing
         the top (code/decompiler) pane nearly all the height and squeezing the
         sub-tab pane to a sliver. ``QSplitter.setSizes()`` clamps requested
-        sizes to each widget's real minimum size, so the fix must keep the
-        data-tabs pane at or above its floor even when asked for 5px.
+        sizes to each widget's real minimum size, so the data-tabs pane stays at or
+        above its floor even when asked for 5px.
         """
         panel = CutterPanel()
         splitter = panel._outer_splitter
@@ -184,7 +183,7 @@ class TestSearchTabModeRowNeverCollapses:
         """The mode row must be hosted in a QScrollArea with a genuine fixed, non-zero height.
 
         Without this wrap, a squeezed sub-tab pane could compress the header
-        label and Mode combo down toward zero height (S20-D21), making the
+        label and Mode combo down toward zero height, making the
         Wildcard/String/Assembly/Crypto/Magic/Numeric modes unselectable.
         """
         tab = SearchTab()
@@ -217,7 +216,7 @@ class TestDebuggerTabAttachRowNeverClips:
 
         Without this wrap, a squeezed sub-tab pane clipped the Start/Attach/
         Spawn entry control off the left edge, leaving only Step Into/Over/
-        Continue/Refresh reachable (S20-D21).
+        Continue/Refresh reachable.
         """
         tab = DebuggerTab()
         scroll = tab.findChild(QScrollArea)

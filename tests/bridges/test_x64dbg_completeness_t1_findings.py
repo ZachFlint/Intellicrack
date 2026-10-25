@@ -3,34 +3,16 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Completeness-audit T1 regression tests for ``intellicrack.bridges.x64dbg``.
+"""Completeness tests for ``intellicrack.bridges.x64dbg``.
 
-Findings closed:
-    T1-2  set_exception_config no longer maps break/ignore/log onto
-          SetExceptionBPX's first/second/all chance-selector argument;
-          'break'/'log' issue real chance-scoped exception breakpoints
-          (the latter with a log action and fast-resume) and 'ignore'
-          raises instead of sending an undocumented value.
-    T1-3  Breakpoint condition/log/command/fast-resume/enable/disable
-          now branch on the target breakpoint's type and emit the
-          matching hardware (``bphwcond``/``bphe``/``bphd``/...) or
-          memory (``bpmcond``/``bpme``/``bpmd``/...) command family
-          instead of always the software-only one; ``set_breakpoint``'s
-          condition set is verified via a ``bp_list`` readback.
-    T1-4  export_patches supplies the full three-argument ``savedata``
-          command (filename, address, size) spanning every applied
-          patch and verifies the output file actually appears on disk
-          before reporting success.
-    T1-5  assemble_at (see test_x64dbg_completeness_t1_findings.py::
-          TestAssembleAtPreviewOnly) no longer writes the assembled
-          bytes to memory - it is exercised in the same module for
-          convenience but documented separately below.
+Covers exception breakpoints, breakpoint command selection by breakpoint type, patch export with verified output, and preview-only ``assemble_at``.
 
-Each test scripts an in-process fake pipe client to replay
-deterministic plugin responses, exactly as established in
-``test_x64dbg_audit7_f0001.py`` and ``test_x64dbg_rpc_commands_wave5.py``,
-so the bridge's real command-selection and verification logic runs
-end-to-end without launching x64dbg.exe.
+- ``set_exception_config``: ``break`` issues a first-chance exception breakpoint, ``log`` issues an all-chance, logged, fast-resumed one, and ``ignore`` raises instead of sending an undocumented value.
+- Breakpoint condition, log, command, fast-resume, enable and disable branch on the target breakpoint type and emit the matching hardware (``bphwcond``, ``bphe``, ``bphd``, ...) or memory (``bpmcond``, ``bpme``, ``bpmd``, ...) command family. The condition set is verified through a ``bp_list`` readback.
+- ``export_patches`` supplies the three-argument ``savedata`` command spanning every applied patch and verifies that the output file exists before reporting success.
+- ``assemble_at`` returns the encoded bytes without writing them to memory.
+
+Each test scripts an in-process fake pipe client to replay deterministic plugin responses, so the bridge's command selection and verification logic runs end to end without launching x64dbg.exe.
 """
 
 from __future__ import annotations
@@ -62,7 +44,7 @@ class _FakePipeClient:
 
     Records every ``(command, params)`` pair the bridge sends and
     returns a canned response produced by a caller-supplied responder
-    callable, exactly as established in ``test_x64dbg_audit7_f0001.py``.
+    callable, in the style of the other fake pipe clients.
     """
 
     def __init__(self, responder: _Responder) -> None:
@@ -175,13 +157,12 @@ def bridge() -> X64DbgBridge:
 
 @pytest.mark.asyncio
 class TestSetExceptionConfigChanceMapping:
-    """T1-2: ``set_exception_config`` uses real chance-scoped exception breakpoints."""
+    """``set_exception_config`` uses real chance-scoped exception breakpoints."""
 
     async def test_break_sends_first_chance_exception_bpx(self, bridge: X64DbgBridge) -> None:
         """``handling='break'`` sends ``SetExceptionBPX <code>, first``.
 
-        Falsifiable: reverting to the old ``handling_map = {"break": 1, ...}``
-        numeric mapping sends ``SetExceptionBPX 0xc0000005, 1`` instead, so
+        Falsifiable: a numeric mapping such as ``{"break": 1, ...}`` sends ``SetExceptionBPX 0xc0000005, 1`` instead, so
         the exact-string assertion below fails.
 
         Args:
@@ -196,7 +177,7 @@ class TestSetExceptionConfigChanceMapping:
     async def test_log_sends_all_chance_log_action_and_fast_resume(self, bridge: X64DbgBridge) -> None:
         """``handling='log'`` sets an all-chance, fast-resumed, logged exception breakpoint.
 
-        Falsifiable: reverting to the old numeric mapping sends only
+        Falsifiable: a numeric mapping sends only
         ``SetExceptionBPX 0x80000003, 2`` (a genuinely stopping second-chance
         breakpoint) and never issues ``SetExceptionBreakpointLog`` or
         ``SetExceptionBreakpointFastResume``, so these three assertions fail.
@@ -216,7 +197,7 @@ class TestSetExceptionConfigChanceMapping:
     async def test_ignore_raises_without_sending_anything(self, bridge: X64DbgBridge) -> None:
         """``handling='ignore'`` raises instead of sending an undocumented chance value.
 
-        Falsifiable: reverting to the old ``handling_map`` sends
+        Falsifiable: a numeric ``handling_map`` sends
         ``SetExceptionBPX 0xc0000005, 0`` and returns success instead of
         raising, so ``pytest.raises`` fails and ``fake.sent`` is non-empty.
 
@@ -231,8 +212,7 @@ class TestSetExceptionConfigChanceMapping:
     async def test_unknown_handling_mode_raises(self, bridge: X64DbgBridge) -> None:
         """An unrecognised ``handling`` value raises rather than defaulting to break.
 
-        Falsifiable: the old code's ``handling_map.get(handling, 1)`` silently
-        defaults an unknown mode to a first-chance break breakpoint instead
+        Falsifiable: a ``handling_map.get(handling, 1)`` fallback silently defaults an unknown mode to a first-chance break breakpoint instead
         of raising, so ``pytest.raises`` fails.
 
         Args:
@@ -246,13 +226,12 @@ class TestSetExceptionConfigChanceMapping:
 
 @pytest.mark.asyncio
 class TestBreakpointTypeCommandFamilies:
-    """T1-3: breakpoint condition/log/command/fast-resume/enable/disable pick the right command family."""
+    """Breakpoint condition, log, command, fast-resume, enable and disable pick the right command family."""
 
     async def test_set_breakpoint_condition_uses_hardware_family(self, bridge: X64DbgBridge) -> None:
         """``set_breakpoint(..., bp_type="hardware", condition=...)`` sends ``bphwcond``.
 
-        Falsifiable: reverting the type-branch in ``set_breakpoint`` back to
-        the unconditional ``bpcond`` command makes the ``bphwcond`` assertion
+        Falsifiable: an unconditional ``bpcond`` command in ``set_breakpoint`` makes the ``bphwcond`` assertion
         fail and the forbidden ``bpcond`` string appear instead.
 
         Args:
@@ -283,8 +262,7 @@ class TestBreakpointTypeCommandFamilies:
     ) -> None:
         """A condition that ``bp_list`` reports as unset raises instead of a false success.
 
-        Falsifiable: reverting the added ``_verify_breakpoint_condition``
-        call in ``set_breakpoint`` returns success unconditionally, so
+        Falsifiable: without the ``_verify_breakpoint_condition`` call in ``set_breakpoint``, success is returned unconditionally, so
         ``pytest.raises`` observes no exception and fails.
 
         Args:
@@ -308,16 +286,9 @@ class TestBreakpointTypeCommandFamilies:
     async def test_configure_breakpoint_uses_hardware_family_for_every_property(self, bridge: X64DbgBridge) -> None:
         """``configure_breakpoint`` on a hardware breakpoint uses the hardware command family.
 
-        ``configure_breakpoint`` resolves the type from the local registry
-        that :meth:`~intellicrack.bridges.x64dbg.X64DbgBridge.set_breakpoint`
-        populates, so this test first sets a real hardware breakpoint through
-        the public API - the realistic workflow the finding describes -
-        before configuring it.
+        ``configure_breakpoint`` resolves the type from the local registry that :meth:`~intellicrack.bridges.x64dbg.X64DbgBridge.set_breakpoint` populates, so this test first sets a real hardware breakpoint through the public API before configuring it.
 
-        Falsifiable: reverting ``configure_breakpoint`` to its unconditional
-        software commands sends ``SetBreakpointLog``/``SetBreakpointCommand``/
-        ``SetBreakpointFastResume``/``bpcond`` instead, failing every
-        assertion below.
+        Falsifiable: unconditional software commands would send ``SetBreakpointLog``, ``SetBreakpointCommand``, ``SetBreakpointFastResume`` and ``bpcond`` instead, failing every assertion below.
 
         Args:
             bridge: Fixture bridge instance.
@@ -347,8 +318,7 @@ class TestBreakpointTypeCommandFamilies:
     async def test_enable_breakpoint_uses_hardware_command(self, bridge: X64DbgBridge) -> None:
         """``enable_breakpoint`` on a hardware breakpoint sends ``bphe``, not ``be``.
 
-        Falsifiable: reverting ``enable_breakpoint`` to the hardcoded ``be``
-        command makes the ``bphe`` assertion fail.
+        Falsifiable: a hardcoded ``be`` command in ``enable_breakpoint`` makes the ``bphe`` assertion fail.
 
         Args:
             bridge: Fixture bridge instance.
@@ -375,8 +345,7 @@ class TestBreakpointTypeCommandFamilies:
     async def test_disable_breakpoint_uses_memory_command(self, bridge: X64DbgBridge) -> None:
         """``disable_breakpoint`` on a memory breakpoint sends ``bpmd``, not ``bd``.
 
-        Falsifiable: reverting ``disable_breakpoint`` to the hardcoded ``bd``
-        command makes the ``bpmd`` assertion fail.
+        Falsifiable: a hardcoded ``bd`` command in ``disable_breakpoint`` makes the ``bpmd`` assertion fail.
 
         Args:
             bridge: Fixture bridge instance.
@@ -403,12 +372,12 @@ class TestBreakpointTypeCommandFamilies:
 
 @pytest.mark.asyncio
 class TestExportPatches:
-    """T1-4: ``export_patches`` supplies real ``savedata`` arguments and verifies the output."""
+    """``export_patches`` supplies real ``savedata`` arguments and verifies the output."""
 
     async def test_dumps_minimal_span_and_verifies_output_file(self, bridge: X64DbgBridge, tmp_path: Path) -> None:
         """The dumped span covers every patch and the written file is confirmed on disk.
 
-        Falsifiable: reverting to ``savedata "{path}"`` (one argument) sends
+        Falsifiable: a one-argument ``savedata "{path}"`` sends
         a different command string and this responder's ``savedata`` branch
         (matched by the exact three-argument prefix) never fires, so the
         output file is never written and the verification poll times out.
@@ -446,8 +415,7 @@ class TestExportPatches:
     async def test_raises_when_no_patches_applied(self, bridge: X64DbgBridge, tmp_path: Path) -> None:
         """No applied patches raises instead of issuing a meaningless ``savedata`` call.
 
-        Falsifiable: the old implementation issued ``savedata`` and reported
-        success even with zero patches applied, so ``pytest.raises`` would
+        Falsifiable: an implementation that issues ``savedata`` and reports success with zero patches applied, so ``pytest.raises`` would
         observe no exception.
 
         Args:
@@ -469,11 +437,7 @@ class TestExportPatches:
     async def test_raises_when_output_file_never_appears(self, bridge: X64DbgBridge, tmp_path: Path) -> None:
         """A ``savedata`` command that never actually writes the file raises.
 
-        This is the direct regression test for the finding: the old
-        implementation ignored ``_send_command``'s result entirely and always
-        reported success. Falsifiable: removing the ``_await_file_written``
-        verification call (or its raise) makes ``pytest.raises`` observe no
-        exception even though ``output_file`` is never created.
+        An implementation that ignores ``_send_command``'s result and always reports success fails this test. Falsifiable: removing the ``_await_file_written`` verification call (or its raise) makes ``pytest.raises`` observe no exception even though ``output_file`` is never created.
 
         Args:
             bridge: Fixture bridge instance.
@@ -499,13 +463,12 @@ class TestExportPatches:
 
 @pytest.mark.asyncio
 class TestAssembleAtPreviewOnly:
-    """T1-5: ``assemble_at`` is preview-only and must never touch process memory."""
+    """``assemble_at`` is preview-only and must never touch process memory."""
 
     async def test_assemble_at_does_not_call_write_memory(self, bridge: X64DbgBridge, monkeypatch: pytest.MonkeyPatch) -> None:
         """``assemble_at`` returns the encoded bytes without invoking ``write_memory``.
 
-        Falsifiable: restoring the removed ``await self.write_memory(address,
-        assembled)`` call makes the patched ``write_memory`` spy get invoked,
+        Falsifiable: restoring an ``await self.write_memory(address, assembled)`` call makes the patched ``write_memory`` spy get invoked,
         failing the ``not called`` assertion.
 
         Args:

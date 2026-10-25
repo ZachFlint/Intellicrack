@@ -2,13 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Tests for S20-D16 (Process share): nested QTabWidget overflow degrade.
+"""Tests for nested QTabWidget overflow degrade in the Process panel.
 
 Verifies that :func:`intellicrack.ui.panels.process_panel.tab_overflow.install_tab_overflow`
 makes a tab bar elide overflowing labels instead of clipping them mid-glyph and installs a
 corner dropdown that lists every tab by name and jumps directly to it, and that the Process
-panel's own top-level tab widget (the outermost of the three nested tab levels flagged in
-S20-D16) has this installed.
+panel's own top-level tab widget (the outermost of the three nested tab levels) has this installed.
 """
 
 from __future__ import annotations
@@ -87,7 +86,7 @@ def test_overflow_menu_lists_every_tab_and_navigates_on_trigger(qapp: QApplicati
 def test_process_panel_top_level_tabs_have_overflow_installed(qapp: QApplication) -> None:
     """ProcessPanel's own top-level tab widget must have the overflow degrade installed.
 
-    This is the outermost of the three nested tab levels named in S20-D16
+    This is the outermost of the three nested tab levels
     (Processes/Memory/Threads/Modules/System).
 
     Args:

@@ -142,7 +142,7 @@ class RetainedWorker(QThread):
 
     Subclasses are retained in :class:`_WorkerRegistry` for the lifetime of their OS thread, preventing the ``QThread: Destroyed while
     thread is still running`` abort that occurs when an unparented worker's only Python reference goes out of scope while the thread is
-    still executing. Subclasses name this class directly rather than an alias, so that a source gate walking the class graph can find every
+    still executing. Subclasses name this class directly rather than an alias, so that static checks walking the class graph can find every
     worker thread in the package from its bases alone.
 
     A worker may additionally record the widget that dispatched it as its *owner*. The owner is deliberately not the worker's Qt parent: Qt
@@ -326,9 +326,8 @@ class BridgeCallWorker(RetainedWorker):
         down (``shutdown_bridge_loop``) while this worker is still in flight, the
         worker detects the dead loop, cancels its pending future, and returns
         instead of blocking its OS thread forever. A worker left blocked on a
-        stopped loop becomes an unjoinable zombie whose ``QThread`` later aborts
-        the process when destroyed - the class of non-deterministic hang/crash
-        seen when the whole suite shares one loop across thousands of tests.
+        stopped loop would otherwise become an unjoinable zombie whose ``QThread`` aborts the process when destroyed. That shows up as
+        non-deterministic hangs when the whole test suite shares one loop.
 
         Args:
             loop: The persistent bridge event loop the coroutine runs on.
@@ -526,8 +525,7 @@ def run_bridge_coroutine(
             wait on the background loop. When the coroutine does not complete
             in time a :class:`TimeoutError` is raised (the coroutine keeps
             running on the loop and is not cancelled) so a slow or hung backend
-            cannot freeze the caller indefinitely. ``None`` waits forever
-            (legacy behaviour).
+            cannot freeze the caller indefinitely. ``None`` waits forever.
 
     Returns:
         object | None: Coroutine result when executed synchronously, or
@@ -668,8 +666,8 @@ def run_bridge_coroutine_async(
     persistent background event loop.  Results and errors are delivered
     via Qt signals back to the main thread.
 
-    ``parent`` is the delivery context, not the worker's Qt parent. Parenting the worker to the caller made Qt delete a running
-    ``QThread`` along with that caller - which is what closing a panel or dialog mid-call does - and Qt answers that with a native access
+    ``parent`` is the delivery context, not the worker's Qt parent. Parenting the worker to the caller would let Qt delete a running
+    ``QThread`` along with that caller, which is what closing a panel or dialog mid-call does, and Qt answers that with a native access
     violation that takes the whole process down with no Python traceback. The worker is therefore dispatched unparented and pinned in
     :class:`_WorkerRegistry` until its OS thread finishes, with ``parent`` recorded as its owner so :func:`drain_bridge_workers_for` still
     finds it and so :func:`guarded_delivery` can drop a result that arrives once ``parent`` is gone.
@@ -771,7 +769,7 @@ def run_callable_async(
     The synchronous counterpart to :func:`run_bridge_coroutine_async`, and it treats ``parent`` the same way: as the delivery context
     rather than the worker's Qt parent. A worker parented to the calling widget is destroyed together with that widget, and Qt answers the
     destruction of a still-running ``QThread`` with a native access violation that takes the process down with no Python traceback - which
-    is what closing a panel or dialog during a long entropy scan, signature scan or pattern search used to do. The worker is therefore
+    is what closing a panel or dialog during a long entropy scan, signature scan or pattern search would otherwise do. The worker is therefore
     created unparented and pinned in :class:`_WorkerRegistry` until its OS thread finishes, with ``parent`` recorded as its owner so
     :func:`drain_bridge_workers_for` still finds it, and both callbacks are wrapped by :func:`guarded_delivery` so a result arriving after
     ``parent`` is gone is dropped instead of raising out of a Qt slot.
@@ -911,7 +909,7 @@ def drain_bridge_workers_for(root: QObject, timeout_ms: int = _WORKER_DRAIN_TIME
     globally instead would join and flush callbacks for workers belonging to entirely different widgets, which can resurrect their side
     effects at the wrong time.
 
-    For bridge-call workers this is no longer what keeps Qt from destroying a running thread: they are unparented and pinned in the worker
+    For bridge-call workers this is not what keeps Qt from destroying a running thread: they are unparented and pinned in the worker
     registry (see :func:`run_bridge_coroutine_async`), and a result that outlives ``root`` entirely is dropped at delivery, so one that
     outlasts the drain budget keeps running safely until :func:`drain_bridge_workers` joins it at shutdown or test teardown. Workers that
     do carry a Qt parent still depend on this drain completing before that parent is destroyed.

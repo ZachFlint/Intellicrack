@@ -10,20 +10,28 @@ use std::io::{Read, Write};
 use aes::cipher::{Array, BlockCipherDecrypt, BlockCipherEncrypt, KeyInit};
 use thiserror::Error;
 
+/// Errors returned by [`apply_transform`].
 #[derive(Error, Debug)]
 pub enum TransformError {
+    /// No transform has this name.
     #[error("unknown transform: {0}")]
     UnknownTransform(String),
+    /// A parameter is missing, empty or out of range.
     #[error("invalid parameter: {0}")]
     InvalidParameter(String),
+    /// The transform rejected the data (bad base64, corrupt zlib, padding, ...).
     #[error("transform failed: {0}")]
     Failed(String),
 }
 
+/// Metadata for one transform, as returned by [`list_transforms`].
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct TransformInfo {
+    /// Name accepted by [`apply_transform`].
     pub name: String,
+    /// Grouping shown in the UI.
     pub category: String,
+    /// One-line description.
     pub description: String,
 }
 
@@ -47,7 +55,9 @@ pub enum PaddingMode {
     Zero,
     /// ISO 10126 padding: filler bytes with the final byte holding the
     /// padding length.  This implementation uses deterministic zero filler
-    /// for reproducibility.  Strictly validated on decrypt.
+    /// for reproducibility.  On decrypt the length byte is validated
+    /// (1..=16 and at most the buffer length); filler bytes are not checked,
+    /// since the standard allows arbitrary filler.
     Iso10126,
 }
 
@@ -80,13 +90,16 @@ fn get_param_u8<S: BuildHasher>(
     params: &HashMap<String, Vec<u8>, S>,
     key: &str,
 ) -> Result<u8, TransformError> {
-    let bytes = get_param(params, key)?;
-    if bytes.is_empty() {
-        return Err(TransformError::InvalidParameter(format!(
+    match get_param(params, key)? {
+        [] => Err(TransformError::InvalidParameter(format!(
             "{key} must not be empty"
-        )));
+        ))),
+        [byte] => Ok(*byte),
+        bytes => Err(TransformError::InvalidParameter(format!(
+            "{key} must be exactly one byte, got {}",
+            bytes.len()
+        ))),
     }
-    Ok(bytes[0])
 }
 
 /// Applies the named transform to the provided data with the given parameters.
@@ -151,10 +164,11 @@ fn apply_xor_transform<S: BuildHasher>(
         }
         "xor_rolling" => {
             let key_start = get_param_u8(params, "key")?;
-            let increment = params
-                .get("increment")
-                .and_then(|v| v.first().copied())
-                .unwrap_or(1);
+            let increment = if params.contains_key("increment") {
+                get_param_u8(params, "increment")?
+            } else {
+                1
+            };
             let mut result = Vec::with_capacity(data.len());
             let mut current_key = key_start;
             for &b in data {
@@ -199,16 +213,39 @@ fn apply_base64_transform(name: &str, data: &[u8]) -> Result<Vec<u8>, TransformE
     }
 }
 
+/// Inflates a zlib stream, growing the output fallibly in 64 KiB steps.
+///
+/// A small stream can expand roughly a thousandfold, so growing the buffer
+/// with an infallible `read_to_end` lets a decompression bomb abort the host
+/// process when the allocation cannot be committed; here it becomes an
+/// error. `limit` caps the output size (callers pass `usize::MAX` for
+/// "only what memory allows").
+fn zlib_inflate_bounded(data: &[u8], limit: usize) -> Result<Vec<u8>, TransformError> {
+    let mut decoder = flate2::read::ZlibDecoder::new(data);
+    let mut output: Vec<u8> = Vec::new();
+    let mut chunk = vec![0u8; 64 * 1024];
+    loop {
+        let read = decoder
+            .read(&mut chunk)
+            .map_err(|e| TransformError::Failed(format!("zlib inflate: {e}")))?;
+        if read == 0 {
+            return Ok(output);
+        }
+        if output.len().saturating_add(read) > limit {
+            return Err(TransformError::Failed(format!(
+                "zlib inflate: output exceeds {limit} bytes"
+            )));
+        }
+        output.try_reserve(read).map_err(|e| {
+            TransformError::Failed(format!("zlib inflate: cannot allocate output: {e}"))
+        })?;
+        output.extend_from_slice(&chunk[..read]);
+    }
+}
+
 fn apply_zlib_transform(name: &str, data: &[u8]) -> Result<Vec<u8>, TransformError> {
     match name {
-        "zlib_inflate" => {
-            let mut decoder = flate2::read::ZlibDecoder::new(data);
-            let mut output = Vec::new();
-            decoder
-                .read_to_end(&mut output)
-                .map_err(|e| TransformError::Failed(format!("zlib inflate: {e}")))?;
-            Ok(output)
-        }
+        "zlib_inflate" => zlib_inflate_bounded(data, usize::MAX),
         "zlib_deflate" => {
             let mut encoder =
                 flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
@@ -528,15 +565,28 @@ const TRANSFORM_LIST: &[(&str, &str, &str)] = &[
     ),
     ("bit_invert", "bitops", "Bitwise NOT each byte"),
     ("byte_reverse", "byteops", "Reverse byte order"),
-    ("byte_swap_16", "byteops", "Swap endianness of 16-bit words"),
-    ("byte_swap_32", "byteops", "Swap endianness of 32-bit words"),
-    ("byte_swap_64", "byteops", "Swap endianness of 64-bit words"),
+    (
+        "byte_swap_16",
+        "byteops",
+        "Swap endianness of 16-bit words (a trailing partial word is kept as-is)",
+    ),
+    (
+        "byte_swap_32",
+        "byteops",
+        "Swap endianness of 32-bit words (a trailing partial word is kept as-is)",
+    ),
+    (
+        "byte_swap_64",
+        "byteops",
+        "Swap endianness of 64-bit words (a trailing partial word is kept as-is)",
+    ),
     ("remove_nulls", "byteops", "Remove all null bytes"),
     ("mask_and", "mask", "AND each byte with repeating pattern"),
     ("mask_or", "mask", "OR each byte with repeating pattern"),
     ("mask_xor", "mask", "XOR each byte with repeating pattern"),
 ];
 
+/// Returns the catalogue of supported transforms, in dispatch order.
 #[must_use]
 pub fn list_transforms() -> Vec<TransformInfo> {
     TRANSFORM_LIST
@@ -558,6 +608,25 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_vec()))
             .collect()
+    }
+
+    /// A single-byte parameter given more than one byte must be rejected, not
+    /// silently truncated to its first byte (which would make `rot_n` with a
+    /// two-character "shift" apply the first byte's value instead).
+    #[test]
+    fn test_single_byte_param_rejects_multi_byte_value() {
+        let params = make_params(&[("shift", b"13")]);
+        let err = apply_transform("rot_n", b"Hello", &params).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "invalid parameter: shift must be exactly one byte, got 2"
+        );
+        let wide = make_params(&[("count", &256u64.to_le_bytes())]);
+        let err = apply_transform("bit_shift_left", &[0x01], &wide).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "invalid parameter: count must be exactly one byte, got 8"
+        );
     }
 
     #[test]
@@ -780,7 +849,137 @@ mod tests {
     #[test]
     fn test_list_transforms() {
         let transforms = list_transforms();
-        assert!(transforms.len() >= 20);
+        assert_eq!(transforms.len(), 23);
+        let none: HashMap<String, Vec<u8>> = HashMap::new();
+        for info in &transforms {
+            // Every listed name must be dispatched (parameter errors are fine).
+            assert!(
+                !matches!(
+                    apply_transform(&info.name, &[], &none),
+                    Err(TransformError::UnknownTransform(_))
+                ),
+                "{} is listed but not dispatched",
+                info.name
+            );
+        }
+    }
+
+    /// An `increment` parameter that is present but empty must be rejected
+    /// instead of silently defaulting to 1, as an empty `key` is.
+    #[test]
+    fn test_xor_rolling_empty_increment_errors() {
+        let params = make_params(&[("key", &[0x10]), ("increment", &[])]);
+        let err = apply_transform("xor_rolling", b"\0\0\0", &params).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "invalid parameter: increment must not be empty"
+        );
+        let defaulted = make_params(&[("key", &[0x10])]);
+        assert_eq!(
+            apply_transform("xor_rolling", b"\0\0\0", &defaulted).unwrap(),
+            vec![0x10, 0x11, 0x12]
+        );
+    }
+
+    /// Inflate must grow its output fallibly, because an infallible `read_to_end`
+    /// lets a ~1000:1 decompression bomb abort the host process instead of
+    /// returning an error.
+    #[test]
+    fn test_zlib_inflate_bounded_reports_limit_and_round_trips() {
+        let compressed = apply_transform("zlib_deflate", &[0u8; 1000], &HashMap::new()).unwrap();
+        assert_eq!(
+            zlib_inflate_bounded(&compressed, 999)
+                .unwrap_err()
+                .to_string(),
+            "transform failed: zlib inflate: output exceeds 999 bytes"
+        );
+        assert_eq!(
+            zlib_inflate_bounded(&compressed, 1000).unwrap(),
+            vec![0u8; 1000]
+        );
+        let big = apply_transform("zlib_deflate", &vec![7u8; 300_000], &HashMap::new()).unwrap();
+        assert_eq!(
+            apply_transform("zlib_inflate", &big, &HashMap::new()).unwrap(),
+            vec![7u8; 300_000]
+        );
+    }
+
+    #[test]
+    fn test_aes_ecb_fips197_known_answers() {
+        let plaintext: Vec<u8> = (0..16u8).map(|i| i * 0x11).collect();
+        let cases: [(usize, [u8; 16]); 3] = [
+            (
+                16,
+                [
+                    0x69, 0xc4, 0xe0, 0xd8, 0x6a, 0x7b, 0x04, 0x30, 0xd8, 0xcd, 0xb7, 0x80, 0x70,
+                    0xb4, 0xc5, 0x5a,
+                ],
+            ),
+            (
+                24,
+                [
+                    0xdd, 0xa9, 0x7c, 0xa4, 0x86, 0x4c, 0xdf, 0xe0, 0x6e, 0xaf, 0x70, 0xa0, 0xec,
+                    0x0d, 0x71, 0x91,
+                ],
+            ),
+            (
+                32,
+                [
+                    0x8e, 0xa2, 0xb7, 0xca, 0x51, 0x67, 0x45, 0xbf, 0xea, 0xfc, 0x49, 0x90, 0x4b,
+                    0x49, 0x60, 0x89,
+                ],
+            ),
+        ];
+        for (key_len, expected) in cases {
+            let key: Vec<u8> = (0..u8::try_from(key_len).unwrap()).collect();
+            let params = make_params(&[("key", &key), ("padding", b"none")]);
+            // FIPS-197 appendix C.1-C.3; a wrong key schedule still round-trips
+            // but cannot produce these exact ciphertexts.
+            assert_eq!(
+                apply_transform("aes_ecb_encrypt", &plaintext, &params).unwrap(),
+                expected.to_vec(),
+                "AES-{} ciphertext",
+                key_len * 8
+            );
+            assert_eq!(
+                apply_transform("aes_ecb_decrypt", &expected, &params).unwrap(),
+                plaintext
+            );
+        }
+    }
+
+    #[test]
+    fn test_base64_rfc4648_vectors() {
+        let none: HashMap<String, Vec<u8>> = HashMap::new();
+        for (plain, encoded) in [
+            (&b""[..], &b""[..]),
+            (b"f", b"Zg=="),
+            (b"fo", b"Zm8="),
+            (b"foo", b"Zm9v"),
+            (b"foobar", b"Zm9vYmFy"),
+        ] {
+            assert_eq!(
+                apply_transform("base64_encode", plain, &none).unwrap(),
+                encoded
+            );
+            assert_eq!(
+                apply_transform("base64_decode", encoded, &none).unwrap(),
+                plain
+            );
+        }
+    }
+
+    #[test]
+    fn test_byte_swap_trailing_partial_word_passes_through() {
+        let none: HashMap<String, Vec<u8>> = HashMap::new();
+        assert_eq!(
+            apply_transform("byte_swap_32", &[1, 2, 3, 4, 5], &none).unwrap(),
+            vec![4, 3, 2, 1, 5]
+        );
+        assert_eq!(
+            apply_transform("byte_swap_16", &[1, 2, 3], &none).unwrap(),
+            vec![2, 1, 3]
+        );
     }
 
     #[test]

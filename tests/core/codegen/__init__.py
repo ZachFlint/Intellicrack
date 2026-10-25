@@ -3,4 +3,4 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 core-analysis remediation tests."""
+"""Tests for the core codegen package."""

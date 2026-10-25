@@ -125,6 +125,8 @@ pub struct FieldDefinition {
     pub color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub validation: Option<FieldValidation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -180,8 +182,12 @@ pub enum TemplateError {
     UnknownType(String),
     #[error("field type has no statically known size: {0}")]
     UnsizedFieldType(String),
+    #[error("resource limit exceeded: {0}")]
+    ResourceLimit(String),
 }
 
+/// A named collection of struct templates, seeded with the built-ins and
+/// extensible at runtime with user templates parsed from JSON.
 pub struct TemplateRegistry {
     templates: HashMap<String, StructTemplate>,
 }
@@ -196,6 +202,8 @@ impl TemplateRegistry {
         registry
     }
 
+    /// Inserts a template under its own name, replacing any template already
+    /// registered under that name.
     pub fn register(&mut self, template: StructTemplate) {
         self.templates.insert(template.name.clone(), template);
     }
@@ -213,6 +221,8 @@ impl TemplateRegistry {
         Ok(name)
     }
 
+    /// Removes the template registered under `name`, returning whether one
+    /// was present.
     pub fn remove(&mut self, name: &str) -> bool {
         self.templates.remove(name).is_some()
     }
@@ -330,22 +340,36 @@ pub fn field_size(ft: &FieldType) -> Option<usize> {
     }
 }
 
-fn format_integer_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> String {
-    match ft {
-        FieldType::UInt8 => format!("{} (0x{:02X})", raw[0], raw[0]),
+fn decode<const N: usize, T>(
+    raw: &[u8],
+    endian: Endianness,
+    little: fn([u8; N]) -> T,
+    big: fn([u8; N]) -> T,
+) -> Option<T> {
+    let bytes: [u8; N] = raw.get(..N)?.try_into().ok()?;
+    Some(match endian {
+        Endianness::Little => little(bytes),
+        Endianness::Big => big(bytes),
+    })
+}
+
+fn format_scalar_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> Option<String> {
+    Some(match ft {
+        FieldType::UInt8 => {
+            let v = *raw.first()?;
+            format!("{v} (0x{v:02X})")
+        }
         FieldType::Int8 => {
-            let signed = i8::from_ne_bytes([raw[0]]);
-            format!("{signed} (0x{:02X})", raw[0])
+            let byte = *raw.first()?;
+            let signed = i8::from_ne_bytes([byte]);
+            format!("{signed} (0x{byte:02X})")
         }
         FieldType::Bool => {
-            if raw[0] != 0 {
-                "true".to_string()
-            } else {
-                "false".to_string()
-            }
+            let text = if *raw.first()? == 0 { "false" } else { "true" };
+            text.to_string()
         }
         FieldType::Char => {
-            let ch = raw[0];
+            let ch = *raw.first()?;
             if ch.is_ascii_graphic() || ch == b' ' {
                 format!("'{}' (0x{ch:02X})", ch as char)
             } else {
@@ -353,88 +377,53 @@ fn format_integer_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> Strin
             }
         }
         FieldType::UInt16 => {
-            let v = match endian {
-                Endianness::Little => u16::from_le_bytes([raw[0], raw[1]]),
-                Endianness::Big => u16::from_be_bytes([raw[0], raw[1]]),
-            };
+            let v = decode(raw, endian, u16::from_le_bytes, u16::from_be_bytes)?;
             format!("{v} (0x{v:04X})")
         }
         FieldType::Int16 => {
-            let v = match endian {
-                Endianness::Little => i16::from_le_bytes([raw[0], raw[1]]),
-                Endianness::Big => i16::from_be_bytes([raw[0], raw[1]]),
-            };
+            let v = decode(raw, endian, i16::from_le_bytes, i16::from_be_bytes)?;
             let u = u16::from_ne_bytes(v.to_ne_bytes());
             format!("{v} (0x{u:04X})")
         }
         FieldType::UInt32 => {
-            let v = match endian {
-                Endianness::Little => u32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]),
-                Endianness::Big => u32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]),
-            };
+            let v = decode(raw, endian, u32::from_le_bytes, u32::from_be_bytes)?;
             format!("{v} (0x{v:08X})")
         }
         FieldType::Int32 => {
-            let v = match endian {
-                Endianness::Little => i32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]),
-                Endianness::Big => i32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]),
-            };
+            let v = decode(raw, endian, i32::from_le_bytes, i32::from_be_bytes)?;
             let u = u32::from_ne_bytes(v.to_ne_bytes());
             format!("{v} (0x{u:08X})")
         }
         FieldType::UInt64 => {
-            let v = match endian {
-                Endianness::Little => u64::from_le_bytes([
-                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-                ]),
-                Endianness::Big => u64::from_be_bytes([
-                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-                ]),
-            };
+            let v = decode(raw, endian, u64::from_le_bytes, u64::from_be_bytes)?;
             format!("{v} (0x{v:016X})")
         }
         FieldType::Int64 => {
-            let v = match endian {
-                Endianness::Little => i64::from_le_bytes([
-                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-                ]),
-                Endianness::Big => i64::from_be_bytes([
-                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-                ]),
-            };
+            let v = decode(raw, endian, i64::from_le_bytes, i64::from_be_bytes)?;
             let u = u64::from_ne_bytes(v.to_ne_bytes());
             format!("{v} (0x{u:016X})")
         }
         FieldType::Float32 => {
-            let v = match endian {
-                Endianness::Little => f32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]),
-                Endianness::Big => f32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]),
-            };
+            let v = decode(raw, endian, f32::from_le_bytes, f32::from_be_bytes)?;
             format!("{v}")
         }
         FieldType::Float64 => {
-            let v = match endian {
-                Endianness::Little => f64::from_le_bytes([
-                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-                ]),
-                Endianness::Big => f64::from_be_bytes([
-                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-                ]),
-            };
+            let v = decode(raw, endian, f64::from_le_bytes, f64::from_be_bytes)?;
             format!("{v}")
         }
         _ => String::new(),
-    }
+    })
 }
 
-fn format_composite_value(ft: &FieldType, raw: &[u8]) -> String {
-    match ft {
+fn format_composite_value(ft: &FieldType, raw: &[u8]) -> Option<String> {
+    Some(match ft {
         FieldType::Bytes(n) => {
-            let hex: Vec<String> = raw[..*n].iter().map(|b| format!("{b:02X}")).collect();
+            let hex: Vec<String> = raw.get(..*n)?.iter().map(|b| format!("{b:02X}")).collect();
             hex.join(" ")
         }
         FieldType::FixedString(n) => {
-            let s: String = raw[..*n]
+            let s: String = raw
+                .get(..*n)?
                 .iter()
                 .take_while(|&&b| b != 0)
                 .map(|&b| {
@@ -482,12 +471,12 @@ fn format_composite_value(ft: &FieldType, raw: &[u8]) -> String {
             big_value,
         } => format!("endianness_switch(peek+{peek_offset}=={big_value:#04X})"),
         _ => String::new(),
-    }
+    })
 }
 
 #[must_use]
 pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> String {
-    match ft {
+    let formatted = match ft {
         FieldType::UInt8
         | FieldType::Int8
         | FieldType::Bool
@@ -499,9 +488,13 @@ pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> Str
         | FieldType::UInt64
         | FieldType::Int64
         | FieldType::Float32
-        | FieldType::Float64 => format_integer_value(ft, raw, endian),
+        | FieldType::Float64 => format_scalar_value(ft, raw, endian),
         _ => format_composite_value(ft, raw),
-    }
+    };
+    formatted.unwrap_or_else(|| {
+        let needed = field_size(ft).unwrap_or(0);
+        format!("<truncated: {} of {needed} bytes>", raw.len())
+    })
 }
 
 #[must_use]
@@ -544,6 +537,7 @@ pub fn field_type_name(ft: &FieldType) -> &'static str {
 /// range answers that are part of the contract instead of incidental: `NaN`
 /// reads as `0`, and a magnitude beyond the integer range clamps to `i64::MIN`
 /// or `i64::MAX` rather than wrapping.
+#[must_use]
 fn float_to_i64_saturating(value: f64) -> i64 {
     const MANTISSA_BITS: u64 = 52;
     const EXPONENT_BIAS: u64 = 1023;
@@ -591,71 +585,75 @@ fn float_to_i64_saturating(value: f64) -> i64 {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ScalarValue {
+    Integer(i128),
+    Float(f64),
+}
+
+impl ScalarValue {
+    #[must_use]
+    fn to_integer(self) -> i128 {
+        match self {
+            Self::Integer(v) => v,
+            Self::Float(f) => i128::from(float_to_i64_saturating(f)),
+        }
+    }
+}
+
 #[must_use]
-pub fn read_numeric_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> i64 {
+fn read_scalar_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> ScalarValue {
+    let integer = ScalarValue::Integer;
     match ft {
-        FieldType::UInt8 | FieldType::Bool | FieldType::Char => i64::from(raw[0]),
-        FieldType::Int8 => i64::from(i8::from_ne_bytes([raw[0]])),
-        FieldType::UInt16 => match endian {
-            Endianness::Little => i64::from(u16::from_le_bytes([raw[0], raw[1]])),
-            Endianness::Big => i64::from(u16::from_be_bytes([raw[0], raw[1]])),
-        },
-        FieldType::Int16 => match endian {
-            Endianness::Little => i64::from(i16::from_le_bytes([raw[0], raw[1]])),
-            Endianness::Big => i64::from(i16::from_be_bytes([raw[0], raw[1]])),
-        },
-        FieldType::UInt32 => match endian {
-            Endianness::Little => i64::from(u32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]])),
-            Endianness::Big => i64::from(u32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]])),
-        },
-        FieldType::Int32 => match endian {
-            Endianness::Little => i64::from(i32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]])),
-            Endianness::Big => i64::from(i32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]])),
-        },
-        FieldType::UInt64 => match endian {
-            Endianness::Little => i64::from_ne_bytes(
-                u64::from_le_bytes([
-                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-                ])
-                .to_ne_bytes(),
-            ),
-            Endianness::Big => i64::from_ne_bytes(
-                u64::from_be_bytes([
-                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-                ])
-                .to_ne_bytes(),
-            ),
-        },
-        FieldType::Int64 => match endian {
-            Endianness::Little => i64::from_le_bytes([
-                raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-            ]),
-            Endianness::Big => i64::from_be_bytes([
-                raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-            ]),
-        },
-        FieldType::Float32 => {
-            let v = match endian {
-                Endianness::Little => f32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]),
-                Endianness::Big => f32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]),
-            };
-            float_to_i64_saturating(f64::from(v))
+        FieldType::UInt8 | FieldType::Char => integer(raw.first().copied().map_or(0, i128::from)),
+        FieldType::Bool => integer(i128::from(raw.first().is_some_and(|b| *b != 0))),
+        FieldType::Int8 => integer(
+            raw.first()
+                .map_or(0, |b| i128::from(i8::from_ne_bytes([*b]))),
+        ),
+        FieldType::UInt16 => integer(
+            decode(raw, endian, u16::from_le_bytes, u16::from_be_bytes).map_or(0, i128::from),
+        ),
+        FieldType::Int16 => integer(
+            decode(raw, endian, i16::from_le_bytes, i16::from_be_bytes).map_or(0, i128::from),
+        ),
+        FieldType::UInt32 => integer(
+            decode(raw, endian, u32::from_le_bytes, u32::from_be_bytes).map_or(0, i128::from),
+        ),
+        FieldType::Int32 => integer(
+            decode(raw, endian, i32::from_le_bytes, i32::from_be_bytes).map_or(0, i128::from),
+        ),
+        FieldType::UInt64 => integer(
+            decode(raw, endian, u64::from_le_bytes, u64::from_be_bytes).map_or(0, i128::from),
+        ),
+        FieldType::Int64 => integer(
+            decode(raw, endian, i64::from_le_bytes, i64::from_be_bytes).map_or(0, i128::from),
+        ),
+        FieldType::Float32 => decode(raw, endian, f32::from_le_bytes, f32::from_be_bytes)
+            .map_or(ScalarValue::Integer(0), |v| {
+                ScalarValue::Float(f64::from(v))
+            }),
+        FieldType::Float64 => decode(raw, endian, f64::from_le_bytes, f64::from_be_bytes)
+            .map_or(ScalarValue::Integer(0), ScalarValue::Float),
+        FieldType::Bitfield { backing_type, .. } | FieldType::Enum { backing_type, .. } => {
+            read_scalar_value(backing_type, raw, endian)
         }
-        FieldType::Float64 => {
-            let v = match endian {
-                Endianness::Little => f64::from_le_bytes([
-                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-                ]),
-                Endianness::Big => f64::from_be_bytes([
-                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
-                ]),
-            };
-            float_to_i64_saturating(v)
-        }
+        FieldType::Pointer { pointer_type, .. } => read_scalar_value(pointer_type, raw, endian),
         // Bytes/FixedString/Array/Padding carry no single scalar value; 0 is
         // the only sensible placeholder for a field with no numeric meaning.
-        _ => 0,
+        _ => integer(0),
     }
+}
+
+#[must_use]
+pub fn read_numeric_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> i128 {
+    read_scalar_value(ft, raw, endian).to_integer()
+}
+
+#[must_use]
+fn low_64_bits(value: i128) -> i64 {
+    let [b0, b1, b2, b3, b4, b5, b6, b7, ..] = value.to_le_bytes();
+    i64::from_le_bytes([b0, b1, b2, b3, b4, b5, b6, b7])
 }
 
 fn register_builtins(registry: &mut TemplateRegistry) {
@@ -674,7 +672,7 @@ mod tests {
     fn test_registry_has_builtins() {
         let reg = TemplateRegistry::new();
         let list = reg.list();
-        assert!(!list.is_empty());
+        assert_ne!(list.len(), 0);
         assert!(list.iter().any(|(name, _)| name == "IMAGE_DOS_HEADER"));
     }
 
@@ -694,7 +692,7 @@ mod tests {
 
         let reg = TemplateRegistry::new();
         let fields = reg.apply("IMAGE_DOS_HEADER", &data, 0).unwrap();
-        assert!(!fields.is_empty());
+        assert_ne!(fields.len(), 0);
         assert_eq!(fields[0].name, "e_magic");
         assert_eq!(fields[0].display_value, "23117 (0x5A4D)");
     }
@@ -722,6 +720,7 @@ mod tests {
             magic_detection: None,
             fields: vec![
                 FieldDefinition {
+                    at: None,
                     name: "magic".to_string(),
                     field_type: FieldType::UInt16,
                     endianness: None,
@@ -730,6 +729,7 @@ mod tests {
                     validation: None,
                 },
                 FieldDefinition {
+                    at: None,
                     name: "version".to_string(),
                     field_type: FieldType::UInt8,
                     endianness: None,
@@ -809,15 +809,11 @@ mod tests {
     fn test_list_detailed() {
         let reg = TemplateRegistry::new();
         let detailed = reg.list_detailed();
-        assert!(!detailed.is_empty());
+        assert_ne!(detailed.len(), 0);
         let dos = detailed
             .iter()
             .find(|(name, _, _, _)| name == "IMAGE_DOS_HEADER")
             .expect("IMAGE_DOS_HEADER must appear in list_detailed");
-        // IMAGE_DOS_HEADER per WinNT.h has exactly 19 named members:
-        // e_magic, e_cblp, e_cp, e_crlc, e_cparhdr, e_minalloc, e_maxalloc, e_ss, e_sp,
-        // e_csum, e_ip, e_cs, e_lfarlc, e_ovno, e_res[4], e_oemid, e_oeminfo, e_res2[10],
-        // e_lfanew.  Deleting any field registration changes this count and fails the gate.
         assert_eq!(
             dos.3, 19,
             "IMAGE_DOS_HEADER must expose exactly 19 fields in list_detailed"
@@ -1014,6 +1010,7 @@ mod tests {
                 &FieldType::Union {
                     variants: vec![
                         FieldDefinition {
+                            at: None,
                             name: "a".to_string(),
                             field_type: FieldType::UInt8,
                             endianness: None,
@@ -1022,6 +1019,7 @@ mod tests {
                             validation: None,
                         },
                         FieldDefinition {
+                            at: None,
                             name: "b".to_string(),
                             field_type: FieldType::UInt16,
                             endianness: None,
@@ -1210,9 +1208,6 @@ mod tests {
         );
     }
 
-    /// Audit F-0054 regression: `Float32`/`Float64` must be truncated to
-    /// their real integer value, not silently substituted with 0 via the
-    /// generic composite-type fallback.
     #[test]
     fn test_read_numeric_value_float_truncates_to_real_value() {
         assert_eq!(
@@ -1237,10 +1232,6 @@ mod tests {
         );
     }
 
-    /// Audit F-0008/F-0026 regression: `field_size` must distinguish
-    /// "no static size" (`None`) from a legitimate zero-byte size
-    /// (`Some(0)`), and must report `Array` count overflow as `None`
-    /// rather than silently wrapping.
     #[test]
     fn test_field_size_option_semantics() {
         assert_eq!(field_size(&FieldType::UInt32), Some(4));
@@ -1263,8 +1254,6 @@ mod tests {
             Some(20)
         );
 
-        // Array whose element type has no static size propagates None
-        // instead of the old flat-0 sentinel that corrupted sibling offsets.
         assert_eq!(
             field_size(&FieldType::Array {
                 element_type: Box::new(FieldType::StructRef("Elem".to_string())),
@@ -1446,7 +1435,7 @@ mod tests {
         let unbounded_double = f64::NEG_INFINITY.to_le_bytes();
         assert_eq!(
             read_numeric_value(&FieldType::Float64, &unbounded_double, Endianness::Little),
-            i64::MIN
+            i128::from(i64::MIN)
         );
 
         let little_single = 1.0e9f32.to_le_bytes();
@@ -1467,7 +1456,147 @@ mod tests {
         let overlarge_single = 1.0e30f32.to_le_bytes();
         assert_eq!(
             read_numeric_value(&FieldType::Float32, &overlarge_single, Endianness::Little),
-            i64::MAX
+            i128::from(i64::MAX)
+        );
+    }
+
+    #[test]
+    fn test_u64_read_numeric_value_is_exact() {
+        assert_eq!(
+            read_numeric_value(&FieldType::UInt64, &[0xFF; 8], Endianness::Little),
+            18_446_744_073_709_551_615
+        );
+        assert_eq!(
+            read_numeric_value(
+                &FieldType::UInt64,
+                &0x8000_0000_0000_0000u64.to_be_bytes(),
+                Endianness::Big
+            ),
+            9_223_372_036_854_775_808
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::Int64, &[0xFF; 8], Endianness::Little),
+            -1
+        );
+        assert_eq!(low_64_bits(18_446_744_073_709_551_615), -1);
+        assert_eq!(low_64_bits(9_223_372_036_854_775_808), i64::MIN);
+        assert_eq!(low_64_bits(i128::from(i64::MIN)), i64::MIN);
+        assert_eq!(low_64_bits(7), 7);
+    }
+
+    #[test]
+    fn test_bool_reads_as_zero_or_one() {
+        let read = |ft: &FieldType, byte: u8| read_numeric_value(ft, &[byte], Endianness::Little);
+        assert_eq!(read(&FieldType::Bool, 0x00), 0);
+        assert_eq!(read(&FieldType::Bool, 0x01), 1);
+        assert_eq!(read(&FieldType::Bool, 0x02), 1);
+        assert_eq!(read(&FieldType::Bool, 0xFF), 1);
+        assert_eq!(read(&FieldType::UInt8, 0x02), 2);
+        assert_eq!(read(&FieldType::Char, 0x41), 65);
+        assert_eq!(
+            format_field_value(&FieldType::Bool, &[0x02], Endianness::Little),
+            "true"
+        );
+    }
+
+    #[test]
+    fn test_read_numeric_value_sees_through_wrappers() {
+        let enum_u16 = FieldType::Enum {
+            backing_type: Box::new(FieldType::UInt16),
+            values: Vec::new(),
+        };
+        let bitfield_u32 = FieldType::Bitfield {
+            bit_width: 4,
+            backing_type: Box::new(FieldType::UInt32),
+            flags: None,
+        };
+        let pointer_to_enum = FieldType::Pointer {
+            pointer_type: Box::new(enum_u16.clone()),
+            target_template: "T".to_string(),
+        };
+
+        assert_eq!(
+            read_numeric_value(&enum_u16, &[0x34, 0x12], Endianness::Little),
+            0x1234
+        );
+        assert_eq!(
+            read_numeric_value(&enum_u16, &[0x12, 0x34], Endianness::Big),
+            0x1234
+        );
+        assert_eq!(
+            read_numeric_value(&bitfield_u32, &[0x78, 0x56, 0x34, 0x12], Endianness::Little),
+            0x1234_5678
+        );
+        assert_eq!(
+            read_numeric_value(&pointer_to_enum, &[0x34, 0x12], Endianness::Little),
+            0x1234
+        );
+        assert_eq!(
+            read_scalar_value(
+                &FieldType::Pointer {
+                    pointer_type: Box::new(FieldType::Float32),
+                    target_template: "T".to_string(),
+                },
+                &2.5f32.to_le_bytes(),
+                Endianness::Little
+            ),
+            ScalarValue::Float(2.5)
+        );
+    }
+
+    #[test]
+    fn test_short_buffers_never_panic() {
+        let little = Endianness::Little;
+        assert_eq!(
+            format_field_value(&FieldType::UInt8, &[], little),
+            "<truncated: 0 of 1 bytes>"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::UInt32, &[1, 2], little),
+            "<truncated: 2 of 4 bytes>"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Int64, &[0xFF; 7], Endianness::Big),
+            "<truncated: 7 of 8 bytes>"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Float64, &[0; 3], little),
+            "<truncated: 3 of 8 bytes>"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Bytes(4), &[0xAA, 0xBB], little),
+            "<truncated: 2 of 4 bytes>"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::FixedString(3), &[], little),
+            "<truncated: 0 of 3 bytes>"
+        );
+        assert_eq!(format_field_value(&FieldType::Bytes(0), &[], little), "");
+        assert_eq!(
+            format_field_value(&FieldType::Padding(8), &[], little),
+            "padding[8]"
+        );
+
+        for ft in [
+            FieldType::UInt8,
+            FieldType::Int16,
+            FieldType::UInt32,
+            FieldType::Int64,
+            FieldType::UInt64,
+            FieldType::Float32,
+            FieldType::Float64,
+            FieldType::Bool,
+            FieldType::Char,
+        ] {
+            assert_eq!(read_numeric_value(&ft, &[], little), 0);
+        }
+        assert_eq!(
+            read_numeric_value(&FieldType::UInt64, &[1, 2, 3], little),
+            0
+        );
+        assert_eq!(
+            read_scalar_value(&FieldType::Float64, &[1], little),
+            ScalarValue::Integer(0)
         );
     }
 }

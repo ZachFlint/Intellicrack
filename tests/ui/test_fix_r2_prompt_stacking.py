@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, items 13 and 45: an answer reaches its asker the moment it is given, however many questions are open, and never after a timeout.
+"""An answer reaches its asker the moment it is given, however many questions are open, and never after a timeout.
 
 Two servers ask for launch consent at once, on the real background loop, through the real consent dialogs. The operator answers the
 first question while the second is still on screen, and the first asker must have its answer before the second dialog closes. A dialog

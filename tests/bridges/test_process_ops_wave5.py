@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave-5 integration gates for ProcessBridge operations.
+"""Integration gates for ProcessBridge operations.
 
 Tests: adjust_token_privilege success + post-adjustment get_token_privileges
 verification; remove_privilege post-removal token inspection; pipe_write
@@ -300,8 +300,7 @@ class TestStackWalkSuccessPath:
 
     Walks the stack of a secondary blocking thread inside the current process.
     Each frame dict must contain an ``'address'`` key whose value is a non-zero
-    integer (any valid code pointer).  The production code at process.py:5926
-    uses the key ``'address'`` for the program counter value.
+    integer (any valid code pointer).  The production code uses the key ``'address'`` for the program counter value.
 
     Oracle: the first frame's ``'address'`` is compared against 0; any non-zero
     value proves StackWalk64 returned a real return address.
@@ -419,7 +418,7 @@ class TestInjectDllSuccessPath:
 
 
 class TestAdjustTokenPrivilegeNoPidDefect:
-    """RED-BY-DESIGN gate for PD-008: no-pid path crashes with OverflowError.
+    """Verify the no-pid privilege path does not crash with OverflowError.
 
     ``adjust_token_privilege`` / ``get_token_privileges`` / ``remove_privilege``
     all have a ``pid=None`` default that resolves to the current process by
@@ -428,22 +427,14 @@ class TestAdjustTokenPrivilegeNoPidDefect:
     has no declared ``argtypes``, ctypes cannot marshal the pseudo-handle's value
     and raises ``OverflowError: int too long to convert``.
 
-    This test asserts the CORRECT behaviour (returns True) and is expected to
-    remain RED until the production defect is fixed.
-
-    Fix (process.py ~line 4004/4040):
-      - Declare ``_advapi32.OpenProcessToken.argtypes = [wintypes.HANDLE,
-        wintypes.DWORD, POINTER(wintypes.HANDLE)]``
-      - Declare ``_kernel32.GetCurrentProcess.restype = wintypes.HANDLE``
-
-    See also: audit/PRODUCTION-DEFECTS.md PD-008.
+    This test asserts the correct behaviour (returns True).
     """
 
     async def test_adjust_token_privilege_no_pid_returns_true(
         self,
         process_bridge: ProcessBridge,
     ) -> None:
-        """Call adjust_token_privilege without a pid; asserts it returns True (RED: PD-008).
+        """Call adjust_token_privilege without a pid; and assert it returns True.
 
         In production, the call raises ``OverflowError`` because
         ``GetCurrentProcess()`` returns a pseudo-handle that ctypes cannot

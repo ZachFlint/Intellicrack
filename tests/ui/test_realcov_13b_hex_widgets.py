@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for the hex editor visualization widgets.
 
-The audit (shard 13) flagged ``widgets.py`` as having no dedicated test
-coverage for the entropy graph, byte-distribution histogram, digram heatmap
-colouring, and large-file settings dialog. These tests feed the widgets with
+``widgets.py`` has no dedicated test coverage for the entropy graph, byte-distribution
+histogram, digram heatmap coloring, and large-file settings dialog. These tests feed the widgets with
 REAL statistics computed from a genuine Windows PE binary (via the real
 ``intellicrack_hexcore`` backend and :func:`compute_statistics`) and assert
 both the public interaction contract (block-click offset mapping) and that the
@@ -61,11 +60,11 @@ def qapp() -> QApplication:
 
 
 def _count_foreground_colors(widget: QWidget, width: int, height: int) -> int:
-    """Render ``widget`` and count the distinct non-background colours painted.
+    """Render ``widget`` and count the distinct non-background colors painted.
 
     The widgets fill their whole surface with an opaque background, so the
     meaningful signal of "real data was drawn" is the number of distinct
-    colours that are not the dominant (background) colour.
+    colors that are not the dominant (background) color.
 
     Args:
         widget: A QWidget instance to render.
@@ -73,8 +72,8 @@ def _count_foreground_colors(widget: QWidget, width: int, height: int) -> int:
         height: Render height in pixels.
 
     Returns:
-        int: Count of sampled pixels whose colour differs from the most
-            common (background) colour.
+        int: Count of sampled pixels whose color differs from the most
+            common (background) color.
     """
     image = QImage(width, height, QImage.Format.Format_ARGB32)
     image.fill(0)

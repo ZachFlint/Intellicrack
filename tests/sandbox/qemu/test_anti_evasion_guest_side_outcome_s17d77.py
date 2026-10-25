@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for S17-D77: anti-evasion must not report guest-side failure as success.
+"""Anti-evasion must not report guest-side failure as success.
 
 ``apply_anti_evasion`` reports two kinds of technique. The launch-time SMBIOS
 and CPUID arguments are read off the fixed launch profile and cannot fail. The

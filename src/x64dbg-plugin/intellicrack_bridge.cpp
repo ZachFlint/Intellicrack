@@ -312,8 +312,7 @@ void on_paused(uint64_t address) {
     // (after a step, after explicit pause, after an unhandled exception
     // routed through the breakpoint manager). The Intellicrack bridge
     // awaits this event after issuing step_into/step_over/step_out so it
-    // can read registers only once the IP has actually moved (audit6.md
-    // F-0004).
+    // can read registers only once the IP has actually moved.
     if (!g_state.pipe_server_running) return;
 
     try {

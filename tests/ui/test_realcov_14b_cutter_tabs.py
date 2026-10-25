@@ -5,9 +5,8 @@
 
 """Real-data coverage for :mod:`intellicrack.ui.panels.cutter_tabs`.
 
-The audit flagged the Cutter analysis tabs as having **no dedicated test**: the
-panel that renders symbols, headers, sections, and hexdumps from real binary
-analysis was never exercised against real data.
+The Cutter analysis tabs render symbols, headers, sections, and hexdumps from real binary
+analysis; these tests exercise them against real data.
 
 A live Cutter/Rizin server is genuine external infrastructure and is absent in
 the container, so these tests do not stand up a server. Instead they build the
@@ -19,7 +18,7 @@ assert the Qt tables hold the verbatim real values (real export symbol names,
 real section names, real virtual addresses). The hexdump tab is fed a real
 hexdump string rendered from real ``.text`` bytes. The rendering logic under
 test is the production code; only the network round trip to the server is
-elided, exactly as the audit's "protocol-correct real data" guidance permits.
+elided.
 """
 
 from __future__ import annotations
@@ -63,7 +62,7 @@ class _RecordingHexBridge:
     calls: list[tuple[int, int]]
 
     def __init__(self) -> None:
-        """Initialise an empty call log."""
+        """Initialize an empty call log."""
         self.calls = []
 
     def hexdump(self, address: int, length: int) -> str:

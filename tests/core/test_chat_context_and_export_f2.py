@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for audit F2 (chat context) and Export Analysis.
+"""Regression gates for chat context and export analysis.
 
-* **F2a** -- the system prompt injects a bounded bridge-analysis summary for the
+* **Prompt context** -- the system prompt injects a bounded bridge-analysis summary for the
   active binary, so the model can answer binary-specific questions from context
   instead of issuing a tool call.
-* **F2b** -- a large tool result is truncated to a bounded preview before it
+* **Tool result truncation** -- a large tool result is truncated to a bounded preview before it
   re-enters the model context, so a full hex dump cannot balloon token usage.
 * **Export** -- ``BridgeAnalysisSummary.to_dict`` serialises nested dataclasses
   into structured JSON objects (not Python ``repr`` strings), so exported
@@ -137,7 +137,7 @@ def _make_binary(name: str) -> BinaryInfo:
 
 
 def test_system_prompt_injects_bridge_analysis_summary(tmp_path: Path) -> None:
-    """F2a: the prompt must carry counts and samples from the cached analysis.
+    """The prompt must carry counts and samples from the cached analysis.
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -159,7 +159,7 @@ def test_system_prompt_injects_bridge_analysis_summary(tmp_path: Path) -> None:
 
 
 def test_bound_tool_result_truncates_large_payload() -> None:
-    """F2b: a large payload must be truncated to a bounded preview with a marker."""
+    """A large payload must be truncated to a bounded preview with a marker."""
     bound = cast("_BoundResultFn", getattr(Orchestrator, "_bound_tool_result"))
     large = "A" * _LARGE_PAYLOAD_CHARS
     result = bound(large)

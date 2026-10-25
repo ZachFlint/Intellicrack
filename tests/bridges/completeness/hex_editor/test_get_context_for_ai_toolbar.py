@@ -5,14 +5,13 @@
 
 """L3 regression gate: ``HexEditorBridge.get_context_for_ai`` must have a real GUI trigger.
 
-Covers the hex-editor bridge-routing finding's AI-context sub-item.
+Covers the AI-context toolbar action.
 ``HexEditorBridge.get_context_for_ai`` (``bridges/hex_editor.py``) bundles
 the current hex context -- cursor window, data inspection, selection, and
 bookmarks -- for the AI side of the application, and is registered as
-``hex_editor.get_context_for_ai`` in the bridge's ``tool_definition()``, but
-had zero references anywhere under ``ui/`` -- a user had no way to invoke it.
+``hex_editor.get_context_for_ai`` in the bridge's ``tool_definition()``. The panel exposes it as a toolbar action.
 
-The fix adds a "Full AI Context" toolbar action
+The panel adds a "Full AI Context" toolbar action
 (``HexEditorPanel._on_get_ai_context``) that dispatches the real bridge
 coroutine via ``run_bridge_coroutine_logged`` and delivers the result
 through the panel's existing ``context_push_requested`` signal -- the same
@@ -100,7 +99,7 @@ class TestFullAiContextActionDispatchesRealBridgeMethod:
     def test_action_pushes_the_real_get_context_for_ai_bundle_to_the_ai_chat_signal(qapp: QApplication) -> None:
         """Triggering the action must call ``bridge.get_context_for_ai`` and emit the genuine result.
 
-        Falsifiable: before this fix, no GUI control called
+        Falsifiable: if no GUI control called
         ``HexEditorBridge.get_context_for_ai`` at all. If
         ``_on_get_ai_context`` were removed, never wired to a toolbar
         control, or rewritten to build its own ad hoc payload instead of

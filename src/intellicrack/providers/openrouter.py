@@ -336,9 +336,9 @@ class OpenRouterProvider(LLMProviderBase):
     def _build_model_info(self, model_data: dict[str, Any]) -> ModelInfo:
         """Convert a raw OpenRouter model dict into a ``ModelInfo``.
 
-        The parsing itself is generic now: OpenRouter's payload is the richest
-        of the ones Intellicrack reads, so what used to be bespoke code here
-        became :func:`~intellicrack.providers.model_metadata.ingest_model_entry`
+        The parsing is generic: OpenRouter's payload is the richest
+        of the ones Intellicrack reads, so it is delegated to
+        :func:`~intellicrack.providers.model_metadata.ingest_model_entry`
         and every endpoint with a comparable payload gets the same treatment.
 
         Args:

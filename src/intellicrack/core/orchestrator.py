@@ -120,7 +120,7 @@ _MAX_TOOL_RESULT_CHARS: int = 8000
 
 A tool result (for example a full hex-dump or memory read) is bounded to this size before it re-enters the conversation context, so a single
 large payload cannot balloon token usage. The truncated preview carries an explicit marker so the model knows to request a narrower range
-for full detail (audit F2).
+for full detail.
 """
 
 OPERATOR_CANCELLED_ERROR: Final[str] = "Cancelled by the operator"
@@ -1370,7 +1370,7 @@ class Orchestrator:
             # cancel flag and return to idle here rather than deferring to the
             # next request, so a stale flag cannot abort a subsequently-started
             # unrelated operation and the status bar does not stick on
-            # "cancelled" (audit F17).
+            # "cancelled".
             self._cancel_event.clear()
             self._state = "idle"
 
@@ -1604,7 +1604,7 @@ class Orchestrator:
         persisted to the session store -- keep the real, structured result
         object untouched, so a large tool payload (e.g. a full import table)
         remains a genuine ``dict``/``list`` for downstream consumers while
-        the model-facing context still stays bounded (audit F2).
+        the model-facing context still stays bounded.
 
         Returns:
             list[Message]: List of messages with system prompt prepended,
@@ -1808,7 +1808,7 @@ class Orchestrator:
         Injects counts and a capped sample of the aggregated sections, imports,
         functions and strings so the model can answer binary-specific questions
         from context without issuing a tool call for data already on hand, while
-        keeping the prompt bounded (audit F2).
+        keeping the prompt bounded.
 
         Args:
             analysis: The aggregated bridge analysis for the active binary.
@@ -1848,7 +1848,7 @@ class Orchestrator:
         Serialises the result and, when the serialised form exceeds
         :data:`_MAX_TOOL_RESULT_CHARS`, replaces it with a truncated preview plus
         an explicit marker, so a large hex dump or memory read does not re-enter
-        the model context in full (audit F2).
+        the model context in full.
 
         Args:
             result: The raw tool result value.
@@ -3464,8 +3464,7 @@ class Orchestrator:
         if self._state not in {"processing", "waiting_confirmation"}:
             # Nothing is in flight to cancel. Clear any stray flag rather than
             # arming it, so an idle-time Cancel cannot make the next unrelated
-            # async operation raise a spurious "async operation cancelled"
-            # (audit F17).
+            # async operation raise a spurious "async operation cancelled".
             self._cancel_event.clear()
             _logger.debug("cancel_noop_no_active_operation", state=self._state)
             return

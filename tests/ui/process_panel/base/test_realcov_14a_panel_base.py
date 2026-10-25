@@ -2,17 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""FIX UNIT 14a real-data coverage for ``process_panel.base``.
+"""Real-data coverage for ``process_panel.base``.
 
-Audit shard 14 flagged the existing ProcessPanel base tests (F-0001/F-0002)
-for verifying the architecture and privilege status labels only against a
-scripted ``_RecordingBridge`` that returns fake results. These tests instead
-wire a real :class:`ProcessBridge` to the panel and attach it to the running
-interpreter, so the status bar updates from genuine ``detect_architecture``
-and ``get_token_privileges`` Win32 queries. Assertions check real, verifiable
-values: the architecture label must reflect the real architecture of this
-process and the privilege label must reflect the real debug-privilege state of
-this process's access token.
+The architecture and privilege status labels are checked against a real
+:class:`ProcessBridge` attached to the running interpreter, not against a
+scripted ``_RecordingBridge`` that returns fake results. The status bar updates
+from genuine ``detect_architecture`` and ``get_token_privileges`` Win32 queries.
+Assertions check real, verifiable values: the architecture label must reflect the
+real architecture of this process and the privilege label must reflect the real
+debug-privilege state of this process's access token.
 """
 
 from __future__ import annotations

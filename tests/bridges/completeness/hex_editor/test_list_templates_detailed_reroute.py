@@ -50,7 +50,7 @@ class TestPopulateTemplateComboRoutesThroughBridge:
 
         Falsifiable: if ``_populate_template_combo`` were reverted to
         call ``self._populate_template_combo_fallback()``
-        unconditionally (the pre-remediation behaviour),
+        unconditionally (the unrouted behaviour),
         ``list_templates_detailed_calls`` would stay at 0 even though a
         bridge was attached. Broken production line:
         ``run_bridge_coroutine_logged(bridge.list_templates_detailed(),

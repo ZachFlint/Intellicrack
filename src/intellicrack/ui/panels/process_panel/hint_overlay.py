@@ -5,7 +5,7 @@
 """Instructional overlay for gated process detail tabs.
 
 Provides :class:`AttachHintOverlay`, a translucent panel shown on top of the Memory, Threads, Modules, and System tabs while the
-ProcessPanel is not attached to a target process. It replaces the previously silent disabled tabs with a clear, always-legible instruction
+ProcessPanel is not attached to a target process. It gives the otherwise silent disabled tabs a clear, always-legible instruction
 telling the user to attach first. The overlay and its label carry the ``attach_hint_overlay``/``attach_hint_label`` object names rather than
 a hardcoded stylesheet, so the shared application stylesheet themes them consistently in both light and dark mode.
 """

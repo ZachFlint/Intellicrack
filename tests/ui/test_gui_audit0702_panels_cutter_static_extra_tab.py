@@ -2,20 +2,17 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for the GUI audit findings in ``cutter_static_extra_tab``.
+"""Gates for the ``cutter_static_extra_tab`` column sizing and tooltips.
 
-Each test targets one audit finding and fails against the pre-fix behaviour:
+Each test targets one defect and fails against the defective behaviour:
 
-* ``H36``: ``ClassesTab`` builds a ``QTreeWidget`` with no header resize
-  configuration at all, so long RTTI/C++ class names (from rizin's ``icj``)
-  are clipped by the header's default ``Interactive`` width. The fix applies
-  ``ResizeToContents`` to the Class/Address/Methods columns, stretches the
-  last column, and sets a full-name tooltip on the top-level row.
-* ``M43``: ``CallGraphTab`` builds its table through ``_make_table``, which
-  applies uniform ``Stretch`` to every column, wasting width on the short
-  fixed-format Address column while squeezing the Caller/Callee name
-  columns. The fix keeps Caller/Callee ``Stretch`` but sets Address to
-  ``ResizeToContents``.
+* ``ClassesTab`` must configure its tree header resize modes. With no header resize configuration at all, long RTTI/C++ class
+  names (from rizin's ``icj``) are clipped by the header's default ``Interactive`` width. The header applies
+  ``ResizeToContents`` to the Class/Address/Methods columns, stretches the last column, and the top-level row carries a
+  full-name tooltip.
+* ``CallGraphTab`` builds its table through ``_make_table``, which applies uniform ``Stretch`` to every column, which would
+  waste width on the short fixed-format Address column while squeezing the Caller/Callee name columns. Caller/Callee keep
+  ``Stretch`` and Address is ``ResizeToContents``.
 
 All tests drive real :class:`ClassesTab` / :class:`CallGraphTab` widgets and
 real ``_apply_data`` calls under an offscreen ``QApplication`` -- no mocks
@@ -34,9 +31,9 @@ from intellicrack.ui.panels.cutter_static_extra_tab import CallGraphTab, Classes
 def test_h36_tree_header_uses_resize_to_contents(qapp: QApplication) -> None:
     """``ClassesTab``'s tree header must configure per-column resize modes.
 
-    Pre-fix, ``ClassesTab.__init__`` never called ``setSectionResizeMode``
-    (or any other width-configuring API) on ``self._tree.header()``, so
-    every column stayed at Qt's default ``Interactive`` resize mode. This
+    ``ClassesTab.__init__`` must call ``setSectionResizeMode``
+    (or any other width-configuring API) on ``self._tree.header()``, or
+    every column stays at Qt's default ``Interactive`` resize mode. This
     asserts the concrete Qt mechanism the fix installs: the Class, Address,
     and Methods columns are ``ResizeToContents`` and the last (Fields)
     column is stretched.
@@ -61,10 +58,10 @@ def test_h36_tree_header_uses_resize_to_contents(qapp: QApplication) -> None:
 def test_h36_long_class_name_widens_column_and_is_not_clipped(qapp: QApplication) -> None:
     """A long RTTI class name must widen the Class column to fit, not clip.
 
-    Pre-fix the Class column stayed at its fixed default width regardless of
+    The Class column must not stay at its fixed default width regardless of
     content (``Interactive`` mode does not auto-grow on data changes), so a
     long demangled/templated/namespaced class name would render clipped.
-    Post-fix, ``ResizeToContents`` makes the rendered column width track the
+    With ``ResizeToContents``, the rendered column width tracks the
     actual content, so populating a long name must measurably widen column 0
     beyond what a short name produces, and the resulting width must be able
     to hold the full name's rendered text.
@@ -107,9 +104,8 @@ def test_h36_long_class_name_widens_column_and_is_not_clipped(qapp: QApplication
 def test_h36_class_row_tooltip_carries_full_name(qapp: QApplication) -> None:
     """The top-level class row must carry a tooltip with the full class name.
 
-    Pre-fix no tooltip was set on the Class column, so an analyst with a
-    still-narrow or manually-shrunk column had no way to recover a clipped
-    name without dragging the column wider. The fix sets ``setToolTip(0,
+    Without a tooltip on the Class column, an analyst with a still-narrow or manually-shrunk column has no way to recover a
+    clipped name without dragging the column wider. The tab sets ``setToolTip(0,
     cls.name)`` on every top-level row.
 
     Args:
@@ -130,11 +126,11 @@ def test_h36_class_row_tooltip_carries_full_name(qapp: QApplication) -> None:
 def test_m43_address_column_is_resize_to_contents_while_names_stretch(qapp: QApplication) -> None:
     """``CallGraphTab`` must resize Address to contents, keeping names stretched.
 
-    Pre-fix, ``_make_table`` applied uniform ``Stretch`` to all three
+    ``_make_table`` must not apply uniform ``Stretch`` to all three
     columns via ``_stretch_headers``, so the short fixed-format Address
     column claimed an equal share of the table width as the free-text
     Caller/Callee name columns. This asserts the concrete per-column
-    override the fix installs: Caller/Callee stay ``Stretch`` and Address
+    override the implementation applies: Caller/Callee stay ``Stretch`` and Address
     becomes ``ResizeToContents``.
 
     Args:
@@ -157,10 +153,10 @@ def test_m43_address_column_is_resize_to_contents_while_names_stretch(qapp: QApp
 def test_m43_long_names_get_far_more_width_than_short_address(qapp: QApplication) -> None:
     """Long mangled Caller/Callee names must consume far more width than Address.
 
-    Pre-fix, uniform ``Stretch`` split the table width roughly evenly across
+    Uniform ``Stretch`` would split the table width roughly evenly across
     all three columns, so a short address like ``0xDEADBEEF`` would occupy
     nearly the same width as a long mangled C++ symbol, squeezing the name
-    columns. Post-fix, Address is ``ResizeToContents`` (sized tightly to its
+    Address must be ``ResizeToContents`` (sized tightly to its
     own text) while Caller/Callee absorb the freed width via ``Stretch``.
 
     Args:

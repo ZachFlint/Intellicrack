@@ -11,7 +11,7 @@ caller as a plain mapping rather than a real instance. Bridge methods perform
 genuine attribute access on such parameters, so passing the mapping straight
 through fails deep inside the call (an ``AttributeError`` on a ``dict``)
 instead of at the dispatch boundary. These tests exercise the
-``ToolRegistry.execute_tool_call`` dispatcher fix (Tier-1 finding #6) that
+``ToolRegistry.execute_tool_call`` dispatcher that
 hydrates such mappings into real dataclass instances before dispatch.
 
 A purpose-built fake bridge is used throughout rather than any real bridge's
@@ -75,8 +75,7 @@ class _OuterSettings:
 class _ConfigurableBridge(ToolBridgeBase):
     """Minimal bridge exposing a dataclass-typed and a plain tool parameter.
 
-    ``configure`` mirrors the shape the Tier-1 finding #6 dispatcher fix
-    targets: one parameter annotated with a dataclass type (optionally
+    ``configure`` has the shape the dispatcher hydration handles: one parameter annotated with a dataclass type (optionally
     ``None``), and one plain ``str`` parameter used to prove non-dataclass
     parameters are left untouched by hydration.
     """
@@ -181,8 +180,7 @@ async def test_dataclass_mapping_argument_is_hydrated_into_real_instance(
     ``_OuterSettings`` wrapper around a leftover dict.
 
     Falsifiability: with the ``_hydrate_dataclass_arguments`` call removed
-    from ``ToolRegistry.execute_tool_call`` (confirmed by temporarily
-    reverting that line during development and rerunning this scenario),
+    from ``ToolRegistry.execute_tool_call``,
     ``bridge.received_settings`` is the raw ``dict`` instead of
     ``_OuterSettings``, failing the ``isinstance`` assertions below.
 

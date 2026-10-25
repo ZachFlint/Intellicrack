@@ -3,20 +3,18 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Wave 5 lifecycle gates: initialize, load, attach, detach, spawn, shutdown.
+"""Lifecycle gates: initialize, load, attach, detach, spawn and shutdown.
 
-Each test drives the real ``X64DbgBridge`` method through a fake transport
-boundary (for pipe-side paths) or live Win32 APIs (for native-only paths) and
-asserts exact state transitions and RPC framing.  No production code is
-patched or replaced — only the named-pipe transport boundary is faked.
+Each test drives the real ``X64DbgBridge`` method through a fake transport boundary (for pipe-side paths) or live Win32 APIs (for native-only paths) and asserts exact state transitions and RPC framing. No production code is patched or replaced; only the named-pipe transport boundary is faked.
 
-Findings closed:
-    1  initialize(tool_path) — path storage and connection-state logic
-    2  load(path, args) — InitDebug command framing and binary_loaded state
-    3  attach(pid) — PID-0 arch-detection error
-    4  detach() — detach command framing and attached-pid clearance
-    5  spawn(path, args) — delegates to load with correct args
-    6  shutdown() — finalization clears attached-pid despite close() errors
+Covered behaviour:
+
+1. ``initialize(tool_path)``: path storage and connection-state logic.
+2. ``load(path, args)``: InitDebug command framing and ``binary_loaded`` state.
+3. ``attach(pid)``: PID-0 architecture-detection error.
+4. ``detach()``: detach command framing and attached-pid clearance.
+5. ``spawn(path, args)``: delegates to load with the correct args.
+6. ``shutdown()``: finalization clears attached-pid despite ``close()`` errors.
 """
 
 from __future__ import annotations

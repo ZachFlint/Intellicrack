@@ -2,17 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""S18-D18: the guest's monitor launcher has to report the monitors it did not start.
+r"""The guest's monitor launcher has to report the monitors it did not start.
 
-Across six headless re-drives against the same real Windows guest the agent's launcher started a
-different subset of the eight monitors every time - run 3 started none of them at all, run 5 came
-back without the dll, service and resource collectors, run 6 without ``dll_monitor`` alone - and it
-said nothing whatever about the ones it missed. Its loop was
-``if (Test-Path $scriptPath) { Start-Process ... }``: a script that was not on the share was skipped
-in silence, and a ``Start-Process`` that threw went nowhere. The report that came back showed an
-empty DLL tab with nothing anywhere in it to separate that from a sample that loaded no libraries.
+The launcher loop is ``if (Test-Path $scriptPath) { Start-Process ... }``. Without a record, a
+script that is not on the share is skipped in silence and a ``Start-Process`` that throws goes
+nowhere, so the report shows an empty DLL tab with nothing to separate it from a sample that loaded
+no libraries.
 
-Three things have to hold for that to stop happening, and there is a group of gates here for each.
+Three things have to hold, and there is a group of gates here for each.
 The launcher must *record* what it did with every monitor it was asked to start; the record must
 leave the guest with the other diagnostics, because a log inside a discarded VM is no record at all;
 and the host must fold the launcher's cause onto the outage it already reports, so a collector that
@@ -578,7 +575,7 @@ class TestTheGeneratedLauncherReportsWhatItStarted:
     """Run the real launcher and require an account of every monitor it was asked to start."""
 
     def test_a_monitor_missing_from_the_share_is_reported_by_name(self, agent_script: str, tmp_path: Path) -> None:
-        """Live run 6 started every monitor but ``dll_monitor`` and reported nothing about it.
+        """A monitor the launcher did not start is reported even when every other one started.
 
         Args:
             agent_script: Text of the agent script the production generator wrote.
@@ -615,11 +612,10 @@ class TestTheGeneratedLauncherReportsWhatItStarted:
         )
 
     def test_monitors_it_cannot_start_do_not_cost_the_rest_of_the_fleet(self, agent_script: str, tmp_path: Path) -> None:
-        """A partial fleet was the live symptom, so a skipped monitor must not end the loop.
+        """A skipped monitor must not end the loop.
 
         The first and last entries are the ones withheld: a launcher that stopped at the first
-        monitor it could not start would leave every later one unreported and unstarted, which is
-        exactly the "different subset every run" shape the report showed.
+        monitor it could not start would leave every later one unreported and unstarted.
 
         Args:
             agent_script: Text of the agent script the production generator wrote.
@@ -647,7 +643,7 @@ class TestTheGeneratedLauncherReportsWhatItStarted:
         )
 
     def test_a_share_with_no_monitors_at_all_is_fully_accounted_for(self, agent_script: str, tmp_path: Path) -> None:
-        """Live run 3 started none of the eight monitors and the report said nothing at all.
+        """A launcher that starts none of the monitors still accounts for each of them.
 
         Args:
             agent_script: Text of the agent script the production generator wrote.
@@ -678,7 +674,7 @@ class TestTheLauncherCauseReachesTheOutage:
     """A collector that never started has to say why, not only that it did not."""
 
     async def test_a_monitor_the_launcher_never_found_carries_that_cause(self, tmp_path: Path) -> None:
-        """The measured failure: an empty DLL tab with no way to tell why it was empty.
+        """An empty DLL tab comes with the reason its collector did not run.
 
         Args:
             tmp_path: pytest-provided temporary directory fixture.
@@ -714,7 +710,7 @@ class TestTheLauncherCauseReachesTheOutage:
         assert "launcher" in decorated.lower(), f"the outage does not attribute the cause to the guest's launcher: {decorated!r}"
 
     async def test_a_monitor_the_launcher_could_not_start_reports_the_diagnostic(self, tmp_path: Path) -> None:
-        """A ``Start-Process`` that failed used to go nowhere; its message must reach the report.
+        """The message of a failed ``Start-Process`` must reach the report.
 
         Args:
             tmp_path: pytest-provided temporary directory fixture.
@@ -767,7 +763,7 @@ class TestTheLauncherCauseReachesTheOutage:
         )
 
     async def test_a_guest_that_wrote_no_launcher_log_still_reports_its_outages(self, tmp_path: Path) -> None:
-        """The pre-fix guest wrote no launcher log at all, and must not break the host.
+        """A guest that wrote no launcher log must not break the host.
 
         Args:
             tmp_path: pytest-provided temporary directory fixture.

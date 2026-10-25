@@ -213,18 +213,17 @@ class TemplatesMixin:
         Supports arbitrary nesting depth by recursively building child items.
 
         Named distinctly from ``PatternEditorMixin``'s own tree-population
-        method: both mixins are combined into ``HexEditorPanel`` and both
-        historically used the generic name ``_populate_template_tree``, so
-        Python's MRO silently resolved every call - including this mixin's
-        own ``_on_apply_template`` - to whichever mixin was listed first in
-        ``HexEditorPanel``'s base classes (``PatternEditorMixin``). That
-        mixin's field dicts carry a ``type`` key instead of
-        ``display_value``, so the struct-template Value column always
-        rendered empty (S20-D07) even though the hexcore engine and the
-        PyO3 bridge both already emit a fully populated ``display_value``
-        for every field. A unique method name removes the ambiguity: this
-        mixin's own call site now always reaches this implementation
-        regardless of base-class ordering.
+        method: both mixins are combined into ``HexEditorPanel``, and a
+        shared generic name would let Python's MRO resolve every call -
+        including this mixin's own ``_on_apply_template`` - to whichever
+        mixin is listed first in ``HexEditorPanel``'s base classes
+        (``PatternEditorMixin``). That mixin's field dicts carry a ``type``
+        key instead of ``display_value``, so the struct-template Value
+        column would render empty even though the hexcore engine and the
+        PyO3 bridge both emit a fully populated ``display_value`` for every
+        field. A unique method name removes the ambiguity: this mixin's own
+        call site always reaches this implementation regardless of
+        base-class ordering.
 
         Args:
             fields: List of field dictionaries from the template engine.
@@ -587,7 +586,7 @@ class TemplatesMixin:
         """Create PE/ELF structure bookmarks directly against the document.
 
         Local fallback used only when no bridge is attached to this mixin (e.g. headless / test harnesses that drive the document directly),
-        preserving the exact PE/ELF detection and bookmark regions the panel has always produced.
+        preserving the exact PE/ELF detection and bookmark regions.
         """
         document = self.document
         if document is None:

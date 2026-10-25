@@ -24,7 +24,7 @@ background ``search_hex`` is in flight raises ``PyBorrowMutError``, which
 pyo3 surfaces to Python as ``RuntimeError``.
 
 The panel-wide disable only blocks *new* GUI-thread-initiated mutations
-while a search is in flight; it cannot retroactively serialise a
+while a search is in flight; it cannot retroactively serialize a
 document-mutating background worker that was already running before the
 search started (e.g. a script already executing via
 ``ScriptingMixin._script_worker``), nor any mutation triggered
@@ -92,7 +92,7 @@ def _get_default_highlight_color() -> str:
     return ThemeManager.get_instance().get_hex_mark_colors()["highlight_rule"]
 
 
-"""Serialises native ``HexDocument`` access across mutation and search.
+"""Serializes native ``HexDocument`` access across mutation and search.
 
 Every background ``search_hex`` dispatch in this module acquires this lock for the duration of the call. Any other module that mutates the
 active document's underlying bytes (``write_bytes``, ``insert_bytes``, block operations, etc.) must acquire the same lock instance around
@@ -299,7 +299,7 @@ class HighlightingMixin:
 
         Args:
             bridge: Connected hex editor bridge used to persist the rule.
-            color: Hex colour string selected for the new rule.
+            color: Hex color string selected for the new rule.
         """
         pattern = self._highlight_pattern_edit.text().strip() if self._highlight_pattern_edit else ""
         parent = self if isinstance(self, QWidget) else None
@@ -376,7 +376,7 @@ class HighlightingMixin:
             bridge: Connected hex editor bridge used to persist the rule.
             condition_type: One of ``"byte_value"``, ``"byte_range"``, or ``"pattern"``.
             params: Condition parameters dict for the new rule.
-            color: Hex colour string selected for the new rule.
+            color: Hex color string selected for the new rule.
         """
         params_json = json.dumps(params)
         parent_obj = self if isinstance(self, QWidget) else None
@@ -566,7 +566,7 @@ class HighlightingMixin:
     def seed_highlights_from_bridge(self, rules: object) -> None:
         """Populate the widget and list from the bridge's current highlight rules.
 
-        Called on panel initialisation (after :meth:`set_state_holder` wires
+        Called on panel initialization (after :meth:`set_state_holder` wires
         the callback) to ensure the GUI reflects any rules already registered
         by the bridge or AI before the panel was opened.
 

@@ -4,8 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for :mod:`intellicrack.core.xml_gen`.
 
-The audit flagged ``xml_gen.py`` as having only re-export identity coverage and
-no integration with a real consumer. ``intellicrack.sandbox.windows`` is the
+``xml_gen.py`` is tested through a real consumer, not only re-export identity.
+``intellicrack.sandbox.windows`` is the
 production consumer: it builds a Windows Sandbox ``.wsb`` configuration tree
 from the re-exported ``Element`` / ``SubElement`` / ``indent`` / ``ElementTree``
 / ``tostring`` primitives and serialises it to disk.

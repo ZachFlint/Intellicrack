@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Critical-coverage tests for ``intellicrack.providers.xpu_utils`` on a machine without an Intel XPU.
+"""Tests for ``intellicrack.providers.xpu_utils`` on a machine without an Intel XPU.
 
 Three situations are driven with real objects only:
 

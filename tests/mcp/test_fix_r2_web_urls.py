@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 21: only the URL rebuilt from its parts reaches the platform's URL handler.
+"""Only the URL rebuilt from its parts reaches the platform's URL handler.
 
 ``urlsplit`` drops leading control characters and spaces and takes whatever sits between ``//`` and the path as the host, so the string a
 server sent could pass the scheme check and still reach ``ShellExecute`` with a NUL in front or a UNC path for a host. The gates hand

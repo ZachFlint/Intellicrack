@@ -14,24 +14,34 @@ use sha3::{Sha3_256, Sha3_512};
 use siphasher::sip128::Hasher128;
 use thiserror::Error;
 
+/// A finished digest.
 #[derive(Debug, Clone)]
 pub struct HashResult {
+    /// The algorithm name as requested.
     pub algorithm: String,
+    /// The digest as lowercase hexadecimal.
     pub hex_digest: String,
 }
 
+/// Errors raised while hashing or checksumming.
 #[derive(Error, Debug)]
 pub enum HashError {
+    /// The algorithm name is not recognized.
     #[error("unsupported algorithm: {0}")]
     UnsupportedAlgorithm(String),
+    /// The requested range does not lie inside the data.
     #[error("invalid range: start={start}, end={end}, data_len={data_len}")]
     InvalidRange {
         start: usize,
         end: usize,
         data_len: usize,
     },
+    /// A custom CRC width other than 8, 16, 32 or 64 bits.
     #[error("invalid CRC width: {0} (must be 8, 16, 32, or 64)")]
     InvalidCrcWidth(u8),
+    /// The data is not a PE image whose checksum can be computed.
+    #[error("{0}")]
+    InvalidPe(String),
 }
 
 const FNV32_INIT: u32 = 0x811c_9dc5;
@@ -108,7 +118,7 @@ fn hex_encode(bytes: &[u8]) -> String {
 pub fn compute_hash(data: &[u8], algorithm: &str) -> Result<HashResult, HashError> {
     let hex_digest = match algorithm.to_lowercase().as_str() {
         "md5" => compute_digest_hash::<Md5>(data),
-        "sha1" => compute_digest_hash::<Sha1>(data),
+        "sha1" | "sha-1" => compute_digest_hash::<Sha1>(data),
         "sha224" | "sha-224" => compute_digest_hash::<Sha224>(data),
         "sha256" | "sha-256" => compute_digest_hash::<Sha256>(data),
         "sha384" | "sha-384" => compute_digest_hash::<Sha384>(data),
@@ -123,10 +133,10 @@ pub fn compute_hash(data: &[u8], algorithm: &str) -> Result<HashResult, HashErro
         "siphash64" | "siphash-2-4" | "siphash" => compute_siphash64(data),
         "siphash128" | "siphash-2-4-128" => compute_siphash128(data),
         "adler32" => compute_adler32(data),
-        "crc8" => compute_crc8(data),
-        "crc16" => compute_crc16(data),
-        "crc32" => compute_crc32(data),
-        "crc64" | "crc64-ecma" => compute_crc64(data),
+        "crc8" | "crc-8" => compute_crc8(data),
+        "crc16" | "crc-16" => compute_crc16(data),
+        "crc32" | "crc-32" => compute_crc32(data),
+        "crc64" | "crc-64" | "crc64-ecma" => compute_crc64(data),
         "fnv1-32" | "fnv1_32" => format!("{:08x}", fnv1_32(data)),
         "fnv1-64" | "fnv1_64" => format!("{:016x}", fnv1_64(data)),
         "fnv1a-32" | "fnv1a_32" => format!("{:08x}", fnv1a_32(data)),
@@ -193,7 +203,7 @@ impl StreamingHasher {
         let normalized = algorithm.to_lowercase();
         let state = match normalized.as_str() {
             "md5" => HasherState::Md5(Box::new(Md5::new())),
-            "sha1" => HasherState::Sha1(Box::new(Sha1::new())),
+            "sha1" | "sha-1" => HasherState::Sha1(Box::new(Sha1::new())),
             "sha224" | "sha-224" => HasherState::Sha224(Box::new(Sha224::new())),
             "sha256" | "sha-256" => HasherState::Sha256(Box::new(Sha256::new())),
             "sha384" | "sha-384" => HasherState::Sha384(Box::new(Sha384::new())),
@@ -216,10 +226,10 @@ impl StreamingHasher {
                 HasherState::SipHash128(siphasher::sip128::SipHasher24::new())
             }
             "adler32" => HasherState::Adler32(adler2::Adler32::new()),
-            "crc8" => HasherState::Crc8(CRC8_ALGO.digest()),
-            "crc16" => HasherState::Crc16(CRC16_ALGO.digest()),
-            "crc32" => HasherState::Crc32(crc32fast::Hasher::new()),
-            "crc64" | "crc64-ecma" => HasherState::Crc64(CRC64_ALGO.digest()),
+            "crc8" | "crc-8" => HasherState::Crc8(CRC8_ALGO.digest()),
+            "crc16" | "crc-16" => HasherState::Crc16(CRC16_ALGO.digest()),
+            "crc32" | "crc-32" => HasherState::Crc32(crc32fast::Hasher::new()),
+            "crc64" | "crc-64" | "crc64-ecma" => HasherState::Crc64(CRC64_ALGO.digest()),
             "fnv1-32" | "fnv1_32" => HasherState::Fnv1_32(FNV32_INIT),
             "fnv1-64" | "fnv1_64" => HasherState::Fnv1_64(FNV64_INIT),
             "fnv1a-32" | "fnv1a_32" => HasherState::Fnv1a32(FNV32_INIT),
@@ -342,15 +352,11 @@ fn compute_adler32(data: &[u8]) -> String {
 }
 
 fn compute_crc8(data: &[u8]) -> String {
-    let crc_algo = crc::Crc::<u8>::new(&crc::CRC_8_SMBUS);
-    let hash = crc_algo.checksum(data);
-    format!("{hash:02x}")
+    format!("{:02x}", CRC8_ALGO.checksum(data))
 }
 
 fn compute_crc16(data: &[u8]) -> String {
-    let crc_algo = crc::Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
-    let hash = crc_algo.checksum(data);
-    format!("{hash:04x}")
+    format!("{:04x}", CRC16_ALGO.checksum(data))
 }
 
 fn compute_crc32(data: &[u8]) -> String {
@@ -359,9 +365,7 @@ fn compute_crc32(data: &[u8]) -> String {
 }
 
 fn compute_crc64(data: &[u8]) -> String {
-    let crc_algo = crc::Crc::<u64>::new(&crc::CRC_64_ECMA_182);
-    let hash = crc_algo.checksum(data);
-    format!("{hash:016x}")
+    format!("{:016x}", CRC64_ALGO.checksum(data))
 }
 
 /// Compute the hash digest for a sub-range of the given data.
@@ -424,12 +428,12 @@ pub fn compute_crc_custom(
     }
     crc = (crc ^ xorout) & mask;
 
+    // `width` is validated to 8, 16, 32 or 64 above, so the remaining arm is 64.
     match width {
         8 => Ok(format!("{:02x}", (crc & 0xFF) as u8)),
         16 => Ok(format!("{:04x}", (crc & 0xFFFF) as u16)),
         32 => Ok(format!("{:08x}", (crc & 0xFFFF_FFFF) as u32)),
-        64 => Ok(format!("{crc:016x}")),
-        _ => unreachable!(),
+        _ => Ok(format!("{crc:016x}")),
     }
 }
 
@@ -489,12 +493,13 @@ fn add_masked_length(checksum: u32, data_len: usize) -> u32 {
 /// Compute the PE file checksum using the standard Windows algorithm.
 ///
 /// Sums all 16-bit words with carry folding, skipping the `CheckSum` field,
-/// then adds the file length.
+/// then adds the file length. For a 2-byte-aligned `checksum_offset` (every
+/// real PE) this equals `CheckSumMappedFile` exactly.
 #[must_use]
 pub fn compute_pe_checksum(data: &[u8], checksum_offset: usize) -> u32 {
     let mut checksum: u32 = 0;
     let skip_start = checksum_offset;
-    let skip_end = checksum_offset + 4;
+    let skip_end = checksum_offset.saturating_add(4);
 
     let mut i = 0;
     while i + 1 < data.len() {
@@ -524,33 +529,38 @@ pub fn compute_pe_checksum(data: &[u8], checksum_offset: usize) -> u32 {
 ///
 /// # Errors
 ///
-/// Returns `HashError::UnsupportedAlgorithm` if the data is not a valid
-/// PE file or the checksum offset is beyond file bounds.
+/// Returns `HashError::InvalidPe` if the data is not a PE file, the checksum
+/// field lies beyond the end of the data, or `e_lfanew` is odd. Windows'
+/// `CheckSumMappedFile` sums 16-bit words, so for an odd header offset the
+/// `CheckSum` field straddles word boundaries and its result is not a pure
+/// function of the bytes outside the field; reporting any value there would
+/// disagree with Windows and make `repair` write a checksum that never
+/// verifies, so the layout is rejected instead.
 pub fn verify_pe_checksum(data: &[u8]) -> Result<PeChecksumResult, HashError> {
+    let invalid = |reason: &str| HashError::InvalidPe(reason.to_string());
     if data.len() < 0x40 {
-        return Err(HashError::UnsupportedAlgorithm(
-            "file too short for PE header".to_string(),
-        ));
+        return Err(invalid("file too short for PE header"));
     }
     if &data[0..2] != b"MZ" {
-        return Err(HashError::UnsupportedAlgorithm(
-            "not a PE file (missing MZ signature)".to_string(),
-        ));
+        return Err(invalid("not a PE file (missing MZ signature)"));
     }
 
-    let e_lfanew = u32::from_le_bytes([data[0x3C], data[0x3D], data[0x3E], data[0x3F]]) as usize;
-    let checksum_offset = e_lfanew + 0x58;
-
-    if checksum_offset + 4 > data.len() {
-        return Err(HashError::UnsupportedAlgorithm(
-            "PE header checksum offset beyond file bounds".to_string(),
-        ));
-    }
+    let e_lfanew = usize::try_from(u32::from_le_bytes([
+        data[0x3C], data[0x3D], data[0x3E], data[0x3F],
+    ]))
+    .map_err(|_| invalid("PE header offset exceeds the address space"))?;
+    let checksum_offset = e_lfanew
+        .checked_add(0x58)
+        .filter(|off| off.checked_add(4).is_some_and(|end| end <= data.len()))
+        .ok_or_else(|| invalid("PE header checksum offset beyond file bounds"))?;
 
     if &data[e_lfanew..e_lfanew + 4] != b"PE\x00\x00" {
-        return Err(HashError::UnsupportedAlgorithm(
-            "invalid PE signature".to_string(),
-        ));
+        return Err(invalid("invalid PE signature"));
+    }
+    if !e_lfanew.is_multiple_of(2) {
+        return Err(HashError::InvalidPe(format!(
+            "PE header at odd offset {e_lfanew:#x}: the CheckSum field is not word-aligned"
+        )));
     }
 
     let stored = u32::from_le_bytes([
@@ -670,7 +680,7 @@ mod tests {
     #[test]
     fn test_blake2b_empty() {
         let result = compute_hash(b"", "blake2b").unwrap();
-        // BLAKE2b-256 KAT for empty input (independent oracle: Python hashlib.blake2b digest_size=32)
+        // BLAKE2b-256 KAT for empty input (Python hashlib.blake2b digest_size=32)
         assert_eq!(
             result.hex_digest,
             "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8"
@@ -914,7 +924,7 @@ mod tests {
     fn test_verify_pe_too_short() {
         let err = verify_pe_checksum(&[0u8; 0x20]).unwrap_err();
         assert!(
-            matches!(&err, HashError::UnsupportedAlgorithm(m) if m.contains("too short")),
+            matches!(&err, HashError::InvalidPe(m) if m.contains("too short")),
             "got {err:?}"
         );
     }
@@ -925,7 +935,7 @@ mod tests {
         d[0] = b'X';
         let err = verify_pe_checksum(&d).unwrap_err();
         assert!(
-            matches!(&err, HashError::UnsupportedAlgorithm(m) if m.contains("MZ")),
+            matches!(&err, HashError::InvalidPe(m) if m.contains("MZ")),
             "got {err:?}"
         );
     }
@@ -938,7 +948,7 @@ mod tests {
         d[0x3C..0x40].copy_from_slice(&0x0000_0400u32.to_le_bytes());
         let err = verify_pe_checksum(&d).unwrap_err();
         assert!(
-            matches!(&err, HashError::UnsupportedAlgorithm(m) if m.contains("beyond file bounds")),
+            matches!(&err, HashError::InvalidPe(m) if m.contains("beyond file bounds")),
             "got {err:?}"
         );
     }
@@ -951,7 +961,7 @@ mod tests {
         d[0x3C..0x40].copy_from_slice(&0x0000_0080u32.to_le_bytes());
         let err = verify_pe_checksum(&d).unwrap_err();
         assert!(
-            matches!(&err, HashError::UnsupportedAlgorithm(m) if m.contains("invalid PE signature")),
+            matches!(&err, HashError::InvalidPe(m) if m.contains("invalid PE signature")),
             "got {err:?}"
         );
     }
@@ -983,17 +993,13 @@ mod tests {
         assert!(!bad.valid);
     }
 
-    /// F-0079 regression: the PE checksum ends by adding the file length to the
-    /// folded word sum. That add used a checked `+`, so a file whose
-    /// 32-bit-masked length approaches `u32::MAX` (a ~4 GiB PE, which this
-    /// engine's large-file path can materialize) overflowed `u32` and panicked
-    /// across the FFI boundary. Windows keeps the value in a DWORD and lets it
-    /// wrap; `add_masked_length` must do the same. Exercised on the extracted
-    /// finalizer so the case is reachable without a 4 GiB allocation.
-    ///
-    /// Mutation caught: reverting to `checksum + (masked_len)` overflow-panics
-    /// on these values under the debug overflow checks `cargo test` uses, so
-    /// the equality assertion is never reached.
+    /// The PE checksum ends by adding the file length to the folded word sum.
+    /// A checked `+` would overflow `u32` and panic across the FFI boundary for
+    /// a file whose 32-bit-masked length approaches `u32::MAX` (a ~4 GiB PE,
+    /// which this engine's large-file path can materialize). Windows keeps the
+    /// value in a DWORD and lets it wrap; `add_masked_length` must do the same.
+    /// Exercised on the extracted finalizer so the case is reachable without a
+    /// 4 GiB allocation.
     #[test]
     fn test_pe_checksum_length_add_wraps_instead_of_panicking() {
         // 0x0001_0000 + 0xFFFF_FFFF == 0x1_0000_FFFF, truncated to 0x0000_FFFF.
@@ -1074,6 +1080,47 @@ mod tests {
         );
     }
 
+    /// The hex editor passes algorithm names as their display labels (for
+    /// example "SHA-1", "CRC-32"), so the hyphenated forms must resolve to the
+    /// same digest as their canonical names rather than being rejected.
+    #[test]
+    fn test_compute_hash_accepts_hex_editor_display_labels() {
+        for (display, canonical) in [
+            ("SHA-1", "sha1"),
+            ("CRC-8", "crc8"),
+            ("CRC-16", "crc16"),
+            ("CRC-32", "crc32"),
+            ("CRC-64", "crc64"),
+        ] {
+            let via_display = compute_hash(b"123456789", display)
+                .unwrap_or_else(|e| panic!("label {display} rejected: {e:?}"))
+                .hex_digest;
+            let via_canonical = compute_hash(b"123456789", canonical).unwrap().hex_digest;
+            assert_eq!(
+                via_display, via_canonical,
+                "label {display} must match {canonical}"
+            );
+        }
+    }
+
+    /// The streaming hasher must accept the same hex-editor display labels, so
+    /// chunked hashing in the hex editor does not fail where one-shot succeeds.
+    #[test]
+    fn test_streaming_hasher_accepts_hex_editor_display_labels() {
+        for display in ["SHA-1", "CRC-8", "CRC-16", "CRC-32", "CRC-64"] {
+            let mut hasher = StreamingHasher::new(display)
+                .unwrap_or_else(|e| panic!("label {display} rejected: {e:?}"));
+            hasher.update(b"1234");
+            hasher.update(b"56789");
+            let streamed = hasher.finalize().hex_digest;
+            let one_shot = compute_hash(b"123456789", display).unwrap().hex_digest;
+            assert_eq!(
+                streamed, one_shot,
+                "streaming {display} must match one-shot"
+            );
+        }
+    }
+
     #[test]
     fn test_compute_pe_checksum_odd_length_trailing_byte() {
         // Odd length drives the trailing-byte branch; checksum_offset far away -> no skip.
@@ -1081,5 +1128,102 @@ mod tests {
         assert_eq!(compute_pe_checksum(&[1, 2, 3, 4, 5, 6, 7], 1000), 3095);
         // Flipping the trailing byte must change the result (byte is not ignored).
         assert_eq!(compute_pe_checksum(&[1, 2, 3, 4, 5, 6, 8], 1000), 3096);
+    }
+
+    /// A 512-byte PE whose bytes outside the headers follow `i * 7 + 3`, with
+    /// the NT headers at `e_lfanew`.
+    fn synthetic_pe(e_lfanew: usize) -> Vec<u8> {
+        let mut buf: Vec<u8> = (0..0x200usize)
+            .map(|i| (i * 7 + 3).to_le_bytes()[0])
+            .collect();
+        buf[0..2].copy_from_slice(b"MZ");
+        buf[0x3C..0x40].copy_from_slice(&u32::try_from(e_lfanew).unwrap().to_le_bytes());
+        buf[e_lfanew..e_lfanew + 4].copy_from_slice(b"PE\0\0");
+        buf[e_lfanew + 4..e_lfanew + 6].copy_from_slice(&0x014Cu16.to_le_bytes());
+        buf[e_lfanew + 0x14..e_lfanew + 0x16].copy_from_slice(&0x00E0u16.to_le_bytes());
+        buf[e_lfanew + 0x18..e_lfanew + 0x1A].copy_from_slice(&0x010Bu16.to_le_bytes());
+        buf
+    }
+
+    /// The expected values come from Windows itself: `CheckSumMappedFile`
+    /// (imagehlp) run on these exact buffers returned `0x0000AA9F` and
+    /// `0x00004940`, so this pins the algorithm to the OS, not to itself.
+    #[test]
+    fn test_pe_checksum_matches_windows_imagehlp_oracle() {
+        assert_eq!(
+            verify_pe_checksum(&synthetic_pe(0x80)).unwrap().calculated,
+            0x0000_AA9F
+        );
+        assert_eq!(
+            verify_pe_checksum(&synthetic_pe(0x82)).unwrap().calculated,
+            0x0000_4940
+        );
+    }
+
+    /// For an odd `e_lfanew` a word-skip that treats the field as two whole
+    /// words mixes a field byte into the sum and drops an outside byte, so the
+    /// reported checksum would match neither Windows (imagehlp gives `0xE31D`
+    /// for `e_lfanew = 0x81`) nor itself after `repair_pe_checksum` wrote it
+    /// back.
+    #[test]
+    fn test_verify_pe_rejects_odd_header_offset() {
+        let err = verify_pe_checksum(&synthetic_pe(0x81)).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "PE header at odd offset 0x81: the CheckSum field is not word-aligned"
+        );
+    }
+
+    /// `checksum_offset + 4` must be a checked add: a caller-supplied offset
+    /// near `usize::MAX` would otherwise panic under overflow checks.
+    #[test]
+    fn test_compute_pe_checksum_huge_offset_does_not_overflow() {
+        assert_eq!(
+            compute_pe_checksum(&[1, 2, 3, 4, 5, 6, 7], usize::MAX - 1),
+            3095
+        );
+    }
+
+    #[test]
+    fn test_known_answer_vectors_for_abc_and_empty() {
+        let digest = |algo: &str, data: &[u8]| compute_hash(data, algo).unwrap().hex_digest;
+        assert_eq!(
+            digest("sha3-256", b"abc"),
+            "3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532"
+        );
+        assert_eq!(
+            digest("sha3-512", b"abc"),
+            "b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e\
+             10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0"
+        );
+        assert_eq!(digest("adler32", b"abc"), "024d0127");
+        assert_eq!(digest("xxh3", b""), "2d06800538d394c2");
+    }
+
+    #[test]
+    fn test_custom_crc_reflected_known_answers() {
+        let check = b"123456789";
+        // CRC-16/ARC, CRC-8/MAXIM and CRC-64/XZ catalogue check values.
+        assert_eq!(
+            compute_crc_custom(check, 16, 0x8005, 0, true, true, 0).unwrap(),
+            "bb3d"
+        );
+        assert_eq!(
+            compute_crc_custom(check, 8, 0x31, 0, true, true, 0).unwrap(),
+            "a1"
+        );
+        assert_eq!(
+            compute_crc_custom(
+                check,
+                64,
+                0x42F0_E1EB_A9EA_3693,
+                u64::MAX,
+                true,
+                true,
+                u64::MAX
+            )
+            .unwrap(),
+            "995dc9bbdf1939fa"
+        );
     }
 }

@@ -3,7 +3,7 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates A-4 and A-5: the dock strips and the document strip are two visually
+ * Gates the dock strips and the document strip, which are two visually
  * identical systems, so they must answer to one keyboard and one set of roles,
  * and neither may cost a tab stop per tab.
  *

@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S17-D82: a Linux guest must actually reach a listening agent.
+r"""A Linux guest must actually reach a listening agent.
 
 Booting ``debian13-intellicrack.qcow2`` through the production bridge failed
 with ``guest agent failed to connect within 300.0s``, and that message was the
 only thing the failure ever produced. Driving the same start phases against a
-live guest on 2026-08-09, and then asking the guest itself, found two separate
+live guest, and then asking the guest itself, found two separate
 faults.
 
 **The agent could not start on a guest that had never run it.**
@@ -17,7 +17,7 @@ configures logging at module scope::
     logging.basicConfig(handlers=[logging.FileHandler(LOG_DIR / "agent.log"), ...])
 
 ``FileHandler`` opens its file as it is constructed, and module scope runs on
-import - long before ``main()``, which is where the directory used to be
+import - long before ``main()``, which is where the directory is set
 created. The guest had no work root at all (``ls /var/lib/intellicrack`` exited
 2, "No such file or directory"), so every run died at import::
 

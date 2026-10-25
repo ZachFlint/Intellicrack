@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for S17-D10b: a live guest process picker for Memory Dump.
+"""A live guest process picker for Memory Dump.
 
 The Sandbox panel offered "Memory Dump" on the Windows Sandbox backend but
 never supplied ``target_pid``, so ``SandboxBridge.memory_dump`` rejected every
-Windows instance outright (audit7 F-0021's guard). The fix adds a real guest
+Windows instance outright. The fix adds a real guest
 process enumeration capability - :meth:`WindowsSandbox.list_processes` - that
 runs ``Get-Process`` inside the guest via the dispatcher and parses the JSON
 it returns with :func:`~intellicrack.sandbox.windows.parse_guest_process_list`,
@@ -160,14 +160,7 @@ class TestParseGuestProcessListBomHandling:
     """
 
     def test_bom_prefixed_array_parses_correctly(self) -> None:
-        """A literal U+FEFF BOM character before a JSON array does not break parsing.
-
-        Falsified by: removing the ``.strip(_UTF8_BOM)`` step from
-        ``parse_guest_process_list`` would make ``json.loads`` receive text
-        starting with U+FEFF, which raises ``json.JSONDecodeError`` (caught,
-        but only because of the parser's error handling) and this test would
-        then observe an empty result instead of the real records.
-        """
+        """A literal U+FEFF BOM character before a JSON array does not break parsing."""
         payload = _BOM + json.dumps([{"Id": 100, "ProcessName": "svchost", "Path": r"C:\Windows\System32\svchost.exe"}])
         result = parse_guest_process_list(payload)
         assert result == [GuestProcessInfo(pid=100, name="svchost", path=r"C:\Windows\System32\svchost.exe")]

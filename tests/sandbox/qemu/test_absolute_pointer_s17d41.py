@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Regression tests for S17-D41: the guest needs an absolute pointing device.
+r"""The guest needs an absolute pointing device.
 
 The VM Display encodes pointer input correctly. RFB ``PointerEvent`` carries
 *absolute* framebuffer coordinates (RFC 6143 7.5.5) and ``vnc_widget.py`` packs
-them exactly as specified. What was missing sat a layer below: the launcher
+them exactly as specified. The gap sits a layer below: the launcher
 attached virtio NIC, virtio-serial and virtio-9p devices and no pointing device
 at all, so every guest fell back to the q35 board's PS/2 mouse. Measured on a
 live guest over its human monitor::
@@ -22,7 +22,7 @@ applies its own pointer acceleration and clamps at the screen edges. The two
 cursors diverge on the first movement and never resync, so a click is delivered
 wherever the guest's cursor drifted to rather than where the operator aimed it.
 From the operator's seat that is indistinguishable from a display that ignores
-input, which is how it was first reported (S17-D39 symptom 2).
+input.
 
 **Why this is not an assertion on the argument.** Naming ``usb-tablet`` in the
 argv proves only that a string is present; whether the guest ends up with an
@@ -94,7 +94,7 @@ _SHUTDOWN_GRACE_SECONDS: Final[float] = 15.0
 def _without_tablet(argv: list[str]) -> list[str]:
     """Rebuild an argv with the absolute pointing device removed.
 
-    This reconstructs the machine as it stood before S17-D41: every other device
+    This rebuilds the machine with every other device
     identical, only the tablet gone. An argv this rewrite cannot change fails the
     calling test, which covers the one way the launcher can regress - dropping
     the tablet - so the discriminator can never quietly compare broken to broken.

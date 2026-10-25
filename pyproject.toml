@@ -135,7 +135,7 @@ optional-dependencies.dev = [
   "vermin>=1.9.2,<2",
   "vulture",
   "wemake-python-styleguide",
-  "wily>=1.12.2,<2",
+  "wily>=2.0.0a1,<3",
   "xenon",
   "yamllint",
   "yapf",
@@ -833,6 +833,7 @@ pypi-dependencies.sentencepiece = ">=0.2.2, <0.3"
 pypi-dependencies.safetensors = ">=0.8.0, <0.9"
 pypi-options.extra-index-urls = ["https://download.pytorch.org/whl/xpu"]
 pypi-options.index-strategy = "unsafe-best-match"
+pypi-options.dependency-overrides.rich = ">=15.0.0, <16"
 target.linux-64.pypi-dependencies.torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
 tasks.dev = "python -m intellicrack"
 tasks.gui = "python -m intellicrack.ui.app"

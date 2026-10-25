@@ -7,9 +7,9 @@
 
 A non-daemon thread that a test or fixture leaves alive blocks
 ``threading._shutdown`` when the interpreter exits: the main thread joins every
-non-daemon thread, so one that never finishes hangs the process. That is the
-exact mechanism behind the whole non-UI sandbox suite printing its summary and
-then hanging until the container's hard timeout killed it (exit 124). This
+non-daemon thread, so one that never finishes hangs the process. A run that
+leaves one behind prints its summary and then hangs until the container's hard
+timeout kills it (exit 124). This
 module provides the pure predicate the session-scoped guard in
 ``tests/conftest.py`` uses, factored out so it can be exercised directly.
 

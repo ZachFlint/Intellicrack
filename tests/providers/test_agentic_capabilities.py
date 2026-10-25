@@ -364,10 +364,9 @@ class TestStreamingToolCalls:
     many stream chunks. They feed recorded, fragmented delta sequences (the
     shape real backends emit, where the function name and JSON argument text
     are split across frames) through the real assembler and assert the
-    finalised :class:`ToolCall` exactly matches a hand-decoded oracle. This
-    is the regression these tests were named to guard: a buffer manager that
-    fails to concatenate argument fragments or drops the tool call silently
-    yields the wrong, or no, ToolCall.
+    finalised :class:`ToolCall` exactly matches a hand-decoded oracle. A buffer
+    manager that fails to concatenate argument fragments or drops the tool call
+    silently yields the wrong, or no, ToolCall.
     """
 
     pytestmark: ClassVar[list[pytest.MarkDecorator]] = [pytest.mark.integration]

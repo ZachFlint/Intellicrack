@@ -3,11 +3,10 @@
  *
  * This file is part of Intellicrack. See LICENSE for details.
  *
- * Gates BE-3: the Edit menu's block operations (`fill_block` already had a
- * menu entry; `copy_block`, `move_block` and `swap_blocks` did not) and the
- * grid's context menu, which did not exist at all - carrying that same
- * selection-scoped subset plus the three bit toggles (`get_bit`, `set_bit`,
- * `toggle_bit`), none of which had any surface either.
+ * Gates the Edit menu's block operations (`fill_block`, `copy_block`,
+ * `move_block` and `swap_blocks`) and the grid's context menu, which carries the
+ * same selection-scoped subset plus the three bit toggles (`get_bit`, `set_bit`,
+ * `toggle_bit`).
  *
  * Every parameter name below is taken verbatim from the Rust signatures in
  * intellicrack-hexcore/src/lib.rs (fill_block, copy_block, move_block,
@@ -17,7 +16,7 @@
  * name", the same technique shell_templates_transforms_numeric_search.test.mjs
  * uses for the numeric search calls.
  *
- * The context menu's keyboard contract is A-3's own `bindMenubarKeys`, reused
+ * The context menu's keyboard contract is `bindMenubarKeys`, reused
  * rather than reimplemented, given a controller with an empty button list.
  * That controller shape is exercised for real here, against the same real
  * `bindMenubarKeys` chrome_menubar.test.mjs drives with a full button set,

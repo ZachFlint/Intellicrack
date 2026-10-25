@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for F-0026: _DOMAIN_PATTERN over-broad hostname matching.
+"""Tests for _DOMAIN_PATTERN hostname matching.
 
-Each test is designed to:
-- FAIL with the old regex (which accepted any 2+ letter trailing label),
-- PASS with the fixed implementation (TLD allowlist + file-extension denylist).
+A hostname is accepted only when its trailing label is in the TLD allowlist
+and not in the file-extension denylist.
 
 The tests cover:
 - File extensions that must not be accepted as TLDs.

@@ -40,7 +40,7 @@ const panelsSource = (await readFile(`${staticDir}panels.js`, 'utf8')).replace(/
 
 const { createRequestGate, documentKey } = await import('../static/panels.js');
 
-/* ------------------------------------------------------ #38/#66: request gate */
+/* ------------------------------------------------------ request gate */
 
 const gate = createRequestGate();
 const firstToken = gate.begin();
@@ -100,7 +100,7 @@ check(
   'an unrelated re-render of the same document must not look like a document switch',
 );
 
-/* --------------------------------------------------------------- #37: strings panel */
+/* --------------------------------------------------------------- strings panel */
 
 const stringsPanelMatch = /function stringsPanel\(env\) \{[\s\S]*?\n\}\n/.exec(panelsSource);
 check('the strings panel function could be located in panels.js for inspection', stringsPanelMatch !== null, 'function stringsPanel(env) { ... } was not found as a single top-level block');

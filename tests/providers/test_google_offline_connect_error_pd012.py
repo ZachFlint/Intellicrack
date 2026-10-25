@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""PD-012 offline falsifiable gate: ``connect()`` must convert a real ``httpx.ConnectError``.
+"""Offline falsifiable gate: ``connect()`` must convert a real ``httpx.ConnectError``.
 
 ``GoogleProvider.connect`` builds a real ``google.genai.Client`` and probes it
 with ``models.list()``.  When the probe cannot reach a listener at all, the
@@ -85,10 +85,10 @@ async def test_connect_wraps_real_httpx_connect_error_as_provider_error(
     port with no listener, so ``models.list()`` triggers an actual refused
     TCP connection and the real ``httpx`` sync transport raises
     ``httpx.ConnectError`` -- no exception is constructed or injected by the
-    test.  Before the PD-012 fix, ``connect()``'s ``except`` clause at
-    google.py listed only ``(ConnectionError, TimeoutError, OSError,
-    ValueError, RuntimeError)``, none of which are base classes of
-    ``httpx.ConnectError``, so the raw transport error propagated out of
+    test.  The ``connect()`` ``except`` clause at google.py must name the
+    httpx transport errors: the builtin exceptions it also catches, such as
+    ``ConnectionError`` and ``OSError``, are not base classes of
+    ``httpx.ConnectError``, so without them the raw transport error escapes
     ``connect()`` instead of the contracted ``ProviderError("Connection
     failed")``.
 
@@ -96,8 +96,8 @@ async def test_connect_wraps_real_httpx_connect_error_as_provider_error(
     ``test_connect_gemini_api_key_restored_after_failure`` gate) is that any
     probe failure raises ``ProviderError`` with the ``_MSG_CONNECTION_FAILED``
     message; the real ``httpx.ConnectError`` MRO is independently verifiable
-    and shares no base with the exception tuple ``connect()`` previously
-    caught.
+    and shares no base with the builtin exceptions in ``connect()``'s catch
+    tuple.
 
     Mutation caught: reverting the ``except`` clause to omit
     ``httpx.ConnectError`` (or an equivalent ``httpx`` base) lets a raw

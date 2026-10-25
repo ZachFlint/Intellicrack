@@ -5,7 +5,7 @@
 """Instrumentation-control widgets embedded in the Frida panel's Hooks, Stalker, Memory, Symbols, and Advanced sections.
 
 Provides self-contained Qt widgets for the Frida instrumentation primitives that have a real bridge method and tool
-definition but historically had no reachable GUI control: ``Interceptor.revert``/``flush`` (hook lifecycle),
+definition and are exposed here as GUI controls: ``Interceptor.revert``/``flush`` (hook lifecycle),
 ``Stalker.addCallProbe``/``removeCallProbe`` (call-probe management), ``Stalker.exclude``/``garbageCollect``/
 ``invalidate``/``setTrustThreshold`` (Stalker tuning), ``Memory.patchCode`` and the
 ``Memory.allocUtf8String``/``allocAnsiString``/``allocUtf16String`` family (code patching and string allocation),
@@ -2035,11 +2035,11 @@ class CancellableControls(QWidget):
         self._bridge = bridge
 
     def last_cancellable_id(self) -> str | None:
-        """Return the most recently created, not-yet-cancelled cancellable ID.
+        """Return the most recently created, not-yet-canceled cancellable ID.
 
         Returns:
             str | None: The active cancellable ID, or ``None`` if none has been created (or it was
-            already cancelled).
+            already canceled).
         """
         return self._last_cancellable_id
 

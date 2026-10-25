@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, items 36 and 34: MCP Settings shows each server's negotiated protocol version and both sides' capabilities, and progress.
+"""MCP Settings shows each server's negotiated protocol version and both sides' capabilities, and progress.
 
 The gate runs the real settings dialog over a real connection manager and a real ``MCPServer`` on each protocol generation, with
 Intellicrack offering roots and log messages. The status tab names the version the connection negotiated, what the server declared it

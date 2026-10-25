@@ -2,19 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for GUI audit findings in SessionManagerDialog.
+"""Tests for SessionManagerDialog table column policy and detail label elision.
 
-Covers two fixes:
+Covers two behaviours:
 
-* Session table column policy. Column 0 used ``Stretch`` while
-  ``setStretchLastSection(True)`` also stretched the trailing numeric
-  "Messages" column, double-stretching the table and squeezing the date
-  columns. The fix disables ``stretchLastSection`` and sizes the Messages
-  column to its contents.
-* Detail label elision. Long provider names and model identifiers were shown
-  in fixed-width detail labels with no elision or tooltip, so they clipped
-  silently. The fix stores the full value as a tooltip and elides the visible
-  text.
+* Session table column policy. Column 0 stretches, and ``stretchLastSection`` is disabled so the trailing numeric
+"Messages" column does not double-stretch the table and squeeze the date columns. The Messages column sizes to its contents.
+* Detail label elision. Long provider names and model identifiers in fixed-width detail labels are elided, with the full value
+stored as a tooltip so they never clip silently.
 """
 
 from __future__ import annotations

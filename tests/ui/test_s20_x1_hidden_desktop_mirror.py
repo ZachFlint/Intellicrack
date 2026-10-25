@@ -3,41 +3,34 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for S20-D01: the x64dbg embed tab must show a real window.
+"""Falsifiable gates for the x64dbg embed tab showing a real window on a hidden desktop.
 
 x64dbg is launched on a dedicated, never-visible Win32 desktop (see
-``intellicrack.core.win32_desktop_process.spawn_on_hidden_desktop``). A prior
-fix already taught the panel to *locate* that window via
-``EnumDesktopWindows`` scoped to the correct ``HDESK``
-(``intellicrack.ui.panels.x64dbg_panel._resolve_debugger_window_hwnd``,
-covered by ``tests/ui/test_x64dbg_embed_finds_window_s13d04.py``), but
-``_poll_embed_tick`` kept feeding the located handle to
-``intellicrack.ui.win32_embed.embed_window``, which reparents via
-``SetParent`` - an API that always fails with ``ERROR_INVALID_PARAMETER``
-when the child and new-parent windows live on different Win32 desktops. So
-even once the window was found, every embed attempt still failed, and the
-poll ran out its retry budget and left the "x64dbg Window" tab on its empty
-placeholder (S20-D01, re-confirmed live).
+``intellicrack.core.win32_desktop_process.spawn_on_hidden_desktop``). The panel locates that
+window via ``EnumDesktopWindows`` scoped to the correct ``HDESK``
+(``intellicrack.ui.panels.x64dbg_panel._resolve_debugger_window_hwnd``, covered by
+``tests/ui/test_x64dbg_embed_finds_window_s13d04.py``). ``SetParent`` always fails with
+``ERROR_INVALID_PARAMETER`` when the child and new-parent windows live on different Win32
+desktops, so ``intellicrack.ui.win32_embed.embed_window`` cannot reparent a window found on
+a hidden desktop. The embed tab must therefore not be left on its empty placeholder.
 
-The fix: once ``_poll_embed_tick`` learns (via
-``intellicrack.core.win32_desktop_process.get_desktop_handle_for_pid``) that
-the debugger's window lives on a registered hidden desktop, it stops trying
-to reparent the real ``HWND`` at all and instead starts a live mirror -
-``_start_mirror_capture``/``_refresh_mirror_frame`` periodically render the
-window's content via ``intellicrack.ui.win32_embed.capture_window_image``
-(``PrintWindow``, which is not desktop-scoped) into a ``QLabel`` hosted in the
-same embed tab. This module spawns a real, titled, visible top-level window
-on a real hidden desktop (the same technique test_x64dbg_embed_finds_window_
-s13d04.py uses, reproduced here as this file must not import from or modify
-that other domain's test module) and drives the panel's real, un-mocked poll
-and mirror-refresh methods against it.
+Once ``_poll_embed_tick`` learns (via
+``intellicrack.core.win32_desktop_process.get_desktop_handle_for_pid``) that the debugger's
+window lives on a registered hidden desktop, it does not try to reparent the real ``HWND``.
+It starts a live mirror instead: ``_start_mirror_capture``/``_refresh_mirror_frame``
+periodically render the window's content via
+``intellicrack.ui.win32_embed.capture_window_image`` (``PrintWindow``, which is not
+desktop-scoped) into a ``QLabel`` hosted in the same embed tab. This module spawns a real,
+titled, visible top-level window on a real hidden desktop (the same technique as
+test_x64dbg_embed_finds_window_s13d04.py, reproduced here so this module does not depend on
+that test module) and drives the panel's real, un-mocked poll and mirror-refresh methods
+against it.
 
-Reverting ``_poll_embed_tick`` to unconditionally call ``embed_window``
-(dropping the ``get_desktop_handle_for_pid`` branch) makes
-``test_poll_embed_tick_starts_mirror_for_hidden_desktop_window`` fail: the
-reparent attempt fails every tick (its result is asserted directly), so
-``panel._mirror_label`` never gets created and the embed tab stays empty
-exactly as in the original defect.
+Reverting ``_poll_embed_tick`` to unconditionally call ``embed_window`` (dropping the
+``get_desktop_handle_for_pid`` branch) makes
+``test_poll_embed_tick_starts_mirror_for_hidden_desktop_window`` fail: the reparent attempt
+fails every tick (its result is asserted directly), so ``panel._mirror_label`` never gets
+created and the embed tab stays empty.
 """
 
 from __future__ import annotations
@@ -231,9 +224,8 @@ def test_poll_embed_tick_starts_mirror_for_hidden_desktop_window(
         assert pixmap.width() > 0
         assert pixmap.height() > 0
 
-        # Empirical premise the fix rests on: SetParent-based reparenting
-        # genuinely cannot embed a window living on a different Win32
-        # desktop, which is exactly why the mirror path exists at all.
+        # Premise of the mirror path: SetParent-based reparenting cannot embed a window living on a
+        # different Win32 desktop.
         assert embed_window(panel._mirror_hwnd, panel.embed_host) is None, "embed_window unexpectedly reparented a window across desktops"
     finally:
         panel._stop_mirror_timer()
@@ -246,7 +238,7 @@ def test_poll_embed_tick_starts_mirror_for_hidden_desktop_window(
 def test_refresh_mirror_frame_preserves_last_frame_when_capture_fails(qapp: QApplication) -> None:
     """A failed capture must leave the previously rendered mirror frame alone.
 
-    Seeds the mirror label with a known frame, points ``_mirror_hwnd`` at an
+    Seeds the mirror label with a known frame, points ``_mirror_hwnd`` at a
     handle ``capture_window_image`` always rejects immediately, and asserts
     the label's pixmap is unchanged - a transient ``PrintWindow`` failure
     must never blank the mirror.

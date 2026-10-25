@@ -2,27 +2,21 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for GUI-audit findings M2, M40 and L4 in the Log Viewer window.
+"""Gates for the Log Viewer window: background save, column sizing and splitter collapsing.
 
-M2 -- ``_on_save_all``/``_save_records`` used to build the full record list
-and serialize+write it with a plain synchronous ``for`` loop directly inside
-the toolbar action's slot, blocking the Qt GUI thread for the duration of the
-write. The fix moves the serialize-and-write work into the module-level
-``_write_records_jsonl`` helper and dispatches it through a background
+``_on_save_all`` and ``_save_records`` must not build the full record list and serialize and write it with a plain synchronous
+``for`` loop inside the toolbar action's slot, which would block the Qt GUI thread for the duration of the write.
+The serialize-and-write work lives in the module-level ``_write_records_jsonl`` helper, dispatched through a background
 :class:`~intellicrack.ui.panels.async_bridge.GenericCallableWorker` ``QThread``,
 returning from the slot before the write completes.
 
-M40 -- the table header left the Logger, Function:Line and Event columns at
-Qt's default ``Interactive`` resize mode (fixed ~100px), so the two most
-information-dense columns in a log viewer started every session visually
-clipped. The fix sets ``ResizeToContents`` on Logger/Function:Line and
-``Stretch`` on Event.
+The table header must not leave the Logger, Function:Line and Event columns at Qt's default ``Interactive``
+resize mode (fixed ~100px), which clips the two most information-dense columns in a log viewer. The header sets
+``ResizeToContents`` on Logger/Function:Line and ``Stretch`` on Event.
 
-L4 -- the horizontal ``QSplitter`` housing the filter panel kept Qt's default
-``childrenCollapsible=True`` and the filter panel had no minimum width, so a
-small drag of the splitter handle toward the left edge snapped the whole
-filter panel to 0px with no restore affordance. The fix calls
-``splitter.setChildrenCollapsible(False)`` and gives the filter panel
+The horizontal ``QSplitter`` housing the filter panel must disable pane collapsing, and the filter panel must have a
+minimum width. Otherwise a small drag of the splitter handle toward the left edge snaps the whole filter panel to 0px
+with no restore affordance. The splitter calls ``splitter.setChildrenCollapsible(False)`` and the filter panel calls
 ``setMinimumWidth(_FILTER_PANEL_MIN_WIDTH)``.
 
 Each test below drives real Qt objects (:class:`LogViewerWindow`,
@@ -221,16 +215,13 @@ def test_m2_save_all_returns_before_slow_write_completes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """M2: ``_on_save_all`` must return before the write finishes, not block on it.
+    """``_on_save_all`` must return before the write finishes, not block on it.
 
     Wraps the real ``_write_records_jsonl`` helper so it sleeps for
-    ``_WRITE_SLEEP_S`` before performing the actual (real) write. Pre-fix,
-    ``_save_records`` ran that serialize+write loop inline in the slot, so
-    triggering "Save All As..." would block the calling (GUI) thread for the
-    full sleep duration and the file would already exist by the time the
-    trigger call returned. Post-fix, the call returns almost immediately and
-    the file does not exist yet at that point; it appears only once the
-    background worker finishes.
+    ``_WRITE_SLEEP_S`` before performing the actual (real) write. If the serialize-and-write loop ran inline in the slot,
+    triggering "Save All As..." would block the calling (GUI) thread for the full sleep duration, and the file would
+    already exist by the time the trigger call returned. The call must return almost immediately, and the file must
+    not exist yet at that point; it appears only once the background worker finishes.
 
     Args:
         qtbot: pytest-qt bot fixture.
@@ -275,16 +266,15 @@ def test_m2_save_all_write_executes_on_background_worker_thread(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """M2: the real write must execute on a background worker thread, not the GUI thread.
+    """The real write must execute on a background worker thread, not the GUI thread.
 
     Wraps the window module's dispatcher, ``run_callable_async``, so the real
     helper still starts the real worker while this gate records the one it
     returned, and wraps ``_write_records_jsonl`` to record the identity of the
-    OS thread that executes it. Pre-fix neither dispatch seam existed (the
-    write logic was inlined directly in ``_save_records``), so the
-    ``monkeypatch.setattr`` calls below would themselves raise
-    ``AttributeError``. Post-fix, exactly one real ``QThread``-backed worker is
-    dispatched and the write runs on a different OS thread than the one that
+    OS thread that executes it. Without those dispatch seams the write logic would be inlined directly in
+    ``_save_records``, and the ``monkeypatch.setattr`` calls below would themselves raise
+    ``AttributeError``. Exactly one real ``QThread``-backed worker must be
+    dispatched, and the write must run on a different OS thread than the one that
     triggered the action.
 
     The worker also belongs to the window without being its Qt child: Qt
@@ -356,13 +346,11 @@ def test_m2_save_all_write_executes_on_background_worker_thread(
 
 
 def test_m40_logger_location_event_columns_use_non_interactive_resize_mode() -> None:
-    """M40: Logger/Function:Line/Event columns must not be left at ``Interactive`` mode.
+    """Logger/Function:Line/Event columns must not be left at ``Interactive`` mode.
 
-    Pre-fix, the header was set to ``Interactive`` for every section and
-    only Time and Level were overridden to ``ResizeToContents``, leaving
-    the Logger, Function:Line and Event columns at Qt's fixed ~100px
-    default regardless of content. Post-fix, Logger and Function:Line use
-    ``ResizeToContents`` and Event uses ``Stretch``.
+    The header must not be set to ``Interactive`` for every section while only Time and Level are overridden to
+    ``ResizeToContents``, which would leave the Logger, Function:Line and Event columns at Qt's fixed ~100px default
+    regardless of content. Logger and Function:Line use ``ResizeToContents`` and Event uses ``Stretch``.
     """
     proxy = LogFilterProxyModel(parent=None)
     proxy.setSourceModel(LogRecordTableModel(parent=None))
@@ -381,15 +369,15 @@ def test_m40_logger_location_event_columns_use_non_interactive_resize_mode() -> 
 
 
 def test_m40_long_logger_name_widens_column_instead_of_clipping(qtbot: QtBot) -> None:
-    """M40: a long, dotted logger name must widen its column rather than being clipped.
+    """A long, dotted logger name must widen its column rather than being clipped.
 
     Builds two independent, freshly-populated table views -- one with a
     one-character logger name, one with a long dotted logger name typical
     of Intellicrack's real loggers -- and compares the resulting column
-    widths. Pre-fix, ``Interactive`` mode holds every column at a fixed
+    With ``Interactive`` mode every column would hold a fixed
     default width regardless of content, so both widths would be equal and
     the long name would render clipped to a handful of characters.
-    Post-fix, ``ResizeToContents`` grows the Logger column to fit the
+    ``ResizeToContents`` must grow the Logger column to fit the
     longer content.
 
     Args:
@@ -427,12 +415,10 @@ def test_m40_long_logger_name_widens_column_instead_of_clipping(qtbot: QtBot) ->
 
 
 def test_l4_splitter_children_not_collapsible(qtbot: QtBot, tmp_path: Path) -> None:
-    """L4: the filter/table splitter must disable Qt's default pane-collapsing.
+    """The filter/table splitter must disable Qt's default pane-collapsing.
 
-    Pre-fix, the ``QSplitter`` housing the filter panel was constructed
-    with no call to ``setChildrenCollapsible``, leaving Qt's default of
-    ``True`` in effect -- exactly what permits a drag past the panel's
-    natural size to snap it to 0px.
+    The ``QSplitter`` housing the filter panel must call ``setChildrenCollapsible(False)``, because Qt's default of
+    ``True`` permits a drag past the panel's natural size to snap it to 0px.
 
     Args:
         qtbot: pytest-qt bot fixture.
@@ -445,16 +431,13 @@ def test_l4_splitter_children_not_collapsible(qtbot: QtBot, tmp_path: Path) -> N
 
 
 def test_l4_dragging_splitter_to_left_edge_keeps_filter_panel_visible(qtbot: QtBot, tmp_path: Path) -> None:
-    """L4: dragging the splitter handle to the left edge must not hide the filter panel.
+    """Dragging the splitter handle to the left edge must not hide the filter panel.
 
     ``QSplitter.moveSplitter(0, 1)`` is the same primitive Qt uses when a
     user drags the handle (or double-clicks it) all the way to the left
-    edge. Pre-fix (default ``childrenCollapsible=True``, no minimum width
-    on the filter panel) this collapsed the panel to 0px, hiding the
-    Minimum Level combo, logger regex, text search, Max Rows spin box and
-    Auto-scroll checkbox entirely. Post-fix, the enforced minimum width
-    keeps the panel at least ``_FILTER_PANEL_MIN_WIDTH`` px wide and
-    visible.
+    With the default ``childrenCollapsible=True`` and no minimum width on the filter panel, this collapses the panel to 0px,
+    hiding the Minimum Level combo, logger regex, text search, Max Rows spin box and Auto-scroll checkbox entirely. The enforced
+    minimum width keeps the panel at least ``_FILTER_PANEL_MIN_WIDTH`` px wide and visible.
 
     Args:
         qtbot: pytest-qt bot fixture.
@@ -476,12 +459,11 @@ def test_l4_dragging_splitter_to_left_edge_keeps_filter_panel_visible(qtbot: QtB
 
 
 def test_l4_filter_panel_has_nonzero_minimum_width(qtbot: QtBot, tmp_path: Path) -> None:
-    """L4: the filter panel must carry an explicit, non-trivial minimum width.
+    """The filter panel must carry an explicit, non-trivial minimum width.
 
-    This is the concrete configuration the fix introduces
-    (``panel.setMinimumWidth(_FILTER_PANEL_MIN_WIDTH)``); pre-fix the panel
-    had no minimum size set at all (``minimumWidth()`` defaults to ``0``),
-    which is precisely what let the splitter collapse it to zero.
+    This is the concrete configuration that sets the panel's minimum width
+    (``panel.setMinimumWidth(_FILTER_PANEL_MIN_WIDTH)``). Without it the panel would have no minimum size
+    (``minimumWidth()`` defaults to ``0``), which is precisely what would let the splitter collapse it to zero.
 
     Args:
         qtbot: pytest-qt bot fixture.

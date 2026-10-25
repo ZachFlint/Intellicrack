@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Second-pass coverage tests for the x64dbg bridge: list-shaped plugin replies and failure paths.
+"""Coverage tests for the x64dbg bridge: list-shaped plugin replies and failure paths.
 
 x64dbg is not installed where these tests run. Plugin replies the echo pipe server cannot produce
 (``bp_list`` lists, ``reg_all`` values, ``unknown_command`` errors, ``status`` payloads) come from
@@ -1188,8 +1188,7 @@ async def test_memory_regions_are_still_listed_when_the_module_list_is_unavailab
 ) -> None:
     """A process whose modules cannot be listed yet still has its regions, with no module name on images.
 
-    Today the module snapshot failure goes unnoticed (PD-052), so this passes through the empty-list path; once
-    PD-052 is fixed the same assertions hold through the ``ToolError`` handler.
+    The module snapshot failure currently goes unnoticed, so the walk passes through the empty-list path. The same assertions would hold once that failure is raised as a ``ToolError``.
 
     Args:
         scripted_bridge: Fresh scripted bridge.

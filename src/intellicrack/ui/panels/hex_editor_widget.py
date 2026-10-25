@@ -1992,6 +1992,8 @@ class HexEditorWidget(QAbstractScrollArea):
         """Paste clipboard content at cursor position.
 
         Attempts to parse clipboard text as a hex string first (e.g. "4D 5A 90"). Falls back to encoding the raw text as UTF-8 bytes.
+        In overwrite mode the pasted bytes are cut at the end of the document, since an overwrite never grows it; only the bytes
+        that fit are written and marked as modified. Insert mode pastes every byte.
         """
         if self._document is None:
             return
@@ -2007,6 +2009,9 @@ class HexEditorWidget(QAbstractScrollArea):
         stripped = text.replace(" ", "").replace("\n", "").replace("\r", "")
         data = bytes.fromhex(stripped) if all(c in string.hexdigits for c in stripped) and len(stripped) % 2 == 0 else text.encode("utf-8")
 
+        if self._edit_mode == "overwrite":
+            data = data[: max(self._document.length() - self._cursor_offset, 0)]
+
         if not data:
             return
 
@@ -2017,8 +2022,7 @@ class HexEditorWidget(QAbstractScrollArea):
             try:
                 self._document.write_bytes(self._cursor_offset, data)
                 self._push_marks_undo()
-                written_end = min(self._cursor_offset + len(data), self._document.length())
-                self._modified_offsets.update(range(self._cursor_offset, written_end))
+                self._modified_offsets.update(range(self._cursor_offset, self._cursor_offset + len(data)))
                 _logger.info("hex_editor_paste_overwrite_completed", offset=self._cursor_offset, length=len(data))
             except (RuntimeError, ValueError, IndexError, OSError):
                 _logger.warning("hex_editor_paste_overwrite_failed", offset=self._cursor_offset, exc_info=True)

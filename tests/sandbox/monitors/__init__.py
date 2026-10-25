@@ -3,4 +3,4 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 regression tests for sandbox subsystem (monitor scripts)."""
+"""Regression tests for sandbox subsystem (monitor scripts)."""

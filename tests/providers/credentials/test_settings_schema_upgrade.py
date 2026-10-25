@@ -5,15 +5,14 @@
 """Gates on reading provider settings written by an older build.
 
 A saved timeout of 120 seconds is ambiguous, and the schema version resolves
-it. Before settings were versioned, 120 was the dialog's untouched default, so
-an unversioned 120 means "use the provider default". From version 2 on, the
-default was stored as ``null``, so a versioned 120 was chosen deliberately.
+it. An unversioned 120 is the dialog's untouched default, so it means "use the
+provider default". From version 2 on, the default is stored as ``null``, so a
+versioned 120 is a deliberate choice.
 
-That rule has to be tested against the version that introduced it, not the
-current one. Tying it to the current version meant that moving the schema from
-2 to 3 reclassified every v2 file as pre-versioning legacy and silently threw
-away the 120-second timeouts users had set on purpose -- on upgrade, with no
-error, which is the one moment nobody is looking.
+The legacy rule is tied to the version that introduced it, not the current one.
+Tying it to the current version would reclassify every v2 file as pre-versioning
+legacy as soon as the schema moves on, and silently discard the 120-second
+timeouts users set on purpose, with no error at the one moment nobody is looking.
 """
 
 from __future__ import annotations

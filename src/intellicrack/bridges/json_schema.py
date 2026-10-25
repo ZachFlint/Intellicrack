@@ -316,7 +316,7 @@ def _inline_members(node: dict[str, Any], state: _InlineState, depth: int, nesti
     Values of data keywords such as ``enum``, ``const`` and ``default`` are
     copied verbatim, and the names in a ``properties`` map are kept whatever
     they are, including ``definitions`` or ``$defs``. Only the definition
-    containers of the schema node itself are dropped. The legacy
+    containers of the schema node itself are dropped. The
     ``dependencies`` keyword maps each name to a schema or to a list of
     property names; its schemas are inlined and its lists kept.
 

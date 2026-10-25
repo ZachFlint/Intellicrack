@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Round 2, item 36: Intellicrack declares exactly the client capabilities it implements, per protocol version, and reports both sides.
+"""Intellicrack declares exactly the client capabilities it implements, per protocol version, and reports both sides.
 
 The gates connect Intellicrack's real connection to a real ``MCPServer`` whose tool reports the capabilities it received, on 2026-07-28
 over stdio (capabilities ride every request's ``_meta``) and 2025-11-25 over SSE (sent once with ``initialize``). A capability is

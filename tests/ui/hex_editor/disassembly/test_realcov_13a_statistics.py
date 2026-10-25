@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for the hex editor statistics mixin.
 
-The audit (shard 13) lists ``statistics.py`` under ``NOT TESTED``: entropy
-correctness, byte distribution histogram accuracy, byte-type percentages, and
-content classification.
+Covers entropy correctness, byte distribution histogram accuracy, byte-type
+percentages, and content classification.
 
 These tests run the real :func:`compute_statistics` and the real
 :class:`StatisticsMixin` rendering pipeline over a REAL Windows PE

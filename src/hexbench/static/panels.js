@@ -56,6 +56,22 @@ const DIFF_KIND_CLASS = new Map([
 export function diffHighlightClass(kind) {
   return DIFF_KIND_CLASS.get(kind) ?? 'is-diff-modified';
 }
+
+/**
+ * Read one of the compare dialog's limit boxes.
+ *
+ * @param {string} text What the user typed; blank means "keep the engine default".
+ * @returns {{ok: boolean, value: number|undefined}} `ok` is false for anything
+ *     that is not a non-negative whole number; `value` is undefined for blank.
+ */
+export function readLimit(text) {
+  const trimmed = String(text ?? '').trim();
+  if (trimmed === '') {
+    return { ok: true, value: undefined };
+  }
+  const value = Number(trimmed);
+  return /^\d+$/.test(trimmed) && Number.isSafeInteger(value) ? { ok: true, value } : { ok: false, value: undefined };
+}
 const SEARCH_OPERATIONS = new Set([
   'search_bytes',
   'search_hex',
@@ -1045,6 +1061,9 @@ function diffPanel(env) {
   let lastActiveHandle = '';
   let state = null;
   let minimap = null;
+  /* Only what the user typed into the dialog. A limit left out is not sent, and
+   * the dispatcher fills in the engine's own default for it. */
+  let limits = {};
 
   const documentOptions = () => env.bench.documents().map((info) => ({ value: info.handle, label: `${info.label} (${humanSize(info.length)})` }));
 
@@ -1141,9 +1160,19 @@ function diffPanel(env) {
       row.addEventListener('click', () => navigateTo(region));
       built.body.appendChild(row);
     }
-    if (state.changed.length === 0) {
+    const unlisted = state.changeCount - state.changed.length;
+    if (state.filesIdentical) {
       tableHost.replaceChildren(
         banner('success', 'The two inputs are identical', `${state.regions.length} region${state.regions.length === 1 ? '' : 's'} in the alignment, all matching.`),
+        built.node,
+      );
+    } else if (unlisted > 0) {
+      tableHost.replaceChildren(
+        banner(
+          'truncated',
+          `Showing ${state.changed.length} of ${state.changeCount} differing regions`,
+          `${unlisted} more are counted but not listed, and ${state.totalDifferences} bytes differ in all. Raise “most regions” in the compare dialog to list more, or raise “minimum match” to merge nearby changes.`,
+        ),
         built.node,
       );
     } else {
@@ -1200,16 +1229,26 @@ function diffPanel(env) {
     ])
       .then(([a, b]) => {
         const args = { data_a: toHex(a.bytes).toLowerCase(), data_b: toHex(b.bytes).toLowerCase() };
+        if (limits.minMatch !== undefined) {
+          args.min_match = limits.minMatch;
+        }
+        if (limits.maxRegions !== undefined) {
+          args.max_regions = limits.maxRegions;
+        }
         const capped = left.length > DIFF_CAP || right.length > DIFF_CAP;
         return env.run('diff_bytes', args, null).then((result) => {
           const regions = Array.isArray(result.value?.regions) ? result.value.regions : [];
+          const changed = regions.filter((region) => DIFF_HIGHLIGHT_TOKENS.has(String(region.diff_type)));
           state = {
             left,
             right,
             leftBytes: a.bytes,
             rightBytes: b.bytes,
             regions,
-            changed: regions.filter((region) => DIFF_HIGHLIGHT_TOKENS.has(String(region.diff_type))),
+            changed,
+            filesIdentical: result.value?.files_identical === true,
+            changeCount: Number.isSafeInteger(result.value?.change_count) ? result.value.change_count : changed.length,
+            totalDifferences: Number(result.value?.total_differences ?? 0),
             comparedBytes: Math.max(a.bytes.length, b.bytes.length),
             durationMs: result.duration_ms,
             cursor: -1,
@@ -1235,6 +1274,22 @@ function diffPanel(env) {
       fields: [
         { name: 'left', label: 'first', type: 'select', value: state?.left.handle ?? options[0].value, options },
         { name: 'right', label: 'second', type: 'select', value: state?.right.handle ?? options[Math.min(1, options.length - 1)].value, options },
+        {
+          name: 'minMatch',
+          label: 'minimum match',
+          hintType: 'int',
+          value: limits.minMatch === undefined ? '' : String(limits.minMatch),
+          placeholder: 'engine default',
+          hint: 'An equal run shorter than this between two changes is merged into one region. Blank keeps the engine default.',
+        },
+        {
+          name: 'maxRegions',
+          label: 'most regions',
+          hintType: 'int',
+          value: limits.maxRegions === undefined ? '' : String(limits.maxRegions),
+          placeholder: 'engine default',
+          hint: 'Regions past this are counted but not listed, which bounds memory. Blank keeps the engine default.',
+        },
       ],
     });
     if (values === null) {
@@ -1244,6 +1299,13 @@ function diffPanel(env) {
       env.toast('warning', 'Pick two different documents', 'Comparing a document against itself is always a match.');
       return;
     }
+    const minMatch = readLimit(values.minMatch);
+    const maxRegions = readLimit(values.maxRegions);
+    if (!minMatch.ok || !maxRegions.ok) {
+      env.toast('warning', 'Not a whole number', 'Minimum match and most regions take a whole number, or nothing for the engine default.');
+      return;
+    }
+    limits = { minMatch: minMatch.value, maxRegions: maxRegions.value };
     compare(values.left, values.right);
   }
 
@@ -1296,7 +1358,7 @@ function diffPanel(env) {
 
 /**
  * The Shannon-entropy dock panel: a live strip that marks the caret's
- * position, rather than the one-shot modal `analyze.entropy` used to open.
+ * position, rather than the one-shot modal that `analyze.entropy` opens.
  *
  * Pinning freezes the panel on whichever document was active when it was
  * pinned - a document switch neither recomputes nor moves the caret marker

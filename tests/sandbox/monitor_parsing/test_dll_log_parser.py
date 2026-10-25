@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit7 F-0019 parser tests for the extended ``dll_monitor.log`` format.
+"""Parser tests for the extended ``dll_monitor.log`` format.
 
 Validates the host-side parser:
 
@@ -43,7 +43,7 @@ def _write_log(shared_folder: Path, lines: list[str]) -> None:
 
 
 def test_legacy_six_column_row_still_parses(tmp_path: Path) -> None:
-    """Pre-audit7 log rows with 6 columns must still parse.
+    """Legacy log rows with 6 columns must still parse.
 
     Args:
         tmp_path: Pytest-provided temp directory used as the sandbox
@@ -94,9 +94,9 @@ def test_extended_eight_column_parsed_row(tmp_path: Path) -> None:
 def test_extended_eight_column_unparsed_row_carries_event_id_and_schema(
     tmp_path: Path,
 ) -> None:
-    """F-0019: rows from the unparsed branch carry the diagnostic fields.
+    """Rows from the unparsed branch carry the diagnostic fields.
 
-    The dll_monitor.ps1 image-load handler now emits a structured record
+    The dll_monitor.ps1 image-load handler emits a structured record
     with ``image_path`` empty plus ``event_id`` and ``payload_schema``
     when the payload field names do not match the known list. The
     parser must surface those fields to the report consumer.

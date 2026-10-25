@@ -3,21 +3,19 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Audit3 U7 tests for ``start_monitors.cmd`` / ``stop_monitors.cmd``.
+r"""Tests for ``start_monitors.cmd`` and ``stop_monitors.cmd``.
 
-Validates the three findings tracked against
-``src/intellicrack/sandbox/scripts/start_monitors.cmd`` plus the new
-companion ``stop_monitors.cmd``:
+Validates the following behavior of
+``src/intellicrack/sandbox/scripts/start_monitors.cmd`` and the companion
+``stop_monitors.cmd``:
 
-* F-0010 - the launcher must capture every spawned monitor's PID into a
-  state file under the supplied ``-LogDir`` and propagate non-zero on
-  any failure to start.
-* F-0024 - the launcher's default ``-LogDir`` must match the monitor
-  scripts (``%ProgramData%\Intellicrack\Sandbox\logs``) and must be
-  forwarded to every spawned monitor.
-* F-0025 - shutdown must be coordinated through the new
-  ``stop_monitors.cmd`` companion, which reads the PID file and
-  terminates every tracked child via ``taskkill``.
+* The launcher captures every spawned monitor's PID into a state file under the
+  supplied ``-LogDir`` and exits non-zero on any failure to start.
+* The launcher's default ``-LogDir`` matches the monitor scripts
+  (``%ProgramData%\Intellicrack\Sandbox\logs``) and is forwarded to every
+  spawned monitor.
+* Shutdown is coordinated through ``stop_monitors.cmd``, which reads the PID file
+  and terminates every tracked child via ``taskkill``.
 
 The tests run the real ``.cmd`` scripts under ``cmd.exe`` against a
 temporary log directory. They are skipped on non-Windows platforms
@@ -188,7 +186,7 @@ def test_start_script_exists() -> None:
     """Verify ``start_monitors.cmd`` exists and contains all required structural sections.
 
     Existence alone is not sufficient: the script must contain the specific
-    functional landmarks that the F-0010 fix demands.  Each of these tokens is
+    functional landmarks the launcher must provide.  Each of these tokens is
     independently verifiable against the script source and would be missing if
     the file were empty, truncated, or replaced with a stub.
     """
@@ -205,7 +203,7 @@ def test_start_script_exists() -> None:
 def test_stop_script_exists() -> None:
     """Verify ``stop_monitors.cmd`` exists and contains all required structural sections.
 
-    The companion stopper must implement F-0025 coordinated shutdown.  These
+    The companion stopper must implement coordinated shutdown.  These
     tokens are the observable evidence that the two-phase design (signal +
     wait/force-kill) is present in the actual file on disk.
     """
@@ -219,10 +217,10 @@ def test_stop_script_exists() -> None:
 
 
 def test_start_script_default_logdir_uses_programdata() -> None:
-    r"""F-0024 runtime gate: default LogDir must resolve to the real ProgramData path.
+    r"""Default LogDir must resolve to the real ProgramData path.
 
     The hardcoded ``C:\Users\WDAGUtilityAccount\Desktop\Shared\logs``
-    default contradicted three monitor scripts.  The remediated launcher
+    is not used; the monitor scripts all default to the ProgramData path.  The launcher
     must use ``%ProgramData%\Intellicrack\Sandbox\logs`` and pass it via
     ``-LogDir`` to each monitor invocation.
 
@@ -429,7 +427,7 @@ def _run_scratch_stop(
 
 
 def test_start_script_tracks_pids(tmp_path: Path) -> None:
-    """F-0010 runtime check: PID file must contain valid PIDs.
+    """PID file must contain valid PIDs.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
@@ -449,7 +447,7 @@ def test_start_script_tracks_pids(tmp_path: Path) -> None:
 
 
 def test_start_script_propagates_failure(tmp_path: Path) -> None:
-    """F-0010 runtime check: launcher must exit non-zero on monitor failure.
+    """Launcher must exit non-zero on monitor failure.
 
     Build a scratch scripts directory containing one inert sleeper plus
     one poisoned ``*.ps1`` script that dies of a parameter binding error,
@@ -492,15 +490,10 @@ def test_start_script_propagates_failure(tmp_path: Path) -> None:
 def test_a_running_monitor_that_never_reports_ready_is_not_taken_for_started(tmp_path: Path) -> None:
     """A monitor that is merely still alive has not started, however long the launcher looks.
 
-    The launcher used to wait out a time window and count whatever was still
-    running at the end of it as started. A monitor that needed longer than the
-    window to die of its startup failure was therefore reported healthy, which
-    is how the failure gate above lost its race on a loaded runner. What counts
-    now is the monitor's own report, so one that keeps running without ever
-    making it is a failure, and it stays tracked so the stopper can reap it.
-
-    Falsifiable: a launcher that judges by survival exits zero here, because
-    the monitor is alive whenever it looks.
+    The launcher counts a monitor as started only on its own report. A monitor that
+    keeps running without ever making that report is a failure, and it stays tracked
+    so the stopper can reap it. Judging by survival alone would count a monitor that
+    is about to die of its startup failure as healthy.
 
     Args:
         tmp_path: Pytest-provided temp directory.
@@ -530,9 +523,6 @@ def test_a_running_monitor_that_never_reports_ready_is_not_taken_for_started(tmp
 
 def test_a_monitor_that_dies_slowly_without_reporting_is_a_startup_failure(tmp_path: Path) -> None:
     """How long a monitor takes to die of its startup failure does not decide the outcome.
-
-    Falsifiable: a launcher whose window closes before the monitor exits has
-    already counted it as started, exits zero, and leaves the dead PID tracked.
 
     Args:
         tmp_path: Pytest-provided temp directory.
@@ -595,7 +585,7 @@ def test_the_launcher_waits_for_a_monitor_that_is_slow_to_report(tmp_path: Path)
 
 
 def test_stop_script_terminates_tracked_pids(tmp_path: Path) -> None:
-    """F-0025 runtime check: stop_monitors.cmd must terminate all tracked PIDs.
+    """``stop_monitors.cmd`` must terminate all tracked PIDs.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.

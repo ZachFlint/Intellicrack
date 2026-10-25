@@ -318,8 +318,7 @@ _HANDLE_QUERY_MAX_BUFFER = 0x10000000
 _X86_NOP_OPCODE = 0x90
 
 # Structured pipe-protocol error codes used to drive recovery decisions
-# without resorting to substring matching on the human-readable message
-# (see audit6.md F-0008/F-0028). The bridge attaches one of these values
+# without resorting to substring matching on the human-readable message. The bridge attaches one of these values
 # via ``ToolError.details["x64dbg_error_code"]`` so callers can branch on
 # the actual failure mode (no transport vs. RPC name unknown vs. timeout)
 # rather than guessing from text.
@@ -435,7 +434,7 @@ def _bp_command_for_type(bp_type: BreakpointType, *, software: str, hardware: st
     through their own command family (``bpcond``/``bphwcond``/
     ``bpmcond``, ``be``/``bphe``/``bpme``, and so on) - sending the
     software-only command against a hardware or memory breakpoint
-    silently does nothing (audit7.md T1-3).
+    silently does nothing.
 
     Args:
         bp_type: Breakpoint type the command targets.
@@ -487,7 +486,7 @@ def _classify_legacy_error(message: str) -> str:
     Older builds of the x64dbg bridge plugin returned only a free-form
     ``error`` string in their responses. To preserve recovery behaviour
     against those builds without resorting to substring matching at
-    every call site (audit6.md F-0008), classify the legacy text once
+    every call site, classify the legacy text once
     here and attach the resulting code to ``ToolError.details``.
 
     Args:
@@ -913,10 +912,10 @@ class _X64DbgBridgeBase(DebuggerBridge):
             or comment readback, breakpoint enable/disable state,
             thread state transition, trace/animate ``is_running``
             flip, script error register, plugin presence) before
-            raising ``ToolError`` from the F-0001 fire-and-forget
-            wrappers (audit7.md F-0001).
+            raising ``ToolError`` from the fire-and-forget
+            wrappers.
         VERIFY_POLL_INTERVAL: Seconds between successive post-condition
-            polls during a F-0001 verification wait.
+            polls during a verification wait.
         ANIMATE_MAX_STEPS: Step budget :meth:`animate_start` gives its
             conditional trace. x64dbg exposes animation only through the
             GUI (Ctrl+F7/Ctrl+F8) and registers no animate console
@@ -925,8 +924,9 @@ class _X64DbgBridgeBase(DebuggerBridge):
             only thing that ends the trace if the caller never issues
             :meth:`animate_stop`.
         STEP_TIMEOUT_SECONDS: Maximum seconds to wait for the plugin's
-            paused-event reply before a step coroutine times out (the
-            audit6 F-0004 bound that replaces the legacy fixed sleep).
+            paused-event reply before a step coroutine times out. A fixed sleep is too short for
+            stepping into syscalls and is not synchronised with x64dbg's paused
+            state.
     """
 
     DEFAULT_PORT = 27015
@@ -2999,7 +2999,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         ``_send_pipe_command``. When the plugin is not present this
         method raises immediately rather than starting an x64dbg.exe
         whose UI would advertise as "connected" while every command
-        raised at the point of invocation (audit6.md F-0013).
+        raised at the point of invocation.
 
         Args:
             is_64bit: Whether to use 64-bit debugger.
@@ -3050,7 +3050,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         # to dismiss the modal dialogs x64dbg would otherwise block on while
         # driven headlessly. Standard handles are wired to NUL inside
         # spawn_on_hidden_desktop so a plugin that writes diagnostics cannot
-        # deadlock on an undrained pipe (audit6.md F-0015).
+        # deadlock on an undrained pipe.
         headless_env = dict(os.environ)
         headless_env[_HEADLESS_ENV_VAR] = "1"
         # The vendored x64dbg build only ships the Windows Qt platform
@@ -3161,7 +3161,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         rather than sleeping for a hard-coded interval and reporting
         readiness when the pipe never existed - a misclassification
         that would cascade into a misleading ``CreateFileW`` failure
-        downstream (audit6.md F-0017).
+        downstream.
 
         On Windows the call loops ``WaitNamedPipeW`` with a small
         per-iteration timeout until the pipe is available or the overall
@@ -3205,7 +3205,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         silently reuse a stale handle left over from a previous x64dbg
         process generation, both of which starve the server's one pipe
         instance until every subsequent connect attempt times out with
-        ``ERROR_SEM_TIMEOUT`` (121) (F16). Always replacing the client here
+        ``ERROR_SEM_TIMEOUT`` (121). Always replacing the client here
         - rather than only when it is ``None`` - also guarantees that a
         fresh ``load()`` never reuses a handle from a previous session.
 
@@ -3296,8 +3296,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         or rebuilds a registry entry. Because this runs in an executor
         thread, any interaction with asyncio futures must use
         ``loop.call_soon_threadsafe``. ``paused`` events resolve any
-        pending step waiters with the reported instruction pointer
-        (audit6.md F-0004); the pause-emitting plugin extracts the IP
+        pending step waiters with the reported instruction pointer; the pause-emitting plugin extracts the IP
         via ``Script::Register::GetCIP``. ``breakpoint`` and
         ``watchpoint`` events also pause the debuggee, so those resolve
         step waiters as well to avoid hanging when a step lands on a
@@ -3365,7 +3364,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         x64dbg pausing the target, so resolving on every paused-class
         event (paused / breakpoint / watchpoint) lets the corresponding
         step coroutine return the new instruction pointer rather than
-        racing a hard-coded sleep (audit6.md F-0004).
+        racing a hard-coded sleep.
 
         Args:
             address: Instruction pointer reported by the plugin in the
@@ -3429,7 +3428,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         so calling this first here gives every operation - including
         :meth:`set_breakpoint`, :meth:`remove_breakpoint`, and
         :meth:`set_breakpoint_on_api`, which issue their writes entirely
-        through this method - the same session-liveness probe (D19). A
+        through this method - the same session-liveness probe. A
         process that has already exited can never again satisfy a pipe
         reconnect (the plugin's single named-pipe server instance died
         with it), so this raises immediately with an actionable message
@@ -3547,8 +3546,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
     def _is_recoverable_pipe_error(exc: ToolError) -> bool:
         """Return True only when the structured error code indicates a missing RPC.
 
-        Replaces the legacy substring-matching classifier (audit6.md
-        F-0008/F-0028). The bridge attaches a structured
+        The bridge attaches a structured
         ``x64dbg_error_code`` to every ``ToolError`` raised from
         ``_send_pipe_command``; this helper inspects that code and
         returns ``True`` only for codes that are genuinely recoverable
@@ -3557,8 +3555,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         A "pipe not connected" or "plugin unavailable" failure is
         explicitly *not* recoverable because the script-command
         fallback travels the same broken pipe; treating it as
-        recoverable would mask the underlying transport failure
-        (F-0028).
+        recoverable would mask the underlying transport failure.
 
         Args:
             exc: The raised ``ToolError`` to classify.
@@ -3646,10 +3643,8 @@ class _X64DbgBridgeBase(DebuggerBridge):
         as soon as the command is queued, not once the debuggee process
         actually exists. Querying ``$pid`` immediately afterwards can
         race the debug loop and observe ``0`` (or a transient pipe
-        failure) before the process has been created, which previously
-        left ``self._attached_pid`` permanently unset and made every
-        process-inspection command report "not attached" even though
-        the debuggee was running. Polling for up to
+        failure) before the process has been created. A single read would leave ``self._attached_pid`` unset, so every
+        process-inspection command would report "not attached" while the debuggee runs. Polling for up to
         :attr:`VERIFY_TIMEOUT` absorbs that race instead of giving up
         after a single attempt.
 
@@ -3687,7 +3682,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         it: a process that crashed or was killed since the previous
         session is torn down and replaced with a fresh
         :meth:`_start_debugger` launch rather than being reused as if it
-        were still connected (D19). After ``InitDebug`` is issued, the
+        were still connected. After ``InitDebug`` is issued, the
         pipe is re-checked with a cheap handle-liveness probe
         (:attr:`plugin_status`'s ``pipe_connected``) before the load is
         reported as successful, so a session that died mid-``load`` -
@@ -3755,7 +3750,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         ``self._process``, skip :meth:`_start_debugger` entirely, and
         try to reuse a named pipe whose single server instance no
         longer exists - reporting success once ``InitDebug`` is queued
-        even though nothing is listening (D19). This probes the tracked
+        even though nothing is listening. This probes the tracked
         process's exit status via :meth:`DesktopProcess.poll` and, when
         it has exited, closes the stale pipe client and process handle
         so the caller relaunches a fresh instance.
@@ -3805,7 +3800,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         image, missing ``MZ`` / ``PE\\x00\\x00`` signatures, or a
         non-x86 ``Machine`` such as ARM/ARM64/IA64) raises
         :class:`ToolError` so the caller cannot launch the wrong
-        debugger and silently fail to attach (audit6.md F-0023).
+        debugger and silently fail to attach.
 
         Args:
             path: Path to binary.
@@ -3865,8 +3860,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         Detects the target process architecture and starts the matching
         debugger variant (x64dbg or x32dbg). When the architecture
         cannot be determined the call refuses rather than guessing
-        64-bit and silently launching the wrong debugger (audit6.md
-        F-0018).
+        64-bit and silently launching the wrong debugger.
 
         Args:
             pid: Process ID.
@@ -3924,7 +3918,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         ``None`` instead of defaulting to ``True`` prevents the bridge
         from launching x64dbg.exe against a 32-bit target it cannot
         attach to, so :meth:`attach` can surface the failure to the
-        caller (audit6.md F-0018).
+        caller.
 
         Args:
             pid: Process ID of the target process.
@@ -4080,10 +4074,8 @@ class _X64DbgBridgeBase(DebuggerBridge):
         an existing breakpoint) cannot race past us. Reads the
         instruction pointer from a register fetch only after the event
         reports completion, masking the result to the architecture's
-        pointer width. This replaces the previous hard-coded
-        ``asyncio.sleep(0.05)`` (audit6.md F-0004), which was both too
-        short for stepping into syscalls/long calls and unsynchronised
-        with x64dbg's actual paused state.
+        pointer width. A fixed ``asyncio.sleep`` is too short for stepping into syscalls or long
+        calls and is not synchronised with x64dbg's actual paused state.
 
         Args:
             command: One of ``step_into`` / ``step_over`` / ``step_out``.
@@ -4125,7 +4117,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
         Awaits the plugin's ``paused`` event so the returned instruction
         pointer reflects the post-step CPU state rather than racing a
-        hard-coded delay (audit6.md F-0004). Propagates any exception
+        hard-coded delay. Propagates any exception
         raised by :meth:`_await_step_complete`, including ``ToolError``
         when the step does not complete within
         :attr:`STEP_TIMEOUT_SECONDS`.
@@ -4140,7 +4132,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         """Single step over.
 
         Awaits the plugin's ``paused`` event so the returned instruction
-        pointer reflects the post-step CPU state (audit6.md F-0004).
+        pointer reflects the post-step CPU state.
         Propagates any exception raised by :meth:`_await_step_complete`,
         including ``ToolError`` when the step does not complete within
         :attr:`STEP_TIMEOUT_SECONDS`.
@@ -4155,7 +4147,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         """Step out of current function.
 
         Awaits the plugin's ``paused`` event so the returned instruction
-        pointer reflects the post-step CPU state (audit6.md F-0004).
+        pointer reflects the post-step CPU state.
         Propagates any exception raised by :meth:`_await_step_complete`,
         including ``ToolError`` when the step does not complete within
         :attr:`STEP_TIMEOUT_SECONDS`.
@@ -4177,17 +4169,15 @@ class _X64DbgBridgeBase(DebuggerBridge):
         x64dbg breakpoints are uniquely identified by their target
         address - the ``BPMAP`` returned by ``DbgGetBpList`` keys each
         entry by ``addr`` and exposes no separate numeric id, so the
-        breakpoint id round-tripped to the caller is the address
-        (audit6.md F-0002). After the plugin reports a successful
+        breakpoint id round-tripped to the caller is the address. After the plugin reports a successful
         ``bp_set``, the local registry is only updated once a follow-up
-        ``bp_list`` confirms the breakpoint really exists at ``address``
-        (audit6.md F-0001); this rejects the case where the textual
+        ``bp_list`` confirms the breakpoint really exists at ``address``; this rejects the case where the textual
         x64dbg console command parses but the debugger never installs
         the breakpoint (e.g. unmapped address, type rejected for the
         active target). When ``condition`` is supplied, ``bpcond`` is
         issued after the breakpoint is verified so the conditional
         expression is honoured even when the plugin ignores the
-        in-payload ``condition`` field (audit6.md F-0026).
+        in-payload ``condition`` field.
 
         Args:
             address: Breakpoint address.
@@ -4374,11 +4364,10 @@ class _X64DbgBridgeBase(DebuggerBridge):
         already established earlier in the same session is honoured
         when a type-specific command family is chosen for
         ``configure_breakpoint``/``enable_breakpoint``/
-        ``disable_breakpoint`` (audit7.md T1-3). A breakpoint this
+        ``disable_breakpoint``. A breakpoint this
         bridge never set (for example one created directly from the
         x64dbg GUI) is not in the registry and is treated as software,
-        matching this bridge's pre-existing behaviour for untracked
-        addresses.
+        matching the default for untracked addresses.
 
         Args:
             address: Breakpoint address to classify.
@@ -4399,8 +4388,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         checks the reported ``breakCondition`` text, so a condition
         command that parses without taking effect (for example the
         software-only command family sent against a hardware or memory
-        breakpoint) surfaces as an error rather than a false success
-        (audit7.md T1-3).
+        breakpoint) surfaces as an error rather than a false success.
 
         Args:
             address: Breakpoint address the condition was set on.
@@ -4589,8 +4577,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         Raises:
             ToolError: If the pipe/session is dead or the plugin reports
                 a non-recoverable error. A dead session must never be
-                masked by silently returning the local breakpoint cache
-                (D19) - only a genuinely recoverable failure (an older
+                masked by silently returning the local breakpoint cache. Only a genuinely recoverable failure (an older
                 plugin build missing ``bp_list``) falls back to the
                 locally tracked breakpoints.
         """
@@ -4723,8 +4710,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         Raises:
             ToolError: If the pipe/session is dead or the plugin reports
                 a non-recoverable error. A dead session must never be
-                masked by silently returning the local watchpoint cache
-                (D19) - only a genuinely recoverable failure (an older
+                masked by silently returning the local watchpoint cache. Only a genuinely recoverable failure (an older
                 plugin build missing ``bp_list``) falls back to the
                 locally tracked watchpoints.
         """
@@ -6310,7 +6296,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
             ToolError: If the plugin returns a value that is neither an
                 integer nor a parseable hex/decimal string. A failure to
                 evaluate must not be conflated with a legitimate
-                expression that evaluates to ``0`` (audit6.md F-0014).
+                expression that evaluates to ``0``.
         """
         _logger.debug("evaluating_expression", expression=expression)
         result = await self._send_pipe_command("eval", {"expression": expression})
@@ -6900,17 +6886,11 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         then issues ``run`` - and polls ``reg_get rip`` with a bounded
         timeout to confirm the debugger actually reached ``address``.
 
-        This wrapper used to send a ``runto <address>`` console command
-        instead. x64dbg registers no ``runto`` command: its
-        ``registercommands()`` table carries ``run``/``go``/``r``/``g``,
-        ``erun``, ``RunToUserCode``/``rtu`` and ``RunToParty``, and the
-        string ``runto`` appears nowhere in the shipped ``x64dbg.dll``.
-        The command was therefore rejected, the instruction pointer
-        never moved, and every call failed its verification poll. The
-        implementation before that returned ``{"success": True}``
-        immediately after queuing the command, even though the debugger
-        dispatches asynchronously and the IP may still be at the
-        original site (audit6.md F-0001).
+        x64dbg registers no ``runto`` console command: its ``registercommands()`` table carries
+        ``run``/``go``/``r``/``g``, ``erun``, ``RunToUserCode``/``rtu`` and ``RunToParty``, and the
+        string ``runto`` appears nowhere in the shipped ``x64dbg.dll``. The bridge therefore
+        dispatches the plugin's RPC and reports success only after ``reg_get rip`` confirms the IP,
+        because the debugger dispatches asynchronously.
 
         Args:
             address: Target address to run to.
@@ -7294,7 +7274,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         """Read the label currently assigned to ``address`` via ``lbl_list``.
 
         Used by :meth:`set_label` to confirm the plugin actually wrote
-        the requested label (audit7.md F-0001). Propagates any
+        the requested label. Propagates any
         ``ToolError`` raised by :meth:`_lookup_annotation_text` other
         than the recoverable ``unknown_command`` code.
 
@@ -7312,7 +7292,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         """Read the comment currently assigned to ``address`` via ``cmt_list``.
 
         Used by :meth:`set_comment` to confirm the plugin actually wrote
-        the requested comment (audit7.md F-0001). Propagates any
+        the requested comment. Propagates any
         ``ToolError`` raised by :meth:`_lookup_annotation_text` other
         than the recoverable ``unknown_command`` code.
 
@@ -7583,7 +7563,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         can observe only the paused state on both sides of the
         transition and never the transient running state in between -
         reporting "the debugger never entered the running state" even
-        though the command genuinely ran and settled (S20-D03).
+        though the command genuinely ran and settled.
 
         The plugin already pushes an asynchronous ``paused`` event
         whenever x64dbg suspends the debuggee for any reason, and
@@ -7594,10 +7574,9 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         This method races that event against the existing
         :meth:`_wait_for_running_state` poll: whichever settles first
         wins, so a real x64dbg instance resolves through the event almost
-        always (fixing the race) while a plugin build too old to emit the
+        always, while a plugin build too old to emit the
         event - or a caller for whom the debugger was already in the
-        target state before this call - still falls back to the exact
-        poll-based verification this replaces.
+        target state before this call - still falls back to the exact poll-based verification.
 
         The step waiter is registered before the command is sent (as
         :meth:`_dispatch_step_and_await` does) so a completion that lands
@@ -7643,7 +7622,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         x64dbg exposes ``script.iserror()`` which returns 1 when the
         most recently executed script command raised an error. Used to
         verify :meth:`script_load`, :meth:`script_run`,
-        :meth:`script_cmd`, and :meth:`script_abort` (audit7.md F-0001).
+        :meth:`script_cmd`, and :meth:`script_abort`.
 
         Returns:
             bool | None: ``True`` when the script error flag is set,
@@ -7825,12 +7804,9 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         The label text is wrapped in double quotes before it is handed to
         the ``lblset`` console command: x64dbg's command tokenizer strips
         internal whitespace from an unquoted argument, so a spaced label
-        such as ``"main loop"`` would otherwise be stored as ``mainloop``
-        (live 6F re-drive finding). After queuing the command, reads the
+        such as ``"main loop"`` would otherwise be stored as ``mainloop``. After queuing the command, reads the
         label back via the ``lbl_list`` plugin RPC and compares it against
-        ``text``. The wrapper used to claim ``success: True`` without
-        inspecting the result of the queued console command
-        (audit7.md F-0001).
+        ``text``.
 
         Args:
             address: Address for the label.
@@ -7942,11 +7918,9 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         to the ``cmtset`` console command: x64dbg's command tokenizer
         strips internal whitespace from an unquoted argument, so a spaced
         comment such as ``"loop body"`` would otherwise be stored as
-        ``loopbody`` (live 6F re-drive finding). After queuing the
+        ``loopbody``. After queuing the
         command, reads the comment back via the ``cmt_list`` plugin RPC
-        and compares it against ``text``. The wrapper used to claim
-        ``success: True`` without inspecting the result of the queued
-        console command (audit7.md F-0001).
+        and compares it against ``text``.
 
         Args:
             address: Address for the comment.
@@ -8058,11 +8032,9 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         and queues the matching enable command - ``be`` for software,
         ``bphe`` for hardware, ``bpme`` for memory - since the software-only
         command silently does nothing against a hardware or memory
-        breakpoint (audit7.md T1-3). Polls ``bp_list`` afterwards and
+        breakpoint. Polls ``bp_list`` afterwards and
         confirms the breakpoint at ``address`` is reported with
-        ``enabled=True``. The wrapper used to claim ``success: True``
-        and update the local ``_breakpoints`` mirror without inspecting
-        the debugger's authoritative state (audit7.md F-0001).
+        ``enabled=True``.
 
         Args:
             address: Breakpoint address.
@@ -8127,11 +8099,9 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         and queues the matching disable command - ``bd`` for software,
         ``bphd`` for hardware, ``bpmd`` for memory - since the software-only
         command silently does nothing against a hardware or memory
-        breakpoint (audit7.md T1-3). Polls ``bp_list`` afterwards and
+        breakpoint. Polls ``bp_list`` afterwards and
         confirms the breakpoint at ``address`` is reported with
-        ``enabled=False``. The wrapper used to claim ``success: True``
-        and update the local ``_breakpoints`` mirror without inspecting
-        the debugger's authoritative state (audit7.md F-0001).
+        ``enabled=False``.
 
         Args:
             address: Breakpoint address.
@@ -8197,8 +8167,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         non-zero VA the breakpoint is installed at the resolved address
         through ``set_breakpoint``. When ``GetProcAddress`` returns 0
         (unresolved forwarder, ordinal-only export, manifest-resolved
-        import, etc.) the call falls back to the historical
-        ``bpx module.function`` script command and surfaces
+        import, etc.) the call falls back to the ``bpx module.function`` script command and surfaces
         ``resolved_address: None`` / ``resolution_method: "bpx"`` so
         callers can detect the unresolved case.
 
@@ -8665,7 +8634,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
 class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     """Tracing, patching, navigation, database, threads, PEB/TEB, watches, animation.
 
-    Hosts the trace controller, patch lifecycle (assemble/nop/save/ restore/export), conditional tracing and step counting, cross- reference
+    Hosts the trace controller, patch lifecycle (assemble/nop/save/restore/export), conditional tracing and step counting, cross-reference
     and string/intermodular discovery, expression evaluator, control-flow graph, database save/load/clear, thread switching and naming,
     SEH/PEB/TEB readers, PE directory inspection, watch expressions, logging/DLL/anti-debug breakpoint variants, and the animate start/stop
     loops.
@@ -8707,20 +8676,12 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     ) -> dict[str, Any]:
         """Start a run-trace recording session in x64dbg.
 
-        x64dbg exposes no ``TraceSetCondition`` command under any name or
-        alias (help.x64dbg.com tracing command index), so the previous
-        ``TraceSetCondition {addr}, {condition}`` form was never a real
-        command, and ``TraceSetLog`` never accepts an address either -
-        its only two arguments are ``[log text]`` and ``[log condition]``.
-        Both calls were additionally gated on ``address is not None``,
-        which the Trace tab's Condition/Log inputs never supply (they
-        carry no address field), so ``condition``/``log_text`` were
-        silently dropped on every GUI call and the debugger only ever
-        received a bare, argument-less ``StartRunTrace`` - itself
-        ineffective, since ``StartRunTrace``'s file-name argument is
-        required, not optional (audit7.md T1-7).
+        x64dbg exposes no ``TraceSetCondition`` command under any name or alias (help.x64dbg.com
+        tracing command index), and ``TraceSetLog`` never accepts an address either - its only two
+        arguments are ``[log text]`` and ``[log condition]``. ``StartRunTrace``'s file-name argument is
+        required, not optional, so a trace is never started without one.
 
-        The real, documented mapping used here: when ``log_text`` is
+        The documented mapping used here: when ``log_text`` is
         supplied, ``TraceSetLog "<log_text>"[, "<condition>"]`` is issued
         first, so ``condition`` takes effect as the *log* condition (log
         only when it evaluates non-zero; x64dbg defaults this to
@@ -8803,7 +8764,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         ``SetExceptionBPX``'s second argument selects which exception
         *chance* (first/second/all) an exception breakpoint captures -
         it is not a break/ignore/log axis, so ``handling`` is not
-        forwarded to it as a numeric code (audit7.md T1-2). ``break``
+        forwarded to it as a numeric code. ``break``
         and ``log`` are instead implemented as genuine exception
         breakpoints scoped by chance: ``break`` captures first-chance
         occurrences and stops there, while ``log`` captures every
@@ -8934,10 +8895,8 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         rather than read once because the ``assemble`` RPC returns as
         soon as the asynchronous ``asm`` console command is queued, so an
         immediate single read can race the write and observe the
-        pre-patch bytes on a patch that in fact succeeded (live 6F
-        re-drive finding). Returns the post-patch byte string so callers
-        can correlate the assembled output with the requested mnemonic
-        (audit6.md F-0001).
+        pre-patch bytes on a patch that in fact succeeded. Returns the post-patch byte string so callers
+        can correlate the assembled output with the requested mnemonic.
 
         Args:
             address: Target address.
@@ -8982,9 +8941,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
 
         After issuing the ``fill`` console command, reads ``size`` bytes
         back from ``address`` (when attached) and confirms every byte is
-        ``0x90``. The wrapper used to claim ``success: True``
-        unconditionally; that masked silent fill failures (audit6.md
-        F-0001).
+        ``0x90``.
 
         Args:
             address: Start address.
@@ -9069,9 +9026,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         ``DbgCmdExec("asm ...")`` and returns as soon as the command is
         queued, not once x64dbg has rewritten the target bytes. A single
         immediate read-back therefore races the assemble and can observe
-        the pre-patch bytes even when the patch ultimately succeeds - the
-        live 6F re-drive saw exactly this (unchanged on the first read,
-        the ``mov eax, 1`` encoding present ~0.4s later). Polling for up
+        the pre-patch bytes even when the patch ultimately succeeds - in one observed case the first read was unchanged and the ``mov eax, 1`` encoding was present ~0.4s later. Polling for up
         to :attr:`VERIFY_TIMEOUT` absorbs that race so a genuine patch is
         not misreported as "memory unchanged".
 
@@ -9272,13 +9227,9 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         """Restore original bytes at a patched address.
 
         Dispatches the plugin's ``patch_restore`` RPC, which calls the
-        SDK's ``DbgFunctions()->PatchRestore``. There is deliberately no
-        console-command fallback: this wrapper used to answer a rejected
-        RPC by sending ``patchrestore <address>``, but x64dbg registers
-        no ``patchrestore`` command - the string appears nowhere in the
-        shipped ``x64dbg.dll`` - so the fallback restored nothing while
-        still reporting success. A failing RPC now reaches the caller
-        instead of being masked.
+        SDK's ``DbgFunctions()->PatchRestore``. There is deliberately no console-command fallback: x64dbg registers no ``patchrestore`` command
+        (the string appears nowhere in the shipped ``x64dbg.dll``), so a fallback would restore nothing
+        while still reporting success. A failing RPC reaches the caller instead of being masked.
 
         Args:
             address: Address of the patch to restore.
@@ -9398,9 +9349,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
 
         After queuing ``suspendthread``, polls ``thread_detail`` for
         the thread record matching ``tid`` and waits until the
-        ``suspended`` flag is ``True``. The wrapper used to claim
-        ``success: True`` without observing the actual thread state
-        (audit7.md F-0001).
+        ``suspended`` flag is ``True``.
 
         Args:
             tid: Thread ID.
@@ -9456,9 +9405,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
 
         After queuing ``resumethread``, polls ``thread_detail`` for
         the thread record matching ``tid`` and waits until the
-        ``suspended`` flag is ``False``. The wrapper used to claim
-        ``success: True`` without observing the actual thread state
-        (audit7.md F-0001).
+        ``suspended`` flag is ``False``.
 
         Args:
             tid: Thread ID.
@@ -9511,9 +9458,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         """Switch the active debugger thread and verify the switch occurred.
 
         After queuing ``switchthread``, polls ``thread_detail`` to
-        confirm the requested thread is present in the listing. The
-        wrapper used to claim ``success: True`` without observing the
-        debugger's actual thread state (audit7.md F-0001).
+        confirm the requested thread is present in the listing.
 
         Args:
             tid: Thread ID to switch to.
@@ -9554,9 +9499,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         """Set a thread's display name and verify the new name was applied.
 
         After queuing ``setthreadname``, polls ``thread_detail`` until
-        the matching thread record reports ``name == name``. The
-        wrapper used to claim ``success: True`` without inspecting the
-        actual thread metadata (audit7.md F-0001).
+        the matching thread record reports ``name == name``.
 
         Args:
             tid: Thread ID.
@@ -9808,7 +9751,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         or memory (``bpmcond``/``SetMemoryBreakpointLog``/
         ``SetMemoryBreakpointCommand``/``SetMemoryBreakpointFastResume``) -
         since the software-only commands silently do nothing against a
-        hardware or memory breakpoint (audit7.md T1-3). ``condition`` is
+        hardware or memory breakpoint. ``condition`` is
         additionally verified via :meth:`_verify_breakpoint_condition` so
         a failed set surfaces as an error instead of a false success.
 
@@ -9868,7 +9811,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         otherwise it fires only when this expression evaluates true.
         Dispatches through :func:`_bp_command_for_type` since the
         software-only command silently does nothing against a hardware
-        or memory breakpoint (audit7.md T1-3).
+        or memory breakpoint.
 
         Args:
             address: Breakpoint address.
@@ -9900,7 +9843,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         otherwise only when this expression evaluates true. Dispatches
         through :func:`_bp_command_for_type` since the software-only
         command silently does nothing against a hardware or memory
-        breakpoint (audit7.md T1-3).
+        breakpoint.
 
         Args:
             address: Breakpoint address.
@@ -9928,7 +9871,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         a breakpoint to be removed automatically on its first hit.
         Dispatches through :func:`_bp_command_for_type` since the
         software-only command silently does nothing against a hardware
-        or memory breakpoint (audit7.md T1-3). Neither flag is surfaced
+        or memory breakpoint. Neither flag is surfaced
         in this bridge's ``bp_list`` parsing, so there is no readback
         to verify against.
 
@@ -9957,7 +9900,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         suppresses the default log message on hit without affecting a
         user-defined log. Dispatches through :func:`_bp_command_for_type`
         since the software-only command silently does nothing against
-        a hardware or memory breakpoint (audit7.md T1-3). Neither flag
+        a hardware or memory breakpoint. Neither flag
         is surfaced in this bridge's ``bp_list`` parsing, so there is no
         readback to verify against.
 
@@ -10068,8 +10011,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
 
         Dispatches through :func:`_bp_command_for_type` since the
         software-only ``ResetBreakpointHitCount`` command silently does
-        nothing against a hardware or memory breakpoint (audit7.md
-        T1-3), then confirms via :meth:`_verify_breakpoint_hit_count`
+        nothing against a hardware or memory breakpoint, then confirms via :meth:`_verify_breakpoint_hit_count`
         that ``bp_list`` reports the new count, so a reset that parses
         without taking effect surfaces as an error instead of a false
         success.
@@ -10103,8 +10045,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         to clear a previously set name, so it is still sent rather than
         treated as a no-op. Dispatches through
         :func:`_bp_command_for_type` since the software-only command
-        silently does nothing against a hardware or memory breakpoint
-        (audit7.md T1-3). This bridge's ``bp_list`` parsing
+        silently does nothing against a hardware or memory breakpoint. This bridge's ``bp_list`` parsing
         (:meth:`get_breakpoints`) has no ``name`` field, so - like
         :meth:`set_breakpoint_log_condition`'s sibling setters - there
         is no readback to verify against.
@@ -10214,28 +10155,17 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         Queues ``TraceIntoConditional`` and confirms it settled via
         :meth:`_await_run_completion`, which races the plugin's ``paused``
         event against a ``status`` poll so a trace that completes faster
-        than one poll interval is still caught (S20-D03) instead of being
-        misreported as never having started. The wrapper used to claim
-        ``success: True`` without inspecting the debugger state at all
-        (audit7.md F-0001).
+        than one poll interval is still caught instead of being
+        misreported as never having started.
 
         Per x64dbg's documented ``TraceIntoConditional``/``ticnd`` syntax
         (help.x64dbg.com tracing commands), ``arg1`` is the required break
         condition - tracing stops the instant it evaluates to a value
         other than 0 - and ``[arg2]`` is the optional step budget the
-        debugger honours regardless of the condition. This wrapper used to
-        build the command with those two positions swapped
-        (``f"TraceIntoConditional {max_steps}"`` with ``condition``
-        appended only when truthy), so ``max_steps`` was evaluated as the
-        break condition and any nonzero step budget stopped the trace
-        after a single instruction. Since the condition is mandatory and
-        stops on nonzero, an omitted ``condition`` is now sent as the
-        literal expression ``0``, the same always-false, never-trips
-        sentinel x64dbg's own Conditional Tracing feature documents as the
-        break condition's default and that :meth:`step_count` already
-        sends as its own ``TraceIntoConditional`` command's first
-        argument - so the trace genuinely runs up to ``max_steps``
-        instead of stopping immediately.
+        debugger honours regardless of the condition. An omitted ``condition`` is sent as the literal expression ``0``, since the condition is
+        mandatory and stops on nonzero. ``0`` is the always-false, never-trips sentinel that x64dbg's
+        own Conditional Tracing feature documents as the break condition's default, so the trace runs
+        up to ``max_steps``.
 
         Args:
             condition: Break condition expression; tracing stops as soon
@@ -10281,28 +10211,17 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         Queues ``TraceOverConditional`` and confirms it settled via
         :meth:`_await_run_completion`, which races the plugin's ``paused``
         event against a ``status`` poll so a trace that completes faster
-        than one poll interval is still caught (S20-D03) instead of being
-        misreported as never having started. The wrapper used to claim
-        ``success: True`` without inspecting the debugger state at all
-        (audit7.md F-0001).
+        than one poll interval is still caught instead of being
+        misreported as never having started.
 
         Per x64dbg's documented ``TraceOverConditional``/``tocnd`` syntax
         (help.x64dbg.com tracing commands), ``arg1`` is the required break
         condition - tracing stops the instant it evaluates to a value
         other than 0 - and ``[arg2]`` is the optional step budget the
-        debugger honours regardless of the condition. This wrapper used to
-        build the command with those two positions swapped
-        (``f"TraceOverConditional {max_steps}"`` with ``condition``
-        appended only when truthy), so ``max_steps`` was evaluated as the
-        break condition and any nonzero step budget stopped the trace
-        after a single instruction. Since the condition is mandatory and
-        stops on nonzero, an omitted ``condition`` is now sent as the
-        literal expression ``0``, the same always-false, never-trips
-        sentinel x64dbg's own Conditional Tracing feature documents as the
-        break condition's default and that :meth:`step_count` already
-        sends as its own ``TraceOverConditional`` command's first
-        argument - so the trace genuinely runs up to ``max_steps``
-        instead of stopping immediately.
+        debugger honours regardless of the condition. An omitted ``condition`` is sent as the literal expression ``0``, since the condition is
+        mandatory and stops on nonzero. ``0`` is the always-false, never-trips sentinel that x64dbg's
+        own Conditional Tracing feature documents as the break condition's default, so the trace runs
+        up to ``max_steps``.
 
         Args:
             condition: Break condition expression; tracing stops as soon
@@ -10349,7 +10268,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         trace record type has been set for that page. Until then
         ``GetTraceRecordHitCount`` has no buffer to read and answers zero
         for every address in it, which is why :meth:`get_trace_record`
-        could not return a non-zero count on its own (S18-D03).
+        could not return a non-zero count on its own.
 
         The plugin reads the page's type back after applying it, and this
         wrapper refuses to report success unless the read-back matches
@@ -10421,7 +10340,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         address' page alongside the counts, so a zero ``hitCount`` can be
         told apart from a page :meth:`set_trace_record` never armed: with
         type ``none`` x64dbg keeps no counters and every byte on the page
-        reads back as zero (S18-D03).
+        reads back as zero.
 
         Args:
             address: Address to query.
@@ -10485,21 +10404,9 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         ``[arg2]`` is the step budget, the same ``condition=0, count``
         framing :meth:`trace_into` and :meth:`trace_over` build.
 
-        This wrapper used to send ``tic 0, {count}`` / ``toc 0, {count}``,
-        but ``tic`` and ``toc`` are not registered anywhere in x64dbg as
-        command names or aliases - only ``ticnd``/``tocnd`` and the full
-        ``TraceIntoConditional``/``TraceOverConditional`` names exist - so
-        the ``exec`` RPC returned an unknown-command error and no stepping
-        ever ran. The argument order (``0`` then ``count``) was already
-        correct and is preserved; only the unrecognised command name is
-        replaced with the documented one.
-
         The console command blocks the debugger until the step budget is
         exhausted; this wrapper then waits for the debugger to return to a
-        paused state via ``status``. The previous implementation returned
-        ``success: True`` immediately and offered the caller no way to
-        distinguish "step issued" from "step completed" (audit7.md
-        F-0001).
+        paused state via ``status``.
 
         Args:
             count: Number of steps to execute.
@@ -10548,17 +10455,9 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         then polls ``status`` and waits for the debugger's
         ``is_running`` flag to flip to ``True``.
 
-        This wrapper used to queue ``AnimateInto``/``AnimateOver``.
-        x64dbg registers neither: animation is a GUI-only feature bound
-        to Ctrl+F7/Ctrl+F8, its ``registercommands()`` table carries
-        only ``AnimateWait``, and the strings ``AnimateInto`` and
-        ``AnimateOver`` appear nowhere in the shipped ``x64dbg.dll``.
-        Both were rejected as unknown commands, the debugger never
-        started running, and every call failed its verification poll. A
-        bounded conditional trace is the console-command equivalent: it
-        steps continuously until :meth:`animate_stop` pauses it. The
-        wrapper used to claim ``success: True`` without observing the
-        actual debugger state (audit7.md F-0001).
+        x64dbg registers neither ``AnimateInto`` nor ``AnimateOver``: animation is a GUI-only feature
+        bound to Ctrl+F7/Ctrl+F8, its ``registercommands()`` table carries only ``AnimateWait``, and the
+        strings appear nowhere in the shipped ``x64dbg.dll``, so the conditional trace above is used instead.
 
         Args:
             step_type: Step type ('into' or 'over').
@@ -10604,20 +10503,14 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         Queues ``pause`` and confirms it settled via
         :meth:`_await_run_completion`, which races the plugin's ``paused``
         event against a ``status`` poll: an animate loop that stops
-        between two micro-steps can settle faster than one poll interval
-        (S20-D03), and the animation may already have stopped before this
+        between two micro-steps can settle faster than one poll interval, and the animation may already have stopped before this
         call ever starts polling - both are accepted as success as long
         as either signal confirms the paused state.
 
-        This wrapper used to queue ``AnimateStop``, which x64dbg does
-        not register - the string appears nowhere in the shipped
-        ``x64dbg.dll`` - so the command was rejected, nothing was
-        stopped, and every call failed its verification poll. ``pause``
-        is x64dbg's documented stop ("Pause the debuggee or stop
-        animation if animation is in progress") and equally ends the
-        conditional trace :meth:`animate_start` issues. The wrapper used
-        to claim ``success: True`` without observing the actual debugger
-        state (audit7.md F-0001).
+        x64dbg does not register ``AnimateStop`` (the string appears nowhere in the shipped
+        ``x64dbg.dll``), so ``pause`` is used instead. It is x64dbg's documented stop ("Pause the
+        debuggee or stop animation if animation is in progress") and equally ends the conditional trace
+        :meth:`animate_start` issues.
 
         Returns:
             dict[str, Any]: Dict with ``success`` and ``verified``.
@@ -10659,8 +10552,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         target rather than starting a fresh session from scratch. After
         queuing the command, polls ``status`` to confirm the debugger
         actually reached a paused state at the new entry point before
-        reporting success, rather than claiming success immediately
-        after queuing the command.
+        reporting success.
 
         Returns:
             dict[str, Any]: Dict with ``success``, ``path`` (the
@@ -10738,8 +10630,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         the program reaches somewhere outside the trace coverage") and
         confirms it settled via :meth:`_await_run_completion`, the same
         paused-event/status race :meth:`trace_into` uses so a trace that
-        completes within a single poll interval is still observed
-        (S20-D03).
+        completes within a single poll interval is still observed.
 
         Per x64dbg's documented ``TraceIntoBeyondTraceCoverage``/``tibt``
         syntax, both ``arg1`` (the break condition) and ``arg2`` (the step
@@ -11164,9 +11055,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
 
         After queuing ``scriptload``, queries the
         ``script.iserror()`` register via the expression evaluator and
-        raises ``ToolError`` when it is set. The wrapper used to claim
-        ``success: True`` without inspecting the script error register
-        (audit7.md F-0001).
+        raises ``ToolError`` when it is set.
 
         Args:
             path: Path to script file.
@@ -11205,9 +11094,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
 
         After queuing ``scriptrun``, queries the
         ``script.iserror()`` register via the expression evaluator and
-        raises ``ToolError`` when it is set. The wrapper used to claim
-        ``success: True`` without inspecting the script error register
-        (audit7.md F-0001).
+        raises ``ToolError`` when it is set.
 
         Returns:
             dict[str, Any]: Dict with ``success`` and ``verified``.
@@ -11241,9 +11128,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
 
         After queuing ``scriptcmd``, queries the
         ``script.iserror()`` register via the expression evaluator and
-        raises ``ToolError`` when it is set. The wrapper used to claim
-        ``success: True`` without inspecting the script error register
-        (audit7.md F-0001).
+        raises ``ToolError`` when it is set.
 
         Args:
             line: Script command line.
@@ -11284,15 +11169,10 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         ``script.iserror()`` register via the expression evaluator and
         raises ``ToolError`` when it is set.
 
-        This wrapper used to queue a ``scriptabort`` console command.
-        x64dbg registers no such command - its script section carries
-        ``scriptload``, ``scriptcmd``, ``scriptrun``, ``scriptexec`` and
-        ``scriptdll`` but no abort, and the string appears nowhere in
-        the shipped ``x64dbg.dll`` - so the command was rejected and the
-        running script was never aborted, while the follow-up
-        ``script.iserror()`` check still reported a clean abort. The
-        wrapper used to claim ``success: True`` without inspecting the
-        script error register at all (audit7.md F-0001).
+        x64dbg registers no ``scriptabort`` console command: its script section carries ``scriptload``,
+        ``scriptcmd``, ``scriptrun``, ``scriptexec`` and ``scriptdll`` but no abort, and the string
+        appears nowhere in the shipped ``x64dbg.dll``. A console command would be rejected while the
+        follow-up ``script.iserror()`` check still reported a clean abort.
 
         Returns:
             dict[str, Any]: Dict with ``success`` and ``verified``.
@@ -11362,9 +11242,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
 
         After queuing ``plugload``, checks ``plugin_list`` (preferred)
         or ``plugin.find(<name>)`` via the expression evaluator and
-        raises ``ToolError`` when the plugin is absent. The wrapper
-        used to claim ``success: True`` without observing the actual
-        plugin manager state (audit7.md F-0001).
+        raises ``ToolError`` when the plugin is absent.
 
         Args:
             path: Path to plugin DLL.
@@ -11407,8 +11285,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         After queuing ``plugunload``, checks ``plugin_list``
         (preferred) or ``plugin.find(<name>)`` via the expression
         evaluator and raises ``ToolError`` when the plugin is still
-        loaded. The wrapper used to claim ``success: True`` without
-        observing the actual plugin manager state (audit7.md F-0001).
+        loaded.
 
         Args:
             name: Plugin name.
@@ -11446,14 +11323,10 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
     async def plugin_list(self) -> list[dict[str, Any]]:
         """List the plugins x64dbg loaded.
 
-        Dispatches the plugin's ``plugin_list`` RPC. There is
-        deliberately no console-command fallback: this wrapper used to
-        answer a rejected RPC by sending ``pluglist``, but x64dbg
-        registers no such command - its ``registercommands()`` table
-        carries only ``plugload``, ``plugunload`` and ``plugreload``,
-        and the string appears nowhere in the shipped ``x64dbg.dll`` -
-        so the fallback reported success while returning an empty list
-        and hiding the real RPC failure.
+        Dispatches the plugin's ``plugin_list`` RPC. There is deliberately no console-command fallback: x64dbg registers no ``pluglist`` command
+        (its ``registercommands()`` table carries only ``plugload``, ``plugunload`` and ``plugreload``,
+        and the string appears nowhere in the shipped ``x64dbg.dll``), so a fallback would report
+        success while returning an empty list and hide the real RPC failure.
 
         Returns:
             list[dict[str, Any]]: List of plugin info dicts.
@@ -11846,7 +11719,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
                 degenerate fallback of ``{"debugging": False, ...}`` is
                 indistinguishable from a real "not running" state and
                 would cause orchestrators polling this endpoint to act
-                on stale information (audit6.md F-0029).
+                on stale information.
         """
         _logger.debug("status_querying")
         result = await self._send_pipe_command("status")
@@ -12465,18 +12338,15 @@ class X64DbgBridge(_X64DbgScriptingMixin):
     """Bridge for x64dbg Windows debugger.
 
     Composed from the ``_X64DbgBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references resolve
-    through normal MRO. Each mixin groups one surface area so no single class definition exceeds the public method limit. The public
-    interface, attribute set, and behavior are identical to the pre-refactor monolithic class.
+    through normal MRO. Each mixin groups one surface area so no single class definition exceeds the public method limit.
     """
 
     async def shutdown(self) -> None:
         """Shutdown x64dbg and cleanup resources.
 
         Each cleanup phase is wrapped so that a fault in one stage cannot
-        strand a later one. An exception from ``_close_connection`` no
-        longer leaks the spawned ``x64dbg.exe`` process (audit6.md
-        F-0011): the process-termination block is reached
-        unconditionally, and the bookkeeping state (attached PID,
+        strand a later one. An exception from ``_close_connection`` does not skip the
+        process-termination block, so the spawned ``x64dbg.exe`` is not leaked, and the bookkeeping state (attached PID,
         breakpoints, watchpoints, pending step waiters, cached process
         handles) is always cleared in the ``finally`` arm even when
         termination itself raises. The first captured cleanup exception

@@ -2,26 +2,23 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gates for S20-D13 (VM Display pop-out) and the S20-D11 header state-reporting fix.
+"""Gates for the VM Display pop-out and the sandbox header state reporting.
 
-S20-D13: the VM Display tab scaled a live guest framebuffer into a small
-docked sliver with no way to enlarge it - no fullscreen, pop-out, or detach
-control existed anywhere in ``vnc_widget.py`` or ``sandbox_panel.py``.
-:class:`VNCWidget` now carries its own "Pop Out" control that reparents the
-*same* live widget instance into a resizable, maximized top-level window and
-back again, and :class:`SandboxPanel` wires it to the real ``QTabWidget`` the
-"VM Display" tab lives in.
+VM Display pop-out: the tab scales a live guest framebuffer into a small docked
+area, so :class:`VNCWidget` carries its own "Pop Out" control that reparents
+the *same* live widget instance into a resizable, maximized top-level window
+and back again, and :class:`SandboxPanel` wires it to the real ``QTabWidget``
+the "VM Display" tab lives in.
 
 These gates drive real ``QTabWidget``/``QWidget`` reparenting - the widget
 really is removed from and reinserted into the tab widget's page list, and
 its real top-level ``window()`` really changes - not a stand-in for Qt's
 widget tree.
 
-S20-D11 (header half): the header showed "Inactive" the entire time a real
-Windows Sandbox session process was alive during a slow create, because the
-indicator was only ever updated on the two extremes (never created / fully
-created). ``SandboxPanel._on_create`` now sets an intermediate "Starting..."
-state as soon as the create request is dispatched.
+Header state: during a slow create the header must not show "Inactive" while
+a real Windows Sandbox session process is alive, so ``SandboxPanel._on_create``
+sets an intermediate "Starting..." state as soon as the create request is
+dispatched.
 """
 
 from __future__ import annotations

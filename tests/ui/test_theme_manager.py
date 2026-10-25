@@ -574,14 +574,14 @@ class _RecordingStyleStandIn:
 
 
 class TestMenuBarToolbarRuntimeRepolish:
-    """Regression gate: a live theme toggle must repolish the menu bar and toolbar.
+    """A live theme toggle must repolish the menu bar and toolbar.
 
-    Reproduces the reported bug where Settings -> Toggle Theme left the main
-    menu bar and toolbar rendering the previous theme's colors: on Windows, a
+    Settings -> Toggle Theme must not leave the main menu bar and toolbar rendering the previous
+    theme's colors: on Windows, a
     QMenuBar/QToolBar that has already been polished once keeps its
     first-polished background after a second ``QApplication.setStyleSheet()``
     call unless it is explicitly unpolished and repolished. This asserts the
-    fix's actual mechanism -- that ``ThemeManager.apply_theme`` calls
+    required mechanism -- that ``ThemeManager.apply_theme`` calls
     ``style().unpolish()`` then ``style().polish()`` on the live
     QMenuBar/QToolBar during a runtime toggle -- via
     :class:`_RecordingStyleStandIn`, rather than sampling rendered pixels:
@@ -598,8 +598,7 @@ class TestMenuBarToolbarRuntimeRepolish:
 
         Falsifiable: removing the ``self._repolish_chrome(app_instance)`` call
         from ``ThemeManager.apply_theme`` leaves ``unpolished`` (and
-        ``polished``) empty for both widgets (confirmed by reverting it
-        locally and rerunning this test) -- the stand-in style is never
+        ``polished``) empty for both widgets -- the stand-in style is never
         consulted at all without that call, since Qt's own stylesheet
         machinery resolves styling internally rather than by calling back
         into ``QApplication.style()``.

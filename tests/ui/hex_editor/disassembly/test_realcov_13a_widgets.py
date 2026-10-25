@@ -4,9 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for the hex editor visualization widget classes.
 
-The audit (shard 13) lists ``widgets.py`` under ``NOT TESTED``:
-``EntropyGraphWidget`` rendering and click navigation, ``ByteDistributionWidget``
-histogram accuracy and log-scale toggle, and the digram matrix heatmap.
+Covers ``EntropyGraphWidget`` rendering and click navigation,
+``ByteDistributionWidget`` histogram accuracy and log-scale toggle, and the
+digram matrix heatmap.
 
 These tests feed the widgets REAL byte-distribution, per-block entropy, and
 digram data computed from a REAL Windows PE (``kernel32.dll``), force a real

@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for :class:`PreferencesDialog`.
 
-The preferences dialog was previously untested. These tests construct the
+These tests construct the
 real dialog over a real :class:`Config`, mutate real input widgets through
 the live Qt widget tree, and assert that:
 

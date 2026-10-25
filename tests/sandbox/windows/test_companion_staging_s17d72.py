@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D72: a target that needs a file beside it must get it.
+r"""A target that needs a file beside it must get it.
 
 ``run_binary`` staged exactly one file. That is not what a real target looks
 like - a DLL sits next to the executable, a resource or locale subtree under
@@ -119,7 +119,7 @@ class _StagingSandbox(WindowsSandbox):
         # The interpreter has to receive this line exactly as production wrote
         # it. Passing it as an argument instead would put Python's argv quoting
         # in between, and that renders an embedded quote as backslash-quote,
-        # which cmd reads literally - the very confusion S17-D73 was about.
+        # which cmd reads literally - the same confusion as in argument quoting.
         process = await asyncio.create_subprocess_shell(
             translated,
             stdout=asyncio.subprocess.PIPE,

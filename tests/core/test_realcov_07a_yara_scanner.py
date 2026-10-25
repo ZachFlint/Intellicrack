@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage tests for ``intellicrack.core.yara_scanner``.
 
-The audit (shard 07) noted that ``YaraScanner`` had no direct unit tests:
-all coverage went through the hex-editor bridge. These tests exercise the
-``YaraScanner`` public API directly against REAL System32 PE binaries with
+These tests exercise the ``YaraScanner`` public API directly, not only through
+the hex-editor bridge, against REAL System32 PE binaries with
 REAL YARA rules:
 
 * ``compile_source`` / ``compile_rules`` (file-based) compile genuine YARA

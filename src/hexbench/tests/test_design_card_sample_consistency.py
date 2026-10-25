@@ -8,10 +8,9 @@
 ``design/build_cards.py`` renders three tables whose whole documented point is
 that they describe the real 640 byte sample header rather than invented
 numbers: the inspector panel's per-format readings, the status bar's entropy
-figure, and the argument-row gallery's kind count. Each of those tables used
-to carry literals that were never actually derived from the sample bytes
-alongside it, so nothing caught them drifting away from what the sample
-actually contains.
+figure, and the argument-row gallery's kind count. Each of those tables must be
+derived from the sample bytes beside it, or nothing catches it drifting away
+from what the sample actually contains.
 
 These tests run the real generator, read the HTML it actually wrote, and
 independently recompute the same figures from the same sample bytes -- using
@@ -208,7 +207,7 @@ class ArgumentRowCaptionMatchesTheRenderedKindCountTests(Assertions, unittest.Te
         self.equal(label_match.group(1), f"All {badge_count} kinds", "the argument-row gallery caption")
 
     def test_rendered_kind_count_is_not_nine(self) -> None:
-        """A control against the exact defect reported: the true rendered count is not nine."""
+        """A control against the stale literal: the true rendered count is not nine."""
         html = _read_card("operations-arguments.html")
         badge_count = len(_KIND_BADGE.findall(html))
         self.unequal(badge_count, 9, "count of rendered kind badges")

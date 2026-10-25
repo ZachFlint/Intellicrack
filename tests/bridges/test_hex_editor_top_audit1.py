@@ -1,14 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 
-"""Audit-1 (hex-editor-top) regression tests.
+"""Tests for the top-half HexEditorBridge behavior.
 
-Each test in this file maps to a finding from ``audit1.md`` for the
-``bridges-hex`` unit and is named ``test_f_<id>_<topic>`` so the
-finding identifier remains traceable from a failing test report. All
-tests exercise the real ``HexEditorBridge`` against the native
-``intellicrack_hexcore`` document; no mocks of the bridge or document
-are used.
+Each test exercises the real ``HexEditorBridge`` against the native ``intellicrack_hexcore`` document; no mocks of the bridge or document are used.
 """
 
 from __future__ import annotations
@@ -89,9 +84,7 @@ def _make_collector() -> tuple[list[tuple[HexDocumentEvent, dict[str, Any]]], St
     return events, on_event
 
 
-# ---------------------------------------------------------------------------
-# F-0004 - get_alignment_grid + tool registration
-# ---------------------------------------------------------------------------
+# get_alignment_grid + tool registration
 
 
 class TestF0004AlignmentGridGetter:
@@ -124,9 +117,7 @@ class TestF0004AlignmentGridGetter:
         assert "hex_editor.get_alignment_grid" in names
 
 
-# ---------------------------------------------------------------------------
-# F-0005 - state_lock used in document mutations, not only in shutdown
-# ---------------------------------------------------------------------------
+# state_lock used in document mutations, not only in shutdown
 
 
 class TestF0005StateLockUsage:
@@ -149,9 +140,7 @@ class TestF0005StateLockUsage:
         assert bridge.document is None
 
 
-# ---------------------------------------------------------------------------
-# F-0006 - apply_transform / apply_pipeline write back into the document
-# ---------------------------------------------------------------------------
+# apply_transform / apply_pipeline write back into the document
 
 
 class TestF0006ApplyTransformWritesBack:
@@ -194,9 +183,7 @@ class TestF0006ApplyTransformWritesBack:
         assert _run(bridge.read_bytes(0, 4)).replace(" ", "") == "01020304"
 
 
-# ---------------------------------------------------------------------------
-# F-0007 - _build_ips_from_patches overflow validation
-# ---------------------------------------------------------------------------
+# _build_ips_from_patches overflow validation
 
 
 class _PatchesOnlyDoc:
@@ -367,9 +354,7 @@ class TestF0007IpsBuilderOverflow:
         assert blob.endswith(b"EOF")
 
 
-# ---------------------------------------------------------------------------
-# F-0008 - _apply_ips_patches raises on truncated records
-# ---------------------------------------------------------------------------
+# _apply_ips_patches raises on truncated records
 
 
 class TestF0008IpsApplyTruncationRaises:
@@ -438,9 +423,7 @@ class TestF0008IpsApplyTruncationRaises:
         assert _run(bridge.read_bytes(0, 2)).replace(" ", "") == "AABB"
 
 
-# ---------------------------------------------------------------------------
-# F-0013 - PE imports/exports prefer disk path
-# ---------------------------------------------------------------------------
+# PE imports/exports prefer disk path
 
 
 @pytest.mark.skipif(not _pefile_available, reason="pefile not installed")
@@ -580,9 +563,7 @@ class TestF0013PeImportsExportsDiskPath:
         )
 
 
-# ---------------------------------------------------------------------------
-# F-0014 - yara_scan prefers disk path
-# ---------------------------------------------------------------------------
+# yara_scan prefers disk path
 
 
 class TestF0014YaraScanDiskPath:
@@ -608,9 +589,7 @@ class TestF0014YaraScanDiskPath:
         assert any(m["rule"] == "mz_marker" for m in matches)
 
 
-# ---------------------------------------------------------------------------
-# F-0016 - Pattern registry unavailable raises
-# ---------------------------------------------------------------------------
+# Pattern registry unavailable raises
 
 
 class TestF0016PatternRegistryRaises:
@@ -648,9 +627,7 @@ class TestF0016PatternRegistryRaises:
             _run(bridge.auto_detect_pattern())
 
 
-# ---------------------------------------------------------------------------
-# F-0017 - apply_template notifies state holder
-# ---------------------------------------------------------------------------
+# apply_template notifies state holder
 
 
 class TestF0017ApplyTemplateNotifiesStateHolder:
@@ -685,9 +662,7 @@ class TestF0017ApplyTemplateNotifiesStateHolder:
         assert executed[0][1]["pattern_name"] == template_name
 
 
-# ---------------------------------------------------------------------------
-# F-0019 - entropy/digram fallbacks
-# ---------------------------------------------------------------------------
+# entropy/digram fallbacks
 
 
 class _NoEntropyDoc:
@@ -796,9 +771,7 @@ class TestF0019EntropyFallback:
         }
 
 
-# ---------------------------------------------------------------------------
-# F-0020 - read_bytes length cap
-# ---------------------------------------------------------------------------
+# read_bytes length cap
 
 
 class TestF0020ReadBytesCap:
@@ -835,9 +808,7 @@ class TestF0020ReadBytesCap:
             _run(bridge.read_bytes(0, -1))
 
 
-# ---------------------------------------------------------------------------
-# F-0021 - replace_bytes emits per-region events
-# ---------------------------------------------------------------------------
+# replace_bytes emits per-region events
 
 
 class TestF0021ReplaceBytesPerRegionEvents:
@@ -874,9 +845,7 @@ class TestF0021ReplaceBytesPerRegionEvents:
             assert evt[1]["offset"] != 0 or len(modified_events) == 3
 
 
-# ---------------------------------------------------------------------------
-# F-0024 - capabilities advertisement
-# ---------------------------------------------------------------------------
+# capabilities advertisement
 
 
 class TestF0024CapabilitiesTruthful:
@@ -899,9 +868,7 @@ class TestF0024CapabilitiesTruthful:
         assert bridge.capabilities.supports_scripting is False
 
 
-# ---------------------------------------------------------------------------
-# F-0032 - open_file closes previous document
-# ---------------------------------------------------------------------------
+# open_file closes previous document
 
 
 class TestF0032OpenFileClosesPrevious:
@@ -957,9 +924,7 @@ class TestF0032OpenFileClosesPrevious:
         assert closed_idx[0] < opened_idx[0]
 
 
-# ---------------------------------------------------------------------------
-# F-0033 - save_to_sandbox destroys orphan instance on copy_to failure
-# ---------------------------------------------------------------------------
+# save_to_sandbox destroys orphan instance on copy_to failure
 
 
 class _FailingSandboxBridge:
@@ -1063,9 +1028,7 @@ class TestF0033SaveToSandboxDestroysOrphan:
         assert sandbox.destroyed == ["sbx-1"]
 
 
-# ---------------------------------------------------------------------------
-# F-0034 - get_context_for_ai bookmark cap
-# ---------------------------------------------------------------------------
+# get_context_for_ai bookmark cap
 
 
 class TestF0034GetContextBookmarkCap:
@@ -1111,9 +1074,7 @@ class TestF0034GetContextBookmarkCap:
         assert ctx["bookmark_truncated"] is True
 
 
-# ---------------------------------------------------------------------------
-# F-0035 - export_patches logs fallback for ips32 mismatch
-# ---------------------------------------------------------------------------
+# export_patches logs fallback for ips32 mismatch
 
 
 class _NoIps32Doc:
@@ -1176,9 +1137,7 @@ class TestF0035ExportIps32FallbackIsLogged:
         assert any("native_unavailable" in str(entry.get("event", "")) and entry.get("log_level") == "warning" for entry in captured)
 
 
-# ---------------------------------------------------------------------------
-# F-0041 - search_text raises when search_text_encoded missing
-# ---------------------------------------------------------------------------
+# search_text raises when search_text_encoded missing
 
 
 class _NoEncodedSearchDoc:
@@ -1215,7 +1174,7 @@ class _NoEncodedSearchDoc:
 
 
 class TestF0041SearchTextRaisesOnMissingEncodedSearch:
-    """search_text now raises when the encoded backend method is missing."""
+    """search_text raises when the encoded backend method is missing."""
 
     def test_missing_search_text_encoded_raises(
         self,
@@ -1234,9 +1193,7 @@ class TestF0041SearchTextRaisesOnMissingEncodedSearch:
             _run(bridge.search_text("MZ", "utf-8", 10))
 
 
-# ---------------------------------------------------------------------------
-# F-0046 - copy_as raises without selection
-# ---------------------------------------------------------------------------
+# copy_as raises without selection
 
 
 class TestF0046CopyAsRequiresSelection:
@@ -1275,9 +1232,7 @@ class TestF0046CopyAsRequiresSelection:
         assert result.replace(" ", "") == "4D5A"
 
 
-# ---------------------------------------------------------------------------
-# F-0048 - initialize merges highlight rules
-# ---------------------------------------------------------------------------
+# initialize merges highlight rules
 
 
 class TestF0048InitializeMergesHighlightRules:
@@ -1314,9 +1269,7 @@ class TestF0048InitializeMergesHighlightRules:
         assert shared_rules[0]["color"] == "#BBBBBB"
 
 
-# ---------------------------------------------------------------------------
-# F-0049 - save / save_as updates target_path
-# ---------------------------------------------------------------------------
+# save / save_as updates target_path
 
 
 class TestF0049SaveAsUpdatesTargetPath:
@@ -1342,9 +1295,7 @@ class TestF0049SaveAsUpdatesTargetPath:
         assert bridge.state.target_path.resolve() == new_path.resolve()
 
 
-# ---------------------------------------------------------------------------
-# F-0051 - get_digram_matrix supports compact summary mode
-# ---------------------------------------------------------------------------
+# get_digram_matrix supports compact summary mode
 
 
 class TestF0051DigramMatrixSummary:
@@ -1388,9 +1339,7 @@ class TestF0051DigramMatrixSummary:
         assert len(result["matrix"]) == 65536
 
 
-# ---------------------------------------------------------------------------
-# F-0054 - search_numeric validates value_type/endianness
-# ---------------------------------------------------------------------------
+# search_numeric validates value_type/endianness
 
 
 class TestF0054SearchNumericValidatesEnums:
@@ -1444,9 +1393,7 @@ class TestF0054SearchNumericValidatesEnums:
         assert any(r["offset"] == 0 for r in result)
 
 
-# ---------------------------------------------------------------------------
-# F-0057 - target_path derived from Rust file_path()
-# ---------------------------------------------------------------------------
+# target_path derived from Rust file_path()
 
 
 class TestF0057TargetPathFromRustFilePath:

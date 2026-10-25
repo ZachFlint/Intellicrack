@@ -3,18 +3,17 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""L3 regression gate for T2-7(a): hex-editor OPEN / SAVE / SAVE-AS must route through the bridge.
+"""L3 gate: hex-editor OPEN / SAVE / SAVE-AS must route through the bridge.
 
-Prior to this fix ``HexEditorPanel._load_file_impl`` opened
-``intellicrack_hexcore.HexDocument`` directly and mirrored the result into the
+``HexEditorPanel._load_file_impl`` opens
+``intellicrack_hexcore.HexDocument`` directly and mirrors the result into the
 bridge via the synchronous, non-notifying ``HexEditorBridge.adopt_document``,
-which never released whatever document the bridge was already holding.
-``HexEditorPanel._on_save`` / ``_perform_save_as`` likewise called
+which does not release whatever document the bridge already holds.
+``HexEditorPanel._on_save`` / ``_perform_save_as`` call
 ``document.save()`` directly, bypassing ``HexEditorBridge.save`` /
-``save_as`` entirely, so the bridge's own ``target_path`` bookkeeping never
-tracked a GUI-driven save.
+``save_as`` entirely, so the bridge's ``target_path`` bookkeeping never tracks a GUI-driven save.
 
-The fix routes all three actions through the corresponding bridge coroutine
+All three actions are routed through the corresponding bridge coroutine
 via ``run_bridge_coroutine`` when a bridge is attached: opening goes through
 ``HexEditorBridge.open_file`` (which releases any previously-open document
 before opening the new one), and saving goes through ``HexEditorBridge.save``
@@ -140,7 +139,7 @@ class TestOpenRoutesThroughBridge:
         """A second ``load_file`` must close the bridge's previous document before opening the new one.
 
         Falsifiable: if ``_load_file_impl`` were reverted to call
-        ``hexcore.HexDocument.open()`` directly (the pre-fix behaviour),
+        ``hexcore.HexDocument.open()`` directly (the unrouted behaviour),
         ``bridge.open_file_calls`` would stay empty and ``close_file_calls``
         would stay ``0`` even though two different files were loaded through
         the panel.

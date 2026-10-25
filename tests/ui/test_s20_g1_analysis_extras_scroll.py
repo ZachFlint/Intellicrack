@@ -3,23 +3,22 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for S20-D09 -- Ghidra Analysis Extras tab section overlap.
+"""Gate for Ghidra Analysis Extras tab section overlap.
 
 ``GhidraAnalysisExtrasWidget._setup_ui``
-(src/intellicrack/ui/panels/ghidra_panel_extras.py) used to stack five group
-sections (Instruction Flow / Register Value, Thunk Management, External
-References, Properties, Bidirectional Call Graph) directly onto the widget's
-own ``QVBoxLayout`` with no per-section minimum height and no scroll area.
-When the bottom detail pane hosting this tab was shorter than the sections'
-combined natural height, Qt's layout engine compressed several sections into
-overlapping strips -- concretely, this made the Instruction-Flow address
-field untypeable, because a click at its screen position landed on whatever
-section had actually been drawn on top of it instead.
+(src/intellicrack/ui/panels/ghidra_panel_extras.py) must not stack its five group
+sections (Instruction Flow / Register Value, Thunk Management, External References,
+Properties, Bidirectional Call Graph) directly onto the widget's own
+``QVBoxLayout`` without a per-section minimum height or a scroll area. When the bottom
+detail pane hosting this tab is shorter than the sections' combined natural height,
+Qt's layout engine compresses several sections into overlapping strips. That makes the
+Instruction-Flow address field untypeable, because a click at its screen position lands
+on whatever section is drawn on top of it.
 
-The fix builds every section as its own container with a real, explicit
-``minimumHeight`` derived from its ``sizeHint()`` and hosts the full stack
-inside :func:`intellicrack.ui.panels.base_panel.make_scrollable`, so a short
-host pane grows a scrollbar instead of crushing the stack.
+Every section is built as its own container with a real, explicit ``minimumHeight``
+derived from its ``sizeHint()``, and the full stack is hosted inside
+:func:`intellicrack.ui.panels.base_panel.make_scrollable`, so a short host pane grows a
+scrollbar instead of crushing the stack.
 
 Every assertion reads live Qt geometry off a real, fully constructed
 ``GhidraAnalysisExtrasWidget`` under an offscreen ``QApplication`` -- no
@@ -107,10 +106,9 @@ class TestAnalysisExtrasIsScrollable:
     def test_each_section_carries_a_real_minimum_height(extras_widget: GhidraAnalysisExtrasWidget) -> None:
         """Every section container must carry an explicit, nonzero minimum height.
 
-        Regression: with sections appended directly to a shared layout (no
-        per-section container), no widget in the chain carries an explicit
-        minimum, so Qt's layout engine is free to compress any of them under
-        starvation from an oversized sibling pane.
+        Without a per-section container, no widget in the chain carries an explicit
+        minimum, so Qt's layout engine is free to compress any of them under starvation
+        from an oversized sibling pane.
 
         Args:
             extras_widget: A live ``GhidraAnalysisExtrasWidget`` fixture instance.
@@ -162,11 +160,10 @@ class TestAnalysisExtrasIsScrollable:
     def test_sections_do_not_overlap_at_short_viewport(qapp: object) -> None:
         """At a short viewport, every section must occupy a disjoint, ordered vertical band.
 
-        This is the user-facing property S20-D09 broke: the Instruction-Flow
-        address field became untypeable because a later section was drawn on
-        top of it.
+        This is the user-facing property at stake: the Instruction-Flow address field must
+        stay typeable, and it stops being typeable when a later section is drawn on top of it.
 
-        Regression: a standalone, never-shown ``GhidraAnalysisExtrasWidget``
+        A standalone, never-shown ``GhidraAnalysisExtrasWidget``
         cannot exercise this -- Qt only starves a plain (non-scrolling)
         container's children below their declared minimums when that
         container is genuinely part of a visible layout chain that has

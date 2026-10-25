@@ -5,7 +5,7 @@
 
 """Falsifiable gates for the sandbox panel layout hardening.
 
-Guards the fixes that stop the sandbox panel from smashing its controls when
+Guards the layout that stops the sandbox panel from smashing its controls when
 docked narrow: the execution-control cluster is wrapped in a scroll area, the
 timeout/memory spin boxes and the path/argument/command/profile/diff fields
 carry readable minimum widths, and the toolbar's many action buttons are
@@ -188,7 +188,7 @@ class TestSandboxGroupedEnableState:
         """Activating then deactivating the sandbox must enable then disable the grouped actions.
 
         QEMU is selected because the snapshot and VM-control actions are gated
-        on the backend that actually implements them (S17-D10).
+        on the backend that actually implements them.
         """
         panel = SandboxPanel()
         panel.sandbox_type_combo.setCurrentText("QEMU")

@@ -12,13 +12,13 @@ relaunched elevated -- and has bugchecked this host outright.
 
 :mod:`scripts.sandbox.docker_sandbox` already covers one direction: it refuses
 to start a container while a virtual machine holds the host. This module covers
-the other, which was only ever half-built. The WHPX boot gates asked ``docker
-ps`` whether a *container* was running, but the collision is with the *engine*:
-Docker Desktop keeps its Windows engine and its utility VM on the Host Compute
-Service for as long as it runs, with or without a container. ``just test`` runs
-the container leg and then the host-native leg, so by the time the WHPX gates
-look, the container has exited while the engine is still up -- the container
-check passes and a virtual machine boots straight into the live engine.
+the other. Asking ``docker ps`` whether a *container* is running is not
+enough, because the collision is with the *engine*: Docker Desktop keeps its
+Windows engine and its utility VM on the Host Compute Service for as long as it
+runs, with or without a container. ``just test`` runs the container leg and then
+the host-native leg, so by the time the WHPX gates look, the container has
+exited while the engine is still up -- a container check passes and a virtual
+machine boots straight into the live engine.
 
 The interlock here detects the engine itself and quiesces it before any WHPX
 virtual machine starts. Quiescing is a graceful Docker Desktop shutdown, which
@@ -248,9 +248,9 @@ def stop_docker_engine_service() -> bool:
     """Stop the Docker engine service outright, for an already-elevated caller.
 
     Only reached when a graceful shutdown left the engine on the Host Compute
-    Service. Stopping the service needs an elevated token, which is why a
-    wedged engine has previously needed Docker Desktop relaunched as
-    administrator to recover. Nothing here requests elevation: the caller
+    Service. Stopping the service needs an elevated token, which is why
+    recovering a wedged engine needs Docker Desktop relaunched as
+    administrator. Nothing here requests elevation: the caller
     decides whether it already holds a token, and a run that does not simply
     leaves the engine up and skips the virtual machine gates.
 

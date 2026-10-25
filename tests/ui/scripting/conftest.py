@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Shared fixtures for audit3 UI panel tests.
+"""Shared fixtures for the UI panel tests.
 
 Provides a session-scoped QApplication required for Qt widget testing under
 the offscreen Qt platform plugin, along with real ``Config`` and

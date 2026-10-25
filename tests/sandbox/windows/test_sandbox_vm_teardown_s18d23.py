@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S18-D23: the stop force-killed a session that had closed cleanly.
+r"""The stop force-killed a session that had closed cleanly.
 
 Measured live. The backend's own stop log, both lines stamped the same second:
 

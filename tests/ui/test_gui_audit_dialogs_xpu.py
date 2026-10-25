@@ -2,13 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for GUI audit finding: XPU requirements HTML injection.
+"""Tests for XPU requirements HTML escaping.
 
-``XPUStatusDialog._on_requirements_ready`` interpolated requirement warning
-strings straight into ``setHtml`` without escaping, so a warning containing
-``<``, ``>`` or ``&`` was parsed as markup and rendered as broken HTML. The
-fix routes each warning through ``html.escape`` so the literal characters are
-displayed verbatim.
+``XPUStatusDialog._on_requirements_ready`` must escape requirement warning strings before embedding them in ``setHtml``, so a warning
+containing ``<``, ``>`` or ``&`` is not parsed as markup and rendered as broken HTML. Each warning is routed through ``html.escape``
+so the literal characters are displayed verbatim.
 """
 
 from __future__ import annotations
@@ -70,8 +68,8 @@ class TestXpuRequirementsHtmlEscape:
         text so the plain-text projection of the rendered document contains the
         literal ``<b>&x``. When it is NOT escaped, Qt parses ``<b>`` as a bold
         tag and drops it, so the literal string is lost. Asserting on the
-        plain-text projection therefore distinguishes the fixed behaviour from
-        the regression.
+        plain-text projection therefore distinguishes escaped output from
+        unescaped output.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture.

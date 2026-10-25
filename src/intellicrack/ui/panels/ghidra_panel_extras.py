@@ -51,8 +51,8 @@ _EXT_REF_COLUMNS: list[str] = ["Address", "External Name", "Library", "Type"]
 _CALL_GRAPH_COLUMNS: list[str] = ["Name", "Address"]
 _PROPERTY_COLUMNS: list[str] = ["Property", "Value"]
 
-# Floor for the scroll viewport that hosts every Analysis Extras section
-# (S20-D09): each section below carries its own real minimumHeight derived
+# Floor for the scroll viewport that hosts every Analysis Extras section:
+# each section below carries its own real minimumHeight derived
 # from its sizeHint, so this only bounds how short the visible viewport may
 # get before a scrollbar appears -- it never lets a section's own controls
 # compress below their natural size.
@@ -118,7 +118,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         """Build every section of the Analysis Extras tab inside a scrollable viewport.
 
         Each section is built as its own container with a real
-        ``minimumHeight`` derived from its own content (S20-D09), and the
+        ``minimumHeight`` derived from its own content, and the
         full stack is wrapped in :func:`make_scrollable` so a short host
         splitter pane grows a scrollbar instead of compressing every
         section into overlapping, untypeable slivers.
@@ -147,10 +147,6 @@ class GhidraAnalysisExtrasWidget(QWidget):
 
         outer_layout.addWidget(make_scrollable(content, min_height=_EXTRAS_SCROLL_MIN_HEIGHT))
 
-    # ------------------------------------------------------------------
-    # Instruction Flow / Register Value
-    # ------------------------------------------------------------------
-
     def _build_flow_register_section(self, fm: FontManager) -> QWidget:
         """Build the instruction-flow and register-value lookup section.
 
@@ -160,7 +156,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         Returns:
             QWidget: Section container with a real minimum height, derived
             from its own content, so its address field can never be
-            compressed below a typeable size (S20-D09).
+            compressed below a typeable size.
         """
         section = QWidget()
         section_layout = QVBoxLayout(section)
@@ -392,10 +388,6 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._flow_register_result.setPlainText(f"Error: {exc}")
         _logger.warning("ghidra_flow_register_gui_failed", error=str(exc))
 
-    # ------------------------------------------------------------------
-    # Thunk management
-    # ------------------------------------------------------------------
-
     def _build_thunk_section(self, fm: FontManager) -> QWidget:
         """Build the thunk-management section.
 
@@ -405,7 +397,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         Returns:
             QWidget: Section container with a real minimum height, derived
             from its own content, so its address fields can never be
-            compressed below a typeable size (S20-D09).
+            compressed below a typeable size.
         """
         section = QWidget()
         section_layout = QVBoxLayout(section)
@@ -555,10 +547,6 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._thunk_result.setPlainText(f"Error: {exc}")
         _logger.warning("ghidra_thunk_gui_failed", error=str(exc))
 
-    # ------------------------------------------------------------------
-    # Function Tags
-    # ------------------------------------------------------------------
-
     def _build_function_tags_section(self, fm: FontManager) -> QWidget:
         """Build the function-tag management section.
 
@@ -568,7 +556,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         Returns:
             QWidget: Section container with a real minimum height, derived
             from its own content, so its name and address fields can never
-            be compressed below a typeable size (S20-D09).
+            be compressed below a typeable size.
         """
         section = QWidget()
         section_layout = QVBoxLayout(section)
@@ -755,10 +743,6 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._function_tags_result.setPlainText(f"Error: {exc}")
         _logger.warning("ghidra_function_tags_gui_failed", error=str(exc))
 
-    # ------------------------------------------------------------------
-    # External References
-    # ------------------------------------------------------------------
-
     def _build_external_refs_section(self, fm: FontManager) -> QWidget:
         """Build the external-references section.
 
@@ -768,7 +752,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         Returns:
             QWidget: Section container with a real minimum height, derived
             from its own content, so its address and name fields can never
-            be compressed below a typeable size (S20-D09).
+            be compressed below a typeable size.
         """
         section = QWidget()
         section_layout = QVBoxLayout(section)
@@ -916,10 +900,6 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._status_label.setText(f"External reference error: {exc}")
         _logger.warning("ghidra_external_reference_gui_failed", error=str(exc))
 
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-
     def _build_properties_section(self, fm: FontManager) -> QWidget:
         """Build the user-defined properties viewer section.
 
@@ -929,7 +909,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         Returns:
             QWidget: Section container with a real minimum height, derived
             from its own content, so its address field can never be
-            compressed below a typeable size (S20-D09).
+            compressed below a typeable size.
         """
         section = QWidget()
         section_layout = QVBoxLayout(section)
@@ -1012,10 +992,6 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._status_label.setText(f"Get properties failed: {exc}")
         _logger.warning("ghidra_get_properties_gui_failed", error=str(exc))
 
-    # ------------------------------------------------------------------
-    # Bidirectional Call Graph
-    # ------------------------------------------------------------------
-
     def _build_call_graph_section(self, fm: FontManager) -> QWidget:
         """Build the bidirectional call-graph section.
 
@@ -1025,7 +1001,7 @@ class GhidraAnalysisExtrasWidget(QWidget):
         Returns:
             QWidget: Section container with a real minimum height, derived
             from its own content, so its address field can never be
-            compressed below a typeable size (S20-D09).
+            compressed below a typeable size.
         """
         section = QWidget()
         section_layout = QVBoxLayout(section)

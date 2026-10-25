@@ -2,13 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for S16-D13: the Analysis panel Notes tab is real, editable, persisted notes.
+"""Gate: the Analysis panel Notes tab is real, editable, and persists typed notes.
 
-Pre-fix, the Notes tab was a single ``QTextEdit`` with ``setReadOnly(True)``
-that only ever displayed ``BridgeAnalysisSummary.analysis_notes`` (bridge-
-generated diagnostics); the user could not type into it at all, and even a
-writable box would have had nothing wired to keep its text across a panel
-refresh. These tests drive the real
+The Notes tab must be a user-editable ``QTextEdit`` whose text is kept separate
+from ``BridgeAnalysisSummary.analysis_notes`` (bridge-generated diagnostics, read-only)
+and must survive a panel refresh. These tests drive the real
 :class:`~intellicrack.ui.panels.analysis_panel.BridgeAnalysisPanel` under an
 offscreen ``QApplication``, type real keystrokes into the notes editor with
 :class:`~PyQt6.QtTest.QTest`, and prove the typed text survives a panel
@@ -127,10 +125,8 @@ def test_generated_diagnostics_stay_visible_and_read_only(qapp: QApplication) ->
 def test_typed_notes_survive_refresh_on_same_analysis_object(qapp: QApplication) -> None:
     """Notes typed by the user must survive :meth:`set_analysis` being called again.
 
-    Pre-fix, the notes widget was fully re-populated from
-    ``analysis.analysis_notes`` on every call and had no independent editable
-    state at all, so there was nothing to lose -- and no way to type
-    anything in the first place. This asserts the user's text is still there
+    The notes widget keeps its own editable state; a refresh must not repopulate
+    it from ``analysis.analysis_notes``. This asserts the user's text is still there
     after the panel is refreshed against the very same analysis object,
     which is exactly what a live re-render of the current binary does.
 

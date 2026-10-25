@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Third-pass critical-coverage tests for the XPU utilities, model loader, local transformers provider and Ollama provider.
+"""Tests for the XPU utilities, model loader, local transformers provider and Ollama provider.
 
-Two groups of lines that the earlier passes could not reach are covered with real objects:
+Two groups of lines are covered with real objects:
 
 * The import-time fallbacks for ``torch``, ``transformers`` and ``bitsandbytes`` are run in a real child interpreter in which both packages
   are made unimportable with the import system's own switch (``sys.modules[name] = None``). The child imports the three product modules and
@@ -107,10 +107,6 @@ def blocked_state() -> dict[str, Any]:
 def test_xpu_utils_keeps_no_torch_handle_when_torch_cannot_be_imported(blocked_state: dict[str, Any]) -> None:
     """With ``torch`` unimportable the module still imports and its torch handle is ``None``.
 
-    Probe key: ``blocked_torch_transformers`` (``import_xpu_utils.torch_module_is_none`` is true).
-
-    One-line change that fails it: replace ``_torch_module = None`` with ``_torch_module = object()`` at xpu_utils.py:32.
-
     Args:
         blocked_state: State reported by the child interpreter.
     """
@@ -119,11 +115,6 @@ def test_xpu_utils_keeps_no_torch_handle_when_torch_cannot_be_imported(blocked_s
 
 def test_xpu_utils_reports_no_device_without_torch(blocked_state: dict[str, Any]) -> None:
     """Without ``torch`` every XPU probe answers its neutral value instead of raising.
-
-    Probe key: ``blocked_torch_transformers`` (``xpu_utils_calls``).
-
-    One-line change that fails it: change ``return False`` to ``return True`` in the ``torch is None`` branch of ``is_xpu_available`` at
-    xpu_utils.py:96.
 
     Args:
         blocked_state: State reported by the child interpreter.
@@ -139,11 +130,6 @@ def test_xpu_utils_reports_no_device_without_torch(blocked_state: dict[str, Any]
 def test_xpu_initialization_names_the_missing_torch(blocked_state: dict[str, Any]) -> None:
     """Initializing the XPU without ``torch`` raises a ``RuntimeError`` that says PyTorch is not installed.
 
-    Probe key: ``blocked_torch_transformers`` (``xpu_utils_calls.initialize_xpu_0``).
-
-    One-line change that fails it: change ``raise RuntimeError(_ERR_PYTORCH_NOT_INSTALLED)`` to ``raise ValueError(_ERR_PYTORCH_NOT_INSTALLED)``
-    at xpu_utils.py:493.
-
     Args:
         blocked_state: State reported by the child interpreter.
     """
@@ -155,10 +141,6 @@ def test_xpu_initialization_names_the_missing_torch(blocked_state: dict[str, Any
 def test_local_transformers_keeps_no_torch_or_transformers_handles(blocked_state: dict[str, Any]) -> None:
     """With both packages unimportable the provider module imports and all three handles are ``None``.
 
-    Probe key: ``blocked_torch_transformers`` (``import_local_transformers``).
-
-    One-line change that fails it: replace ``_AutoTokenizer = None`` with ``_AutoTokenizer = object()`` at local_transformers.py:84.
-
     Args:
         blocked_state: State reported by the child interpreter.
     """
@@ -169,10 +151,6 @@ def test_local_transformers_keeps_no_torch_or_transformers_handles(blocked_state
 
 def test_local_transformers_connect_refuses_without_torch(blocked_state: dict[str, Any]) -> None:
     """Connecting without ``torch`` raises a ``ProviderError`` that names torch and leaves the provider disconnected on the CPU.
-
-    Probe key: ``blocked_torch_transformers`` (``local_transformers_calls.connect``).
-
-    One-line change that fails it: change ``if _torch is None:`` to ``if False:`` at local_transformers.py:341.
 
     Args:
         blocked_state: State reported by the child interpreter.
@@ -189,10 +167,6 @@ def test_local_transformers_connect_refuses_without_torch(blocked_state: dict[st
 def test_model_loader_keeps_no_torch_transformers_or_quantization_handles(blocked_state: dict[str, Any]) -> None:
     """With both packages unimportable the loader module imports and all four handles are ``None``.
 
-    Probe key: ``blocked_torch_transformers`` (``import_model_loader``).
-
-    One-line change that fails it: replace ``BitsAndBytesConfig = None`` with ``BitsAndBytesConfig = object()`` at model_loader.py:44.
-
     Args:
         blocked_state: State reported by the child interpreter.
     """
@@ -204,11 +178,6 @@ def test_model_loader_keeps_no_torch_transformers_or_quantization_handles(blocke
 
 def test_model_loader_entry_points_raise_import_error_without_dependencies(blocked_state: dict[str, Any]) -> None:
     """Loading a model for the CPU or the XPU without the dependencies raises an ``ImportError`` naming torch and transformers.
-
-    Probe key: ``blocked_torch_transformers`` (``model_loader_calls.load_model_for_cpu`` and ``load_model_for_xpu``).
-
-    One-line change that fails it: change ``raise ImportError(_ERR_MISSING_DEPS)`` to ``raise RuntimeError(_ERR_MISSING_DEPS)`` at
-    model_loader.py:763.
 
     Args:
         blocked_state: State reported by the child interpreter.
@@ -307,14 +276,7 @@ async def _release_second_probe_first(
 
 @pytest.mark.asyncio
 async def test_local_probe_unauthorized_after_the_shared_client_was_cleared() -> None:
-    """A local probe whose 401 arrives after another probe cleared the shared client finishes without touching the client.
-
-    Probe key: ``ollama_two_concurrent_401_local`` (the traced frames show one handler run ending at ``if self._local_client:`` and the other
-    continuing to ``aclose``).
-
-    One-line change that fails it: remove the ``if self._local_client:`` guard at ollama.py:329, which then calls ``aclose`` on ``None`` and
-    lets an ``AttributeError`` escape the connect instead of the ``ProviderError``.
-    """
+    """A local probe whose 401 arrives after another probe cleared the shared client finishes without touching the client."""
     arrived = (threading.Event(), threading.Event())
     gates = (threading.Event(), threading.Event())
     with capture_logs() as captured, ScriptedHttpServer() as local:
@@ -336,14 +298,7 @@ async def test_local_probe_unauthorized_after_the_shared_client_was_cleared() ->
 
 @pytest.mark.asyncio
 async def test_cloud_probe_unauthorized_after_the_shared_client_was_cleared() -> None:
-    """A cloud probe whose 401 arrives after another probe cleared the shared client finishes without touching the client.
-
-    Probe key: ``ollama_two_concurrent_401_cloud`` (the traced frames show one handler run ending at ``if self._cloud_client:`` and the other
-    continuing to ``aclose``).
-
-    One-line change that fails it: remove the ``if self._cloud_client:`` guard at ollama.py:355, which then calls ``aclose`` on ``None`` and
-    lets an ``AttributeError`` escape the connect instead of the ``ProviderError``.
-    """
+    """A cloud probe whose 401 arrives after another probe cleared the shared client finishes without touching the client."""
     arrived = (threading.Event(), threading.Event())
     gates = (threading.Event(), threading.Event())
     with capture_logs() as captured, ScriptedHttpServer() as local, ScriptedHttpServer() as cloud:

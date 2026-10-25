@@ -3,19 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for ``HashingMixin._apply_pe_checksum_verification``.
+"""Regression test for ``HashingMixin._apply_pe_checksum_verification``.
 
-Covers the 2026-09-20 Qodana ``PyStringFormatInspection`` (``Any | None``)
-finding: ``stored``/``calculated`` were narrowed with a single compound
-``if not isinstance(stored, int) or not isinstance(calculated, int): return``
-guard. That guard is sound -- past it, both values are provably ``int`` --
-but two-variable compound-``or`` narrowing is a known blind spot for some
-flow-analysis engines, so it is split into two sequential single-variable
-``isinstance`` guards. Both forms are behaviourally identical; this test
-locks in the real, falsifiable property the guard exists to protect: a
-non-int ``stored``/``calculated`` in the worker's result dict must render
-"Verification unavailable" rather than reaching the ``:08X`` format spec
-(which would raise ``TypeError`` for a non-numeric value).
+``stored`` and ``calculated`` are narrowed with two sequential single-variable
+``isinstance`` guards rather than one compound ``or`` guard, because some
+flow-analysis engines do not narrow the compound form. The test checks the
+property the guards protect: a non-int ``stored`` or ``calculated`` in the
+worker's result dict must render "Verification unavailable" rather than
+reaching the ``:08X`` format spec, which would raise ``TypeError``.
 """
 
 from __future__ import annotations
@@ -80,12 +75,6 @@ def test_mismatched_int_stored_and_calculated_renders_invalid_with_both_values()
 )
 def test_non_int_stored_or_calculated_renders_unavailable_without_crashing(info: dict[str, Any]) -> None:
     """A non-int ``stored`` or ``calculated`` must not reach the ``:08X`` format spec.
-
-    Regression target: reverting the split guard back to a single
-    ``isinstance(stored, int) or isinstance(calculated, int)``-style
-    condition that a weaker flow engine cannot narrow would let a
-    non-int value reach ``f"...:08X}"`` and raise ``TypeError`` instead
-    of rendering the safe fallback message.
 
     Args:
         info: A malformed verification result missing a genuine int on

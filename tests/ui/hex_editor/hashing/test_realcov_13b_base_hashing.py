@@ -4,10 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for ``hex_editor.base`` hash and CRC utilities.
 
-The audit (shard 13, base.py and hashing gaps) flagged that the full hash
-algorithm surface of :mod:`intellicrack.ui.panels.hex_editor.base` was only
-exercised indirectly. These tests drive every documented hash/checksum
-algorithm and the parametric CRC engine over a REAL Windows PE binary
+These tests drive every documented hash/checksum algorithm of
+:mod:`intellicrack.ui.panels.hex_editor.base` and the parametric CRC engine
+over a REAL Windows PE binary
 (``C:/Windows/System32/kernel32.dll``) and assert the produced digests
 against independent reference implementations (Python's :mod:`hashlib`,
 :mod:`zlib`, and the canonical CRC catalogue check values).
@@ -119,11 +118,6 @@ class TestChecksumsMatchReference:
 
         ``compute_hash("CRC-8", ...)`` must produce the same formatted result,
         proving the dispatcher wires the correct parameters to the engine.
-
-        Mutation proof: flip ``ref_in=True`` inside the CRC-8 branch of
-        ``_compute_hash_checksums`` in ``base.py``; the reflected computation
-        yields 0x97 for the test vector, so ``compute_custom_crc(...) == 0xF4``
-        fails immediately.
         """
         check_vector = b"123456789"
         catalogue_crc8 = 0xF4
@@ -141,11 +135,6 @@ class TestChecksumsMatchReference:
 
         ``compute_hash("CRC-16", ...)`` must produce the same formatted result,
         proving the dispatcher wires the correct parameters to the engine.
-
-        Mutation proof: change ``ref_in=False`` in the CRC-16 branch of
-        ``_compute_hash_checksums`` in ``base.py``; the unreflected computation
-        yields 0xFEE8 for the test vector, so
-        ``compute_custom_crc(...) == 0xBB3D`` fails immediately.
         """
         check_vector = b"123456789"
         catalogue_crc16 = 0xBB3D
@@ -165,11 +154,6 @@ class TestChecksumsMatchReference:
 
         ``compute_hash("CRC-64", ...)`` must produce the same formatted result,
         proving the dispatcher wires the correct parameters to the engine.
-
-        Mutation proof: flip ``ref_in=True`` inside the CRC-64 branch of
-        ``_compute_hash_checksums`` in ``base.py``; the reflected computation
-        yields a different value for the test vector, so
-        ``compute_custom_crc(...) == 0x62EC59E3F1A4F00A`` fails immediately.
         """
         check_vector = b"123456789"
         catalogue_crc64 = 0x62EC59E3F1A4F00A

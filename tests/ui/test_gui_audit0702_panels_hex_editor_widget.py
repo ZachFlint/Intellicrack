@@ -2,21 +2,21 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for GUI audit findings C5, H9, and M25 in ``hex_editor_widget``.
+"""Gates for ``hex_editor_widget`` colour modes, entropy scan threading and alignment grid.
 
-* ``TestC5ColorModeBackground`` (C5): the Entropy/Byte-Value/Content-Type
+* ``TestC5ColorModeBackground``: the Entropy/Byte-Value/Content-Type
   color-mode combo box must visibly recolor hex-view cell backgrounds
   instead of being wired to a mode flag no paint routine reads.
-* ``TestH9EntropyScanOffGuiThread`` (H9): full-document entropy scans
+* ``TestH9EntropyScanOffGuiThread``: full-document entropy scans
   triggered by the minimap and entropy color mode must run on a
   background worker thread rather than blocking the GUI thread inline on
   every keystroke edit.
-* ``TestM25AlignmentGrid`` (M25): a non-zero alignment-grid size must draw
+* ``TestM25AlignmentGrid``: a non-zero alignment-grid size must draw
   dashed marker lines at grid-boundary rows instead of only affecting
   invisible cursor-snap math.
 
-C5 and M25 drive a real :class:`HexEditorWidget` bound to a real
-``intellicrack_hexcore`` document under an offscreen QApplication. H9
+The color-mode and alignment-grid gates drive a real :class:`HexEditorWidget` bound to a real
+``intellicrack_hexcore`` document under an offscreen QApplication. The entropy gate
 attaches a lightweight in-process document stand-in exposing the minimal
 read/write/entropy_map interface so the exact OS thread performing the
 (simulated) full-document entropy scan can be observed deterministically.
@@ -74,7 +74,7 @@ def _restore_theme() -> None:
 
 
 class TestC5ColorModeBackground:
-    """C5: the color-mode combo actually recolors hex-view cell backgrounds."""
+    """The color-mode combo actually recolors hex-view cell backgrounds."""
 
     @staticmethod
     def _sample_hex_cell_color(image: QImage, widget: HexEditorWidget, row_idx: int) -> QColor:
@@ -97,11 +97,11 @@ class TestC5ColorModeBackground:
     def test_c5_byte_value_mode_recolors_hex_cells_by_byte_magnitude(self, qapp: QApplication) -> None:
         """byte_value color mode paints visibly different backgrounds for 0x00 vs 0xFF rows.
 
-        Pre-fix, ``set_color_mode`` only stored ``_color_mode`` and
+        ``set_color_mode`` must not only store ``_color_mode`` and
         invalidated caches; no paint routine ever read it, so every hex
         cell rendered identically regardless of the selected mode -- both
         the all-zero and the all-0xFF row would sample as the plain editor
-        background. Post-fix, ``_paint_hex_group_background`` resolves
+        background. ``_paint_hex_group_background`` resolves
         ``_color_mode_background``, which for ``"byte_value"`` fills each
         cell with a color proportional to the byte's magnitude.
 
@@ -153,8 +153,8 @@ class TestC5ColorModeBackground:
 
         Sanity check for the pixel-sampling method used by the byte_value
         gate above: with the default "none" mode the sampled cell must
-        remain the plain editor background, confirming the earlier
-        recoloring assertion is attributable to the color mode and not to
+        remain the plain editor background. This confirms the recoloring assertion
+        is attributable to the color mode and not to
         some other unconditional paint path.
 
         Args:
@@ -263,16 +263,16 @@ class _ThreadRecordingDocument:
 
 @pytest.mark.usefixtures("qapp")
 class TestH9EntropyScanOffGuiThread:
-    """H9: full-document entropy scans must not run synchronously on the GUI thread."""
+    """Full-document entropy scans must not run synchronously on the GUI thread."""
 
     @staticmethod
     def test_h9_entropy_scan_dispatches_to_background_thread(qtbot: QtBot) -> None:
         """Showing the minimap starts the entropy scan on a non-GUI thread.
 
-        Pre-fix, ``_ensure_entropy_cache`` called ``document.entropy_map``
+        ``_ensure_entropy_cache`` must not call ``document.entropy_map``
         directly inline, so the scan ran on whatever thread called
         ``show_minimap`` -- the GUI/test thread -- and the recorded thread
-        id would equal the main thread id. Post-fix, ``_ensure_entropy_cache``
+        id would equal the main thread id. ``_ensure_entropy_cache``
         starts a ``GenericCallableWorker`` background ``QThread`` instead.
 
         Args:
@@ -298,12 +298,12 @@ class TestH9EntropyScanOffGuiThread:
     def test_h9_keystroke_edit_does_not_block_on_synchronous_rescan(qtbot: QtBot) -> None:
         """A hex-digit edit while the minimap is visible must not block for a full rescan.
 
-        Pre-fix, ``data_changed`` -> ``_invalidate_color_caches`` ->
+        ``data_changed`` -> ``_invalidate_color_caches`` ->
         ``_refresh_minimap_if_visible`` -> ``_refresh_minimap_entropy`` ->
-        ``_ensure_entropy_cache`` called ``document.entropy_map`` inline
+        ``_ensure_entropy_cache`` must not call ``document.entropy_map`` inline
         and synchronously, so ``_entropy_cache`` would already be
         repopulated (non-empty) and ``entropy_map`` already called a
-        second time the instant the keystroke handler returned. Post-fix
+        second time the instant the keystroke handler returned. Instead,
         the rescan is dispatched to a background worker and the cache
         stays empty on the GUI thread until that worker's completion
         signal fires.
@@ -347,7 +347,7 @@ class TestH9EntropyScanOffGuiThread:
 
 
 class TestM25AlignmentGrid:
-    """M25: a non-zero alignment-grid size draws dashed marker lines at boundary rows."""
+    """A non-zero alignment-grid size draws dashed marker lines at boundary rows."""
 
     @staticmethod
     def _row_has_grid_tint(image: QImage, y: int, x0: int, x1: int, bg: QColor) -> bool:
@@ -374,12 +374,9 @@ class TestM25AlignmentGrid:
     def test_m25_alignment_grid_draws_lines_at_boundary_rows_only(self, qapp: QApplication) -> None:
         """A non-zero grid size draws marker lines only at rows on a grid boundary.
 
-        Pre-fix, ``set_alignment_grid_size`` stored the value and called
-        ``self.update()`` but no paint routine ever referenced
-        ``_alignment_grid_size``, so the offset-column pixels at every
-        row's top edge stayed pure background regardless of the
-        configured grid size. Post-fix, ``_paint_alignment_grid`` draws a
-        dashed line at the top of every row whose absolute byte offset is
+        ``set_alignment_grid_size`` must do more than store the value and call ``self.update()``. A paint routine must reference
+        ``_alignment_grid_size``, otherwise the offset-column pixels at every row's top edge stay pure background regardless of the
+        configured grid size. ``_paint_alignment_grid`` draws a dashed line at the top of every row whose absolute byte offset is
         a multiple of the grid size, and no line otherwise.
 
         Args:

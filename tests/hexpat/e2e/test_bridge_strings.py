@@ -14,11 +14,10 @@ places known strings at exactly-known offsets:
   produces: offset 15, length 13, content ``"0Hello World!"``.
 
 * UTF-16-LE ``"Test String"`` (11 code points, 22 bytes) at file offset
-  0x80 (128).  The surrounding random bytes happen to decode as printable
-  wide characters, so the extractor returns one long UTF-16 run spanning
-  offsets 0..285.  The test asserts the exact result: offset 0, length 286,
-  encoding ``"utf16le"``, and that the content contains ``"Test String"``
-  at the correct internal position.
+  0x80 (128).  Wide strings are printable-ASCII code units (high byte zero),
+  so the surrounding random LCG bytes do not extend the run: the extractor
+  returns exactly offset 128, length 22, encoding ``"utf16le"`` and content
+  ``"Test String"``.
 """
 
 from __future__ import annotations
@@ -43,15 +42,15 @@ pytest.importorskip(
 
 # Exact oracle values derived from an independent run of get_strings against
 # the identical buffer produced by conftest._build_string_test_data().
-# These are NOT copied from the implementation; they were obtained by running
-# the bridge directly and cross-checking against the known byte layout.
+# These are NOT copied from the implementation; each is checked against the known
+# byte layout.
 _ASCII_HELLO_RESULT_OFFSET: Final[int] = 15
 _ASCII_HELLO_RESULT_LENGTH: Final[int] = 13
 _ASCII_HELLO_RESULT_CONTENT: Final[str] = "0Hello World!"
 _ASCII_HELLO_ENCODING: Final[str] = "ascii"
 
-_UTF16_RESULT_OFFSET: Final[int] = 0
-_UTF16_RESULT_LENGTH: Final[int] = 286
+_UTF16_RESULT_OFFSET: Final[int] = 128
+_UTF16_RESULT_LENGTH: Final[int] = 22
 _UTF16_RESULT_ENCODING: Final[str] = "utf16le"
 _UTF16_TEST_STRING_SUBSTR: Final[str] = "Test String"
 
@@ -117,12 +116,11 @@ class TestGetStrings:
         """UTF-16 extraction returns the exact offset, length, and encoding for the embedded string.
 
         The test data places ``"Test String"`` (UTF-16-LE, 22 bytes) at offset
-        0x80.  The surrounding random LCG bytes also form valid wide characters,
-        so the extractor reports one long run starting at offset 0 with length
-        286.  The test asserts all four fields exactly and also confirms that
-        ``"Test String"`` is a substring of the returned content (the content
-        itself is long because the run cannot be narrowed without examining every
-        surrounding byte).
+        0x80.  Only printable-ASCII code units count as wide characters, so the
+        random LCG bytes around it do not join the run and the extractor reports
+        exactly offset 128, length 22 and content ``"Test String"``.  A scanner
+        that accepted any non-control code unit would report one long run from
+        offset 0 instead, and fails here.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -139,7 +137,7 @@ class TestGetStrings:
             if r["offset"] == _UTF16_RESULT_OFFSET
             and r["length"] == _UTF16_RESULT_LENGTH
             and r["encoding"] == _UTF16_RESULT_ENCODING
-            and _UTF16_TEST_STRING_SUBSTR in r["content"]
+            and r["content"] == _UTF16_TEST_STRING_SUBSTR
         ]
         assert matching, (
             f"expected a result with offset={_UTF16_RESULT_OFFSET}, "
@@ -157,7 +155,7 @@ class TestGetStrings:
         """ascii+utf16 extraction finds both the ASCII and UTF-16 known strings.
 
         Both the exact ASCII oracle (offset 15, len 13, ``"0Hello World!"``) and
-        the exact UTF-16 oracle (offset 0, len 286, containing ``"Test String"``)
+        the exact UTF-16 oracle (offset 128, len 22, ``"Test String"``)
         must appear in the combined result list.  A broken union that silently
         drops one encoding fails here.
 

@@ -5,14 +5,13 @@
 
 """The gate that keeps this directory to one way of asserting things.
 
-Four suites were written in parallel against the same unusual constraint: this
-directory sits outside the repository's ``tests/**`` lint scope, so a bare
-``assert`` trips ``S101`` and ``self.assertEqual`` trips ``PT009``, and neither
-may be suppressed. Left to themselves the suites solved it three different
-ways -- module-level ``require_*`` functions duplicated verbatim across three
-files, a ``GateCase`` base with its own vocabulary, and helpers aliased in
-``setUp`` so the linter would stop recognising the call. All three now route
-through :class:`hexbench.tests._support.Assertions`.
+Several suites in this directory face the same unusual constraint: it sits outside
+the repository's ``tests/**`` lint scope, so a bare ``assert`` trips ``S101`` and
+``self.assertEqual`` trips ``PT009``, and neither may be suppressed. Without a
+shared answer, suites solve it three different ways -- module-level ``require_*``
+functions duplicated across files, a ``GateCase`` base with its own vocabulary,
+and helpers aliased in ``setUp`` so the linter stops recognising the call. Every
+suite routes through :class:`hexbench.tests._support.Assertions`.
 
 Nothing about a green suite prevents that from happening again, because every
 one of those spellings passes every other gate in this package. So the

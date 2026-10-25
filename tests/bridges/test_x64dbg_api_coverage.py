@@ -93,14 +93,13 @@ async def test_breakpoint_management(bridge: X64DbgBridge) -> None:
     """Verify breakpoint methods surface a missing plugin instead of masking it.
 
     Without a deployed plugin, ``get_breakpoints`` must raise rather than
-    silently return the local cache (D19), while the locally tracked entry
+    silently return the local cache, while the locally tracked entry
     is left intact.
 
     Args:
         bridge: Fresh X64DbgBridge instance without an active plugin pipe.
     """
-    # set_breakpoint adds to dict THEN sends command.
-    # If command fails, we check if it handled it gracefully or if we catch it.
+    # set_breakpoint records the breakpoint before sending the command.
 
     with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
         await bridge.set_breakpoint(_ADDR_BREAKPOINT, "software")
@@ -125,7 +124,7 @@ async def test_watchpoint_management(bridge: X64DbgBridge) -> None:
     """Verify watchpoint methods surface a missing plugin instead of masking it.
 
     Without a deployed plugin, ``get_watchpoints`` must raise rather than
-    silently return the local cache (D19).
+    silently return the local cache.
 
     Args:
         bridge: Fresh X64DbgBridge instance without an active plugin pipe.
@@ -156,8 +155,7 @@ async def test_run_command(bridge: X64DbgBridge) -> None:
     Args:
         bridge: Fresh X64DbgBridge instance without an active plugin pipe.
     """
-    # Mocking process to avoid "x64dbg not running" check effectively?
-    # No, bridge._process is None.
+    # bridge._process is None, so the bridge reports that x64dbg is not running.
     with pytest.raises(ToolError, match="x64dbg not running"):
         await bridge.run_command("echo hello")
 
@@ -199,12 +197,10 @@ async def test_process_info_real(bridge: X64DbgBridge) -> None:
     assert info.pid == os.getpid()
     assert len(info.threads) > 0
     assert len(info.modules) > 0
-    # command line might be None depending on permissions/implementation, but method should run
+    # The command line can be None depending on process permissions.
 
-    # Check threads
     threads = await bridge.get_threads()
     assert len(threads) > 0
 
-    # Check modules
     modules = await bridge.get_modules()
     assert len(modules) > 0

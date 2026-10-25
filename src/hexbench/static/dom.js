@@ -2,10 +2,9 @@
    Copyright (C) 2026 Zachary Flint
    This file is part of Intellicrack. See LICENSE for details.
 
-   The element factory every other module builds its markup from, kept here
-   because three byte-identical copies of it had grown across the application
-   and none of them could set an attribute - which is what an accessible name,
-   a role or a live-region hint has to be.
+   The element factory every other module builds its markup from. Attributes go
+   through it, because an accessible name, a role or a live-region hint is an
+   attribute and has to be set on the element itself.
 
    Two rules this module exists to hold rather than to document. An icon-only
    button whose whole content is a glyph has no name at all for a screen

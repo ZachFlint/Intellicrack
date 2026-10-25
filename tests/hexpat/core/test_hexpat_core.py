@@ -3,51 +3,50 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit5 U3 regression tests for ``intellicrack.core.hexpat.*`` (core-hexpat).
+"""Regression tests for ``intellicrack.core.hexpat.*``.
 
-Each test pins a specific F-#### finding from ``audit5.md``. Tests in this
+Tests in this
 module only exercise the pure-Python interpreter pipeline (preprocessor →
 lexer → parser → evaluator + stdlib) and avoid the optional native hexcore
-crate. They are deliberately written to fail on the unfixed code and pass
-once the audit5 root-cause repairs land.
+crate.
 
-Findings exercised:
+Behaviour covered:
 
-* F-0001 / F-0017 / F-0027 — bare ``print(...)`` and bare ``format(...)``
+* bare ``print(...)`` and bare ``format(...)``
   must reach the ``std::print`` / ``std::format`` pipeline rather than the
   no-op shadow defined by the evaluator.
-* F-0002 — ``std::mem::base_address()`` must return the active
+* ``std::mem::base_address()`` must return the active
   ``#pragma base_address`` rather than literal ``0``.
-* F-0003 / F-0020 — ``std::core::array_index()`` must reflect the active
+* ``std::core::array_index()`` must reflect the active
   evaluator-owned iteration index rather than the last value passed to
   the unused ``set_array_index`` setter.
-* F-0004 / F-0025 — multi-segment ``builtin::std::*::name`` namespace
+* multi-segment ``builtin::std::*::name`` namespace
   access paths must resolve through the flat scope-key lookup.
-* F-0005 — ``HexPatInterpreter.compile_to_json`` must not downgrade
+* ``HexPatInterpreter.compile_to_json`` must not downgrade
   precise ``HexPatRuntimeError`` / ``HexPatTypeError`` instances raised by
   the underlying compiler module to a generic ``HexPatError``.
-* F-0006 / F-0021 — wiring the interpreter must install an evaluator-backed
+* wiring the interpreter must install an evaluator-backed
   reflection provider so ``std::core::has_attribute`` and friends resolve
   rather than raising ``"requires evaluator metadata not yet wired"``.
-* F-0007 / F-0021 — registering a print sink on the interpreter must be
+* registering a print sink on the interpreter must be
   observable from inside a pattern via ``std::print``.
-* F-0008 / F-0009 / F-0018 / F-0021 / F-0022 — ``std::core::set_endian``
+* ``std::core::set_endian``
   must drive the evaluator's primitive read default; ``#pragma endian``
   must seed both the evaluator and the stdlib defaults.
-* F-0010 / F-0011 — ``builtin::std::string::parse_int`` and the full set
+* ``builtin::std::string::parse_int`` and the full set
   of ``builtin::std::mem::*`` callees referenced by the audited
   ``vendor/ImHex-Patterns/includes/std/*`` library must be registered.
-* F-0012 — variadic ``auto ... pack`` parameters must capture trailing
+* variadic ``auto ... pack`` parameters must capture trailing
   arguments rather than silently dropping them.
-* F-0013 — generic struct templates must propagate template arguments so
+* generic struct templates must propagate template arguments so
   ``Foo<u32>`` and ``Foo<u8>`` produce different layouts.
-* F-0014 — ``using`` aliases must accept array, pointer, and padding
+* ``using`` aliases must accept array, pointer, and padding
   targets.
-* F-0015 — namespaced struct/union/enum/bitfield declarations must keep
+* namespaced struct/union/enum/bitfield declarations must keep
   qualified registrations distinct in the type registry.
-* F-0016 — legitimate ``break``/``continue`` inside ``while``/``for`` must
+* legitimate ``break``/``continue`` inside ``while``/``for`` must
   log at DEBUG, not WARNING.
-* F-0019 — pointer-array fields (``T *name[N]``) must be recognised as a
+* pointer-array fields (``T *name[N]``) must be recognised as a
   pointer-array shape, not flattened to a non-pointer array.
 """
 
@@ -151,17 +150,15 @@ def _attr(target: object, attr: str) -> object:
     return getattr(target, attr)
 
 
-# ---------------------------------------------------------------------------
-# F-0002: pragma base_address propagated into std::mem::base_address
-# ---------------------------------------------------------------------------
+# pragma base_address propagated into std::mem::base_address
 
 
 def test_mem_base_address_uses_pragma_directly() -> None:
     """Constructing the stdlib with a pragma must report the right base address.
 
     The reproduction here calls the builtin directly so the regression
-    is unambiguous: pre-fix the call returned ``0`` regardless of the
-    pragma supplied.
+    is unambiguous: without the wiring, the call returns ``0`` regardless of the
+    pragma.
     """
     pragma = PragmaInfo(base_address=0x10_0000)
     reader = DataReader.from_bytes(_zeros(16))
@@ -184,9 +181,7 @@ def test_mem_base_address_smoke_through_pattern(interp: HexPatInterpreter) -> No
     assert results[0]["offset"] == 0x4000
 
 
-# ---------------------------------------------------------------------------
-# F-0003 / F-0020: array_index reflects the live evaluator stack
-# ---------------------------------------------------------------------------
+# array_index reflects the live evaluator stack
 
 
 def test_array_index_listener_returns_live_value() -> None:
@@ -209,9 +204,7 @@ def test_array_index_listener_returns_live_value() -> None:
     assert array_index() == 0
 
 
-# ---------------------------------------------------------------------------
-# F-0004 / F-0025: namespace-access flat-key lookup
-# ---------------------------------------------------------------------------
+# namespace-access flat-key lookup
 
 
 def test_namespace_chain_resolves_in_pattern(interp: HexPatInterpreter) -> None:
@@ -238,9 +231,7 @@ def test_namespace_chain_three_levels(interp: HexPatInterpreter) -> None:
     assert results[0]["offset"] == 0x55
 
 
-# ---------------------------------------------------------------------------
-# F-0005: compile_to_json must not downgrade typed errors
-# ---------------------------------------------------------------------------
+# compile_to_json must not downgrade typed errors
 
 
 def test_compile_to_json_propagates_codegen_error_no_struct() -> None:
@@ -276,9 +267,7 @@ def test_compile_to_json_propagates_error_runtime_construct() -> None:
         HexPatInterpreter.compile_to_json(source)
 
 
-# ---------------------------------------------------------------------------
-# F-0006 / F-0021: reflection provider wired by interpreter
-# ---------------------------------------------------------------------------
+# reflection provider wired by interpreter
 
 
 def test_reflection_provider_unwired_raises() -> None:
@@ -308,9 +297,7 @@ def test_reflection_provider_wired_resolves_member_count() -> None:
     assert has_member(pattern, "missing").value is False
 
 
-# ---------------------------------------------------------------------------
-# F-0007 / F-0021: print sink installed by interpreter
-# ---------------------------------------------------------------------------
+# print sink installed by interpreter
 
 
 def test_print_sink_constructor_registers_callback() -> None:
@@ -345,9 +332,7 @@ def test_print_sink_disable_silences_output() -> None:
     assert not captured
 
 
-# ---------------------------------------------------------------------------
-# F-0008 / F-0009 / F-0018 / F-0022: pragma+set_endian propagate to evaluator
-# ---------------------------------------------------------------------------
+# pragma+set_endian propagate to evaluator
 
 
 def test_pragma_endian_seeds_stdlib_default() -> None:
@@ -394,9 +379,7 @@ def test_set_endian_invalid_tag_raises() -> None:
         set_endian(99)
 
 
-# ---------------------------------------------------------------------------
-# F-0010 / F-0011: missing builtin registrations
-# ---------------------------------------------------------------------------
+# missing builtin registrations
 
 
 def test_string_parse_int_registered_in_scope() -> None:
@@ -524,18 +507,16 @@ def test_mem_builtins_registered_in_scope() -> None:
         assert evaluator.scope.get(f"std::mem::{name}") is not None, name
 
 
-# ---------------------------------------------------------------------------
-# F-0012: variadic parameters captured
-# ---------------------------------------------------------------------------
+# variadic parameters captured
 
 
 def test_variadic_pack_captures_trailing_arguments(interp: HexPatInterpreter) -> None:
     """``auto ... values`` parameters must collect every trailing argument.
 
-    The fix records the pack length under a synthetic ``size`` member on the
+    The pack length is recorded under a synthetic ``size`` member on the
     bound parameter, so user code can introspect the captured count via
-    ``values.size``. Pre-fix the function ignored every argument past the
-    first declared parameter, so ``values.size`` resolved to ``1``.
+    ``values.size``. Ignoring the arguments past the first declared parameter would
+    make ``values.size`` resolve to ``1``.
 
     Args:
         interp: A fresh interpreter fixture.
@@ -551,9 +532,7 @@ def test_variadic_pack_captures_trailing_arguments(interp: HexPatInterpreter) ->
     assert results[0]["offset"] == 5
 
 
-# ---------------------------------------------------------------------------
-# F-0013: template arguments differentiate layouts
-# ---------------------------------------------------------------------------
+# template arguments differentiate layouts
 
 
 def test_template_args_select_field_size(interp: HexPatInterpreter) -> None:
@@ -592,9 +571,7 @@ def test_template_args_select_field_size(interp: HexPatInterpreter) -> None:
     assert wide["size"] == 4
 
 
-# ---------------------------------------------------------------------------
-# F-0014: using accepts composite targets
-# ---------------------------------------------------------------------------
+# using accepts composite targets
 
 
 def test_using_alias_accepts_array_target(interp: HexPatInterpreter) -> None:
@@ -613,9 +590,7 @@ def test_using_alias_accepts_array_target(interp: HexPatInterpreter) -> None:
     assert results[0]["size"] == 4
 
 
-# ---------------------------------------------------------------------------
-# F-0015: namespace type collisions resolved
-# ---------------------------------------------------------------------------
+# namespace type collisions resolved
 
 
 def test_namespaced_struct_qualified_lookup_distinct() -> None:
@@ -640,20 +615,17 @@ def test_namespaced_struct_qualified_lookup_distinct() -> None:
     assert qualified_beta.decl is decl_b
 
 
-# ---------------------------------------------------------------------------
-# F-0016: legitimate break/continue at DEBUG, not WARNING
-# ---------------------------------------------------------------------------
+# legitimate break/continue at DEBUG, not WARNING
 
 
 def test_break_continue_no_warning_log(interp: HexPatInterpreter) -> None:
     """Legitimate break/continue in while/for loops must not emit WARNING logs.
 
-    The audit calls out that the legitimate ``break``/``continue`` paths
-    inside :meth:`HexPatEvaluator._eval_while` and
-    :meth:`HexPatEvaluator._run_for_body` were emitting WARNING records on
-    every legitimate exit, polluting structured logs. The fix downgrades
-    those branches to DEBUG. This exercises the interpreter directly and
-    asserts the four loop-control events are emitted at DEBUG and that none
+    The legitimate ``break``/``continue`` paths inside :meth:`HexPatEvaluator._eval_while`
+    and :meth:`HexPatEvaluator._run_for_body` must not emit WARNING records on every
+    exit, which would pollute structured logs; they log at DEBUG. This exercises the
+    interpreter directly and asserts the four loop-control events are emitted at DEBUG
+    and that none
     of them is emitted at WARNING or higher. Events are captured with
     :func:`structlog.testing.capture_logs` because the evaluator logs through
     structlog, whose events do not reach the stdlib ``caplog`` fixture.
@@ -706,9 +678,7 @@ def test_break_continue_no_warning_log(interp: HexPatInterpreter) -> None:
     assert debug_events == control_events, f"missing debug control events: {control_events - debug_events}"
 
 
-# ---------------------------------------------------------------------------
-# F-0019: pointer-array fields recognised
-# ---------------------------------------------------------------------------
+# pointer-array fields recognised
 
 
 def test_pointer_array_field_routes_through_pointer_array(
@@ -744,9 +714,7 @@ def test_pointer_array_field_routes_through_pointer_array(
         assert child["children"], "pointer slot must dereference its pointee"
 
 
-# ---------------------------------------------------------------------------
 # Integration smoke: vendor std/{mem,string}.pat behaviour
-# ---------------------------------------------------------------------------
 
 
 def test_vendor_mem_base_address_smoke(vendor_std_lib: Path) -> None:
@@ -765,7 +733,7 @@ def test_vendor_mem_base_address_smoke(vendor_std_lib: Path) -> None:
     * The real interpreter must resolve the short ``std::mem::base_address``
       alias end-to-end and place the field at the pragma-configured base.
       The upstream ``mem.pat`` opens with ``namespace auto std::mem`` whose
-      leading ``auto`` keyword is outside this audit unit's parser scope, so
+      leading ``auto`` keyword is outside the parser scope of these tests, so
       the end-to-end leg uses a parser-supported source rather than the
       vendored namespace block; both legs together gate that the vendored
       library is on the include path and the stdlib bridge is wired.
@@ -803,7 +771,7 @@ def test_vendor_string_parse_int_smoke(vendor_std_lib: Path) -> None:
     * The real interpreter must resolve the short ``std::string::parse_int``
       alias end-to-end and return the parsed integer. The end-to-end leg
       uses a parser-supported source because the vendored ``string.pat``
-      opens with ``namespace auto std::string`` (outside this unit's parser
+      opens with ``namespace auto std::string`` (outside the parser
       scope), so the two legs together gate include-path wiring plus the
       ``parse_int`` builtin.
 
@@ -825,9 +793,7 @@ def test_vendor_string_parse_int_smoke(vendor_std_lib: Path) -> None:
     assert results[0]["offset"] == 123
 
 
-# ---------------------------------------------------------------------------
-# F-0001 / F-0017 / F-0027: bare-name print/format reach stdlib
-# ---------------------------------------------------------------------------
+# bare-name print/format reach stdlib
 
 
 def test_bare_name_print_reaches_sink() -> None:

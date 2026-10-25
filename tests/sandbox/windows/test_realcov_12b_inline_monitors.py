@@ -403,7 +403,7 @@ async def test_file_monitor_source_captures_real_filesystem_event(tmp_path: Path
 async def test_registry_monitor_source_runs_and_produces_parsable_log(tmp_path: Path) -> None:
     """The bundled registry monitor executes and yields a parsable log.
 
-    S17-D66 converged the Windows Sandbox backend onto the single bundled
+    The Windows Sandbox backend uses the single bundled
     ``sandbox/scripts/registry_monitor.ps1``, so the script exercised here is
     the one :meth:`WindowsSandbox._create_monitor_scripts` stages into a guest
     rather than the removed inline copy.

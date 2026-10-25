@@ -233,9 +233,6 @@ def test_the_backend_stages_the_fleet_the_launcher_starts(fleet_start: _FleetSta
 def test_the_launcher_is_not_given_what_the_bootstrap_starts(fleet_start: _FleetStart) -> None:
     """A script the bootstrap starts itself must not sit in the folder the launcher starts everything from.
 
-    Falsifiable: with the dispatcher staged beside the monitors, the launcher
-    starts a second copy of it, and both copies take every command.
-
     Args:
         fleet_start: Outcome of running the launcher over the staged fleet.
     """
@@ -247,10 +244,6 @@ def test_the_launcher_is_not_given_what_the_bootstrap_starts(fleet_start: _Fleet
 
 def test_no_staged_script_is_left_running_without_reporting(fleet_start: _FleetStart) -> None:
     """Every staged script either reports that it started or exits.
-
-    Falsifiable: a staged script that enters its collection loop without
-    creating the file the launcher handed it is still running, unreported,
-    when the launcher's wait limit runs out.
 
     Args:
         fleet_start: Outcome of running the launcher over the staged fleet.

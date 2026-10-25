@@ -2,19 +2,17 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for the 64-bit address signals the Analysis tab depends on.
+"""Gate for the 64-bit address signals the Analysis tab depends on.
 
-The audit's 6A-cont fix widened ``ToolOutputPanel.address_clicked`` to
-``qint64`` so image-based x64 virtual addresses stop being truncated, but left
-``BridgeAnalysisPanel.address_navigate`` at the default 32-bit C++ ``int``.
-PyQt refuses a signal-to-signal connection whose argument types differ, so the
-connection at ``ToolOutputPanel.add_analysis_panel`` raised
-``TypeError: connect() failed between BridgeAnalysisPanel.address_navigate[int]
+``ToolOutputPanel.address_clicked`` carries ``qint64`` so image-based x64 virtual
+addresses are not truncated, so ``BridgeAnalysisPanel.address_navigate`` must carry
+the same type. PyQt refuses a signal-to-signal connection whose argument types differ,
+and a mismatch would make the connection at ``ToolOutputPanel.add_analysis_panel``
+raise ``TypeError: connect() failed between BridgeAnalysisPanel.address_navigate[int]
 and address_clicked()``. That throw lands *after* ``self.analysis_panel`` is
 assigned but *before* ``addTab`` and the ``panels["analysis"]`` registration,
-so the panel object existed while its tab never did -- and the running
-application logged ``analysis_summary_dropped reason=no_analysis_panel``,
-discarding real analysis results.
+leaving a panel object with no tab. The application then logs
+``analysis_summary_dropped reason=no_analysis_panel`` and discards real analysis results.
 
 Both halves are gated here against real widgets: that constructing the panel
 genuinely registers its tab, and that a >32-bit address emitted by either

@@ -5,8 +5,8 @@
 """Gates for storing credentials larger than one Credential Manager blob, and for reporting keyring read failures.
 
 Windows Credential Manager refuses a generic credential whose blob exceeds ``CRED_MAX_CREDENTIAL_BLOB_SIZE`` (2560 bytes), and keyring's
-Windows backend writes UTF-16, so any secret over about 1280 characters -- an OAuth token record, a JWT-bearing input -- used to fail to
-store. The platform-independent tests run against a real file-backed keyring (``keyrings.alt``) in a private temporary file; the
+Windows backend writes UTF-16, so any secret over about 1280 characters -- an OAuth token record, a JWT-bearing input -- cannot be
+stored as a single entry. The platform-independent tests run against a real file-backed keyring (``keyrings.alt``) in a private temporary file; the
 Credential Manager variant adds the same blob limit Windows enforces, so the chunking is proven against the constraint it exists for. The
 tests at the bottom run against the real Windows Credential Manager and only there.
 """
@@ -318,9 +318,9 @@ class TestReadFailuresAreReported:
         """A stored input the backend cannot decode is an error, not a missing value.
 
         The entry is written to the keyring file as base64 of bytes that are
-        not UTF-8, so the backend's own ``get_password`` fails. Before the fix
-        the store logged that and answered ``None``, and the operator was told
-        to enter the value again.
+        not UTF-8, so the backend's own ``get_password`` fails. The store must
+        raise rather than answer ``None``, which would tell the operator to enter
+        the value again.
 
         Args:
             sized_store: Store over the Credential-Manager-sized keyring.

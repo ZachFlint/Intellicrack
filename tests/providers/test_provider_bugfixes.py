@@ -5,7 +5,7 @@
 
 """Regression tests for provider bug fixes.
 
-Validates that the critical/high bug fixes to the AI provider system work
+Validates that the critical and high-severity provider fixes behave
 correctly by driving the real Intellicrack production code end-to-end.  Every
 assertion is checked against an independent oracle (the OAuth2 / PKCE spec, the
 URL the production builder emits parsed back with ``urllib``, the HuggingFace
@@ -91,7 +91,7 @@ def _extract_503_message(exc: BaseException) -> str:
 
 
 class TestAsyncCacheDiscovery:
-    """Fix #1: _init_model_discovery was changed from sync to async."""
+    """_init_model_discovery is async, not sync."""
 
     @staticmethod
     def test_init_model_discovery_returns_discovery_and_cache_path(tmp_path: Path) -> None:

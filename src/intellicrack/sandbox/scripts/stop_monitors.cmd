@@ -1,7 +1,7 @@
 @echo off
 rem Intellicrack Windows Sandbox monitor terminator.
 rem
-rem Two-phase coordinated shutdown (F-0025):
+rem Two-phase coordinated shutdown:
 rem
 rem   1. Signal the named manual-reset event IntellicrackMonitorStop so
 rem      each monitor's main loop observes the request via a non-blocking

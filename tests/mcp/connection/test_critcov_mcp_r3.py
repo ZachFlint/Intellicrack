@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Third-pass critical-coverage tests for ``intellicrack.mcp.connection``: progress for a call nobody is following.
+"""Critical-coverage tests for ``intellicrack.mcp.connection``: progress for a call nobody is following.
 
 A server reports progress under the token the request carried in its ``_meta``. The connection follows only the tokens of the calls it
 started itself. A real fixture server is asked to report progress under a token the connection never issued, by sending the request

@@ -6,12 +6,12 @@
  * One badge, one writer.
  *
  * The dock asks every panel for a `count()` and rebuilds its tab strip from the
- * answers. The operation console used to also reach into the document for its
- * own tab and append a pill to it, which made two writers for one badge: the
- * next re-render from the panel list dropped the console's number without a
- * word. This suite holds both halves of the fix - that nothing outside the dock
- * addresses a dock tab any more, and that the console's coverage really does
- * arrive through count().
+ * answers. The operation console must not reach into the document for its
+ * own tab or append a pill to it: that makes two writers for one badge, and the
+ * next re-render from the panel list drops the console's number without a word.
+ * This suite holds both halves of that rule - that nothing outside the dock
+ * addresses a dock tab, and that the console's coverage really does arrive
+ * through count().
  *
  * The count is not a constant, it is what the session has exercised, so the
  * behavioural half drives the real panel: a stubbed `/api/jobs` answer goes in

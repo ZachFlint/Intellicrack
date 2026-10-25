@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Unit tests for providers.discovery (audit2 F-0006..F-0024 coverage).
+"""Unit tests for providers.discovery.
 
 These tests drive the real ModelDiscovery, DiscoveryCache, and DiscoveryFilter
 implementations with exact known-correct expected values derived independently
@@ -256,7 +256,7 @@ def _model(
 
 
 class TestF0006F0007AsyncCacheLockHonoured:
-    """F-0006/F-0007: aget/aset/ainvalidate serialize through the lock."""
+    """aget/aset/ainvalidate serialize through the lock."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -291,7 +291,7 @@ class TestF0006F0007AsyncCacheLockHonoured:
 
 
 class TestF0008GetRecommendedAwaitsDiscovery:
-    """F-0008: get_recommended_model awaits discovery on a cold cache."""
+    """get_recommended_model awaits discovery on a cold cache."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -310,7 +310,7 @@ class TestF0008GetRecommendedAwaitsDiscovery:
 
 
 class TestF0009UnknownTaskTypeRaises:
-    """F-0009: get_recommended_model rejects unknown task types."""
+    """get_recommended_model rejects unknown task types."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -323,7 +323,7 @@ class TestF0009UnknownTaskTypeRaises:
 
 
 class TestF0010F0024RegexFilter:
-    """F-0010: filter uses re.search; F-0024: invalid regex raises."""
+    """Filter uses re.search; an invalid regex raises."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -350,7 +350,7 @@ class TestF0010F0024RegexFilter:
 
 
 class TestF0011EmptyModelsNotCached:
-    """F-0011: empty discovery results are never cached as success."""
+    """Empty discovery results are never cached as success."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -375,7 +375,7 @@ class TestF0011EmptyModelsNotCached:
 
 
 class TestF0012NoCacheUseFalse:
-    """F-0012: discover_all(use_cache=False) does not write the shared cache."""
+    """discover_all(use_cache=False) does not write the shared cache."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -398,7 +398,7 @@ class TestF0012NoCacheUseFalse:
 
 
 class TestF0017DiscoverProviderInvalidatesStaleCache:
-    """F-0017: discover_provider invalidates cache when provider unconnected."""
+    """discover_provider invalidates cache when provider unconnected."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -425,7 +425,7 @@ class TestF0017DiscoverProviderInvalidatesStaleCache:
 
 
 class TestF0018DRYDiffHelper:
-    """F-0018: model-diff logic is consolidated in a single helper."""
+    """Model-diff logic records added and removed model IDs."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -453,7 +453,7 @@ class TestF0018DRYDiffHelper:
 
 
 class TestF0019SaveSnapshotsTime:
-    """F-0019: save_to_disk samples time once and persists entries."""
+    """save_to_disk samples time once and persists entries."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -469,7 +469,7 @@ class TestF0019SaveSnapshotsTime:
 
 
 class TestF0020AtomicLoadFromDisk:
-    """F-0020: load_from_disk leaves the in-memory cache intact on errors."""
+    """load_from_disk leaves the in-memory cache intact on errors."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -515,7 +515,7 @@ class TestF0020AtomicLoadFromDisk:
 
 
 class TestF0021DiscoverAllInvalidatesOnError:
-    """F-0021: per-provider discovery errors invalidate stale cache entries."""
+    """Per-provider discovery errors invalidate stale cache entries."""
 
     @pytest.mark.asyncio
     @staticmethod
@@ -542,7 +542,7 @@ class TestRealProviderConnectionContract:
     The other tests in this module deliberately feed the real
     :class:`ModelDiscovery` logic through a configurable provider source
     (``_DiscoveryProvider``); the provider there is an input, not the thing
-    under test. These tests close the gap flagged in the audit by driving the
+    under test. These tests drive the
     pipeline through the genuine production :class:`OpenAIProvider` in its real,
     unconnected state. They exercise the real base-class connection-state
     contract (``is_connected`` derived from ``connected``) and the real
@@ -751,7 +751,6 @@ class TestRealProviderDiscoveryErrorPropagation:
         documented model capabilities from OpenAI's public API reference.
         If the real provider's logic ever changed context_window for ``gpt-4o``
         from 128000 to something else, the filter test here would catch the
-        from intellicrack.providers import ids as provider_ids
         discrepancy: the filter assertion uses 100000 as the boundary, so a
         context_window of anything below 100000 would silently break the filter
         result.

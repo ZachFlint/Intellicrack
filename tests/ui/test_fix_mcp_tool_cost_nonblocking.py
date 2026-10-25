@@ -4,9 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gate: listing a server's tools in the MCP settings dialog never waits on the network.
 
-``McpToolToggleView.load`` prices every tool on the GUI thread. Pricing used to
+``McpToolToggleView.load`` prices every tool on the GUI thread. Pricing must not
 call ``tiktoken.get_encoding``, which downloads its BPE file on first use with
-no timeout, so on a stalled network the dialog froze. The gate runs the real
+no timeout, so on a stalled network the dialog would freeze. The gate runs the real
 widget in a child interpreter whose every HTTPS request goes to a proxy that
 never answers, so a regression fails the test instead of hanging the run.
 """

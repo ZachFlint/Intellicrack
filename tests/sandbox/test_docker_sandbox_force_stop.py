@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate for the host driver's timeout container force-stop.
+"""Gate for the host driver's timeout container force-stop.
 
 When a sandbox run exceeds its host ``--timeout`` the driver
 (:file:`scripts/sandbox/docker_sandbox.py`) must actually stop the container in

@@ -50,7 +50,7 @@ The repair worker still runs ``document.repair_pe_checksum`` on a background ``G
 never blocks the Qt event loop. For the vast majority of PE images the repair (a header write plus a checksum scan) completes in well under
 this budget, so joining briefly lets the caller observe the finished write and the fired notification immediately instead of only after the
 GUI thread's event loop happens to process the worker's queued completion signal. Genuinely large images simply time out this short join and
-continue asynchronously exactly as before.
+continue asynchronously.
 """
 
 
@@ -71,7 +71,7 @@ def _format_hash_result(bridge: HexEditorBridge | None, document: object, algo: 
     Raises:
         RuntimeError: If the document fails to compute the hash.
         OSError: If reading the underlying file fails.
-        ValueError: If the algorithm name is not recognised.
+        ValueError: If the algorithm name is not recognized.
         AttributeError: If the document does not expose ``compute_hash``.
     """
     if bridge is not None:
@@ -109,7 +109,7 @@ def _format_hash_range_result(bridge: HexEditorBridge | None, document: object, 
     Raises:
         RuntimeError: If the document fails to compute the hash.
         OSError: If reading the underlying file fails.
-        ValueError: If the algorithm name is not recognised.
+        ValueError: If the algorithm name is not recognized.
         AttributeError: If the document does not expose ``compute_hash_range``.
     """
     if bridge is not None:
@@ -151,7 +151,7 @@ def _verify_pe_checksum(bridge: HexEditorBridge | None, document: object) -> dic
 class HashingMixin:
     """Mixin providing hash computation for the hex editor panel.
 
-    All hash and PE-checksum work is delegated to the hexcore document so that the UI thread never has to materialise the full file in
+    All hash and PE-checksum work is delegated to the hexcore document so that the UI thread never has to materialize the full file in
     Python. Every document call that scans the full file (hashing, PE-checksum verification and repair) runs on a background
     ``GenericCallableWorker`` thread so the Qt event loop keeps pumping while a multi-hundred-megabyte or multi-gigabyte file is processed.
     The mixin only formats the returned values for display.
@@ -545,7 +545,7 @@ class HashingMixin:
         The repair runs on a background worker thread so recomputing the checksum of a large image never blocks the Qt event loop. After
         dispatch this joins the worker for a short, bounded window (``_PE_CHECKSUM_REPAIR_SYNC_WAIT_MS``) so ordinarily fast repairs are
         already complete, written, and have fired their document-modified notification by the time this method returns; a repair on a
-        genuinely large image simply outlives that window and continues to completion asynchronously as before.
+        genuinely large image simply outlives that window and continues to completion asynchronously.
         """
         if self.document is None:
             return

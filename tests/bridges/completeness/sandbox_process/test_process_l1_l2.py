@@ -4,10 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge-completeness remediation gates for the PROCESS slice (L1 + L2).
 
-Covers agent-10 (``audit/bridge-completeness/agent-10-sandbox-process.md``)
-and its verifier (``audit/bridge-completeness/verify/agent-10-sandbox-process-verification.md``)
-for the 10 previously fully-orphaned (NOT-REGISTERED + NO-CONTROL) PROCESS
-bridge methods that are now registered ``process.*`` tool functions:
+Covers the 10 PROCESS bridge methods that are registered as ``process.*`` tool functions:
 
 * P13 ``decommit_memory`` -- real ``VirtualFreeEx(MEM_DECOMMIT)``.
 * P29 ``enumerate_services`` -- real SCM query filtered by active/inactive state.
@@ -20,9 +17,9 @@ bridge methods that are now registered ``process.*`` tool functions:
 * P65 ``time_thread_wait`` -- real ``WaitForSingleObject`` + timing.
 * P66 ``detect_kernel_debugger`` -- real ``NtQueryInformationProcess(ProcessDebugPort)``.
 
-Also covers the two NOT-REGISTERED-but-real duplicate-axis methods
-``enumerate_handles``/``enum_handles`` (P25/P26), each now with its own
-``process.*`` tool-def alongside the pre-existing ``get_handles``.
+Also covers the two duplicate-axis methods
+``enumerate_handles``/``enum_handles`` (P25/P26), each with its own
+``process.*`` tool-def alongside ``get_handles``.
 
 Every test drives the real bridge method against the live Windows APIs
 against either the test-runner's own process (read-only operations) or a
@@ -92,7 +89,7 @@ async def attached_bridge(process_bridge: ProcessBridge) -> AsyncGenerator[Proce
 def notepad_child() -> Generator[int]:
     """Spawn a real, disposable notepad.exe subprocess for mutation-risk tests.
 
-    Some remediated methods (``remove_privilege``, ``duplicate_token``,
+    Some methods (``remove_privilege``, ``duplicate_token``,
     ``detect_kernel_debugger``, ``time_thread_wait``) either permanently
     mutate a token or wait on a handle; running them against the shared
     pytest-interpreter process would risk destabilising the test runner or

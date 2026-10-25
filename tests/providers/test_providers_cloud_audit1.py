@@ -3,28 +3,28 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression tests for ``audit1.md`` providers-cloud findings.
+"""Regression tests for the cloud provider behaviour.
 
-Every audit finding has a paired red/green test in this module:
+Each behaviour below has a paired red/green test in this module:
 
-* F-0001 — ``enable_cache`` is wired into OpenAI/Grok/OpenRouter/Google.
-* F-0002 — ``ThinkingConfig`` is wired into OpenAI o-series, Grok
+* ``enable_cache`` is wired into OpenAI/Grok/OpenRouter/Google.
+* ``ThinkingConfig`` is wired into OpenAI o-series, Grok
   multi-agent, and Gemini 2.5 ``thinking_config``.
-* F-0003 — ``cancel_request`` cancels in-flight non-streaming
+* ``cancel_request`` cancels in-flight non-streaming
   requests by populating ``self._current_task``.
-* F-0004 — Grok / Google / OpenRouter route their non-streaming
+* Grok / Google / OpenRouter route their non-streaming
   requests through ``LLMProviderBase._retry_with_backoff``.
-* F-0005 — Anthropic ``enable_cache`` extends to tools and the last
+* Anthropic ``enable_cache`` extends to tools and the last
   message turn, not only the system prompt.
-* F-0006 — OpenAI ``chat_stream`` re-raises transport errors even when
+* OpenAI ``chat_stream`` re-raises transport errors even when
   ``cancel_requested`` is True so the failure is never swallowed.
-* F-0007 — ``_convert_tool_choice_to_openai_format`` raises
+* ``_convert_tool_choice_to_openai_format`` raises
   :class:`ProviderError` instead of emitting an empty function name.
-* F-0008 — Orchestrator drains ``get_pending_usage`` /
+* Orchestrator drains ``get_pending_usage`` /
   ``get_pending_thinking`` after each LLM call.
-* F-0009 — ``_convert_tools_to_openai_format`` is a single base
+* ``_convert_tools_to_openai_format`` is a single base
   helper shared by OpenAI / Grok / OpenRouter.
-* F-0010 — Anthropic ``_fetch_all_models`` forwards a ``limit``
+* Anthropic ``_fetch_all_models`` forwards a ``limit``
   through to every paginated request.
 
 Live-network tests are gated by environment credentials at the test
@@ -104,9 +104,7 @@ _openrouter_reasoning_effort: Any = getattr(OpenRouterProvider, _REASONING_EFFOR
 _KABOOM_MESSAGE: str = "kaboom"
 
 
-# ---------------------------------------------------------------------------
 # Test helpers
-# ---------------------------------------------------------------------------
 
 
 def _build_text_tool() -> ToolDefinition:
@@ -388,9 +386,7 @@ class _BackoffSleepRecorder:
         return [delay for delay in self.delays if delay >= 1.0]
 
 
-# ---------------------------------------------------------------------------
-# F-0007 — empty function name raises ProviderError
-# ---------------------------------------------------------------------------
+# empty function name raises ProviderError
 
 
 def test_f0007_specific_tool_choice_without_function_name_raises() -> None:
@@ -449,7 +445,7 @@ async def test_f0007_specific_tool_choice_forces_named_tool_on_live_openai() -> 
 
     Drives the converted ``{"type": "function", "function": {"name": "ping"}}``
     dict through a real OpenAI chat request and asserts the server actually
-    selects the named function. This closes the gap the audit flagged on the
+    selects the named function. This closes the gap left by the
     unit test: the conversion is not merely the right shape, it is accepted by
     and honoured by the real endpoint. Gated on ``OPENAI_API_KEY``.
     """
@@ -473,9 +469,7 @@ async def test_f0007_specific_tool_choice_forces_named_tool_on_live_openai() -> 
         await provider.disconnect()
 
 
-# ---------------------------------------------------------------------------
-# F-0009 — base helper de-duplicates the OpenAI tool conversion
-# ---------------------------------------------------------------------------
+# base helper de-duplicates the OpenAI tool conversion
 
 
 def test_f0009_openai_tools_helper_shared_across_providers() -> None:
@@ -502,9 +496,7 @@ def test_f0009_openai_tools_helper_shared_across_providers() -> None:
     assert function_block["name"] == "ping"
 
 
-# ---------------------------------------------------------------------------
-# F-0005 — Anthropic enable_cache extends to system, tools, and messages
-# ---------------------------------------------------------------------------
+# Anthropic enable_cache extends to system, tools, and messages
 
 
 def test_f0005_enable_cache_marks_system_tools_and_last_message() -> None:
@@ -576,16 +568,14 @@ def test_f0005_enable_cache_disabled_leaves_payload_untouched() -> None:
     assert first_msg["content"] == "hi"
 
 
-# ---------------------------------------------------------------------------
-# F-0010 — Anthropic _fetch_all_models forwards limit to pagination
-# ---------------------------------------------------------------------------
+# Anthropic _fetch_all_models forwards limit to pagination
 
 
 @pytest.mark.asyncio
 async def test_f0010_fetch_all_models_forwards_limit() -> None:
     """``_fetch_all_models`` must pass ``limit`` to every page call.
 
-    The method now accepts a keyword-only ``limit`` and the real
+    The method accepts a keyword-only ``limit`` and the real
     ``anthropic.AsyncAnthropic`` client sends it as a query parameter on
     every ``GET /v1/models`` page request (not just the probe).  The
     requests are captured at the HTTP transport seam.
@@ -637,9 +627,7 @@ async def test_f0010_fetch_all_models_forwards_limit() -> None:
     assert list_calls[1]["after_id"] == "claude-opus-4-7"
 
 
-# ---------------------------------------------------------------------------
-# F-0001 / F-0002 — enable_cache + thinking signatures wired
-# ---------------------------------------------------------------------------
+# enable_cache + thinking signatures wired
 
 
 @pytest.mark.asyncio
@@ -975,16 +963,14 @@ def test_f0001_openrouter_enable_cache_attaches_cache_control() -> None:
     assert system_blocks_typed[-1]["cache_control"] == {"type": "ephemeral"}
 
 
-# ---------------------------------------------------------------------------
-# F-0003 — cancel_request cancels non-streaming task
-# ---------------------------------------------------------------------------
+# cancel_request cancels non-streaming task
 
 
 @pytest.mark.asyncio
 async def test_f0003_openai_chat_populates_current_task() -> None:
     """``chat`` registers the active task so ``cancel_request`` can cancel.
 
-    Bug F-0003 was that ``self._current_task`` stayed ``None`` for the
+    The defect was that ``self._current_task`` stayed ``None`` for the
     non-streaming path, so ``cancel_request`` was a no-op.  The fixed
     code wraps the API call in ``asyncio.create_task`` and assigns the
     handle for the duration of the request.
@@ -1011,16 +997,14 @@ async def test_f0003_openai_chat_populates_current_task() -> None:
     assert getattr(provider, _CURRENT_TASK_ATTR) is None
 
 
-# ---------------------------------------------------------------------------
-# F-0003 — Anthropic non-streaming cancel populates _current_task
-# ---------------------------------------------------------------------------
+# Anthropic non-streaming cancel populates _current_task
 
 
 @pytest.mark.asyncio
 async def test_f0003_anthropic_chat_populates_current_task() -> None:
     """Anthropic ``chat`` registers the active task so ``cancel_request`` can cancel.
 
-    F-0003 was that the Anthropic non-streaming path never assigned
+    The defect was that the Anthropic non-streaming path never assigned
     ``self._current_task``, making ``cancel_request`` a no-op.  The fix
     wraps the ``_retry_with_backoff`` call in ``asyncio.create_task`` and
     assigns the handle for the duration of the request.
@@ -1060,9 +1044,7 @@ async def test_f0003_anthropic_chat_populates_current_task() -> None:
     assert getattr(provider, _CURRENT_TASK_ATTR) is None, "_current_task not cleared after call"
 
 
-# ---------------------------------------------------------------------------
-# F-0008 — orchestrator drains pending usage and thinking
-# ---------------------------------------------------------------------------
+# orchestrator drains pending usage and thinking
 
 
 def test_f0008_orchestrator_records_provider_usage() -> None:
@@ -1101,17 +1083,15 @@ def test_f0008_orchestrator_records_provider_usage() -> None:
     assert provider.get_pending_thinking() == [], "Pending thinking must be drained"
 
 
-# ---------------------------------------------------------------------------
-# F-0006 — OpenAI chat_stream propagates transport errors on cancel
-# ---------------------------------------------------------------------------
+# OpenAI chat_stream propagates transport errors on cancel
 
 
 @pytest.mark.asyncio
 async def test_f0006_openai_chat_stream_reraises_on_cancel_and_error() -> None:
     """A connection error during cancellation is surfaced, not swallowed.
 
-    Previously the stream loop only re-raised when ``cancel_requested``
-    was ``False``.  After the fix the outer ``except`` always raises a
+    The stream loop only re-raised when ``cancel_requested``
+    was ``False``.  The outer ``except`` always raises a
     typed :class:`ProviderError`, even when the cancel flag is set.
     The real ``openai.AsyncOpenAI`` client receives a 200 SSE response
     whose body stream fails with ``ConnectionError`` on first read.
@@ -1142,17 +1122,15 @@ async def test_f0006_openai_chat_stream_reraises_on_cancel_and_error() -> None:
         await _consume()
 
 
-# ---------------------------------------------------------------------------
-# F-0006 — 4-provider swallow-on-cancel pattern removed
-# ---------------------------------------------------------------------------
+# 4-provider swallow-on-cancel pattern removed
 
 
 @pytest.mark.asyncio
 async def test_f0006_openrouter_chat_stream_reraises_on_cancel_and_error() -> None:
     """OpenRouter stream re-raises transport errors even when cancel flag is set.
 
-    Previously ``if not self._cancel_requested: raise`` swallowed the
-    transport error when the cancel flag was set.  The fix always raises
+    ``if not self._cancel_requested: raise`` swallowed the
+    transport error when the cancel flag was set.  It always raises
     :class:`ProviderError` so real connection failures are surfaced.
     The real ``httpx.AsyncClient`` transport raises ``ConnectionError``
     when the stream request is sent.
@@ -1183,8 +1161,8 @@ async def test_f0006_openrouter_chat_stream_reraises_on_cancel_and_error() -> No
 async def test_f0006_grok_chat_stream_reraises_on_cancel_and_error() -> None:
     """Grok stream re-raises transport errors even when cancel flag is set.
 
-    Previously ``if not self._cancel_requested: raise`` swallowed the
-    error.  The fix always raises :class:`ProviderError`.  The real
+    ``if not self._cancel_requested: raise`` swallowed the
+    error.  It always raises :class:`ProviderError`.  The real
     ``openai.AsyncOpenAI`` client (Grok base URL) receives a 200 SSE
     response whose body stream fails with ``ConnectionError``.
     """
@@ -1218,7 +1196,7 @@ async def test_f0006_grok_chat_stream_reraises_on_cancel_and_error() -> None:
 async def test_f0006_anthropic_chat_stream_reraises_on_cancel_and_error() -> None:
     """Anthropic stream re-raises transport errors even when cancel flag is set.
 
-    Previously ``if not self._cancel_requested: raise`` in the
+    ``if not self._cancel_requested: raise`` in the
     ``except (ConnectionError, ...)`` clause swallowed errors during
     cancellation.  The fix always raises :class:`ProviderError`.  The
     real ``anthropic.AsyncAnthropic`` client's transport raises
@@ -1250,8 +1228,8 @@ async def test_f0006_anthropic_chat_stream_reraises_on_cancel_and_error() -> Non
 async def test_f0006_google_chat_stream_reraises_on_cancel_and_error() -> None:
     """Google stream re-raises transport errors even when cancel flag is set.
 
-    Previously ``if not self._cancel_requested: raise`` swallowed the
-    error.  The fix always raises :class:`ProviderError`.
+    ``if not self._cancel_requested: raise`` swallowed the
+    error.  It always raises :class:`ProviderError`.
     """
     provider = GoogleProvider()
     provider.connected = True
@@ -1275,9 +1253,7 @@ async def test_f0006_google_chat_stream_reraises_on_cancel_and_error() -> None:
         await _consume()
 
 
-# ---------------------------------------------------------------------------
-# F-0002 follow-up — o-series temperature pinned without thinking
-# ---------------------------------------------------------------------------
+# o-series temperature pinned without thinking
 
 
 @pytest.mark.asyncio
@@ -1318,9 +1294,7 @@ async def test_f0002_openai_o_series_pins_temperature_without_thinking() -> None
     assert abs(actual_temperature - 1.0) < 1e-9, "o-series MUST receive temperature=1.0 even without thinking"
 
 
-# ---------------------------------------------------------------------------
-# F-0004 — Grok / Google / OpenRouter use _retry_with_backoff
-# ---------------------------------------------------------------------------
+# Grok / Google / OpenRouter use _retry_with_backoff
 
 
 @pytest.mark.asyncio
@@ -1487,9 +1461,7 @@ async def test_f0004_google_retries_on_transient_rate_limit(monkeypatch: pytest.
     assert len(sleep_recorder.backoff_delays()) == 1
 
 
-# ---------------------------------------------------------------------------
 # Live network tests (env-gated at the test level only)
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.skipif(

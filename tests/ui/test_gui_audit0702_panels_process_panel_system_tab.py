@@ -2,28 +2,17 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""GUI-audit regression gates for :mod:`intellicrack.ui.panels.process_panel.system_tab`.
+"""Gates for :mod:`intellicrack.ui.panels.process_panel.system_tab` pipe rows and window class column.
 
-Finding H25: reconnecting to a named pipe with the same name left a stale
-table row that resolved to the wrong handle. ``_on_pipe_connect`` always
-appends a new row and overwrites ``_pipe_handles[name]`` with the newest
-handle, so two rows can legitimately display the same pipe name with
-different handles. Pre-fix, ``_selected_pipe`` resolved the acting handle
-by looking the row's *name* up in ``_pipe_handles`` -- always yielding the
-newest handle regardless of which row was actually selected -- and
-``_on_pipe_close`` removed the first table row matching the pipe name,
-regardless of which handle was actually closed. The fix makes
-``_selected_pipe`` read the handle directly from the selected row's own
-handle cell, and makes ``_on_pipe_close`` remove the row whose own handle
-cell matches the handle that was actually closed.
+Reconnecting to a named pipe with the same name must not leave a stale table row that resolves to the wrong handle.
+``_on_pipe_connect`` always appends a new row and overwrites ``_pipe_handles[name]`` with the newest handle, so two rows can
+legitimately display the same pipe name with different handles. ``_selected_pipe`` must read the acting handle from the selected
+row's own handle cell, not look the row's name up in ``_pipe_handles`` (which always yields the newest handle). ``_on_pipe_close``
+must remove the row whose own handle cell matches the handle that was actually closed, not the first row with a matching name.
 
-Finding L13: the Windows tab's "Class Name" column had no header resize
-mode (stuck at the ``QHeaderView`` Interactive default) and no per-item
-tooltip, so long/variable Win32 class names (WinForms, Chrome, UWP style)
-rendered clipped with no way to read the full value without manually
-dragging the column border. The fix sets column 2 to
-``QHeaderView.ResizeMode.ResizeToContents`` and gives every class-name cell
-a tooltip carrying its full text.
+The Windows tab's "Class Name" column must have a header resize mode and a per-item tooltip. Otherwise long, variable Win32 class
+names (WinForms, Chrome, UWP style) render clipped with no way to read the full value without dragging the column border. Column 2
+is set to ``QHeaderView.ResizeMode.ResizeToContents``, and every class-name cell carries a tooltip with its full text.
 
 Each test drives the real :class:`SystemTab` widget and its production
 callback closures with real result data. Only the async dispatch shim
@@ -128,7 +117,7 @@ def _connect_pipe(tab: SystemTab, captured: dict[str, Callable[[object], None] |
 
 
 class TestH25PipeReconnectHandleResolution:
-    """H25: reconnecting to a pipe with the same name must not mix up handles."""
+    """Reconnecting to a pipe with the same name must not mix up handles."""
 
     def test_h25_selected_pipe_reads_handle_from_own_row_not_stale_name_lookup(
         self,
@@ -137,7 +126,7 @@ class TestH25PipeReconnectHandleResolution:
     ) -> None:
         """Selecting the older of two same-named rows resolves that row's own handle.
 
-        Pre-fix ``_selected_pipe`` resolved the handle via
+        ``_selected_pipe`` must not resolve the handle via
         ``self._pipe_handles.get(pipe_name)``, which after a reconnect
         always holds the *newest* handle for that name regardless of which
         row is selected. Reconnecting under the same pipe name produces a
@@ -174,7 +163,7 @@ class TestH25PipeReconnectHandleResolution:
     ) -> None:
         """Closing the newer of two same-named rows removes that row, not the first name match.
 
-        Pre-fix ``_on_pipe_close``'s row-removal loop matched only on pipe
+        ``_on_pipe_close``'s row-removal loop must not match only on pipe
         name and stopped at the first row found, so closing the row
         holding the *second* connection (handle 0x14) would instead
         remove the *first* row (handle 0x10, which is still live),
@@ -210,13 +199,13 @@ class TestH25PipeReconnectHandleResolution:
 
 
 class TestL13WindowsClassNameColumn:
-    """L13: the Windows tab's Class Name column resizes to contents and tooltips."""
+    """The Windows tab's Class Name column resizes to contents and tooltips."""
 
     def test_l13_class_name_header_resize_mode(self, tab: SystemTab) -> None:
         """Columns 1 (Title) and 2 (Class Name) resize to their content width.
 
-        Pre-fix there was no ``setSectionResizeMode`` call for column 2 at
-        all, so it stayed at the ``QHeaderView`` Interactive default. Title
+        Column 2 must have a ``setSectionResizeMode`` call, since otherwise
+        it would stay at the ``QHeaderView`` Interactive default. Title
         sizes to its content too, with no stretched last section, so a long
         title widens the table and its horizontal scrollbar reaches it instead
         of a ``Stretch`` column squeezing it to the viewport.
@@ -241,8 +230,8 @@ class TestL13WindowsClassNameColumn:
     ) -> None:
         """Enumerating windows writes the full class name and a matching tooltip.
 
-        Pre-fix ``_refresh_windows`` built the Class Name cell as a plain
-        ``QTableWidgetItem`` with no ``setToolTip`` call, so
+        ``_refresh_windows`` must set a tooltip on the Class Name cell, rather than leaving a plain
+        ``QTableWidgetItem`` without ``setToolTip``, so
         ``QTableWidgetItem.toolTip()`` would return the empty string
         rather than the full class name.
 

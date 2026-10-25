@@ -4089,7 +4089,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         Script-VM snapshotting is only supported by Frida's V8 runtime (the
         QuickJS runtime this bridge otherwise defaults to raises
-        ``InvalidArgumentError`` for it), so the throwaway VM used to take
+        ``InvalidArgumentError`` for it), so the throwaway VM that takes
         the snapshot is explicitly started with ``runtime="v8"`` regardless
         of the process-wide default.
 
@@ -4276,9 +4276,9 @@ class _FridaBridgeBase(InstrumentationBridge):
             )
         else:
             # int/uint/int8/16/32/uint8/16/32/bool return a plain JS number from
-            # NativeFunction, not a NativePointer, so it has no toInt32() method -- calling
-            # it unconditionally threw "result.toInt32 is not a function" for every integer
-            # return type. Only call toInt32() when the runtime actually handed back a
+            # NativeFunction, not a NativePointer, so it has no toInt32() method and
+            # calling it unconditionally throws "result.toInt32 is not a function".
+            # Only call toInt32() when the runtime actually handed back a
             # pointer-like object; otherwise the number is already the value we want.
             extract_js = "send({ type: 'call_result', value: (result && result.toInt32) ? result.toInt32() : result });"
 
@@ -4353,8 +4353,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             ``send(42)``, ``send([1, 2])``, all of which Frida delivers
             verbatim -- cannot be merged into the result mapping, so it is
             stored under :data:`_SCALAR_PAYLOAD_KEY` instead of being
-            dropped. Discarding it used to leave the waiter completing with
-            an empty mapping, which reached the Scripts panel as ``{}``
+            dropped; dropping it would leave the waiter completing with
+            an empty mapping, which reaches the Scripts panel as ``{}``
             even though the script had answered.
 
             Args:
@@ -4554,10 +4554,10 @@ class _FridaBridgeBase(InstrumentationBridge):
         The bridge tracks scripts in several lookup tables -- ``_scripts`` is
         the canonical handle store, while ``_alloc_scripts``, ``_call_probes``,
         and ``_stalker_scripts`` map per-domain identifiers to a script id.
-        Unload paths historically only touched ``_scripts`` which left the
-        secondary tables holding stale ids long after the underlying script
-        had been destroyed. This method clears every reference unconditionally
-        so callers can rely on the registries reflecting reality even when the
+        Clearing only ``_scripts`` would leave the secondary tables holding
+        stale ids long after the underlying script had been destroyed. This
+        method clears every reference unconditionally so callers can rely on
+        the registries reflecting reality even when the
         underlying Frida unload call failed.
 
         Args:
@@ -4600,7 +4600,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         Stalker state is per-script: the ``Stalker.unfollow`` call must run
         inside the same script that called ``Stalker.follow`` for the active
         runtime to release its event sink. Calling unfollow from a fresh
-        helper script -- as the previous shutdown path did -- left the
+        helper script leaves the
         original script's runtime listening on the thread until garbage
         collection. This helper posts the unfollow into the owning script and
         then disposes of it.
@@ -4650,7 +4650,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         The script answers ``stalker_unfollowed`` once ``Stalker.unfollow`` and ``Stalker.flush`` have
         returned, which is also the point by which every batch of the trace has been delivered. Without
-        that answer the trace cannot be trusted: a stuck agent used to leave this call unloading the
+        that answer the trace cannot be trusted: a stuck agent would otherwise leave this call unloading the
         script and returning an empty trace as though the unfollow had worked.
 
         Args:
@@ -5891,8 +5891,8 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         ``ToolError`` carries a ``details`` dict that downstream consumers
         log alongside the original exception chained via ``from e``. The
-        old code passed only ``str(e)`` through structured logging which
-        dropped the exception class and prevented filters from
+        passing only ``str(e)`` through structured logging drops the
+        exception class and prevents filters from
         distinguishing ``frida.ProcessNotFoundError`` from
         ``frida.PermissionDeniedError`` or
         ``frida.TransportError``. This helper produces a uniform payload

@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for provider tool-count-cap enforcement (S16-D15).
+"""Falsifiable gates for provider tool-count-cap enforcement.
 
 Intellicrack's tool registry flattens seven bridge :class:`ToolDefinition`
 containers into ~595 individual function schemas when a chat request is sent

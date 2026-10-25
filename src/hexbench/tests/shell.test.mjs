@@ -40,7 +40,7 @@ const {
   shouldRunShortcut,
 } = await import('../static/shell.js');
 
-/* -------------------------------------------------------------- F41: hex search wildcard */
+/* -------------------------------------------------------------- hex search wildcard */
 
 check('search pattern accepts a byte wildcard', isValidHexSearchPattern('4D ?? 90') === true, 'the documented ?? wildcard was rejected');
 check('search pattern accepts a nibble wildcard', isValidHexSearchPattern('A?') === true, 'a single ? nibble wildcard was rejected');
@@ -65,7 +65,7 @@ check(
   'replace() no longer validates both fields with the strict (non-wildcard) rule',
 );
 
-/* -------------------------------------------------------------------- F14: inspector cache */
+/* -------------------------------------------------------------------- inspector cache */
 
 check('inspectorCacheKey is null with no document', inspectorCacheKey(null, 0) === null, 'a null document must not produce a cache key');
 const keyDocA = inspectorCacheKey({ handle: 'doc-a', generation: 1 }, 0);
@@ -92,7 +92,7 @@ check(
   'the inspector panel update() no longer compares a document-aware cache key',
 );
 
-/* -------------------------------------------------------------------------- F40: copy cap */
+/* -------------------------------------------------------------------------- copy cap */
 
 const complete = copyResultToast(200, 200);
 check('a complete copy reports success', complete.kind === 'success', `expected success, got ${complete.kind}`);
@@ -108,7 +108,7 @@ check(
   'copySelection no longer routes its result through copyResultToast, so a truncated copy could again read as complete success',
 );
 
-/* --------------------------------------------------------------------- F42: entropy reset */
+/* --------------------------------------------------------------------- entropy reset */
 
 const request = { handle: 'doc-a', generation: 3 };
 const sameActive = { handle: 'doc-a', generation: 3 };
@@ -145,7 +145,7 @@ check(
   'the failure branch of the debounced entropy call no longer routes through applyOutcome, so a failed refresh could again leave a stale reading on screen',
 );
 
-/* -------------------------------------------------------------------- F43: clear hits docks */
+/* -------------------------------------------------------------------- clear hits docks */
 
 check(
   'clearHits() refreshes the docks like setHits() does',
@@ -153,14 +153,14 @@ check(
   'clearHits() still omits the #updateDocks() call that setHits() ends with, so a dock panel showing hits goes stale on Clear results',
 );
 
-/* ----------------------------------------------------------------------------- F44: exit */
+/* ----------------------------------------------------------------------------- exit */
 
 check('file.exit no longer wires directly to window.close()', !/'file\.exit'.*window\.close\(\)/.test(shellSource), 'file.exit still calls window.close() directly with no server-side shutdown');
 check('file.exit runs the shell\'s own exit() command', /this\.#define\('file\.exit', 'Exit', '', \(\) => this\.exit\(\)\)/.test(shellSource), 'file.exit is not wired to Shell#exit()');
 check('exit() calls the server shutdown route', /async exit\(\) \{\s*await shutdown\(\);/.test(shellSource), 'Shell#exit() no longer awaits the api.js shutdown() call');
 check('shutdown is imported from api.js', /import \{[^}]*\bshutdown\b[^}]*\} from '\.\/api\.js';/.test(shellSource), 'shell.js no longer imports shutdown from api.js');
 
-/* ---------------------------------------------------------------- F68: ctrl+c input hijack */
+/* ---------------------------------------------------------------- ctrl+c input hijack */
 
 check(
   'ctrl+c in a field with its own selection defers to native copy (the defect)',

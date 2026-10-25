@@ -2,10 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Wave-5 offline falsifiable gates for GoogleProvider (findings #28, #31-#37, #39).
+"""Offline falsifiable gates for GoogleProvider.
 
-All nine findings from the group-07 audit that were NOT_RESOLVED for the Google
-provider are gated here.  Every test uses only offline transport seams, real
+Every test uses only offline transport seams, real
 ``google.genai`` SDK types as independent oracles, and known-constant expected
 values.  No mock replaces the SUT or any of its decision dependencies.
 """
@@ -79,7 +78,7 @@ class _FakeAsyncApi:
 
 
 class _FakeGenaiClient:
-    """Minimal ``genai.Client`` stand-in for the ``#28`` env-var gate.
+    """Minimal ``genai.Client`` stand-in for the env-var gate.
 
     Replaced via ``monkeypatch`` so ``_connect_impl`` never opens a socket
     while the full ``except``/``finally`` logic in ``connect()`` still runs.
@@ -161,9 +160,7 @@ def _user_message(text: str = "hello") -> Message:
     return Message(role="user", content=text, timestamp=datetime.now(tz=UTC))
 
 
-# ---------------------------------------------------------------------------
-# Finding #28 — connect: GEMINI_API_KEY env-var clearing and restoration
-# ---------------------------------------------------------------------------
+# connect: GEMINI_API_KEY env-var clearing and restoration
 
 
 @pytest.mark.asyncio
@@ -199,9 +196,7 @@ async def test_connect_gemini_api_key_restored_after_failure(
     assert os.environ.get("GEMINI_API_KEY") == _SENTINEL_ENV_KEY
 
 
-# ---------------------------------------------------------------------------
-# Finding #31 — chat_stream: text chunk accumulation
-# ---------------------------------------------------------------------------
+# chat_stream: text chunk accumulation
 
 
 @pytest.mark.asyncio
@@ -268,9 +263,7 @@ async def test_chat_stream_yields_text_chunks_in_order() -> None:
     assert collected == ["Hello", " world"]
 
 
-# ---------------------------------------------------------------------------
-# Finding #32 — _parse_response
-# ---------------------------------------------------------------------------
+# _parse_response
 
 
 class TestParseResponse:
@@ -323,9 +316,7 @@ class TestParseResponse:
         assert not content
 
 
-# ---------------------------------------------------------------------------
-# Finding #33 — _extract_function_calls
-# ---------------------------------------------------------------------------
+# _extract_function_calls
 
 
 class TestExtractFunctionCalls:
@@ -416,9 +407,7 @@ class TestExtractFunctionCalls:
         assert tool_calls == []
 
 
-# ---------------------------------------------------------------------------
-# Finding #34 — _extract_visible_chunk_text
-# ---------------------------------------------------------------------------
+# _extract_visible_chunk_text
 
 
 class TestExtractVisibleChunkText:
@@ -499,9 +488,7 @@ class TestExtractVisibleChunkText:
         assert visible == "alpha beta"
 
 
-# ---------------------------------------------------------------------------
-# Finding #35 — _extract_thinking_text
-# ---------------------------------------------------------------------------
+# _extract_thinking_text
 
 
 class TestExtractThinkingText:
@@ -570,9 +557,7 @@ class TestExtractThinkingText:
         assert thinking == "Only thought."
 
 
-# ---------------------------------------------------------------------------
-# Finding #36 — _create_config: ThinkingConfig and tool_config branches
-# ---------------------------------------------------------------------------
+# _create_config: ThinkingConfig and tool_config branches
 
 
 class TestCreateConfig:
@@ -697,9 +682,7 @@ class TestCreateConfig:
         assert config.tool_config is None
 
 
-# ---------------------------------------------------------------------------
-# Finding #37 — _extract_usage
-# ---------------------------------------------------------------------------
+# _extract_usage
 
 
 class TestExtractUsage:
@@ -808,17 +791,14 @@ class TestExtractUsage:
         assert isinstance(result, UsageInfo)
 
 
-# ---------------------------------------------------------------------------
-# Finding #39 — _convert_messages_to_provider_format: tool_calls and tool_results
-# ---------------------------------------------------------------------------
+# _convert_messages_to_provider_format: tool_calls and tool_results
 
 
 class TestConvertMessagesToProviderFormat:
     """Offline unit gates for the complex message-conversion cases in GoogleProvider.
 
-    Finding #39: the simple user-text case was already gated via the F-0001
-    HTTP body test.  These gates cover the ``function_call`` (assistant with
-    tool_calls) and ``function_response`` (tool result) paths.
+    These gates cover the ``function_call`` (assistant with tool_calls) and
+    ``function_response`` (tool result) paths.
 
     Oracle: Gemini Content wire format spec — assistant tool calls map to
     ``function_call`` parts; tool results map to ``function_response`` parts

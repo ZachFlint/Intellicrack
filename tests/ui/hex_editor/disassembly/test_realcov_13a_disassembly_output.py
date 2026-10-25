@@ -4,9 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for disassembly instruction output rendering.
 
-The shard 13 audit notes that the existing C9 debounce tests validate timing
-and dispatch count but do NOT verify the disassembly output is correct
-(mnemonics, operands, hex bytes, addressing). This module closes that gap.
+The debounce tests validate timing and dispatch count; this module verifies
+the disassembly output is correct (mnemonics, operands, hex bytes,
+addressing).
 
 It opens a REAL Windows PE (``kernel32.dll``) through the real
 :class:`HexEditorBridge`, disassembles real bytes from the real ``.text``

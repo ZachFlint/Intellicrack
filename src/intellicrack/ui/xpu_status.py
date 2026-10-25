@@ -126,7 +126,7 @@ class _RequirementsCheckWorker(RetainedWorker):
     check_failed = pyqtSignal(str)
 
     def __init__(self, *, owner: QWidget | None = None) -> None:
-        """Initialise the probe worker with the dialog that owns it.
+        """Initialize the probe worker with the dialog that owns it.
 
         Args:
             owner: Dialog that started this probe. It is recorded for scoped draining, never used as a Qt parent: Qt destroys a parent's
@@ -586,8 +586,8 @@ class XPUStatusDialog(QDialog):
     def _refresh_requirements(self) -> None:
         """Launch the Windows requirements check on a background thread.
 
-        The previous synchronous implementation spawned three PowerShell subprocesses on the GUI thread, freezing the dialog for ~20
-        seconds. Work is now dispatched to :class:`_RequirementsCheckWorker`; results are delivered via :meth:`_on_requirements_ready` /
+        The check spawns three PowerShell subprocesses, which would freeze the dialog for ~20
+        seconds on the GUI thread. Work is dispatched to :class:`_RequirementsCheckWorker`; results are delivered via :meth:`_on_requirements_ready` /
         :meth:`_on_requirements_failed`. Concurrent invocations (e.g., rapid Refresh clicks) are debounced by checking
         :meth:`QThread.isRunning`.
         """

@@ -3,13 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for SplashScreen defects D45 and D46.
+"""Gates for SplashScreen progress overlay visibility and status message painting.
 
-D45: the progress-bar overlay stayed permanently hidden while ``set_progress``
-animated its value, so the user never saw the animated progress bar. D46:
-``showMessage`` calls made directly (not through ``set_progress``) never
-reached the screen because the custom ``paintEvent`` painted only the
-splash artwork and never the stored message text.
+The progress-bar overlay must become visible while ``set_progress`` animates its value, so the user
+sees the progress bar. ``showMessage`` calls made directly (not through ``set_progress``) must reach
+the screen, so the custom ``paintEvent`` must paint the stored message text, not only the splash
+artwork.
 """
 
 from __future__ import annotations
@@ -78,7 +77,7 @@ def _count_non_background(image: QImage) -> int:
 
 
 class TestOverlayVisibleDuringProgress:
-    """D45: the progress-bar overlay must become visible once progress starts."""
+    """The progress-bar overlay must become visible once progress starts."""
 
     @staticmethod
     def test_overlay_hidden_before_any_progress(qapp: QApplication) -> None:
@@ -97,9 +96,8 @@ class TestOverlayVisibleDuringProgress:
     def test_set_progress_reveals_overlay_and_advances_bar(qapp: QApplication) -> None:
         """set_progress reveals the overlay and moves the real progress bar.
 
-        Before the D45 fix, ``_overlay`` was hidden in ``__init__`` and never
-        re-shown, so the ``QProgressBar`` animated underneath it was never
-        visible to the user. This asserts both halves of that observable
+        The overlay must not stay hidden after ``__init__``, or the ``QProgressBar`` animated
+        underneath it is never visible to the user. This asserts both halves of that observable
         behavior against the production ``set_progress`` call: the overlay
         becomes visible, and the actual ``QProgressBar`` widget value (forced
         to the end of its animation deterministically, matching the existing
@@ -124,7 +122,7 @@ class TestOverlayVisibleDuringProgress:
 
 
 class TestDirectShowMessageIsPainted:
-    """D46: showMessage() text must reach the screen even called directly."""
+    """showMessage() text must reach the screen even when called directly."""
 
     @staticmethod
     def test_direct_showmessage_updates_status_message(qapp: QApplication) -> None:
@@ -132,9 +130,8 @@ class TestDirectShowMessageIsPainted:
 
         ``_draw_status_and_version`` (called from the real ``paintEvent``)
         paints ``self._status_message``, not Qt's own internal splash message
-        state. Before the D46 fix, that attribute was only ever updated by
-        ``set_progress``, so a bare ``showMessage()`` call -- the documented
-        public API -- silently failed to affect what gets painted.
+        state. ``showMessage()`` must update that attribute too, because it is the documented public
+        API, and a bare call must affect what gets painted.
 
         Args:
             qapp: QApplication fixture required by Qt widgets.
@@ -158,10 +155,8 @@ class TestDirectShowMessageIsPainted:
         state differing between the two. Asserts the message region contains
         non-background pixels (the text was painted at all) and that the two
         renders differ (the *new* message reached the paint pipeline, not a
-        stale default). Without the D46 fix, ``showMessage`` never updates
-        ``self._status_message``, so both renders paint the identical
-        ``"Initializing..."`` text and would be pixel-for-pixel equal,
-        falsifying this gate.
+        stale default). If ``showMessage`` did not update ``self._status_message``, both renders would
+        paint the identical ``"Initializing..."`` text and be pixel-for-pixel equal, falsifying this gate.
 
         Args:
             qapp: QApplication fixture required by Qt widgets.

@@ -5,20 +5,20 @@
 
 """GUI-audit regression gates for the Frida panel's device selector and hook table.
 
-These tests lock in three audit fixes in
+These tests cover three behaviors in
 ``intellicrack.ui.panels.frida_panel``:
 
-* M6 -- ``_on_device_changed`` must resolve the bridge device type/host from the
+* ``_on_device_changed`` must resolve the bridge device type/host from the
   combo item's ``userData`` (written by ``_populate_device_combo``), never from
-  the human-readable display string. The prior code parsed the display text and
-  therefore told the bridge ``connect_device("local", None)`` for every
+  the human-readable display string. Parsing the display text would tell the bridge
+  ``connect_device("local", None)`` for every
   enumerated USB/remote device.
-* stale-row -- the async hook add/remove callbacks must locate their target row
+* The async hook add/remove callbacks must locate their target row
   by a stable hook identity (a pending sentinel key while installing, or the
   real hook id) at callback time, not by an index captured at request time. A
   concurrent completion or a ``get_hooks`` repopulate reorders rows, so a
   captured index edits/removes the wrong hook and desynchronises ``_hook_ids``.
-* run-script-raise -- ``_on_run_script_success`` must surface an unusable script
+* ``_on_run_script_success`` must surface an unusable script
   handle through the console/log instead of raising ``RuntimeError`` inside the
   Qt success slot (an exception that would escape the slot after the UI state
   was already reset).
@@ -307,7 +307,7 @@ def capturing_dispatch(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Callable[[
 
 @pytest.mark.usefixtures("qapp")
 class TestDeviceSelectionResolvesFromUserData:
-    """M6 gates: device switching must use combo userData, not display text."""
+    """Device switching uses combo userData, not display text."""
 
     @staticmethod
     def test_usb_selection_connects_usb_not_local(
@@ -316,10 +316,10 @@ class TestDeviceSelectionResolvesFromUserData:
     ) -> None:
         """Selecting an enumerated USB device must call ``connect_device('usb', None)``.
 
-        Regression: the pre-fix ``_on_device_changed`` parsed the display string
+        Regression: parsing the display string in ``_on_device_changed``
         ``"USB Device (usb)"`` -- which is neither ``"usb"`` nor
-        ``"remote:..."`` -- and therefore dispatched ``connect_device('local',
-        None)`` for every enumerated device. This gate populates the combo
+        ``"remote:..."`` -- would dispatch ``connect_device('local', None)`` for every enumerated
+        device. This gate populates the combo
         through the real ``_populate_device_combo`` (proving the userData shape
         the production code writes) and asserts the recorded bridge arguments
         are the USB device's real type, not ``"local"``.
@@ -358,9 +358,8 @@ class TestDeviceSelectionResolvesFromUserData:
     ) -> None:
         """Selecting an enumerated remote device must forward its type and host.
 
-        Regression: display-text parsing ignored the enumerated remote device
-        entirely (``"Remote (remote)"`` matched neither manual branch), so a
-        remote selection wrongly connected ``"local"``. This gate asserts the
+        Regression: the resolver must not fall through to ``"local"`` for an enumerated remote
+        device (``"Remote (remote)"`` matches neither manual branch). This gate asserts the
         resolver reads ``device_type='remote'`` from userData and derives the
         host from the frida ``socket@<host>`` device id.
 
@@ -433,7 +432,7 @@ class TestDeviceSelectionResolvesFromUserData:
 
 @pytest.mark.usefixtures("qapp")
 class TestHookCallbacksTrackByStableKey:
-    """stale-row gates: async hook callbacks must target rows by hook identity."""
+    """Async hook callbacks must target rows by hook identity."""
 
     @staticmethod
     def test_out_of_order_install_callbacks_edit_correct_row(
@@ -444,9 +443,9 @@ class TestHookCallbacksTrackByStableKey:
 
         Two hooks are queued (rows 0 and 1). Hook A's install *fails* first,
         which removes its pending row and shifts hook B from row 1 to row 0.
-        Hook B's install *succeeds* afterwards. With the pre-fix code -- which
-        captured the row index at request time and stored a bare ``""`` per
-        pending hook -- B's success callback would target the now-nonexistent
+        Hook B's install *succeeds* afterwards. With code that captured the row index at request
+        time and stored a bare ``""`` per pending hook, B's success callback would target the
+        now-nonexistent
         row 1, leave the surviving row stuck on "Installing...", and grow
         ``_hook_ids`` out of sync with the table. This gate asserts the
         surviving row is B, marked Active, with ``_hook_ids`` holding exactly
@@ -489,8 +488,8 @@ class TestHookCallbacksTrackByStableKey:
 
         Two active hooks are present. The user removes hook A (row 0); before
         the removal callback returns, a ``get_hooks`` repopulate reorders the
-        table so A is now at row 1 and B at row 0. With the pre-fix code -- which
-        captured row 0 at request time -- the callback would remove row 0
+        table so A is now at row 1 and B at row 0. With code that captured row 0 at request time,
+        the callback would remove row 0
         (hook B, the wrong hook) and desync ``_hook_ids``. This gate asserts the
         callback locates A by its id and removes it, leaving B intact.
 
@@ -525,15 +524,14 @@ class TestHookCallbacksTrackByStableKey:
 
 @pytest.mark.usefixtures("qapp")
 class TestRunScriptSuccessSurfacesFailure:
-    """run-script-raise gate: an unusable handle is surfaced, never raised in the slot."""
+    """Gate: an unusable handle is surfaced, never raised in the slot."""
 
     @staticmethod
     def test_unusable_handle_does_not_raise_and_is_surfaced() -> None:
         """An unusable persistent-script handle must be surfaced without raising.
 
-        Regression: the pre-fix ``_on_run_script_success`` reset the UI and then
-        executed ``raise RuntimeError`` inside the Qt success slot, so an
-        exception escaped the slot after the UI state was already updated. This
+        Regression: ``_on_run_script_success`` must not raise ``RuntimeError`` inside the Qt success
+        slot, since an exception would escape the slot after the UI state was already updated. This
         gate calls the real slot with a ``None`` result (an unusable handle) and
         proves it returns normally, re-enables Run, and writes the abort notice
         to the console.

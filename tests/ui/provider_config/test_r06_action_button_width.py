@@ -2,24 +2,22 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the R06 provider-panel action-button clip fix.
+"""Falsifiable gate for the provider-panel action-button clipping.
 
 ``ProviderConfigDialog._setup_ui`` packs its eight action buttons two-per-row
 into a left panel pinned to ``_LIST_MIN_WIDTH``/``_LIST_MAX_WIDTH`` (200/250
-px). The longest label, "Write .env Template", overflowed its narrow column
-and Qt centre-clipped the rendered text. The fix floors every action button's
-minimum width at its own ``sizeHint().width()`` and raises the left panel's
-minimum width to fit the widest two-button row, so the column grows to the
-text instead of squeezing it.
+px). The longest label, "Write .env Template", overflows its narrow column
+and Qt centre-clips the rendered text. Each action button's minimum width is floored
+at its own ``sizeHint().width()`` and the left panel's minimum width is raised to fit
+the widest two-button row, so the column grows to the text instead of squeezing it.
 
 This gate builds the real :class:`~intellicrack.ui.provider_config.ProviderConfigDialog`,
 shows it under an offscreen ``QApplication`` so real layout geometry is
 computed, and asserts every action button's rendered width is at least the
 width its label needs under the real style (font metrics plus the style's
-own content margins) -- never a restated pixel constant. Reverting the fix
+own content margins) -- never a restated pixel constant. Removing the fix
 (dropping the per-button minimum widths and the left-panel minimum-width
-raise) squeezes "Write .env Template" back below its label width, turning
-this gate RED.
+raise) squeezes "Write .env Template" back below its label width, failing this gate.
 """
 
 from __future__ import annotations
@@ -110,7 +108,7 @@ def _build_dialog(monkeypatch: pytest.MonkeyPatch) -> ProviderConfigDialog:
 
 
 def _action_buttons(dialog: ProviderConfigDialog) -> dict[str, QPushButton]:
-    """Return every action button the R06 finding names, keyed by its label.
+    """Return every action button of the provider dialog, keyed by its label.
 
     Args:
         dialog: The dialog to pull action buttons from.
@@ -134,9 +132,9 @@ def _action_buttons(dialog: ProviderConfigDialog) -> dict[str, QPushButton]:
 def test_action_buttons_are_not_clipped(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
     """Every action button in the left panel renders wide enough for its full label.
 
-    Pre-fix, the two-per-row ``QHBoxLayout``s were packed into a panel pinned
-    at 200-250 px with no per-button minimum width, so "Write .env Template"
-    rendered narrower than its label and Qt centre-clipped it to something
+    Without a per-button minimum width, the two-per-row ``QHBoxLayout``s are packed
+    into a panel pinned at 200-250 px, so "Write .env Template" renders narrower than
+    its label, and Qt centre-clips it to something
     like "Vrite .env Templat". This asserts every action button's real
     rendered width, after a genuine layout pass, is at least the width its
     label needs under the live style.
@@ -170,9 +168,9 @@ def test_action_buttons_are_not_clipped(qapp: QApplication, monkeypatch: pytest.
 
 
 def test_write_env_template_button_keeps_its_tooltip(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The Write .env Template button keeps its descriptive tooltip after the width fix.
+    """The Write .env Template button keeps its descriptive tooltip while it is widened.
 
-    Guards against a naive width fix that reconstructs the button (or
+    Guards against a width fix that reconstructs the button (or
     otherwise drops the ``setToolTip`` call) while widening it.
 
     Args:

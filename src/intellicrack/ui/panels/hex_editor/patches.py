@@ -118,8 +118,7 @@ class PatchesMixin:
         """Export patches via :meth:`HexEditorBridge.export_patches`.
 
         Routes through the bridge so the GUI, AI tools, and the CLI all produce identical patch wire-format bytes — including the bridge's
-        Python-only fallback for hexcore builds without a native exporter. Panel-side ``document.export_patches_*`` calls bypassed that
-        fallback and returned different bytes when the native build was missing. Dispatches through :func:`run_bridge_coroutine_logged` so
+        Python-only fallback for hexcore builds without a native exporter. Dispatches through :func:`run_bridge_coroutine_logged` so
         BPS/UPS full-file diff/rebuild work does not block the Qt main thread; the returned payload is decoded and written to disk by
         :meth:`_on_export_patches_success`, which runs on the main thread once the bridge call completes.
         """

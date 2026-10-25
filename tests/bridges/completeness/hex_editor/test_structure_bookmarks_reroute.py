@@ -7,7 +7,7 @@
 
 Covers the templates tab's "Auto Bookmark Structure" action
 (``ui/panels/hex_editor/templates.py``
-``TemplatesMixin._on_auto_bookmark_structure``), which now dispatches to
+``TemplatesMixin._on_auto_bookmark_structure``), which dispatches to
 ``HexEditorBridge.generate_structure_bookmarks`` when a bridge is
 attached instead of the GUI-local PE/ELF-only walk
 (``_auto_bookmark_structure_local``). The bridge implementation also
@@ -60,7 +60,7 @@ class TestAutoBookmarkStructureRoutesThroughBridge:
 
         Falsifiable: if ``_on_auto_bookmark_structure`` were reverted to
         call ``self._auto_bookmark_structure_local()`` unconditionally
-        (the pre-remediation behaviour),
+        (the unrouted behaviour),
         ``generate_structure_bookmarks_calls`` would stay at 0 even
         though a bridge was attached, and the bookmark would have been
         created by the local walk against ``self.document`` directly

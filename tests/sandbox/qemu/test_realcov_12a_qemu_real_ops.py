@@ -14,15 +14,14 @@ installed on the host:
 * ``_poll_for_result`` is exercised by running the exact OS-specific execution
   script that :meth:`QEMUSandbox._generate_execution_script` emits through a
   real ``cmd.exe`` so the polled exit code, stdout and stderr come from a real
-  process, not hand-written strings (audit Category 1, F-0003).
+  process, not hand-written strings.
 * ``copy_to_sandbox`` / ``copy_from_sandbox`` round-trip a REAL System32 PE DLL
   and assert byte-for-byte SHA-256 equality (coverage gap).
 * ``extract_dropped_files`` collects a REAL PE binary from the host-side dropped
-  mirror into a real ZIP and the archive is validated by content hash
-  (audit Category 1, F-0007).
+  mirror into a real ZIP and the archive is validated by content hash.
 * ``yara_scan`` compiles REAL YARA rules with the real ``yara`` module and scans
   a REAL PE binary staged in a dropped-files ZIP, asserting on a real rule hit
-  driven by strings genuinely present in the binary (audit Category 1, F-0028).
+  driven by strings genuinely present in the binary.
 * ``is_available`` / ``_detect_accelerator`` probe the REAL QEMU binary on the
   host and assert on a real, internally-consistent accelerator result
   (coverage gap; ``is_available`` mocked in the original suite).
@@ -436,7 +435,7 @@ class TestExtractDroppedRealBinary:
         """A real PE in the host mirror is collected into a ZIP with intact bytes.
 
         The host-visible mirror belongs to the virtio-9p transport. Since
-        S17-D69 the FAT transport exposes the share read-only - vvfat's
+        The FAT transport exposes the share read-only - vvfat's
         write-back path aborts the machine rather than failing a write - so a
         guest on it cannot mirror anything here and the tree comes back over
         the guest agent instead. The platform constant is redirected so this
@@ -571,8 +570,6 @@ class TestRealHostAcceleratorProbe:
         accelerator for this host and ``_detect_accelerator`` must agree with
         an independent subprocess oracle.
 
-        **Falsifiability** (Branch B, QEMU present):
-
         - ``assert available is True`` — fails if ``_find_qemu`` is broken to
           return ``None`` despite a real binary being present.
         - ``assert sb.get_accelerator_cached() is True`` — fails if
@@ -581,7 +578,7 @@ class TestRealHostAcceleratorProbe:
         - ``assert sb.get_qemu_path() is not None`` — fails if
           ``self._qemu_path = qemu_path`` (line 1042) is removed.
         - Accelerator selection is gated against the independent oracle, which
-          runs ``qemu-system-x86_64 -accel help`` directly. The falsifiable
+          runs ``qemu-system-x86_64 -accel help`` directly. The
           claim splits on what the host genuinely offers:
 
           * Hardware-accel host (oracle is WHPX or KVM): ``detected`` must equal
@@ -599,9 +596,6 @@ class TestRealHostAcceleratorProbe:
           ``_accelerator`` that ``is_available`` stored after its own
           internal call, proving the two calls are consistent and the
           cached field is not independent of the detection path.
-
-        **Mutation proofs (one-line breakages in src that make the test red)**:
-        In ``src/intellicrack/sandbox/qemu.py`` -
 
         * On a hardware-accel host: change ``_detect_accelerator_impl`` to
           ``return None`` unconditionally (removing the WHPX/KVM probes); the

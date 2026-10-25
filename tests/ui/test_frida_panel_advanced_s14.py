@@ -3,33 +3,32 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gates for two Frida panel defects: S14-D11 and S14-D19.
+"""Gates for two Frida panel defects: hook installs missing from the table, and the Advanced tab layout.
 
-* S14-D11 -- Installing an Intercept-Ret or Replace-Fn hook through the panel
+* Hook installs -- Installing an Intercept-Ret or Replace-Fn hook through the panel
   succeeded at the bridge (both ``FridaBridge.intercept_return`` and
   ``FridaBridge.replace_function`` track the resulting hook in
   ``FridaBridge._hooks``), but ``FridaPanel._on_intercept_return`` /
-  ``_on_replace_function`` never touched the Active Hooks table, so the
-  installed hook was invisible and unselectable for Remove. The fix inserts a
-  pending row before dispatch (mirroring the existing Add Hook flow) and
+  ``_on_replace_function`` must add a row to the Active Hooks table, or the installed hook is invisible and
+  unselectable for Remove. The handler inserts a pending row before dispatch (mirroring the existing Add Hook flow) and
   populates it from the real ``HookInfo`` the bridge returns on success. These
   tests drive the real button handlers against a real, self-contained Frida
   target process and assert the row lands with the right address/module/
   function/status and a real (non-pending) hook id.
 
-* S14-D19 -- The Advanced tab's System Function Call section packed its three
+* Layout -- The Advanced tab's System Function Call section packed its three
   rows into plain ``QHBoxLayout``s with no width protection, so a narrow
   docked panel shrank every label/combo/input below its natural size --
   reported as labels rendering on top of combos -- and the Advanced tab itself
-  had no scroll wrapper, clipping content in the docked view. The fix wraps
-  each dense row in the project's established ``make_control_row`` horizontal-
+  had no scroll wrapper, clipping content in the docked view. Each dense row is wrapped in the
+  project's established ``make_control_row`` horizontal-
   scroll helper (already used by the x64dbg panel for the same class of bug)
-  and wraps the whole Advanced tab content in ``AnalysisPanelBase._make_scrollable``.
+  and the whole Advanced tab content is wrapped in ``AnalysisPanelBase._make_scrollable``.
   These tests shrink the real panel and assert every control keeps at least
   its natural width, that no two controls' rendered geometries overlap, and
   that the Advanced tab is hosted in a scroll area.
 
-Requires a Windows host; the S14-D11 tests additionally require frida-python
+Requires a Windows host; the hook-install tests additionally require frida-python
 and spawn a real ``notepad.exe`` target (``spawns_process``).
 """
 
@@ -346,7 +345,7 @@ class _TestFridaPanel(FridaPanel):
 @pytest.mark.spawns_process
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge/GUI integration tests")
 class TestInterceptReturnAndReplaceFunctionPopulateHooksTable:
-    """S14-D11 gates: Intercept-Ret / Replace-Fn installs must land a row in the Active Hooks table."""
+    """Intercept-Ret / Replace-Fn installs must land a row in the Active Hooks table."""
 
     @staticmethod
     def test_intercept_return_installed_adds_active_hooks_row(
@@ -360,10 +359,9 @@ class TestInterceptReturnAndReplaceFunctionPopulateHooksTable:
         Ret" toolbar button would (dialogs monkeypatched to fixed values, the
         bridge call itself real and dispatched synchronously), targeting the
         spawned notepad process's real ``kernel32.dll!GetCurrentProcessId``
-        export. Falsifiable: before the fix, ``hooks_row_count()`` stays 0 and
-        ``hook_ids_snapshot()`` stays empty even though the bridge call
-        succeeds -- this test fails on the row-count/id assertions in that
-        case.
+        export. Falsifiable: without the row insertion, ``hooks_row_count()`` stays 0 and
+        ``hook_ids_snapshot()`` stays empty even though the bridge call succeeds, so this test
+        fails on the row-count/id assertions.
 
         Args:
             synchronous_dispatch: Captures and drains dispatched coroutines.
@@ -417,7 +415,7 @@ class TestInterceptReturnAndReplaceFunctionPopulateHooksTable:
         real ``kernel32.dll!GetTickCount`` export with a constant-returning
         ``NativeCallback`` (the same target/replacement idiom already proven
         safe in ``tests/bridges/test_realcov_03a_frida_modules.py``).
-        Falsifiable: before the fix, the row never appears even though
+        Falsifiable: without the row insertion, the row never appears even though
         ``FridaBridge.replace_function`` genuinely installed the replacement.
 
         Args:
@@ -536,13 +534,13 @@ def _assert_no_overlap(widgets: list[QWidget], reference: QWidget) -> None:
 
 
 class TestAdvancedTabSystemFunctionCallLayout:
-    """S14-D19 gates: the Advanced tab and its System Function Call rows must stay readable and unclipped."""
+    """The Advanced tab and its System Function Call rows must stay readable and unclipped."""
 
     @staticmethod
     def test_advanced_tab_is_hosted_in_a_scroll_area(qapp: QApplication) -> None:
         """The Advanced tab's content must be wrapped in a scroll area, not clipped in the dock.
 
-        Falsifiable: before the fix, ``_right_tabs.addTab`` received the bare
+        Falsifiable: if ``_right_tabs.addTab`` received the bare
         Advanced-section container directly, so this widget lookup would not
         be a ``QScrollArea`` and the assertion fails.
 
@@ -567,13 +565,10 @@ class TestAdvancedTabSystemFunctionCallLayout:
     def test_system_function_call_controls_stay_readable_when_panel_is_narrow(qapp: QApplication) -> None:
         """Squeezed narrow, every System Function Call control must keep its natural width and never overlap.
 
-        Regression test for S14-D19: before the fix, the three
-        ``SystemFunctionCallControls`` rows (address/args/call,
-        return-type/arg-types/convention, value/errno/GetLastError) were
-        added to the layout as plain ``QHBoxLayout``s, so Qt shrank every
-        label/combo/input below its ``sizeHint`` when the panel narrowed --
-        the reported "Return/Value labels render on top of the combos"
-        symptom. Falsifiable: if the rows are no longer hosted in a
+        The three ``SystemFunctionCallControls`` rows (address/args/call,
+        return-type/arg-types/convention, value/errno/GetLastError) must be hosted in a horizontally scrolling control row.
+        Plain ``QHBoxLayout``s would let Qt shrink every label/combo/input below its ``sizeHint`` when the panel narrows,
+        which renders the reported "Return/Value labels render on top of the combos" symptom. Falsifiable: if the rows are no longer hosted in a
         horizontally-scrolling control row, either the "must overflow"
         assertion fails (nothing to scroll), a control's rendered width drops
         below its natural size, or two controls' geometries intersect.

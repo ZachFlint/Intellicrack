@@ -179,9 +179,8 @@ def test_foreground_role_per_level(dark_theme: ThemeManager) -> None:
     """Verify ForegroundRole resolves the theme-aware color for every level.
 
     DEBUG / INFO / WARNING / ERROR are direct 1:1 mappings onto the active
-    theme's muted / foreground / warning / error colors (the GUI-audit H4
-    fix that replaced a fixed dark-only palette so INFO stays legible under
-    the light theme too). CRITICAL is a black-or-white contrast pick against
+    theme's muted / foreground / warning / error colors (a fixed
+    dark-only palette would leave INFO illegible under the light theme). CRITICAL is a black-or-white contrast pick against
     its own badge background, so it is asserted against the two colors that
     formula can ever produce, not a single hardcoded value.
 

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit7 F-0025 tests for coordinated monitor shutdown.
+"""Tests for coordinated monitor shutdown.
 
 Validates the named ``IntellicrackMonitorStop`` event wired into the
 four monitor scripts (``api_trace.ps1``, ``dll_monitor.ps1``,
@@ -111,9 +111,7 @@ def _wait_for_marker(path: Path, marker: str, timeout_sec: float) -> bool:
     return False
 
 
-# ----------------------------------------------------------------------
 # Source-level guards (run on every platform).
-# ----------------------------------------------------------------------
 
 
 def test_helper_script_exists_with_required_modes() -> None:
@@ -312,9 +310,7 @@ def test_monitor_emits_lifecycle_records(script_path: Path, lifecycle_helper: st
     )
 
 
-# ----------------------------------------------------------------------
 # Windows-only integration tests.
-# ----------------------------------------------------------------------
 
 
 @_WINDOWS_ONLY
@@ -612,7 +608,7 @@ def _materialise_stop_driver_scripts(scripts_dir: Path) -> None:
 
 
 def _materialise_consumer_monitor(scripts_dir: Path, event_name: str) -> None:
-    """Create a long-running consumer monitor for the F-0025 driver test.
+    """Create a long-running consumer monitor for the stop driver test.
 
     The consumer opens the named stop event, polls it, and writes a
     lifecycle record from its ``finally`` clause so the test can assert
@@ -691,8 +687,7 @@ def test_stop_monitors_driver_signals_event_before_taskkill(tmp_path: Path) -> N
 
     # Spawn the consumer directly so the cmd.exe -> powershell.exe ->
     # Start-Process inherited-handle chain in start_monitors.cmd does not
-    # interfere with this assertion. The test on start_monitors.cmd itself
-    # lives in tests/test_audit3/sandbox/test_start_monitors.py.
+    # interfere with this assertion.
     consumer = Popen(
         [
             pwsh,

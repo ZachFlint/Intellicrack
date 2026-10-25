@@ -129,8 +129,8 @@ async def _run_startup(config: Config | None = None) -> ProviderRegistry:
 async def test_startup_connects_openai_through_gateway_saved_in_provider_settings(gateway: ProviderEndpointServer) -> None:
     """The base URL, organization and timeout saved by Provider Settings are used at launch.
 
-    ``providers.json`` holds the gateway settings exactly as earlier releases
-    saved them; ``.env`` holds only the gateway's key.
+    ``providers.json`` holds the gateway settings as Provider Settings writes them;
+    ``.env`` holds only the gateway's key.
 
     Args:
         gateway: Loopback gateway fixture.

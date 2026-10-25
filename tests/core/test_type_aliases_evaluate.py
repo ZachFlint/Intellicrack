@@ -5,7 +5,7 @@
 """Every ``type`` alias in the package evaluates at runtime.
 
 A ``type X = ...`` statement is evaluated lazily: importing its module succeeds even when the value names something imported only under
-``TYPE_CHECKING``, and the ``NameError`` waits for the first read of ``X.__value__``. Sphinx autodoc reads it, so such an alias broke the
+``TYPE_CHECKING``, and the ``NameError`` waits for the first read of ``X.__value__``. Sphinx autodoc reads it, so such an alias breaks the
 documentation build. These gates find every alias in ``src/intellicrack`` by parsing the source and evaluate each one as autodoc does.
 """
 

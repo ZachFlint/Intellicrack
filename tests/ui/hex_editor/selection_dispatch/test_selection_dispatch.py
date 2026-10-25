@@ -2,25 +2,25 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit4 C16 (F-0004, F-0010, F-0024): hex panel selection + dispatch.
+"""Regression tests for hex panel selection and dispatch.
 
 These tests guard against three regressions in
 :class:`~intellicrack.ui.panels.hex_editor.panel.HexEditorPanel`:
 
-* **F-0004** -- ``_on_selection_changed`` must propagate the new selection to
-  the shared :class:`HexDocumentState` and to the attached bridge's
-  ``_selection`` attribute.  The pre-audit code stored the range in panel-local
-  fields only, so AI tools and CLI callers querying the bridge saw stale or
-  empty selection state after the user dragged a selection in the GUI.
+* ``_on_selection_changed`` must propagate the new selection to the shared
+  :class:`HexDocumentState` and to the attached bridge's ``_selection``
+  attribute.  Storing the range in panel-local fields alone leaves AI tools and
+  CLI callers that query the bridge with stale or empty selection state after
+  the user drags a selection in the GUI.
 
-* **F-0010** -- ``set_state_holder``'s ``DOCUMENT_OPENED`` handler must honour
-  subsequent open events even when the panel already has a document loaded.
-  The pre-audit guard ``if self.document is None`` caused the panel to ignore
-  every ``DOCUMENT_OPENED`` event fired after the first file was opened.
+* ``set_state_holder``'s ``DOCUMENT_OPENED`` handler must honour subsequent open
+  events even when the panel already has a document loaded.  A guard of the
+  form ``if self.document is None`` would ignore every ``DOCUMENT_OPENED`` event
+  fired after the first file was opened.
 
-* **F-0024** -- ``_do_copy_as`` must surface a user-visible warning when the
-  system clipboard is unavailable or raises on write.  The pre-audit code
-  silently dropped the result.
+* ``_do_copy_as`` must surface a user-visible warning when the system clipboard
+  is unavailable or raises on write.  Silently dropping the result hides the
+  failure.
 """
 
 from __future__ import annotations
@@ -229,7 +229,7 @@ class _PanelHarness(QWidget):
 
 @pytest.mark.usefixtures("qapp")
 class TestSelectionPropagation:
-    """F-0004: GUI selection must propagate to the shared state holder and bridge."""
+    """GUI selection must propagate to the shared state holder and bridge."""
 
     @staticmethod
     def test_selection_payload_matches_range(qapp: QApplication) -> None:
@@ -427,7 +427,7 @@ class _DocumentOpenedHarness(QWidget):
 
 @pytest.mark.usefixtures("qapp")
 class TestDocumentOpenedDispatch:
-    """F-0010: DOCUMENT_OPENED must swap in a new document even when one is already loaded."""
+    """DOCUMENT_OPENED must swap in a new document even when one is already loaded."""
 
     @staticmethod
     def test_first_open_loads_file(qapp: QApplication, tmp_path: Path) -> None:
@@ -454,9 +454,9 @@ class TestDocumentOpenedDispatch:
     def test_second_open_replaces_document(qapp: QApplication, tmp_path: Path) -> None:
         """Assert that a second DOCUMENT_OPENED replaces the already-loaded document.
 
-        This is the core regression: the pre-audit guard
-        ``if self.document is None`` caused all DOCUMENT_OPENED events
-        after the first to be silently ignored.
+        A guard of the form ``if self.document is None`` would silently ignore
+        every DOCUMENT_OPENED event after the first, so this test asserts that
+        the second open reaches ``load_file``.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
@@ -633,7 +633,7 @@ _CLIPBOARD_WRITE_FAILED_TITLE: Final[str] = "Clipboard Write Failed"
 
 @pytest.mark.usefixtures("qapp")
 class TestCopyAsClipboardError:
-    """F-0024: ``_do_copy_as`` must surface a warning when the clipboard is unavailable.
+    """``_do_copy_as`` must surface a warning when the clipboard is unavailable.
 
     Tests use real stub objects injected through :class:`_CopyHarness` seam
     overrides of ``_get_clipboard``, ``_write_to_clipboard``, and ``_warn_user``.

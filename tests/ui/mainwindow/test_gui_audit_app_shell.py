@@ -2,20 +2,19 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable regression gates for the 2026-07-01 GUI audit app-shell fixes.
+"""Falsifiable regression gates for the app-shell wiring in ``intellicrack.ui.app``.
 
-Each test fails against the pre-fix ``intellicrack.ui.app`` code path and passes
-after remediation:
+Each test fails when the named behaviour regresses:
 
-* H1 - ``_on_bridge_analysis_received`` marshals to the GUI thread and performs
+* ``_on_bridge_analysis_received`` marshals to the GUI thread and performs
   no direct widget mutation; the tab clear/redisplay lives in the GUI-thread
   slot ``_on_bridge_analysis_displayed``.
 * Confirmation - ``_request_tool_confirmation`` shows the dialog by emitting a
   queued signal (``confirmation_requested``) instead of ``QTimer.singleShot``,
   which never fires on the orchestrator's asyncio-loop thread.
-* M12 - a restored "Auto-approve: ON" toggle is applied to the orchestrator at
+* A restored "Auto-approve: ON" toggle is applied to the orchestrator at
   startup so destructive tool calls are actually auto-approved.
-* M13 - the model selection is preserved across Refresh Models by capturing it
+* The model selection is preserved across Refresh Models by capturing it
   before the combo is cleared.
 """
 
@@ -51,9 +50,8 @@ if TYPE_CHECKING:
 _ANALYSIS_STRING_ADDRESS: int = 0x140002100
 _ANALYSIS_STRING_VALUE: str = "h1-display-slot-marker"
 
-# A level that is neither the auto-approve override (NONE) nor the value the
-# pre-fix code hardcoded for the off state (DESTRUCTIVE), so the off-case
-# assertion falsifies a regression back to that hardcode.
+# A level that is neither the auto-approve override (NONE) nor DESTRUCTIVE, so the
+# off-case assertion falsifies a regression back to a hardcoded DESTRUCTIVE.
 _CONFIGURED_LEVEL: ConfirmationLevel = ConfirmationLevel.ALL
 
 
@@ -212,19 +210,19 @@ class _AutoApproveHolder:
 
 
 def test_h1_callback_only_emits_no_direct_widget_mutation() -> None:
-    """H1: the worker-thread callback emits and never touches widgets directly."""
+    """The worker-thread callback emits and never touches widgets directly."""
     holder = _AnalysisCallbackHolder()
     getattr(MainWindow, "_on_bridge_analysis_received")(cast("MainWindow", holder), "summary-payload")
 
     assert holder.bridge_analysis_received.emitted == ["summary-payload"]
-    # Pre-fix these were called on the worker thread; post-fix they must not be.
+    # These must not be called from the worker thread.
     assert holder.tool_panel.clear_calls == []
     assert holder.tool_panel.display_calls == []
 
 
 @pytest.mark.usefixtures("qapp")
 def test_h1_display_slot_performs_the_tab_update() -> None:
-    """H1: the GUI-thread slot renders the summary into the real analysis panel.
+    """The GUI-thread slot renders the summary into the real analysis panel.
 
     The panel update the worker-thread callback must not perform lives here.
     It is asserted against a real ``ToolOutputPanel`` rather than a recorder,
@@ -302,13 +300,13 @@ def test_confirmation_marshals_via_signal_not_singleshot(monkeypatch: pytest.Mon
 
 @pytest.mark.usefixtures("qapp")
 def test_m12_apply_restored_auto_approve_sets_level() -> None:
-    """M12: the restore helper maps the toggle state to the orchestrator level.
+    """The restore helper maps the toggle state to the orchestrator level.
 
     Auto-approve is an override, not a second setting: a restored ON toggle
     suppresses every prompt (``NONE``), while a restored OFF toggle must hand
     the orchestrator the user's *configured* level rather than a hardcoded
     default. The off-case asserts the configured ``ALL`` flows through, which
-    fails if the pre-fix hardcoded ``DESTRUCTIVE`` is ever reintroduced.
+    fails if a hardcoded ``DESTRUCTIVE`` is ever reintroduced.
     """
     on_holder = _AutoApproveHolder(checked=True)
     getattr(MainWindow, "_apply_restored_auto_approve")(cast("MainWindow", on_holder))
@@ -393,7 +391,7 @@ def test_m12_restored_on_state_applied_to_orchestrator_at_startup(
     qapp: QCoreApplication,
     tmp_path: Path,
 ) -> None:
-    """M12: constructing the window with auto_approve=ON leaves the orchestrator at NONE.
+    """Constructing the window with auto_approve=ON leaves the orchestrator at NONE.
 
     Args:
         qapp: Qt application fixture.
@@ -448,7 +446,7 @@ def test_m13_model_selection_preserved_across_refresh(
     window_factory: MainWindow,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """M13: the selected model survives a Refresh Models cycle.
+    """The selected model survives a Refresh Models cycle.
 
     Args:
         window_factory: MainWindow fixture.

@@ -70,10 +70,22 @@ def _run_reqs() -> None:
         raise SystemExit(rc)
 
 
+def _run_deps() -> None:
+    sys.path.insert(0, str(_REPO / "packaging"))
+    import check_runtime_deps
+    analysis = check_runtime_deps.apply_fix(_REPO)
+    for restoration in analysis.restorations:
+        print(f"restored {restoration.requirement()} (from {restoration.source})", flush=True)
+    if analysis.undeclared:
+        detail = "; ".join(f"{module} -> {', '.join(dists)}" for module, dists in analysis.undeclared)
+        raise SystemExit(f"imported but declared in no manifest, cannot auto-restore: {detail}")
+
+
 _step("nul", _run_nul)
 _step("tree", _run_tree)
 _step("kmap", _run_kmap)
 _step("reqs", _run_reqs)
+_step("deps", _run_deps)
 '@
 
 $stepLabels = @{
@@ -81,6 +93,7 @@ $stepLabels = @{
     tree = @{ start = 'Generating structure files...';     ok = 'Structure generated' }
     kmap = @{ start = 'Generating knowledge map...';       ok = 'Knowledge map generated' }
     reqs = @{ start = 'Generating requirements.txt...';    ok = 'Requirements generated' }
+    deps = @{ start = 'Verifying runtime dependency manifest...'; ok = 'Runtime dependency manifest verified' }
 }
 
 $pixiParts = @($Pixi -split '\s+' | Where-Object { $_ })

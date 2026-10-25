@@ -2,26 +2,19 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""D33 drift gate: the embedded stylesheet fallback must track the ``.qss`` assets.
+"""Drift gate: the embedded stylesheet fallback must track the ``.qss`` assets.
 
-``ThemeManager`` falls back to an embedded stylesheet whenever the
-theme-specific ``.qss`` asset cannot be read. Before this fix that fallback
-was two large hand-maintained string literals (``DARK_THEME_FALLBACK`` /
-``LIGHT_THEME_FALLBACK``) that had drifted from the shipped
-``dark_theme.qss`` / ``light_theme.qss`` in both directions -- missing
-selectors the real assets define (e.g. ``chat_panel``/``header``/
-``input_bar``/``send_button`` rules) and carrying selectors the real assets
-never defined (e.g. a ``QLabel[subheading="true"]`` rule).
+``ThemeManager`` falls back to an embedded stylesheet whenever the theme-specific ``.qss`` asset
+cannot be read. That fallback must be computed from the shipped assets, not kept as a
+hand-maintained copy, because a copy drifts from ``dark_theme.qss`` / ``light_theme.qss`` as soon
+as a selector is added to or removed from the asset.
 
-The fix makes the ``.qss`` file the single source of truth: the fallback is
-computed by reading the packaged asset (through
+The fallback is computed by reading the packaged asset (through
 :func:`importlib.resources.files` primarily, the filesystem-backed
-:func:`~intellicrack.ui.resources.resource_helper.get_style_path` as a
-secondary route) instead of duplicating its text as Python source. These
-tests drive the real ``ThemeManager`` routing logic and the real asset files
-on disk -- never a restatement of either -- and are written to fail if a
-future change reintroduces a hand-maintained copy that can drift from the
-``.qss`` file it is supposed to mirror.
+:func:`~intellicrack.ui.resources.resource_helper.get_style_path` as a secondary route) instead of
+duplicating its text as Python source. These tests drive the real ``ThemeManager`` routing logic
+and the real asset files on disk, never a restatement of either, and fail if a change
+reintroduces a hand-maintained copy that can drift from the ``.qss`` file it mirrors.
 """
 
 from __future__ import annotations
@@ -95,7 +88,7 @@ def test_d33_loader_fallback_matches_representative_asset_for_every_theme(
     monkeypatch: pytest.MonkeyPatch,
     theme: str,
 ) -> None:
-    """D33: the loader's fallback for every theme equals its family's live ``.qss`` content.
+    """The loader's fallback for every theme equals its family's live ``.qss`` content.
 
     Forces the theme-specific per-file read to report "missing" (as would
     happen for a corrupted or partially-shipped install) and asserts the
@@ -118,12 +111,12 @@ def test_d33_loader_fallback_matches_representative_asset_for_every_theme(
 
 
 def test_d33_dark_fallback_constant_matches_dark_theme_qss_exactly() -> None:
-    """D33: ``DARK_THEME_FALLBACK`` is byte-for-byte identical to ``dark_theme.qss``."""
+    """``DARK_THEME_FALLBACK`` is byte-for-byte identical to ``dark_theme.qss``."""
     assert _representative_asset_text(THEME_DARK) == DARK_THEME_FALLBACK
 
 
 def test_d33_light_fallback_constant_matches_light_theme_qss_exactly() -> None:
-    """D33: ``LIGHT_THEME_FALLBACK`` is byte-for-byte identical to ``light_theme.qss``."""
+    """``LIGHT_THEME_FALLBACK`` is byte-for-byte identical to ``light_theme.qss``."""
     assert _representative_asset_text(THEME_LIGHT) == LIGHT_THEME_FALLBACK
 
 
@@ -132,13 +125,11 @@ def test_d33_fallback_tracks_a_live_edit_to_the_qss_asset_not_a_frozen_copy(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """D33: the fallback reflects a live edit to ``dark_theme.qss``, proving it is not a hardcoded copy.
+    """The fallback reflects a live edit to ``dark_theme.qss``, proving it is not a hardcoded copy.
 
-    This is the falsifiability check for the drift bug itself: before the
-    fix, ``DARK_THEME_FALLBACK`` was a hand-maintained literal that a change
-    to ``dark_theme.qss`` would never touch, so a mutated selector in the
-    real asset would silently NOT be reflected in what ``ThemeManager``
-    actually serves as a fallback. Here the real asset content is copied to
+    This is the falsifiability check for the drift bug itself: a mutated selector in the real asset
+    must be reflected in what ``ThemeManager`` actually serves as a fallback, which a hand-maintained
+    literal would never do. Here the real asset content is copied to
     a scratch directory with a marker appended, the packaged-resource read
     route (:mod:`importlib.resources`) is forced to fail so the
     filesystem-backed secondary route is exercised, and the real

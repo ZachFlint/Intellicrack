@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Third-pass coverage for ``intellicrack.bridges.ghidra``.
+"""Coverage for ``intellicrack.bridges.ghidra``.
 
 A file whose own access-control list denies attribute reads, inside a directory whose
 list denies listing, makes ``Path.exists`` raise ``PermissionError`` (measured with real

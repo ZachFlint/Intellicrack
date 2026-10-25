@@ -59,13 +59,11 @@ from intellicrack.providers import ids as provider_ids
 from intellicrack.providers.ids import normalize_provider_id
 
 
-# ---------------------------------------------------------------------------
 # SectionInfo computed properties (PE characteristic bit flags)
 # Independent oracle: PE specification bitmask values
 #   0x20000000 = IMAGE_SCN_MEM_EXECUTE
 #   0x40000000 = IMAGE_SCN_MEM_READ
 #   0x80000000 = IMAGE_SCN_MEM_WRITE
-# ---------------------------------------------------------------------------
 
 _TEXT_CHARACTERISTICS = 0x60000020  # EXECUTE | READ | CNT_CODE
 _DATA_CHARACTERISTICS = 0xC0000040  # READ | WRITE | CNT_INITIALIZED_DATA
@@ -156,10 +154,8 @@ def test_section_entropy_high_flags_packed() -> None:
     assert sec.is_executable is True
 
 
-# ---------------------------------------------------------------------------
 # DataTypeInfo.display_type computed property
 # Independent oracle: documented format rules in the class docstring
-# ---------------------------------------------------------------------------
 
 
 def test_display_type_plain_name() -> None:
@@ -237,10 +233,8 @@ def test_display_type_array_without_base_type_falls_back_to_name() -> None:
     assert info.display_type == "unknown[]"
 
 
-# ---------------------------------------------------------------------------
 # FunctionInfo.has_code and FunctionInfo.summary
 # Independent oracle: documented property semantics
-# ---------------------------------------------------------------------------
 
 
 def test_function_has_code_false_when_both_none() -> None:
@@ -316,10 +310,8 @@ def test_function_summary_zero_vars() -> None:
     assert info.summary == "sub_402000@0x402000 (stdcall, 0 vars)"
 
 
-# ---------------------------------------------------------------------------
 # BreakpointInfo.__str__
 # Independent oracle: documented format string in the class docstring
-# ---------------------------------------------------------------------------
 
 
 def test_breakpoint_str_enabled() -> None:
@@ -360,10 +352,8 @@ def test_breakpoint_str_zero_hits() -> None:
     assert "0xdead000" in str(bp)
 
 
-# ---------------------------------------------------------------------------
 # ThreadInfo.__str__
 # Independent oracle: documented format string
-# ---------------------------------------------------------------------------
 
 
 def test_thread_str_format() -> None:
@@ -381,10 +371,8 @@ def test_thread_str_suspended_state() -> None:
     assert "0x401800" in result
 
 
-# ---------------------------------------------------------------------------
 # CrossReference.__str__
 # Independent oracle: documented format "[type] src -> dst"
-# ---------------------------------------------------------------------------
 
 
 def test_cross_reference_str_with_function_names() -> None:
@@ -423,10 +411,8 @@ def test_cross_reference_str_mixed_names() -> None:
     assert str(xref) == "[jump] dispatcher -> 0x402000"
 
 
-# ---------------------------------------------------------------------------
 # RegisterState.__getitem__, get_gpr_dict, get_segment_registers
 # Independent oracle: x86-64 ABI register set
-# ---------------------------------------------------------------------------
 
 _REG_STATE_KWARGS: dict[str, int] = {
     "rax": 0x1234567890ABCDEF,
@@ -517,10 +503,8 @@ def test_register_state_get_segment_registers_excludes_gprs() -> None:
         assert gpr_name not in segs
 
 
-# ---------------------------------------------------------------------------
 # ToolFunction.signature computed property
 # Independent oracle: documented format "name(param: type, ...) -> returns"
-# ---------------------------------------------------------------------------
 
 
 def test_tool_function_signature_single_param() -> None:
@@ -544,11 +528,9 @@ def test_tool_function_signature_no_params() -> None:
     assert func.signature == "list_modules() -> list[ModuleInfo]"
 
 
-# ---------------------------------------------------------------------------
 # BridgeAnalysisSummary.complete flag semantics
 # Independent oracle: docstring states False is the default; consumers MUST
 # check this flag before treating the summary as authoritative
-# ---------------------------------------------------------------------------
 
 
 def test_bridge_analysis_summary_complete_defaults_false() -> None:
@@ -622,11 +604,9 @@ def test_bridge_analysis_summary_str_contains_binary_name() -> None:
     assert "uniqueMarkerBinary.exe" in str(summary)
 
 
-# ---------------------------------------------------------------------------
 # IntellicrackError hierarchy: construction, str, and isinstance tests
 # These tests are falsifiable: if the inheritance chain is broken the isinstance
 # check will return False, or the str representation will not match.
-# ---------------------------------------------------------------------------
 
 
 def test_intellicrack_error_str_equals_message() -> None:
@@ -777,11 +757,9 @@ def test_tool_error_not_subclass_of_provider_error() -> None:
     assert not issubclass(ToolError, ProviderError)
 
 
-# ---------------------------------------------------------------------------
 # pytest.raises tests for exception error paths
 # These use pytest.raises to verify that specific operations raise the right
 # exception type with the right message.
-# ---------------------------------------------------------------------------
 
 
 def test_register_state_getitem_raises_key_error_with_message() -> None:
@@ -823,10 +801,8 @@ def test_session_add_tag_empty_raises_value_error_with_message() -> None:
         session.add_tag("")
 
 
-# ---------------------------------------------------------------------------
 # ToolName and provider id enum membership and values
 # Independent oracle: documented string values required by external tool bridges
-# ---------------------------------------------------------------------------
 
 
 def test_tool_name_enum_values_exact() -> None:
@@ -868,10 +844,8 @@ def test_provider_name_roundtrip_from_value() -> None:
     assert normalize_provider_id("my-gateway") == "my-gateway"
 
 
-# ---------------------------------------------------------------------------
 # Session.create: UUID format and field initialization
 # Independent oracle: UUID v4 spec (RFC 4122) — 8-4-4-4-12 hex groups
-# ---------------------------------------------------------------------------
 
 _UUID4_PATTERN = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
@@ -918,10 +892,8 @@ def test_session_active_binary_none_when_no_binaries() -> None:
     assert session.active_binary is None
 
 
-# ---------------------------------------------------------------------------
 # Session.add_binary / active_binary
 # Independent oracle: add_binary sets active_binary_index to 0 on first add
-# ---------------------------------------------------------------------------
 
 
 def test_session_add_binary_makes_it_active() -> None:
@@ -962,10 +934,8 @@ def test_session_active_binary_out_of_range_returns_none() -> None:
     assert session.active_binary is None
 
 
-# ---------------------------------------------------------------------------
 # Session.add_tag / remove_tag
 # Independent oracle: documented contract (bool return, ValueError, normalisation)
-# ---------------------------------------------------------------------------
 
 
 def test_session_add_tag_returns_true_for_new_tag() -> None:
@@ -1017,10 +987,8 @@ def test_session_remove_tag_strips_whitespace_to_match() -> None:
     assert "pe_binary" not in session.tags
 
 
-# ---------------------------------------------------------------------------
 # Session.set_tool_state / clear_tool_state
 # Independent oracle: dict-based storage; clear returns True iff key existed
-# ---------------------------------------------------------------------------
 
 
 def test_session_set_tool_state_stores_state() -> None:
@@ -1062,10 +1030,8 @@ def test_session_clear_tool_state_returns_false_when_absent() -> None:
     assert result is False
 
 
-# ---------------------------------------------------------------------------
 # Message timestamp and tool_calls / tool_results wiring
 # Independent oracle: datetime UTC, ToolCall/ToolResult field contract
-# ---------------------------------------------------------------------------
 
 
 def test_message_timestamp_is_utc_aware() -> None:
@@ -1116,10 +1082,8 @@ def test_tool_result_duration_and_error_fields() -> None:
     assert math.isclose(fail.duration_ms, 5.0)
 
 
-# ---------------------------------------------------------------------------
 # PatchInfo byte lengths and values
 # Independent oracle: known patch patterns for JZ->JMP and NOP sleds
-# ---------------------------------------------------------------------------
 
 
 def test_patch_info_jz_to_jmp_bytes() -> None:
@@ -1154,10 +1118,8 @@ def test_patch_info_nop_sled_length_and_bytes() -> None:
     assert patch.applied is False
 
 
-# ---------------------------------------------------------------------------
 # ToolDefinition structure
 # Independent oracle: ToolFunction.signature contract already validated above
-# ---------------------------------------------------------------------------
 
 
 def test_tool_definition_functions_accessible_by_index() -> None:
@@ -1187,10 +1149,8 @@ def test_tool_parameter_enum_membership() -> None:
     assert len(param.enum) == 3
 
 
-# ---------------------------------------------------------------------------
 # Session field inventory (structural contract)
 # Independent oracle: documented Session attributes in the class docstring
-# ---------------------------------------------------------------------------
 
 
 def test_session_has_all_required_fields() -> None:
@@ -1222,10 +1182,8 @@ def test_bridge_analysis_summary_has_complete_field() -> None:
     assert "complete" in field_names
 
 
-# ---------------------------------------------------------------------------
 # Session.get_bridge_analysis / add_bridge_analysis round-trip
 # Independent oracle: dict storage keyed by binary name
-# ---------------------------------------------------------------------------
 
 
 def test_session_add_and_get_bridge_analysis() -> None:
@@ -1261,10 +1219,8 @@ def test_session_get_bridge_analysis_returns_none_for_unknown() -> None:
     assert result is None
 
 
-# ---------------------------------------------------------------------------
 # ProcessInfo / ThreadInfo / ModuleInfo composite structure
 # Independent oracle: known field values cross-checked against input
-# ---------------------------------------------------------------------------
 
 
 def test_process_info_threads_and_modules_preserved() -> None:
@@ -1296,10 +1252,8 @@ def test_process_info_threads_and_modules_preserved() -> None:
     assert proc.modules[0].base_address == 0x77000000
 
 
-# ---------------------------------------------------------------------------
 # HookInfo optional address
 # Independent oracle: None vs int semantics
-# ---------------------------------------------------------------------------
 
 
 def test_hook_info_active_with_resolved_address() -> None:

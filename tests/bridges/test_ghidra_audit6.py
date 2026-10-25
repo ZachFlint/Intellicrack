@@ -3,82 +3,79 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit-6 GHIDRA-A, GHIDRA-B, GHIDRA-C, and GHIDRA-D regression tests.
+"""Regression tests for the Ghidra bridge foundation, launcher, and write paths.
 
-GHIDRA-A foundation findings:
+Foundation behavior:
 
-Covers F-0001 (``remote_exec`` discards trailing expression results),
-F-0002 (call-site indentation reaches the remote interpreter as
-``IndentationError``), F-0005/F-0028 (read methods relayed empty data
-from a swallowed-exception return), F-0006/F-0025 (read methods caught
-every exception and returned empty containers despite advertising
-``Raises: ToolError``), and F-0011 (``get_call_graph`` and
-``get_call_tree`` issued per-byte ``getReferencesFrom`` lookups instead
-of using ``Function.getCalledFunctions``).
+* ``remote_exec`` keeps the value of a trailing expression statement.
+* Call-site indentation is stripped before the script reaches the remote
+  interpreter, where it would raise ``IndentationError``.
+* Read methods surface the remote payload and raise ``ToolError`` on failure
+  instead of returning empty data from a swallowed exception.
+* ``get_call_graph`` and ``get_call_tree`` use ``Function.getCalledFunctions``
+  instead of per-byte ``getReferencesFrom`` lookups.
 
-Tests substitute a deterministic in-process double for the
-``ghidra_bridge`` client. The double mirrors the upstream
-``BridgeClient.remote_exec`` / ``remote_eval`` semantics at the smallest
-viable boundary: ``remote_exec`` runs the script via :func:`exec`,
-``remote_eval`` evaluates a single expression by wrapping it in a
-return statement and executing it in the shared globals namespace. This
-is the same boundary the real bridge crosses, so the tests exercise
-the corrected ``_execute_remote`` dispatch path end-to-end.
+Tests substitute a deterministic in-process double for the ``ghidra_bridge``
+client. The double mirrors the upstream ``BridgeClient.remote_exec`` and
+``remote_eval`` semantics at the smallest viable boundary: ``remote_exec`` runs
+the script via :func:`exec`, and ``remote_eval`` evaluates a single expression
+by wrapping it in a return statement and executing it in the shared globals
+namespace. This is the same boundary the real bridge crosses, so the tests
+exercise the ``_execute_remote`` dispatch path end-to-end.
 
-GHIDRA-B headless launcher and lifecycle findings:
+Headless launcher and lifecycle behavior:
 
-* F-0003 - Bridge script must start a ``jfx_bridge`` ``BridgeServer`` directly
-  (Ghidra 12.x dropped Jython, so the upstream ``ghidra_bridge_server`` cannot
-  load under PyGhidra) and call ``.run()`` to keep the JVM alive.
-* F-0004 - The BridgeServer must be wired with eval/exec hooks bound to the
-  live PyGhidra script namespace and an explicit ``response_timeout``.
-* F-0009 - The bridge script writer must use explicit ``utf-8`` encoding and
-  convert ``OSError`` into ``ToolError``.
-* F-0012 - ``shutdown`` must close the ``ghidra_bridge`` RPC client socket so
-  the connection does not leak.
-* F-0013 - Concurrent ``start_headless`` invocations must not race over a
-  single shared script directory; cleanup must serialise via a global lock.
-* F-0014 - The bridge port wait loop must not deadlock when Ghidra writes more
-  stderr than the OS pipe buffer holds; stderr drain threads must run
-  continuously throughout the wait loop.
-* F-0015 - ``Popen`` must be invoked with ``cwd``, scrubbed environment, and
+* The bridge script starts a ``jfx_bridge`` ``BridgeServer`` directly and calls
+  ``.run()`` to keep the JVM alive. Ghidra 12.x dropped Jython, so the upstream
+  ``ghidra_bridge_server`` cannot load under PyGhidra.
+* The BridgeServer is wired with eval/exec hooks bound to the live PyGhidra
+  script namespace and an explicit ``response_timeout``.
+* The bridge script writer uses explicit ``utf-8`` encoding and converts
+  ``OSError`` into ``ToolError``.
+* ``shutdown`` closes the ``ghidra_bridge`` RPC client socket so the connection
+  does not leak.
+* Concurrent ``start_headless`` invocations do not race over a single shared
+  script directory, and cleanup serializes via a global lock.
+* The bridge port wait loop does not deadlock when Ghidra writes more stderr
+  than the OS pipe buffer holds; stderr drain threads run continuously
+  throughout the wait loop.
+* ``Popen`` is invoked with ``cwd``, a scrubbed environment, and
   ``creationflags=CREATE_NO_WINDOW`` on Windows.
-* F-0016 - ``analyzeHeadless`` resolution must respect the current platform
-  (``.bat`` on Windows, the POSIX shell variant otherwise).
-* F-0019 - The ``file_written`` log line must only run after the on-disk
-  contents have been verified against the rendered script content.
+* ``analyzeHeadless`` resolution respects the current platform (``.bat`` on
+  Windows, the POSIX shell variant otherwise).
+* The ``file_written`` log line runs only after the on-disk contents have been
+  verified against the rendered script content.
 
-GHIDRA-C write-method and analyze findings:
+Write-method and analyze behavior:
 
-* F-0007 - ``decompile`` raises ``ToolError`` on every real failure mode
-  (function not found, decompiler did not complete) instead of
-  returning the literal sentinel string ``"Decompilation failed"``.
-* F-0008 - ``analyze`` runs ``analyzeAll`` on a background daemon thread
-  (inside a transaction) and polls a completion flag in short RPCs, instead
-  of blocking a single ``waitForAnalysis`` RPC that overflows the jpype
-  timeout under Jython-less PyGhidra.
-* F-0010 - ``search_bytes`` raises ``ToolError`` on malformed hex
-  tokens and on empty hex input rather than silently returning ``[]``.
-* F-0020 - ``set_label`` / ``add_comment`` / ``rename_function`` /
-  ``create_bookmark`` / ``add_reference`` / ``create_equate`` /
-  ``set_program_metadata`` verify the remote-side outcome via
-  ``remote_eval`` readback before returning ``success: True``.
-* F-0024 - ``set_color`` raises ``ToolError`` in headless mode instead
-  of returning fake-success via the ``IntPropertyMap`` fallback.
-* F-0027 - ``analyze`` emits structured logs that distinguish the
-  ``analyzeAll`` start phase from the poll-complete phase.
+* ``decompile`` raises ``ToolError`` on every real failure mode (function not
+  found, decompiler did not complete) instead of returning the literal sentinel
+  string ``"Decompilation failed"``.
+* ``analyze`` runs ``analyzeAll`` on a background daemon thread inside a
+  transaction and polls a completion flag in short RPCs, rather than blocking a
+  single ``waitForAnalysis`` RPC that overflows the jpype timeout under PyGhidra.
+* ``search_bytes`` raises ``ToolError`` on malformed hex tokens and on empty hex
+  input instead of silently returning ``[]``.
+* ``set_label``, ``add_comment``, ``rename_function``, ``create_bookmark``,
+  ``add_reference``, ``create_equate``, and ``set_program_metadata`` verify the
+  remote-side outcome via ``remote_eval`` readback before returning
+  ``success: True``.
+* ``set_color`` raises ``ToolError`` in headless mode instead of returning fake
+  success via the ``IntPropertyMap`` fallback.
+* ``analyze`` emits structured logs that distinguish the ``analyzeAll`` start
+  phase from the poll-complete phase.
 
-GHIDRA-D parsing/xrefs/security/capability findings:
+Parsing, cross-reference, security, and capability behavior:
 
-* F-0017 - MD5 must not be exposed in :class:`BinaryInfo`.
-* F-0018 - ``import_debug_info`` must canonicalise + existence-check the path.
-* F-0022 - ``get_xrefs_to`` / ``get_xrefs_from`` must preserve the full
-  Ghidra reference-type taxonomy (call/jump/read/write/data) instead of
-  flattening to ``call``/``data``.
-* F-0023 - ``BridgeCapabilities.supports_patching`` must be ``False`` because
-  ``GhidraBridge`` exposes no ``apply_patch`` implementation.
-* F-0026 - xref results must populate ``from_function`` / ``to_function``
-  enrichment fields when Ghidra resolves a containing function.
+* MD5 is not exposed in :class:`BinaryInfo`.
+* ``import_debug_info`` canonicalizes the path and checks that it exists.
+* ``get_xrefs_to`` and ``get_xrefs_from`` preserve the full Ghidra reference-type
+  taxonomy (call, jump, read, write, data) instead of flattening to ``call`` or
+  ``data``.
+* ``BridgeCapabilities.supports_patching`` is ``False`` because ``GhidraBridge``
+  exposes no ``apply_patch`` implementation.
+* Xref results populate ``from_function`` and ``to_function`` enrichment fields
+  when Ghidra resolves a containing function.
 """
 
 from __future__ import annotations
@@ -152,8 +149,7 @@ class _FakeBridgeClient:
         is compiled with mode ``"eval"`` so non-expression input is
         rejected the same way the upstream client rejects it, then
         executed via a return-statement wrapper so the value flows back
-        without invoking :func:`eval` directly. Variables previously
-        assigned by :meth:`remote_exec` are visible through the shared
+        without invoking :func:`eval` directly. Variables assigned by :meth:`remote_exec` are visible through the shared
         globals dictionary.
 
         Args:
@@ -202,12 +198,11 @@ def _run(coro: Coroutine[Any, Any, object]) -> object:
 def test_f0001_trailing_expression_round_trips_via_execute_script(
     bridge_with_fake: tuple[GhidraBridge, _FakeBridgeClient],
 ) -> None:
-    """F-0001: trailing expression statements must round-trip end-to-end.
+    """Trailing expression statements must round-trip end-to-end.
 
-    The pre-fix bridge dispatched every script through ``remote_exec``,
-    whose underlying :func:`exec` discards expression-statement values
-    and forced public methods like ``execute_script`` to return an
-    empty string. The fix rewrites the trailing expression into an
+    Every script is dispatched through ``remote_exec``,
+    whose underlying :func:`exec` discards expression-statement values, which forces public methods like ``execute_script`` to return an
+    empty string. The bridge rewrites the trailing expression into an
     assignment to a sentinel and reads the sentinel back via
     ``remote_eval``. We drive the public ``execute_script`` entry point
     with a multi-statement script that produces a string value and
@@ -258,13 +253,10 @@ def test_f0001_pure_statement_script_returns_empty_string(
 def test_f0002_indented_call_site_does_not_leak_indentation(
     bridge_with_fake: tuple[GhidraBridge, _FakeBridgeClient],
 ) -> None:
-    """F-0002: call-site indentation must be stripped before dispatch.
+    """Call-site indentation must be stripped before dispatch.
 
     Inline scripts in the bridge are written inside method bodies, so
-    every line carries the surrounding indentation. The pre-fix path
-    forwarded that indentation directly to ``exec`` on the remote side,
-    which raises ``IndentationError`` on the first statement. The fix
-    runs every script through :func:`textwrap.dedent` before dispatch.
+    every line carries the surrounding indentation. Forwarding that indentation directly to ``exec`` on the remote side raises ``IndentationError`` on the first statement, so every script runs through :func:`textwrap.dedent` before dispatch.
     This test simulates the real call-site shape (16 leading spaces per
     line) by passing a script through the public ``execute_script``
     entry point and asserts the script reaches ``remote_exec`` dedented
@@ -291,9 +283,7 @@ def test_f0002_indented_script_would_have_failed_without_dedent() -> None:
     """The raw indented script must indeed be unparseable.
 
     Confirms that the indentation pattern produced by inline call sites
-    is genuinely invalid Python at module scope. Without dedent, the
-    pre-fix path passes this string straight to ``exec``, which rejects
-    it. Establishing this baseline makes it explicit that the dedent
+    is genuinely invalid Python at module scope. Without dedent, this string passes straight to ``exec``, which rejects it. Establishing this baseline makes it explicit that the dedent
     in ``_execute_remote`` is load-bearing rather than cosmetic.
     """
     indented = """
@@ -380,12 +370,9 @@ def test_remote_exec_failure_propagates(
 def test_f0005_f0028_read_bytes_returns_real_payload(
     bridge_with_fake: tuple[GhidraBridge, _FakeBridgeClient],
 ) -> None:
-    """F-0005/F-0028: ``read_bytes`` must surface the actual byte payload.
+    """``read_bytes`` must surface the actual byte payload.
 
-    Pre-fix: ``_execute_remote`` returned ``None``, the
-    ``isinstance(result, dict)`` guard fell through, and the method
-    returned an empty list of bytes for every successful read. Now we
-    drive the call through a fake remote that returns the expected
+    If ``_execute_remote`` returned ``None``, the ``isinstance(result, dict)`` guard would fall through and the method would return an empty list of bytes for every successful read. The call is driven through a fake remote that returns the expected
     Ghidra-shaped dict and confirm the bridge surfaces the bytes.
 
     Args:
@@ -506,12 +493,10 @@ def test_f0005_f0028_read_bytes_returns_real_payload(
 def test_f0006_f0025_get_functions_raises_on_remote_failure(
     bridge_with_fake: tuple[GhidraBridge, _FakeBridgeClient],
 ) -> None:
-    """F-0006/F-0025: ``get_functions`` must raise instead of returning [].
+    """``get_functions`` must raise instead of returning [].
 
-    Pre-fix: every exception was caught and the method returned an
-    empty list, so callers could not distinguish "no functions" from
-    "RPC failed". The fix raises ``ToolError`` for every non-success
-    path. We trigger a real failure on the remote side and confirm the
+    Exceptions are not swallowed into an empty list, so callers can distinguish "no functions" from
+    "RPC failed". The method raises ``ToolError`` for every non-success path. We trigger a real failure on the remote side and confirm the
     contract.
 
     Args:
@@ -558,13 +543,9 @@ def test_f0006_f0025_get_functions_raises_on_remote_failure(
 def test_f0011_call_graph_uses_get_called_functions(
     bridge_with_fake: tuple[GhidraBridge, _FakeBridgeClient],
 ) -> None:
-    """F-0011: ``get_call_graph`` must use ``Function.getCalledFunctions``.
+    """``get_call_graph`` must use ``Function.getCalledFunctions``.
 
-    Pre-fix: the bridge iterated every byte of the function body and
-    issued a per-byte ``getReferencesFrom`` lookup, producing O(N*M)
-    RPC calls. The fix delegates to
-    ``Function.getCalledFunctions(monitor)`` which Ghidra implements as
-    a single call-target query. This test builds a tiny call graph
+    The bridge delegates to ``Function.getCalledFunctions(monitor)``, which Ghidra implements as a single call-target query, rather than iterating every byte of the function body with a per-byte ``getReferencesFrom`` lookup (O(N*M) RPC calls). This test builds a tiny call graph
     using the Ghidra-shaped API surface, confirms the result, and
     asserts the per-byte API is never invoked.
 
@@ -735,7 +716,7 @@ def test_f0011_call_graph_uses_get_called_functions(
 def test_f0011_call_tree_uses_get_called_functions(
     bridge_with_fake: tuple[GhidraBridge, _FakeBridgeClient],
 ) -> None:
-    """F-0011: ``get_call_tree`` must also use ``Function.getCalledFunctions``.
+    """``get_call_tree`` must also use ``Function.getCalledFunctions``.
 
     Args:
         bridge_with_fake: Fixture providing a live bridge plus a
@@ -899,12 +880,9 @@ def test_f0011_call_tree_uses_get_called_functions(
 def test_f0028_decompile_raises_on_function_not_found(
     bridge_with_fake: tuple[GhidraBridge, _FakeBridgeClient],
 ) -> None:
-    """F-0028: ``decompile`` must raise instead of returning a sentinel string.
+    """``decompile`` must raise instead of returning a sentinel string.
 
-    Pre-fix: the method silently returned the literal string
-    ``"Decompilation failed"`` when the function did not exist or the
-    decompiler did not complete, conflating success and failure. The
-    fix raises ``ToolError`` with a structured message.
+    The method must not silently return the literal string ``"Decompilation failed"`` when the function does not exist or the decompiler does not complete, which conflates success and failure. It raises ``ToolError`` with a structured message.
 
     Args:
         bridge_with_fake: Fixture providing a live bridge plus a
@@ -1113,7 +1091,7 @@ def test_create_bridge_script_starts_jfx_bridge_server(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-0003: Deployed script must start a jfx_bridge ``BridgeServer`` and run it.
+    """Deployed script must start a jfx_bridge ``BridgeServer`` and run it.
 
     Ghidra 12.x dropped Jython, so the upstream ``ghidra_bridge_server`` (which
     subclasses a Java interface at import time) cannot load under PyGhidra. The
@@ -1143,14 +1121,14 @@ def test_create_bridge_script_routes_eval_exec_through_pyghidra_namespace(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-0004: Script must wire eval/exec hooks into the live PyGhidra namespace.
+    """Script must wire eval/exec hooks into the live PyGhidra namespace.
 
     The BridgeServer must be constructed with ``local_eval_hook`` /
     ``local_exec_hook`` that evaluate against ``globals()`` (the PyGhidraScript
     namespace whose ``__missing__`` lazily resolves the Ghidra flat API), and
     with an explicit ``response_timeout`` above the 2s jfx default. Dropping the
     hooks would make ``getState``/``currentProgram``/``analyzeAll`` unresolvable
-    remotely; dropping the timeout re-introduces the F15 spurious timeouts.
+    remotely; dropping the timeout reintroduces spurious timeouts.
 
     Args:
         fresh_bridge: Bridge fixture.
@@ -1172,7 +1150,7 @@ def test_create_bridge_script_shadows_toaddr_for_64bit_offsets(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F15: Script must shadow the flat-API ``toAddr`` to survive 64-bit addresses.
+    """Script must shadow the flat-API ``toAddr`` to survive 64-bit addresses.
 
     Under CPython/jpype the overloaded ``toAddr(int)``/``toAddr(long)`` binds to
     the ``int`` overload and raises ``OverflowError`` for image bases at or above
@@ -1200,7 +1178,7 @@ def test_create_bridge_script_utf8_encoding(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-0009: Script must be written with explicit utf-8 encoding.
+    """Script must be written with explicit utf-8 encoding.
 
     Args:
         fresh_bridge: Bridge fixture.
@@ -1221,7 +1199,7 @@ def test_create_bridge_script_oserror_raises_toolerror(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-0009: ``OSError`` during write must surface as a chained ``ToolError``.
+    """``OSError`` during write must surface as a chained ``ToolError``.
 
     Induces a real ``PermissionError`` (a concrete ``OSError`` subclass) by
     pre-creating the bridge script target path as a directory before the bridge
@@ -1274,7 +1252,7 @@ def test_create_bridge_script_oserror_raises_toolerror(
 
 
 def test_create_bridge_script_unique_tempdirs(fresh_bridge: GhidraBridge) -> None:
-    """F-0013 / F-0021: Each invocation must get its own tempdir under the lock.
+    """Each invocation must get its own tempdir under the lock.
 
     Args:
         fresh_bridge: Bridge fixture.
@@ -1297,7 +1275,7 @@ def test_create_bridge_script_unique_tempdirs(fresh_bridge: GhidraBridge) -> Non
 
 
 def test_create_bridge_script_concurrent_no_collisions() -> None:
-    """F-0013: Parallel ``create_bridge_script`` calls must not collide."""
+    """Parallel ``create_bridge_script`` calls must not collide."""
     bridges = [GhidraBridge() for _ in range(8)]
     for b in bridges:
         b.set_port(_alloc_port())
@@ -1339,7 +1317,7 @@ def test_create_bridge_script_logs_after_verification(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-0019: ``file_written`` must follow successful readback.
+    """``file_written`` must follow successful readback.
 
     Args:
         fresh_bridge: Bridge fixture.
@@ -1361,7 +1339,7 @@ def test_create_bridge_script_logs_after_verification(
 
 
 def test_close_bridge_client_closes_socket() -> None:
-    """F-0012: ``GhidraBridge`` shutdown closure helper must close the RPC socket."""
+    """``GhidraBridge`` shutdown closure helper must close the RPC socket."""
 
     class _DummySock:
         """Minimal socket stand-in tracking ``close`` calls."""
@@ -1396,7 +1374,7 @@ def test_close_bridge_client_closes_socket() -> None:
 
 
 def test_close_bridge_client_no_client_attr_safe() -> None:
-    """F-0012: Missing ``client`` attribute must not raise."""
+    """Missing ``client`` attribute must not raise."""
 
     class _Empty:
         """Bridge stand-in without a ``client`` attribute."""
@@ -1406,7 +1384,7 @@ def test_close_bridge_client_no_client_attr_safe() -> None:
 
 
 def test_resolve_headless_executable_platform_specific(tmp_path: Path) -> None:
-    """F-0016: ``analyzeHeadless`` resolution must be platform-aware.
+    """``analyzeHeadless`` resolution must be platform-aware.
 
     Args:
         tmp_path: Pytest temp dir.
@@ -1444,7 +1422,7 @@ def test_resolve_headless_executable_platform_specific(tmp_path: Path) -> None:
 
 
 def test_scrubbed_environment_strips_blocklist() -> None:
-    """F-0015: Env scrub must strip every variable in the blocklist."""
+    """Env scrub must strip every variable in the blocklist."""
     scrubber = cast("Callable[[], dict[str, str]]", getattr(GhidraBridge, "_scrubbed_environment"))
     blocklist = _env_blocklist()
     inserted: list[str] = []
@@ -1463,7 +1441,7 @@ def test_scrubbed_environment_strips_blocklist() -> None:
 
 
 def test_cleanup_bridge_script_removes_files(tmp_path: Path) -> None:
-    """F-0013: cleanup must serialize via lock and remove files.
+    """Cleanup must serialize via lock and remove files.
 
     Args:
         tmp_path: Pytest temp dir.
@@ -1481,7 +1459,7 @@ def test_cleanup_bridge_script_removes_files(tmp_path: Path) -> None:
 
 
 def test_cleanup_bridge_script_uses_global_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """F-0013: ``_cleanup_bridge_script`` must hold the bridge-script lock.
+    """``_cleanup_bridge_script`` must hold the bridge-script lock.
 
     Args:
         tmp_path: Pytest temp dir.
@@ -1540,7 +1518,7 @@ def test_drain_threads_consume_stderr_in_real_subprocess(
     fresh_bridge: GhidraBridge,
     tmp_path: Path,
 ) -> None:
-    """F-0014: drain threads must consume stderr from a real subprocess.
+    """Drain threads must consume stderr from a real subprocess.
 
     Args:
         fresh_bridge: Bridge fixture.
@@ -1615,7 +1593,7 @@ def test_start_headless_uses_correct_popen_kwargs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-0015 + F-0016: real Popen invocation must include cwd, env, and creationflags.
+    """Real Popen invocation must include cwd, env, and creationflags.
 
     Args:
         fresh_bridge: Bridge fixture.
@@ -1648,7 +1626,7 @@ def test_start_headless_uses_correct_popen_kwargs(
         # Launch a harmless short-lived placeholder rather than the real
         # ``pyghidra.ghidra_launch`` command: this test asserts on the captured
         # command/kwargs that start_headless constructs, not on PyGhidra's
-        # behaviour, and actually spawning PyGhidra against a stub install would
+        # behavior, and actually spawning PyGhidra against a stub install would
         # start a JVM that hangs/orphans in CI. The real cwd/env/creationflags
         # start_headless passed are still captured above and asserted below.
         placeholder = [sys.executable, "-c", "import time; time.sleep(2)"]
@@ -1704,7 +1682,7 @@ def test_start_headless_uses_correct_popen_kwargs(
 
 
 def test_shutdown_closes_bridge_client_socket() -> None:
-    """F-0012: shutdown must close ``self._bridge.client.sock``."""
+    """Shutdown must close ``self._bridge.client.sock``."""
 
     class _DummySock:
         """Socket stand-in for shutdown closure assertion."""
@@ -1744,7 +1722,7 @@ def test_shutdown_closes_bridge_client_socket() -> None:
 
 
 class FakeGhidraBridge:
-    """Test double exposing the subset of ``ghidra_bridge`` GHIDRA-C uses.
+    """Test double exposing the subset of ``ghidra_bridge`` that the bridge uses.
 
     ``GhidraBridge`` accesses two callables on the underlying RPC
     client: :py:meth:`remote_exec` for statement scripts and
@@ -1752,7 +1730,7 @@ class FakeGhidraBridge:
     records every script and expression so tests can assert on the
     exact code sent across the bridge, and lets each test programme a
     deterministic value to return from ``remote_eval`` (the readback
-    primitive the new readback-verification logic relies on).
+    primitive the readback-verification logic relies on).
     """
 
     def __init__(self) -> None:
@@ -1853,10 +1831,8 @@ def bridge(fake_bridge: FakeGhidraBridge) -> GhidraBridge:
     return real_bridge
 
 
-# ---------------------------------------------------------------------------
-# F-0008 + F-0027: analyze must run analyzeAll on a background thread, poll a
+# analyze must run analyzeAll on a background thread, poll a
 # completion flag in short RPCs, and emit phased logs
-# ---------------------------------------------------------------------------
 
 
 def _analysis_done_responder(expression: str) -> object:
@@ -1877,9 +1853,9 @@ async def test_analyze_kicks_off_threaded_analysis_and_polls(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0008: analyze must launch analyzeAll on a background thread and poll to completion.
+    """Analyze must launch analyzeAll on a background thread and poll to completion.
 
-    The migrated PyGhidra analyze runs ``analyzeAll`` inside a transaction on a
+    The PyGhidra analyze path runs ``analyzeAll`` inside a transaction on a
     daemon thread and polls a completion flag in short RPCs, instead of blocking
     a single ``waitForAnalysis`` RPC (which overflows the jpype/jfx_bridge
     timeout). Fails if the kickoff re-blocks on ``waitForAnalysis`` or the poll
@@ -1904,7 +1880,7 @@ async def test_analyze_logs_distinguish_phases(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0027: analyze emits ``started`` and ``complete`` structured log records.
+    """Analyze emits ``started`` and ``complete`` structured log records.
 
     Args:
         bridge: Connected bridge fixture.
@@ -1926,7 +1902,7 @@ async def test_analyze_propagates_remote_failure(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0008: analyze surfaces a ``ToolError`` when wait phase raises.
+    """Analyze surfaces a ``ToolError`` when wait phase raises.
 
     Args:
         bridge: Connected bridge fixture.
@@ -1937,9 +1913,7 @@ async def test_analyze_propagates_remote_failure(
         await bridge.analyze()
 
 
-# ---------------------------------------------------------------------------
-# F-0007: decompile must raise ToolError on every real failure mode
-# ---------------------------------------------------------------------------
+# decompile must raise ToolError on every real failure mode
 
 
 @pytest.mark.asyncio
@@ -1947,7 +1921,7 @@ async def test_decompile_raises_when_function_not_found(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0007: missing function at address must raise instead of returning a string.
+    """Missing function at address must raise instead of returning a string.
 
     Args:
         bridge: Connected bridge fixture.
@@ -1967,7 +1941,7 @@ async def test_decompile_raises_when_decompiler_fails(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0007: decompiler-completed=False must raise rather than return sentinel.
+    """decompiler-completed=False must raise rather than return sentinel.
 
     Args:
         bridge: Connected bridge fixture.
@@ -1987,7 +1961,7 @@ async def test_decompile_returns_pseudocode_on_success(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0007: a successful decompile returns the recovered C source.
+    """A successful decompile returns the recovered C source.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2002,16 +1976,14 @@ async def test_decompile_returns_pseudocode_on_success(
     assert text == "void main(void) { return; }"
 
 
-# ---------------------------------------------------------------------------
-# F-0010: search_bytes hex validation
-# ---------------------------------------------------------------------------
+# search_bytes hex validation
 
 
 @pytest.mark.asyncio
 async def test_search_bytes_rejects_malformed_hex_token(
     bridge: GhidraBridge,
 ) -> None:
-    """F-0010: a non-hex token must raise instead of being silently ignored.
+    """A non-hex token must raise instead of being silently ignored.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2024,7 +1996,7 @@ async def test_search_bytes_rejects_malformed_hex_token(
 async def test_search_bytes_rejects_empty_hex_pattern(
     bridge: GhidraBridge,
 ) -> None:
-    """F-0010: empty hex input must raise instead of returning ``[]``.
+    """Empty hex input must raise instead of returning ``[]``.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2037,7 +2009,7 @@ async def test_search_bytes_rejects_empty_hex_pattern(
 async def test_search_bytes_rejects_short_hex_token(
     bridge: GhidraBridge,
 ) -> None:
-    """F-0010: a single-nibble token must raise instead of being parsed.
+    """A single-nibble token must raise instead of being parsed.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2051,7 +2023,7 @@ async def test_search_bytes_accepts_wildcards_with_valid_bytes(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0010: valid hex with ``??`` wildcards must reach the bridge unchanged.
+    """Valid hex with ``??`` wildcards must reach the bridge unchanged.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2065,9 +2037,7 @@ async def test_search_bytes_accepts_wildcards_with_valid_bytes(
     assert "findBytes" in script
 
 
-# ---------------------------------------------------------------------------
-# F-0020: write methods must verify remote outcome via remote_eval readback
-# ---------------------------------------------------------------------------
+# Write methods must verify remote outcome via remote_eval readback
 
 
 @pytest.mark.asyncio
@@ -2075,7 +2045,7 @@ async def test_set_label_verifies_via_readback(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: a successful set_label round-trips the name through readback.
+    """A successful set_label round-trips the name through readback.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2092,7 +2062,7 @@ async def test_set_label_raises_when_readback_missing_name(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: missing label in readback must raise instead of fake-success.
+    """Missing label in readback must raise instead of fake-success.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2108,7 +2078,7 @@ async def test_add_comment_verifies_via_readback(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: a successful add_comment round-trips through readback.
+    """A successful add_comment round-trips through readback.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2125,7 +2095,7 @@ async def test_add_comment_raises_when_readback_mismatches(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: comment mismatch on readback must raise rather than fake-success.
+    """Comment mismatch on readback must raise rather than fake-success.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2141,7 +2111,7 @@ async def test_rename_function_verifies_via_readback(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: rename_function returns only when readback confirms the name.
+    """rename_function returns only when readback confirms the name.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2157,7 +2127,7 @@ async def test_rename_function_raises_when_readback_diverges(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: rename_function readback divergence must raise.
+    """rename_function readback divergence must raise.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2173,7 +2143,7 @@ async def test_create_bookmark_verifies_via_readback(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: create_bookmark requires the readback to contain the new entry.
+    """create_bookmark requires the readback to contain the new entry.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2194,7 +2164,7 @@ async def test_create_bookmark_raises_when_readback_missing_pair(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: create_bookmark fails closed when readback lacks the entry.
+    """create_bookmark fails closed when readback lacks the entry.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2215,7 +2185,7 @@ async def test_add_reference_verifies_via_readback(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: add_reference confirms via getReferencesFrom readback.
+    """add_reference confirms via getReferencesFrom readback.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2231,7 +2201,7 @@ async def test_add_reference_raises_when_readback_missing_target(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: add_reference raises when readback does not include the target.
+    """add_reference raises when readback does not include the target.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2247,7 +2217,7 @@ async def test_create_equate_verifies_via_readback(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: create_equate confirms via equate-table readback.
+    """create_equate confirms via equate-table readback.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2266,7 +2236,7 @@ async def test_create_equate_raises_when_readback_missing(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: create_equate raises when no equate of that name is present.
+    """create_equate raises when no equate of that name is present.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2282,7 +2252,7 @@ async def test_create_equate_raises_when_value_diverges(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: create_equate raises when the readback value differs.
+    """create_equate raises when the readback value differs.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2301,7 +2271,7 @@ async def test_set_program_metadata_verifies_via_readback(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: set_program_metadata confirms via program-name/imagebase readback.
+    """set_program_metadata confirms via program-name/imagebase readback.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2317,7 +2287,7 @@ async def test_set_program_metadata_raises_when_name_diverges(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0020: program-metadata raises when readback name differs.
+    """Program-metadata raises when readback name differs.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2328,9 +2298,7 @@ async def test_set_program_metadata_raises_when_name_diverges(
         await bridge.set_program_metadata(name="patched.exe", image_base=0x140000000)
 
 
-# ---------------------------------------------------------------------------
-# F-0024: set_color must raise in headless mode when ColorizingService is absent
-# ---------------------------------------------------------------------------
+# set_color must raise in headless mode when ColorizingService is absent
 
 
 @pytest.mark.asyncio
@@ -2338,7 +2306,7 @@ async def test_set_color_raises_in_headless_without_service(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0024: headless mode without ColorizingService must raise ``ToolError``.
+    """Headless mode without ColorizingService must raise ``ToolError``.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2361,7 +2329,7 @@ async def test_set_color_succeeds_when_service_applies(
     bridge: GhidraBridge,
     fake_bridge: FakeGhidraBridge,
 ) -> None:
-    """F-0024: set_color returns success when ColorizingService applied the color.
+    """set_color returns success when ColorizingService applied the color.
 
     Args:
         bridge: Connected bridge fixture.
@@ -2378,9 +2346,7 @@ async def test_set_color_succeeds_when_service_applies(
     assert info["backend"] == "colorizing_service"
 
 
-# ---------------------------------------------------------------------------
 # Disconnected guards (sanity)
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -2399,9 +2365,7 @@ async def test_disconnected_search_bytes_raises() -> None:
         await b.search_bytes(hex_pattern="48 8B")
 
 
-# ---------------------------------------------------------------------------
-# GHIDRA-D parsing/xrefs/security/capability tests
-# ---------------------------------------------------------------------------
+# Parsing, xrefs, security, and capability tests
 
 
 _XRefRefType = Literal["call", "jump", "data", "read", "write"]
@@ -2498,11 +2462,11 @@ def disconnected_bridge() -> GhidraBridge:
     return GhidraBridge()
 
 
-# F-0017 - MD5 must not be exposed in BinaryInfo.
+# MD5 must not be exposed in BinaryInfo.
 
 
 def test_binary_info_dataclass_has_no_md5_field() -> None:
-    """Verify ``BinaryInfo`` no longer carries an ``md5`` field (F-0017)."""
+    """Verify ``BinaryInfo`` does not carry an ``md5`` field."""
     field_names = {f.name for f in fields(BinaryInfo)}
     assert "md5" not in field_names, (
         "BinaryInfo must not expose MD5; the algorithm is cryptographically "
@@ -2513,7 +2477,7 @@ def test_binary_info_dataclass_has_no_md5_field() -> None:
 
 
 def test_binary_info_construction_rejects_md5_keyword() -> None:
-    """Verify constructing :class:`BinaryInfo` with ``md5=`` raises (F-0017)."""
+    """Verify constructing :class:`BinaryInfo` with ``md5=`` raises."""
     binary_info_constructor = cast("Callable[..., BinaryInfo]", BinaryInfo)
     with pytest.raises(TypeError):
         binary_info_constructor(
@@ -2532,7 +2496,7 @@ def test_binary_info_construction_rejects_md5_keyword() -> None:
         )
 
 
-# F-0023 - Capability flag accuracy.
+# Capability flags must be accurate.
 
 
 def test_capability_supports_patching_is_false(disconnected_bridge: GhidraBridge) -> None:
@@ -2545,7 +2509,7 @@ def test_capability_supports_patching_is_false(disconnected_bridge: GhidraBridge
 
 
 def test_capability_no_apply_patch_method(disconnected_bridge: GhidraBridge) -> None:
-    """Verify the bridge does not advertise an ``apply_patch`` method (F-0023).
+    """Verify the bridge does not advertise an ``apply_patch`` method.
 
     Args:
         disconnected_bridge: Disconnected GhidraBridge fixture.
@@ -2553,7 +2517,7 @@ def test_capability_no_apply_patch_method(disconnected_bridge: GhidraBridge) -> 
     assert not hasattr(disconnected_bridge, "apply_patch")
 
 
-# F-0018 - import_debug_info path canonicalisation + existence check.
+# import_debug_info path canonicalization and existence check.
 
 
 @pytest.mark.asyncio
@@ -2619,8 +2583,8 @@ async def test_import_debug_info_rejects_path_traversal_to_missing_target(
 ) -> None:
     r"""Verify a traversal path that resolves to a missing target is rejected.
 
-    The canonicaliser collapses ``..`` segments via ``Path.resolve(strict=True)``
-    so a craft path like ``<tmp>\..\<tmp>\nope.pdb`` either resolves to a
+    The canonicalizer collapses ``..`` segments via ``Path.resolve(strict=True)``
+    so a crafted path like ``<tmp>\..\<tmp>\nope.pdb`` either resolves to a
     non-existent file (rejected by ``not found``) or to a path outside the
     intended root.
 
@@ -2665,7 +2629,7 @@ async def test_import_debug_info_rejects_unsupported_extension_after_resolve(
     disconnected_bridge: GhidraBridge,
     tmp_path: Path,
 ) -> None:
-    """Verify unsupported extensions are rejected after canonicalisation.
+    """Verify unsupported extensions are rejected after canonicalization.
 
     Args:
         disconnected_bridge: Disconnected GhidraBridge fixture.
@@ -2699,7 +2663,7 @@ def test_resolve_debug_info_path_returns_absolute(tmp_path: Path) -> None:
     assert resolved == real.resolve()
 
 
-# F-0022 / F-0026 - xref taxonomy + function enrichment.
+# xref taxonomy and function enrichment.
 
 
 def test_map_ghidra_ref_type_call() -> None:

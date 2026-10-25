@@ -1049,7 +1049,7 @@ class IntellicrackAgentServer(_LoopbackServer):
     reads a byte of it. Nothing about that connection is unhealthy; it is
     simply not answered yet. A host that treats its own per-attempt patience as
     the agent's deadline abandons such a connection while the agent is still
-    working towards it, which is what S18-D04 was.
+    working towards it, which is the failure the client's retry budget must cover.
 
     ``drop_requests`` models the harder half of that failure: the request
     crossed the channel and the agent took delivery of it, and the connection

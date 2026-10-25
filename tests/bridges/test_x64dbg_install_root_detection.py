@@ -5,23 +5,11 @@
 
 """Regression gate: x64dbg detection must resolve to the installation root.
 
-A real x64dbg snapshot ships its debugger binaries under
-``release/x64/x64dbg.exe`` and ``release/x32/x32dbg.exe`` - never at the
-installation root. :class:`~intellicrack.bridges.x64dbg.X64DbgBridge`
-initialises from the installation *root* (the directory that contains
-``release/``) because it computes ``root / "release" / "x64" / "x64dbg.exe"``.
+A real x64dbg snapshot ships its debugger binaries under ``release/x64/x64dbg.exe`` and ``release/x32/x32dbg.exe``, never at the installation root. :class:`~intellicrack.bridges.x64dbg.X64DbgBridge` initialises from the installation *root* (the directory that contains ``release/``) because it computes ``root / "release" / "x64" / "x64dbg.exe"``.
 
-Previously ``TOOL_REGISTRY[X64DBG].executables`` listed bare
-``["x64dbg.exe", "x96dbg.exe"]``. The ``common_paths`` probe therefore looked
-for ``<root>/x64dbg.exe`` (which never exists in a real install) and the
-nested tools-directory search matched ``release/x96dbg.exe`` and returned the
-``release/`` sub-directory - one level too deep. Feeding that path to the
-bridge produced ``release/release/x64/x64dbg.exe`` (missing), so the bridge
-never connected, never deployed its plugin, and every ``load`` raised
-"x64dbg bridge plugin not deployed ... installation not configured".
+``TOOL_REGISTRY[X64DBG].executables`` must therefore list only names that exist at a real install root. A bare ``x64dbg.exe`` entry breaks the ``common_paths`` probe, and a nested tools-directory search matches the ``release/`` sub-directory one level too deep. Feeding that path to the bridge produces ``release/release/x64/x64dbg.exe`` (missing), so the bridge never connects and every ``load`` fails with "x64dbg bridge plugin not deployed".
 
-These tests build a realistic install tree and assert the finder returns the
-root and the bridge connects from it. They fail on the pre-fix registry entry.
+These tests build a realistic install tree and assert that the finder returns the root and that the bridge connects from it.
 """
 
 from __future__ import annotations
@@ -68,8 +56,7 @@ class TestX64dbgInstallRootDetection:
     def test_registry_executables_reflect_real_nested_layout() -> None:
         """Every declared x64dbg executable resolves under the install root.
 
-        A bare ``x64dbg.exe`` entry (the pre-fix value) does not exist at a real
-        install root and is what broke ``common_paths`` detection.
+        A bare ``x64dbg.exe`` entry does not exist at a real install root and breaks ``common_paths`` detection.
         """
         info = TOOL_REGISTRY[ToolName.X64DBG]
         assert info.executables, "x64dbg must declare at least one executable"
@@ -85,9 +72,7 @@ class TestX64dbgInstallRootDetection:
     def test_find_tool_returns_install_root_from_tools_dir(tmp_path: Path) -> None:
         """find_tool resolves the nested tools-dir install to its root.
 
-        The bridge contract is ``root / release / x64 / x64dbg.exe`` must exist
-        under the returned path. The pre-fix nested search returned the
-        ``release/`` directory, making that join point at a missing file.
+        The bridge contract is that ``root / release / x64 / x64dbg.exe`` must exist under the returned path. A nested search that returned the ``release/`` directory would make that join point at a missing file.
 
         Args:
             tmp_path: Pytest-provided temporary directory (the tools root).
@@ -123,10 +108,7 @@ class TestX64dbgInstallRootDetection:
     def test_bridge_connects_from_finder_resolved_path(tmp_path: Path) -> None:
         """The finder's path drives the bridge to a connected state.
 
-        This reproduces the reported failure end to end: resolve the install
-        with the finder, hand the result to the bridge, and require the bridge
-        to register the installation as present. With the pre-fix registry the
-        finder yields ``release/`` and ``state.connected`` stays False.
+        Resolves the install with the finder, hands the result to the bridge, and requires the bridge to register the installation as present. A registry that yields ``release/`` leaves ``state.connected`` False.
 
         Args:
             tmp_path: Pytest-provided temporary directory (the tools root).

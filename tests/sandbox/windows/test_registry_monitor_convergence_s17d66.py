@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D66: the Windows Sandbox Registry Changes tab reported garbage.
+r"""The Windows Sandbox Registry Changes tab reported garbage.
 
 Measured live: every row of the Registry Changes tab showed the literal
 constant ``Microsoft.PowerShell.Core\Registry`` in its key column, the real key
@@ -513,7 +513,7 @@ class TestTheReportColumnsHoldTheRightFields:
 
 
 class TestADeletedValueIsReported:
-    """The second half of S17-D66: deletion detection was unreachable."""
+    """Deletion detection must be reachable."""
 
     def test_the_monitor_logs_the_deletion(self, observation: _ProbeObservation) -> None:
         """Deleting a watched value must produce a deleted line in the log.

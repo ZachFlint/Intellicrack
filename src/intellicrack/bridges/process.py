@@ -607,9 +607,7 @@ ProcessAccessRights = Literal[
     "suspend",
 ]
 
-# ---------------------------------------------------------------------------
 # Module-level ToolFunction list (FridaBridge pattern)
-# ---------------------------------------------------------------------------
 
 _PROCESS_FUNCTIONS: list[ToolFunction] = [
     ToolFunction(
@@ -2121,9 +2119,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
     surface, the memory map walker, and the pattern scanner, together with the private helpers each of those entry points dispatches into.
     """
 
-    # ------------------------------------------------------------------
     # Process listing and management
-    # ------------------------------------------------------------------
 
     async def list(
         self,
@@ -2817,9 +2813,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         _logger.info("process_resumed", pid=target_pid, thread_count=len(threads))
         return True
 
-    # ------------------------------------------------------------------
     # Memory operations
-    # ------------------------------------------------------------------
 
     async def read_memory(self, address: int, size: int) -> str:
         """Read memory from process and return it as a hex string.
@@ -3396,9 +3390,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         )
         raise ToolError(_ERR_READ_FAILED)
 
-    # ------------------------------------------------------------------
     # Module and thread enumeration
-    # ------------------------------------------------------------------
 
     async def get_modules(self, pid: int | None = None) -> list[ModuleInfo]:
         """Get loaded modules.
@@ -4030,9 +4022,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             return int(ctx64.Rip)
         return 0
 
-    # ------------------------------------------------------------------
     # DLL injection
-    # ------------------------------------------------------------------
 
     async def inject_dll(self, dll_path: str) -> bool:
         """Inject a DLL into the process.
@@ -4199,9 +4189,7 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
     and bulk enumeration.
     """
 
-    # ------------------------------------------------------------------
     # Token / privilege manipulation
-    # ------------------------------------------------------------------
 
     def add_privileges_changed_callback(self, callback: Callable[[], None]) -> None:
         """Register a callback to invoke when token privileges change.
@@ -4573,9 +4561,7 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
         )
         return int(self._kernel32.GetLastError())
 
-    # ------------------------------------------------------------------
     # Handle enumeration
-    # ------------------------------------------------------------------
 
     def _query_extended_handles_buffer(self) -> tuple[ctypes.Array[ctypes.c_char], int, int]:
         """Query NtQuerySystemInformation for SystemExtendedHandleInformation.
@@ -4946,9 +4932,7 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
 
         return handles
 
-    # ------------------------------------------------------------------
     # Window enumeration
-    # ------------------------------------------------------------------
 
     async def get_windows(self, pid: int | None = None) -> list[dict[str, object]]:
         """Enumerate windows belonging to a process.
@@ -5021,9 +5005,7 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
         _logger.debug("process_get_windows_completed", pid=target_pid, count=len(windows))
         return windows
 
-    # ------------------------------------------------------------------
     # Service management
-    # ------------------------------------------------------------------
 
     def _configure_scm_prototypes(
         self,
@@ -5235,9 +5217,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
     co-located with the public method to keep the dispatch self-contained.
     """
 
-    # ------------------------------------------------------------------
     # PEB / TEB access
-    # ------------------------------------------------------------------
 
     async def read_peb(self, pid: int | None = None) -> dict[str, object]:
         """Read Process Environment Block fields.
@@ -5762,9 +5742,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             "tls_array_base": tls_array_base,
         }
 
-    # ------------------------------------------------------------------
     # Heap enumeration
-    # ------------------------------------------------------------------
 
     async def get_heaps(self, pid: int | None = None) -> list[dict[str, object]]:
         """Enumerate heaps of a process via Toolhelp32.
@@ -5834,9 +5812,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             if not self._kernel32.Heap32ListNext(snapshot, ctypes.byref(entry)):
                 break
 
-    # ------------------------------------------------------------------
     # Thread context (registers)
-    # ------------------------------------------------------------------
 
     async def get_thread_context(self, tid: int) -> dict[str, int]:
         """Get CPU register context for a thread.
@@ -6196,9 +6172,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         if not self._kernel32.SetThreadContext(thread_handle, ctypes.byref(ctx)):
             raise ToolError(_ERR_CONTEXT_SET_FAILED)
 
-    # ------------------------------------------------------------------
     # Stack walk + symbols
-    # ------------------------------------------------------------------
 
     async def stack_walk(self, tid: int) -> list[dict[str, object]]:
         """Walk the call stack of a thread using DbgHelp StackWalk64.
@@ -6529,9 +6503,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             return raw_name.rstrip(b"\x00").decode("utf-8", errors="ignore")
         return ""
 
-    # ------------------------------------------------------------------
     # SEH chain
-    # ------------------------------------------------------------------
 
     async def get_seh_chain(self, tid: int) -> list[dict[str, object]]:
         """Get the exception handler chain for a thread.
@@ -6827,9 +6799,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         flag_names = [name for flag, name in ((_UNWIND_FLAG_EHANDLER, "EHANDLER"), (_UNWIND_FLAG_UHANDLER, "UHANDLER")) if flags & flag]
         return handler_rva, "|".join(flag_names)
 
-    # ------------------------------------------------------------------
     # Mitigation policies
-    # ------------------------------------------------------------------
 
     async def get_mitigation_policies(self, pid: int | None = None) -> dict[str, object]:
         """Query process mitigation policies (DEP, ASLR, CFG, etc.).
@@ -7017,9 +6987,7 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
     together with token duplication, privilege removal, registry value reads, kernel debugger probing, and mitigation policy aliases.
     """
 
-    # ------------------------------------------------------------------
     # High-level enumeration helpers (named-API aliases)
-    # ------------------------------------------------------------------
 
     async def enumerate_system_processes(self) -> list[dict[str, object]]:
         """Enumerate all running processes and return dict-formatted records.
@@ -8047,9 +8015,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
     object create/map/unmap.
     """
 
-    # ------------------------------------------------------------------
     # Environment variables
-    # ------------------------------------------------------------------
 
     async def get_environment(self, pid: int | None = None) -> dict[str, str]:
         """Read environment variables from process PEB.
@@ -8270,9 +8236,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
 
         return env_ptr, env_size
 
-    # ------------------------------------------------------------------
     # Named pipe operations
-    # ------------------------------------------------------------------
 
     async def pipe_connect(self, pipe_name: str, timeout_ms: int = 5000) -> int:
         r"""Connect to a named pipe.
@@ -8387,9 +8351,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         self._pipe_handles.pop(handle, None)
         return True
 
-    # ------------------------------------------------------------------
     # COM object enumeration
-    # ------------------------------------------------------------------
 
     async def enumerate_com_servers(self, pid: int | None = None) -> list[dict[str, str]]:
         r"""Enumerate COM servers loaded in a process.
@@ -8580,9 +8542,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
 
         return results
 
-    # ------------------------------------------------------------------
     # .NET CLR detection
-    # ------------------------------------------------------------------
 
     async def detect_dotnet(self, pid: int | None = None) -> dict[str, object]:
         """Detect .NET CLR presence and version in a process.
@@ -8885,9 +8845,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         version_bytes = meta_data[16 : 16 + version_length]
         return version_bytes.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip()
 
-    # ------------------------------------------------------------------
     # Driver communication
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _describe_win32_device_error(failure_message: str, last_error: int) -> str:
@@ -9064,9 +9022,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         self._device_handles.pop(handle, None)
         return True
 
-    # ------------------------------------------------------------------
     # Job object management
-    # ------------------------------------------------------------------
 
     async def get_job_info(self, pid: int | None = None) -> dict[str, object]:
         """Query job object information for a process.
@@ -9501,9 +9457,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
             "other_transfer_count": io.OtherTransferCount,
         }
 
-    # ------------------------------------------------------------------
     # GDI / User objects
-    # ------------------------------------------------------------------
 
     async def get_gui_resources(self, pid: int | None = None) -> dict[str, int]:
         """Get GDI and User object counts for a process.
@@ -9561,9 +9515,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
 
-    # ------------------------------------------------------------------
     # Registry access
-    # ------------------------------------------------------------------
 
     async def reg_read_value(self, key_path: str, value_name: str) -> dict[str, object]:
         r"""Read a registry value.
@@ -9738,9 +9690,7 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
 
         return values
 
-    # ------------------------------------------------------------------
     # Section object mapping
-    # ------------------------------------------------------------------
 
     async def create_section(self, size: int, section_name: str | None = None) -> int:
         """Create a named section (file mapping) object.
@@ -9888,9 +9838,7 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
     information through ``NtQuerySystemInformation``, alongside the bridge-wide private helpers used across multiple mixins.
     """
 
-    # ------------------------------------------------------------------
     # TLS slot access
-    # ------------------------------------------------------------------
 
     async def get_tls_values(self, tid: int, max_slots: int = TLS_TOTAL_SLOT_COUNT) -> list[dict[str, object]]:
         """Read static and expansion TLS slot values for a thread.
@@ -10013,9 +9961,7 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
         except ToolError:
             _logger.warning("tls_expansion_read_failed", tid=tid, address=hex(exp_ptr))
 
-    # ------------------------------------------------------------------
     # Fiber enumeration
-    # ------------------------------------------------------------------
 
     async def get_fiber_data(self, tid: int) -> dict[str, object]:
         """Read fiber data pointer for a thread.
@@ -10044,9 +9990,7 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
             "has_fiber": has_fiber is True,
         }
 
-    # ------------------------------------------------------------------
     # NtQuerySystemInformation bridge
-    # ------------------------------------------------------------------
 
     async def query_system_info(self, info_class: int, buffer_size: int = 65536) -> str:
         """Raw NtQuerySystemInformation bridge with an auto-sizing buffer.

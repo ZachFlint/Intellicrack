@@ -2,27 +2,19 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gates for GUI audit findings M8, M23, M24, L11 in ``pattern_editor``.
+"""Gates for background pattern execution, library tree expansion and sizing in ``pattern_editor``.
 
-* ``M8`` -- ``PatternEditorMixin._apply_via_interpreter`` used to call
-  ``HexPatInterpreter.execute`` directly and synchronously from the "Apply at
-  Cursor" click handler, freezing the Qt event loop for the full duration of
-  interpretation. The fix dispatches ``execute`` onto a
-  ``GenericCallableWorker`` background ``QThread`` and applies the decoded
-  fields back on the GUI thread via queued signals.
-* ``M23`` -- ``_on_pattern_library_clicked`` treated every non-root tree item
-  as a loadable template, including category/folder nodes, so clicking a
-  category silently raised (and swallowed) an exception instead of
-  expanding/collapsing. The fix special-cases any item with children.
-* ``M24`` -- the "User" top-level node in the pattern library tree was built
-  but never populated; every template, including ones with no category, was
-  bucketed under "Built-in". The fix routes uncategorised
-  (``list_templates_detailed`` category == ``""``) templates to "User".
-* ``L11`` -- the pattern library tree was hard-capped at 200px with no
-  ``ResizeToContents`` header and no tooltip fallback when a HexPat
-  community-pattern's description pragma was empty. The fix removes the hard
-  cap, resizes the header to contents, and falls back the tooltip to the
-  pattern's own name.
+* ``PatternEditorMixin._apply_via_interpreter`` must not call
+  ``HexPatInterpreter.execute`` directly and synchronously from the "Apply at Cursor" click handler, which would freeze the Qt
+  event loop for the full duration of interpretation. ``execute`` is dispatched onto a ``GenericCallableWorker`` background
+  ``QThread``, and the decoded fields are applied back on the GUI thread via queued signals.
+* ``_on_pattern_library_clicked`` must not treat every non-root tree item as a loadable template, including category/folder nodes.
+  Clicking a category would otherwise silently raise (and swallow) an exception instead of expanding/collapsing. Any item with
+  children is special-cased.
+* The "User" top-level node in the pattern library tree must be populated: uncategorised
+  (``list_templates_detailed`` category == ``""``) templates belong under "User", not "Built-in".
+* The pattern library tree must not be hard-capped at 200px, and its header must resize to contents. A HexPat community
+  pattern with an empty description pragma falls back to a tooltip showing the pattern's own name.
 
 All tests drive a real :class:`HexEditorPanel` (which mixes in
 ``PatternEditorMixin``) against a real ``intellicrack_hexcore.HexDocument``
@@ -130,8 +122,7 @@ class _DelayedInterpreter(HexPatInterpreter):
     """``HexPatInterpreter`` whose ``execute`` imposes an artificial delay.
 
     Lets a test distinguish a non-blocking worker-thread dispatch (the
-    caller returns well before ``execute`` finishes) from the pre-fix
-    in-line call (the caller only returns once ``execute``, including the
+    caller returns well before ``execute`` finishes) from an in-line call (the caller only returns once ``execute``, including the
     delay, has completed). Also records the name of the thread ``execute``
     actually ran on, so the test can prove it was not the Qt GUI thread.
     """
@@ -173,17 +164,17 @@ class _DelayedInterpreter(HexPatInterpreter):
 
 
 class TestM8ApplyViaInterpreterRunsOffGuiThread:
-    """M8: ``_apply_via_interpreter`` dispatches interpretation to a background worker."""
+    """``_apply_via_interpreter`` dispatches interpretation to a background worker."""
 
     def test_m8_apply_via_interpreter_returns_before_delayed_execute_completes(self, qapp: QApplication) -> None:
         """The click-handler path returns almost immediately, well before ``execute`` finishes.
 
-        Pre-fix, ``_apply_via_interpreter`` called
+        ``_apply_via_interpreter`` must not call
         ``interpreter.execute(source, self.document, offset)`` directly on
         the calling (GUI) thread, so it would not return until the full
         artificial delay plus the real interpretation had elapsed, and the
         status label and templates tree would already reflect the finished
-        result by the time the call returned. Post-fix, execution is
+        result by the time the call returned. Execution is
         dispatched to a ``GenericCallableWorker`` QThread, so the call
         returns in a small fraction of the delay, the status label reads
         "Executing...", and the templates tree is still empty until the
@@ -243,19 +234,16 @@ class TestM8ApplyViaInterpreterRunsOffGuiThread:
 
 
 class TestM23CategoryNodeTogglesExpansionInsteadOfLoading:
-    """M23: clicking a category/folder node toggles expansion instead of loading a template."""
+    """Clicking a category/folder node toggles expansion instead of loading a template."""
 
     def test_m23_clicking_category_node_toggles_expansion_not_treated_as_template(self, qapp: QApplication) -> None:
         """Clicking the "PE" category under "Built-in" expands it, not loads it as a template.
 
-        Pre-fix, ``_on_pattern_library_clicked`` only special-cased items
-        whose ``parent()`` is ``None``; a category node like "PE" (parent is
-        the "Built-in" root) fell through to
-        ``self.document.export_template_json("PE")``, which raises because
-        no template is literally named "PE", and the exception is logged and
-        swallowed -- ``PE.isExpanded()`` is never touched. Post-fix, any item
-        with children is expanded/collapsed directly and returns before the
-        template-loading branch runs.
+        ``_on_pattern_library_clicked`` must not special-case only items whose ``parent()`` is ``None``. A category node like "PE"
+        (parent is the "Built-in" root) would fall through to
+        ``self.document.export_template_json("PE")``, which raises because no template is literally named "PE", and the exception
+        would be logged and swallowed -- ``PE.isExpanded()`` is never touched. Any item with children is expanded/collapsed
+        directly and returns before the template-loading branch runs.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -297,7 +285,7 @@ class TestM23CategoryNodeTogglesExpansionInsteadOfLoading:
     def test_m23_clicking_leaf_template_still_loads_it(self, qapp: QApplication) -> None:
         """A real leaf template item (no children) is still loaded on click.
 
-        Guards against an overly broad fix that would stop leaf templates
+        Guards against an overly broad change that would stop leaf templates
         from loading at all.
 
         Args:
@@ -335,16 +323,14 @@ class TestM23CategoryNodeTogglesExpansionInsteadOfLoading:
 
 
 class TestM24UserRootPopulatedFromUncategorisedTemplates:
-    """M24: uncategorised templates are attached to the "User" root, which is no longer dead."""
+    """Uncategorised templates are attached to the "User" root."""
 
     def test_m24_imported_template_without_category_appears_under_user_root(self, qapp: QApplication) -> None:
         """A JSON template registered with no ``category`` key lands under "User".
 
-        Pre-fix, ``user_root`` was created and added to the tree but no code
-        path ever called ``user_root.addChild(...)``; every template,
-        regardless of category, was bucketed into ``builtin_root`` via the
-        name-prefix heuristic. Post-fix, ``list_templates_detailed()``'s
-        empty category string routes the template to ``user_root``.
+        ``user_root`` is created and added to the tree, so templates must be attached to it via
+        ``user_root.addChild(...)``; otherwise every template, regardless of category, is bucketed into ``builtin_root`` via the
+        name-prefix heuristic. ``list_templates_detailed()``'s empty category string must route the template to ``user_root``.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -390,13 +376,13 @@ class TestM24UserRootPopulatedFromUncategorisedTemplates:
 
 
 class TestL11PatternLibraryTreeWidthAndTooltipFallback:
-    """L11: the library tree is no longer width-capped and tooltips fall back to the pattern name."""
+    """The library tree is not width-capped and tooltips fall back to the pattern name."""
 
     def test_l11_library_tree_resizes_to_contents_instead_of_hard_capped(self, qapp: QApplication) -> None:
         """The tree's header resizes to contents and its width is no longer hard-capped at 200px.
 
-        Pre-fix, ``setMaximumWidth(200)`` permanently capped the pane
-        regardless of content. Post-fix a minimum width replaces the cap and
+        ``setMaximumWidth(200)`` would permanently cap the pane
+        regardless of content. A minimum width replaces the cap and
         the header section resize mode is ``ResizeToContents``.
 
         Args:
@@ -425,9 +411,9 @@ class TestL11PatternLibraryTreeWidthAndTooltipFallback:
     ) -> None:
         """A community pattern with no ``#pragma description`` gets a name-fallback tooltip.
 
-        Pre-fix, ``tooltip = pattern.description or ""`` left the tooltip
+        ``tooltip = pattern.description or ""`` would leave the tooltip
         empty for any pattern without a description pragma, so an elided
-        long name had no way to be read in full. Post-fix, the tooltip falls
+        long name had no way to be read in full. The tooltip falls
         back to the pattern's own name.
 
         Args:

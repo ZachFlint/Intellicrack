@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Coverage for the application entry point paths the existing suites leave unexecuted.
+"""Coverage for the application entry point paths.
 
 Everything that can run inside the pytest process runs there against real objects:
 configuration, structlog capture, the real provider, session, orchestrator and

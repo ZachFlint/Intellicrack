@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit5 U8 hardcoded path fix (F-0024).
+"""Tests for the default paths of the tool and sandbox configuration dialogs.
 
 These tests verify that ``ToolConfigDialog`` and ``SandboxConfigDialog``
-no longer rely on the developer-specific ``D:/Intellicrack/...``
-hardcoded paths cited in audit5 F-0024. Instead, defaults must derive
+do not rely on developer-specific ``D:/Intellicrack/...``
+hardcoded paths. Instead, defaults must derive
 from :func:`intellicrack.core.config.get_project_root` so the dialogs
 function on any installation root.
 """
@@ -79,7 +79,7 @@ def qapp() -> Iterator[QApplication]:
 
 
 class TestToolConfigDialogPaths:
-    """F-0024: ToolConfigDialog must default tools_directory to project root."""
+    """ToolConfigDialog must default tools_directory to project root."""
 
     def test_default_tools_directory_uses_project_root(
         self,
@@ -152,7 +152,7 @@ class TestToolConfigDialogPaths:
 
 
 class TestSandboxConfigDialogPaths:
-    """F-0024: SandboxConfigDialog must default shared folder to project root."""
+    """SandboxConfigDialog must default shared folder to project root."""
 
     def test_default_shared_folder_uses_project_root(
         self,

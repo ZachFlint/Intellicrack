@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for ScriptTypeInfo audit3 F-0006 remediation.
+"""Tests for ScriptTypeInfo.
 
 Verifies that the x64dbg template emits a coherent, runnable bypass skeleton:
 no contradictory bp+bpcnd combination, every directive is a known x64dbg
@@ -249,7 +249,7 @@ def _classify_directive(line: str) -> str | None:
 
 
 class TestX64dbgTemplateParse:
-    """Audit3 F-0006: x64dbg template must be a coherent, parsable script."""
+    """The x64dbg template must be a coherent, parsable script."""
 
     @staticmethod
     @pytest.fixture
@@ -274,11 +274,10 @@ class TestX64dbgTemplateParse:
 
     @staticmethod
     def test_template_has_no_contradictory_bp_and_bpcnd_override(rendered: str) -> None:
-        """Audit3 F-0006: never both an unconditional bp AND an eax==1 bpcnd override.
+        """Never both an unconditional bp AND an eax==1 bpcnd override.
 
-        The pre-fix template emitted ``bp <addr>`` followed by
-        ``bpcnd <addr>, "eax=1"`` which silently disabled the breakpoint
-        before it could ever fire.
+        A template that emits ``bp <addr>`` followed by
+        ``bpcnd <addr>, "eax=1"`` silently disables the breakpoint before it can fire.
 
         Args:
             rendered: The fully interpolated x64dbg template text.
@@ -358,7 +357,7 @@ class TestX64dbgTemplateParse:
 
 
 class TestScriptTypeInfoX64dbgMetadata:
-    """Audit3 F-0006: x64dbg type metadata stays intact alongside the template fix."""
+    """The x64dbg type metadata stays intact alongside the template."""
 
     @staticmethod
     def test_x64dbg_type_listed() -> None:

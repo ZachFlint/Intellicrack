@@ -28,8 +28,8 @@ Set-StrictMode -Version Latest
 # source is a hard failure (throw / nonzero exit), never a silent skip. The
 # script is idempotent - it recreates build/stage from scratch on each run.
 #
-# Every parameter is opt-in: with no arguments the script behaves exactly as it
-# did before they existed. The -Skip* switches drop optional or network-bound
+# Every parameter is opt-in: with no arguments the script stages the complete
+# installer tree. The -Skip* switches drop optional or network-bound
 # steps for a CI job that only needs the rest, and each one warns that the
 # resulting stage is incomplete rather than pretending it is shippable.
 
@@ -233,7 +233,6 @@ Write-Banner 'Intellicrack Stage Build'
 Write-Step 'STAGE' "Repo root: $RepoRoot"
 Write-Step 'STAGE' "Stage dir: $Stage"
 
-# ---------------------------------------------------------------------------
 # Preflight: the committed wizard images must not be stale.
 #
 # packaging/wizard/*.png are generated from the app icon by
@@ -243,7 +242,6 @@ Write-Step 'STAGE' "Stage dir: $Stage"
 # release behind, with nothing to notice it. The generator is parsed rather than
 # restated so the gate follows a change of icon path, background directory or
 # selected background instead of silently guarding the wrong files.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Preflight: checking wizard image freshness...'
 $WizardDir = Join-Path $RepoRoot 'packaging\wizard'
 $WizardGenerator = Join-Path $WizardDir 'generate_banners.ps1'
@@ -307,9 +305,7 @@ if ($WizardNewestSourceStamp -gt $WizardNewestImageStamp) {
 }
 Write-Success "wizard images current ($($WizardImageNames.Count) checked against $($WizardSources.Count) sources)"
 
-# ---------------------------------------------------------------------------
 # Step 1: recreate build/stage clean.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 1/15: recreating build/stage clean...'
 if (Test-Path -LiteralPath $Stage) {
     if ($PSCmdlet.ShouldProcess($Stage, 'Remove the previously staged tree')) {
@@ -319,9 +315,7 @@ if (Test-Path -LiteralPath $Stage) {
 New-Item -ItemType Directory -Path $Stage -Force | Out-Null
 Write-Success 'build/stage recreated'
 
-# ---------------------------------------------------------------------------
 # Step 2: runtime = trimmed copy of the slim pixi runtime environment.
-# ---------------------------------------------------------------------------
 # The shipped runtime is staged from the dedicated `runtime` pixi environment,
 # which composes only the default (runtime) feature. The build/dev/test/docs/
 # profile/tooling features - the Rust and clang toolchains, cmake/ninja, the
@@ -357,9 +351,9 @@ $RuntimeSitePackages = Join-Path $RuntimeDir 'Lib\site-packages'
 Assert-Produced -Path (Join-Path $RuntimeDir 'python.exe') -What 'staged runtime python.exe'
 Assert-Produced -Path $RuntimeSitePackages -What 'staged runtime site-packages'
 
-# The runtime is staged from the slim `runtime` pixi environment, which never
-# carried the dev/test/docs/profile toolchains, so there is nothing to prune per
-# distribution here - the former prune_dev closure step has been retired.
+# The runtime is staged from the slim `runtime` pixi environment, which holds none
+# of the dev/test/docs/profile toolchains, so there is nothing to prune per
+# distribution here.
 Write-Progress 'Removing node.exe, *.pdb, *.pyd.old_*, and __pycache__ from runtime...'
 Remove-MatchingItem -Root $RuntimeDir -Filter 'node.exe'
 Remove-MatchingItem -Root $RuntimeDir -Filter '*.pdb'
@@ -435,9 +429,7 @@ foreach ($di in $EditableDistInfo) {
 }
 Write-Success 'runtime staged and trimmed'
 
-# ---------------------------------------------------------------------------
 # Step 3: portable hexcore rebuild -> runtime site-packages.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 3/15: rebuilding portable hexcore wheel...'
 $HexcoreDir = Join-Path $RepoRoot 'src\intellicrack-hexcore'
 Assert-Source -Path (Join-Path $HexcoreDir 'Cargo.toml') -What 'hexcore crate'
@@ -498,9 +490,7 @@ Remove-Item -LiteralPath $WheelExtract -Recurse -Force -ErrorAction SilentlyCont
 Assert-Produced -Path (Join-Path $HexcoreDest 'intellicrack_hexcore.cp313-win_amd64.pyd') -What 'staged hexcore .pyd'
 Write-Success 'portable hexcore staged'
 
-# ---------------------------------------------------------------------------
 # Step 4: app source materialized copy.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 4/15: staging app source...'
 $SrcIntellicrack = Join-Path $RepoRoot 'src\intellicrack'
 Assert-Source -Path (Join-Path $SrcIntellicrack '__init__.py') -What 'intellicrack source package'
@@ -510,9 +500,7 @@ Assert-Produced -Path (Join-Path $AppSrcDest '__init__.py') -What 'staged intell
 Assert-Produced -Path (Join-Path $AppSrcDest 'assets\icon.ico') -What 'staged intellicrack icon'
 Write-Success 'app source staged'
 
-# ---------------------------------------------------------------------------
 # Step 5: ML split - move ML-only distributions out of runtime into ml_overlay.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 5/15: splitting ML-only distributions into ml_overlay...'
 $RuntimePython = Join-Path $RuntimeDir 'python.exe'
 $Pyproject = Join-Path $RepoRoot 'pyproject.toml'
@@ -745,9 +733,7 @@ Remove-Item -LiteralPath $CoreGateScript -Force -ErrorAction SilentlyContinue
 
 Write-Success "ML split complete ($($MlEntries.Count) entries moved to ml_overlay)"
 
-# ---------------------------------------------------------------------------
 # Step 6: x64dbg tree + plugin verification.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 6/15: staging x64dbg...'
 $X64dbgSrc = Join-Path $RepoRoot 'tools\x64dbg'
 Assert-Source -Path $X64dbgSrc -What 'x64dbg tree'
@@ -759,9 +745,7 @@ Assert-Produced -Path (Join-Path $X64dbgDest 'release\x64\plugins\intellicrack_b
 Assert-Produced -Path (Join-Path $X64dbgDest 'release\x32\plugins\intellicrack_bridge_x32.dp32') -What 'x32 bridge plugin'
 Write-Success 'x64dbg staged'
 
-# ---------------------------------------------------------------------------
 # Step 7: remaining tool subset.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 7/15: staging tool subset...'
 $ToolSubset = @('radare2', 'cutter', 'NASM')
 foreach ($tool in $ToolSubset) {
@@ -776,18 +760,15 @@ Assert-Produced -Path (Join-Path $Stage 'app\tools\radare2\bin\radare2.exe') -Wh
 Assert-Produced -Path (Join-Path $Stage 'app\tools\NASM\nasm.exe') -What 'nasm.exe'
 Write-Success 'tool subset staged'
 
-# ---------------------------------------------------------------------------
 # Step 8: Ghidra tree.
 #
 # The bridge drives Ghidra through the CPython (PyGhidra/jfx_bridge) server,
 # not the legacy Jython interpreter, so Ghidra/Features/Jython must never
 # reach the shipped installer: a live Jython extension beside PyGhidra
-# reintroduces the S19-D11 script-manager outage. Excluding it from the
-# mirror is the fix; the post-copy assertion below is what makes the fix
-# durable -- a re-stage that forgets the exclusion (or mirrors from a source
-# tree where Jython was never disabled) fails the build instead of silently
-# shipping it.
-# ---------------------------------------------------------------------------
+# causes a script-manager outage. The mirror excludes it, and the post-copy
+# assertion below keeps that exclusion honest -- a re-stage that forgets it (or
+# mirrors from a source tree where Jython was never disabled) fails the build
+# instead of silently shipping it.
 Write-Step 'STAGE' 'Step 8/15: staging Ghidra...'
 $GhidraSrc = Join-Path $RepoRoot 'tools\ghidra'
 Assert-Source -Path (Join-Path $GhidraSrc 'support\analyzeHeadless.bat') -What 'Ghidra tree'
@@ -812,9 +793,7 @@ if ($GhidraJythonJars.Count -gt 0) {
 }
 Write-Success 'Ghidra staged (Jython extension excluded)'
 
-# ---------------------------------------------------------------------------
 # Step 9: bundled Temurin JDK 21 under the Ghidra tree.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 9/15: staging pinned Temurin JDK 21...'
 if ($SkipJdkDownload) {
     Write-Skip 'Temurin JDK download skipped (-SkipJdkDownload)'
@@ -866,9 +845,7 @@ if ($SkipJdkDownload) {
     Write-Success "Temurin JDK staged: $($JdkRoot.Name)"
 }
 
-# ---------------------------------------------------------------------------
 # Step 10: QEMU program tree, excluding images/.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 10/15: staging QEMU (excluding images/)...'
 $QemuSrc = Join-Path $RepoRoot 'tools\qemu'
 Assert-Source -Path (Join-Path $QemuSrc 'qemu-system-x86_64.exe') -What 'QEMU tree'
@@ -881,9 +858,7 @@ if (Test-Path -LiteralPath (Join-Path $QemuDest 'images')) {
 }
 Write-Success 'QEMU staged'
 
-# ---------------------------------------------------------------------------
 # Step 11: optional bundled Debian sandbox guest.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 11/15: staging Debian sandbox guest...'
 if ($SkipGuestImage) {
     Write-Skip 'Debian sandbox guest image skipped (-SkipGuestImage)'
@@ -899,9 +874,7 @@ if ($SkipGuestImage) {
     Write-Success 'Debian sandbox guest staged'
 }
 
-# ---------------------------------------------------------------------------
 # Step 12: vendor pattern/data trees.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 12/15: staging vendor trees...'
 $VendorSubset = @('community-patterns', 'ImHex-Patterns', 'PatternLanguage', 'traceevent')
 foreach ($vendor in $VendorSubset) {
@@ -926,9 +899,7 @@ if ($patternCount -eq 0) {
 }
 Write-Success 'vendor trees staged'
 
-# ---------------------------------------------------------------------------
 # Step 13: hexbench standalone GUI.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 13/15: staging hexbench...'
 $HexbenchSrc = Join-Path $RepoRoot 'src\hexbench'
 Assert-Source -Path $HexbenchSrc -What 'hexbench source'
@@ -944,7 +915,6 @@ Invoke-Robocopy -Source $HexbenchSrc -Destination $HexbenchDest `
     -ExcludeFiles @('*.pyc', 'gate.ps1', 'update-deps.ps1', 'hexbench.spec')
 Write-Success 'hexbench staged'
 
-# ---------------------------------------------------------------------------
 # Step 14: PyInstaller launchers.
 #
 # Both are small stdlib-only bootstrappers that resolve the runtime staged
@@ -952,7 +922,6 @@ Write-Success 'hexbench staged'
 # here: that spec freezes the editor with an interpreter of its own for
 # standalone distribution, which inside the installer would duplicate the
 # runtime, webview and hexcore this stage already carries.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 14/15: staging license texts...'
 $ProjectLicense = Join-Path $RepoRoot 'LICENSE'
 $LicenseIndex = Join-Path $RepoRoot 'THIRD-PARTY-LICENSES.md'
@@ -971,7 +940,6 @@ Assert-Produced -Path (Join-Path $AppRoot 'THIRD-PARTY-LICENSES.md') -What 'stag
 Assert-Produced -Path (Join-Path $AppRoot 'licenses\x64dbg\LICENSE') -What 'staged x64dbg license text'
 Write-Success 'license texts staged'
 
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Step 15/15: building the launchers...'
 $Launchers = @(
     @{ Spec = 'packaging/launcher/launcher.spec'; Exe = 'Intellicrack.exe'; What = 'launcher' }
@@ -1005,9 +973,7 @@ foreach ($Launcher in $Launchers) {
     Write-Success "$($Launcher.What) staged"
 }
 
-# ---------------------------------------------------------------------------
 # Finalize: single-source the installer version and stamp build provenance.
-# ---------------------------------------------------------------------------
 Write-Step 'STAGE' 'Finalizing: version stamp and build metadata...'
 
 # Derive the installer version defines from the single source of truth so the

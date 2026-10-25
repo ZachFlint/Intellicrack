@@ -33,7 +33,7 @@ const renderersSource = await readFile(`${staticDir}renderers.js`, 'utf8');
 
 const { mergePatches, sliceCodePoints, writeBackPlan } = await import('../static/renderers.js');
 
-/* ---------------------------------------------------------- #39: mergePatches */
+/* ---------------------------------------------------------- mergePatches */
 
 const wholeEntryA = { __bytes__: '0102', length: 2, truncated: false };
 const wholeEntryB = { __bytes__: '0304', length: 2, truncated: false };
@@ -73,7 +73,7 @@ check(
   'renderPatches no longer appends a banner when mergePatches reports a truncated contribution',
 );
 
-/* ------------------------------------------------------ #67: sliceCodePoints */
+/* ------------------------------------------------------ sliceCodePoints */
 
 check('short text passes through unchanged', sliceCodePoints('hello', 240) === 'hello', 'a string under the limit must not be altered');
 check('empty text passes through unchanged', sliceCodePoints('', 240) === '', 'an empty string must not be altered');
@@ -114,7 +114,7 @@ check(
   'renderStrings no longer truncates the row title through sliceCodePoints',
 );
 
-/* ------------------------------------------------------- #13: writeBackPlan */
+/* ------------------------------------------------------- writeBackPlan */
 
 const exactWrite = writeBackPlan({ length: 16, truncated: false }, 16);
 check(
@@ -130,7 +130,7 @@ check(
   `expected a resize note, got ${JSON.stringify(resizingWrite)}`,
 );
 
-/* The finding's exact motivating case: a length-preserving transform (the
+/* The motivating case: a length-preserving transform (the
    true output length equals the source range) whose result was capped by
    the 4096-byte inline transport cap. */
 const truncatedWrite = writeBackPlan({ length: 8192, truncated: true }, 8192);

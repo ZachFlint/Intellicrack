@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gate for S17-D73: an argument must reach the guest as the argument that was sent.
+r"""An argument must reach the guest as the argument that was sent.
 
-Found by being bitten by it on a live Windows guest. A probe sent one
+On a live Windows guest, a probe sent one
 ``powershell.exe -NoProfile -Command <script>`` argument whose script contained
 double quotes, and the guest answered ``ParserError ... UnexpectedToken`` at a
 character offset *inside* that script: the agent had rewritten the argument
@@ -23,8 +23,8 @@ neither of:
   the wrapper itself appends - has to be doubled, or the last backslash escapes
   that quote and the argument swallows whatever follows it.
 
-So ``value with "quoted" text`` arrived stripped of its quotes, and a path
-ending in a separator ate the next argument entirely. Nothing reported either:
+Without the escapes, ``value with "quoted" text`` arrives stripped of its quotes, and a path
+ending in a separator swallows the next argument. Nothing reports it:
 the guest simply received a different argument vector than the host sent.
 
 Those rules belong to ``CommandLineToArgvW``, which is every callee here except
@@ -47,7 +47,7 @@ of the ``agent.ps1`` production has just generated and runs them in a real
 compared is the argument vector the operating system really handed the child
 against the one the caller really asked for. Asserting on the composed command
 line instead would let this test agree with whatever quoting the code happens
-to do, which is exactly how the defect survived.
+to do, which is how such a defect survives.
 """
 
 from __future__ import annotations

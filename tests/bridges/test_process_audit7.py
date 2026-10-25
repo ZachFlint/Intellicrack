@@ -2,28 +2,15 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression tests for audit7 process bridge findings (Unit 2).
+"""Tests for the process bridge: WOW64 SEH pointer width, handle type names, non-blocking pattern search, hex system-info output, and pipe and device handle tracking.
 
 Covers:
 
-* F-0008 - ``get_seh_chain`` must use a 4-byte pointer when the target
-  is WOW64, regardless of the host interpreter's pointer width.
-* F-0019 - ``get_handles`` must resolve ``ObjectTypeIndex`` to a
-  human-readable ``type_name`` string while preserving the raw
-  ``type_index`` as a sibling field. The tool definition's ``returns``
-  text must describe the new schema.
-* F-0035 - ``search_pattern`` must not block the asyncio event loop
-  while scanning many regions; each region's scan must be dispatched
-  via ``asyncio.to_thread`` and yield to the loop.
-* F-0037 - ``query_system_info`` must return a hex ``str`` rather than
-  raw ``bytes`` so the tool-def contract is honoured and JSON tool
-  responses are serialisable. The function's return annotation must be
-  ``str``.
-* F-0044 - ``pipe_connect`` and ``device_open`` must register their
-  handles in :attr:`ProcessBridge._pipe_handles` and
-  :attr:`ProcessBridge._device_handles` so ``shutdown`` can release
-  them; the corresponding ``*_close`` methods must remove the entry on
-  success.
+* ``get_seh_chain`` must use a 4-byte pointer when the target is WOW64, regardless of the host interpreter's pointer width.
+* ``get_handles`` must resolve ``ObjectTypeIndex`` to a human-readable ``type_name`` string while preserving the raw ``type_index`` as a sibling field. The tool definition's ``returns`` text must describe the new schema.
+* ``search_pattern`` must not block the asyncio event loop while scanning many regions. Each region's scan must be dispatched via ``asyncio.to_thread`` and yield to the loop.
+* ``query_system_info`` must return a hex ``str`` rather than raw ``bytes``, so the tool-def contract is honored and JSON tool responses are serializable. The function's return annotation must be ``str``.
+* ``pipe_connect`` and ``device_open`` must register their handles in :attr:`ProcessBridge._pipe_handles` and :attr:`ProcessBridge._device_handles` so ``shutdown`` can release them. The corresponding ``*_close`` methods must remove the entry on success.
 """
 
 from __future__ import annotations
@@ -160,13 +147,11 @@ async def attached_bridge_audit7(
     await bridge_audit7.close()
 
 
-# ---------------------------------------------------------------------
-# F-0008: WOW64 SEH pointer width
-# ---------------------------------------------------------------------
+# WOW64 SEH pointer width
 
 
 class TestF0008SehWow64PointerSize:
-    """F-0008: SEH chain must use 4-byte pointers for WOW64 targets."""
+    """SEH chain must use 4-byte pointers for WOW64 targets."""
 
     async def test_get_seh_chain_uses_four_byte_pointer_for_wow64_target(
         self,
@@ -219,13 +204,11 @@ class TestF0008SehWow64PointerSize:
         assert first["next"] == wow64_terminal
 
 
-# ---------------------------------------------------------------------
-# F-0019: get_handles resolves type names
-# ---------------------------------------------------------------------
+# get_handles resolves type names
 
 
 class TestF0019GetHandlesResolvesTypeNames:
-    """F-0019: ``get_handles`` must surface resolved ``type_name`` strings."""
+    """``get_handles`` must surface resolved ``type_name`` strings."""
 
     async def test_get_handles_entries_include_type_name_string(
         self,
@@ -297,13 +280,11 @@ class TestF0019GetHandlesResolvesTypeNames:
         assert "type_name" in returns_text, f"tool-def returns text must mention type_name, got: {returns_text}"
 
 
-# ---------------------------------------------------------------------
-# F-0035: search_pattern non-blocking
-# ---------------------------------------------------------------------
+# search_pattern non-blocking
 
 
 class TestF0035SearchPatternNonBlocking:
-    """F-0035: ``search_pattern`` must yield to the asyncio event loop."""
+    """``search_pattern`` must yield to the asyncio event loop."""
 
     async def test_search_pattern_returns_correct_match_addresses_via_real_scan(
         self,
@@ -348,13 +329,11 @@ class TestF0035SearchPatternNonBlocking:
         assert "asyncio.to_thread" in source, "search_pattern must dispatch region scans via asyncio.to_thread"
 
 
-# ---------------------------------------------------------------------
-# F-0037: query_system_info returns hex str
-# ---------------------------------------------------------------------
+# query_system_info returns hex str
 
 
 class TestF0037QuerySystemInfoHexString:
-    """F-0037: ``query_system_info`` returns a hex string, not raw bytes."""
+    """``query_system_info`` returns a hex string, not raw bytes."""
 
     async def test_query_system_info_returns_hex_string(
         self,
@@ -380,13 +359,11 @@ class TestF0037QuerySystemInfoHexString:
         assert ret in {str, "str"}, f"query_system_info return annotation must be str, got {ret!r}"
 
 
-# ---------------------------------------------------------------------
-# F-0044: pipe_connect / device_open populate tracking dicts
-# ---------------------------------------------------------------------
+# pipe_connect / device_open populate tracking dicts
 
 
 class TestF0044HandleTrackingDicts:
-    """F-0044: pipe_connect / device_open populate the tracking dicts."""
+    """pipe_connect / device_open populate the tracking dicts."""
 
     async def test_pipe_connect_registers_handle_in_pipe_handles(
         self,

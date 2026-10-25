@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""FIX UNIT 14a real-data coverage for ``process_panel.modules_tab``.
+"""Real-data coverage for ``process_panel.modules_tab``.
 
-Audit shard 14 flagged the existing modules-tab tests for populating the
-module tree from hand-built module dicts and never exercising the real
-``ProcessBridge.get_modules`` enumeration. These tests attach a real
+The module tree is checked against the real ``ProcessBridge.get_modules``
+enumeration rather than hand-built module dicts. These tests attach a real
 :class:`ProcessBridge` to the running interpreter and drive
 ``ModulesTab._refresh_modules`` so the module tree renders genuine loaded
 Win32 modules. Assertions check real, verifiable values: every Python

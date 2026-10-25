@@ -3,20 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit 5 u4 / F-0026 - HexPatCompiler propagates #pragma metadata to JSON.
+"""HexPatCompiler propagates #pragma metadata to JSON.
 
-Before remediation ``HexPatCompiler.compile_to_dict`` skipped the
-preprocessor entirely. The static JSON template was emitted with
-``default_endianness="little"`` regardless of ``#pragma endian big``, no
-``author`` even when ``#pragma author`` was set, and the description was a
-hardcoded ``"<Name> (compiled from HexPat DSL)"`` string regardless of
-``#pragma description``. ``#pragma magic`` and ``#pragma base_address`` were
-likewise silently dropped.
+``HexPatCompiler.compile_to_dict`` runs the preprocessor, so the static JSON template
+reflects ``#pragma endian``, ``#pragma author``, ``#pragma description``, ``#pragma magic``
+and ``#pragma base_address`` rather than fixed defaults.
 
-The remediation runs the preprocessor before lexing/parsing and threads the
-extracted ``PragmaInfo`` into the codegen so the static template reflects
-the user's pragma directives. Runtime constructs continue to be rejected by
-the codegen so this fix does not weaken the static-template guarantees.
+Runtime constructs continue to be rejected by the codegen, so the static-template
+guarantees hold.
 """
 
 from __future__ import annotations
@@ -32,7 +26,7 @@ from intellicrack.core.hexpat_compiler import HexPatCodegen, HexPatCompiler
 
 
 class TestCompilerHonoursPragmaEndian:
-    """F-0026: ``#pragma endian`` controls the emitted ``default_endianness``."""
+    """``#pragma endian`` controls the emitted ``default_endianness``."""
 
     def test_default_endianness_is_little_when_no_pragma(self) -> None:
         """Patterns with no endian pragma fall back to little endian."""
@@ -54,7 +48,7 @@ class TestCompilerHonoursPragmaEndian:
 
 
 class TestCompilerHonoursPragmaDescription:
-    """F-0026: ``#pragma description`` populates the template description."""
+    """``#pragma description`` populates the template description."""
 
     def test_pragma_description_used_as_template_description(self) -> None:
         """``#pragma description "<text>"`` sets the JSON template description."""
@@ -70,7 +64,7 @@ class TestCompilerHonoursPragmaDescription:
 
 
 class TestCompilerHonoursPragmaAuthor:
-    """F-0026: ``#pragma author`` populates the template ``author`` field."""
+    """``#pragma author`` populates the template ``author`` field."""
 
     def test_pragma_author_emitted_as_author_field(self) -> None:
         """``#pragma author "<name>"`` sets the JSON template ``author`` field."""
@@ -86,7 +80,7 @@ class TestCompilerHonoursPragmaAuthor:
 
 
 class TestCompilerHonoursPragmaMagic:
-    """F-0026: ``#pragma magic`` populates ``magic_detection``."""
+    """``#pragma magic`` populates ``magic_detection``."""
 
     def test_pragma_magic_emitted_as_magic_detection(self) -> None:
         """``#pragma magic [0x0, "4D5A"]`` sets ``magic_detection``."""
@@ -104,7 +98,7 @@ class TestCompilerHonoursPragmaMagic:
 
 
 class TestCompilerHonoursPragmaMetadata:
-    """F-0026: ``#pragma base_address`` and ``#pragma bitfield_order`` are recorded."""
+    """``#pragma base_address`` and ``#pragma bitfield_order`` are recorded."""
 
     def test_pragma_base_address_emitted_in_metadata(self) -> None:
         """``#pragma base_address`` is recorded under ``pragma_metadata.base_address``."""
@@ -126,7 +120,7 @@ class TestCompilerHonoursPragmaMetadata:
 
 
 class TestCompilerOutputIsValidJson:
-    """F-0026: the emitted dict round-trips through JSON serialisation."""
+    """The emitted dict round-trips through JSON serialisation."""
 
     def test_compile_emits_json_serialisable_output(self) -> None:
         """The dict from ``compile_to_dict`` must serialise via ``json.dumps``."""
@@ -140,7 +134,7 @@ class TestCompilerOutputIsValidJson:
         result = HexPatCompiler.compile_to_dict(source)
         text = json.dumps(result)
         # The serialised form must contain every pragma value, proving the
-        # compiler now propagates them into the static template.
+        # compiler propagates them into the static template.
         assert "big" in text
         assert "ACME" in text
         assert "ACME format" in text
@@ -149,7 +143,7 @@ class TestCompilerOutputIsValidJson:
 
 
 class TestCompilerStillRejectsRuntimeConstructs:
-    """F-0026 fix must not weaken the existing static-template guarantees."""
+    """Propagating pragmas must not weaken the existing static-template guarantees."""
 
     def test_function_decl_still_rejected(self) -> None:
         """Top-level functions remain runtime-only and must raise ``HexPatError``."""

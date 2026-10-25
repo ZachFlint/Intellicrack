@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Critical-coverage tests for the Frida bridge library, Stalker transform, kernel, file, SQLite and code-writer paths.
+"""Coverage tests for the Frida bridge library, Stalker transform, kernel, file, SQLite and code-writer paths.
 
 Every test that needs a session drives the real Frida runtime against a child
 process that the test itself starts (a Python interpreter blocked on stdin),

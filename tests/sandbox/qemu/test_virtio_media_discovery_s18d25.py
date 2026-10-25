@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Gates for S18-D25: the staged virtio medium was unreachable by discovery.
+r"""The staged virtio medium was unreachable by discovery.
 
 Measured on a real provisioning run. The install medium was found in
 ``D:\Intellicrack\tools\qemu\images`` and verified, and the very next step

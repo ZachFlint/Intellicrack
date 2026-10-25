@@ -3,14 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Regression gate for the patch-address formatting in ``cutter_panel``.
+"""Gate for the patch-address formatting in ``cutter_panel``.
 
-Covers the 2026-09-20 Qodana ``PyStringFormatInspection`` finding on
-``CutterPanel._on_patch_dialog``: the parsed ``address`` (``int | None``) is
+Covers ``CutterPanel._on_patch_dialog``: the parsed ``address`` (``int | None``) is
 read again inside an ``on_success`` closure handed to
 ``run_bridge_coroutine_logged``; the guard above the closure narrows it in
 the enclosing scope but static analysis cannot prove that survives into the
-closure. The handler now rebinds the narrowed value to an explicitly
+closure. The handler rebinds the narrowed value to an explicitly
 ``int``-typed local (``resolved_address``) before the log call, the bridge
 call, and the closure.
 
@@ -48,7 +47,7 @@ class _RecordingCutterBridge:
     """Stand-in bridge recording exactly which arguments ``write_bytes`` forwarded."""
 
     def __init__(self) -> None:
-        """Initialise an empty call log."""
+        """Initialize an empty call log."""
         self.calls: list[tuple[int, str]] = []
 
     async def write_bytes(self, address: int, hex_data: str) -> bool:

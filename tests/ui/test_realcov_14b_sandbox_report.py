@@ -5,15 +5,14 @@
 
 """Real monitor-log coverage for :mod:`intellicrack.ui.panels.sandbox_panel`.
 
-The audit flagged the sandbox panel report view as never exercised against
-real captured monitor data: only combo-box wiring was tested.
+The sandbox panel report view is exercised against real captured monitor data.
 
 These tests write genuine pipe-delimited monitor logs in the exact wire schema
 that the in-guest agents under ``sandbox/scripts/`` emit, parse them with the
 **production** :mod:`intellicrack.sandbox.log_parsers` async helpers, assemble a
 real :class:`~intellicrack.sandbox.base.ExecutionReport`, and drive it through
 :meth:`SandboxPanel.load_execution_report`. Assertions verify the panel's
-file-change, registry-change, and network-activity trees materialise exactly
+file-change, registry-change, and network-activity trees materialize exactly
 the records the real parser produced from the real log files. The parsing
 pipeline under test is the real one; nothing about file/registry/network record
 extraction is mocked.

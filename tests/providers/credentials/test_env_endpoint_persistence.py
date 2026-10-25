@@ -8,8 +8,7 @@
 organization. These gates drive the real :class:`CredentialLoader` against real
 temporary ``.env`` files and the real process environment, and fail when:
 
-* a saved OpenRouter base URL does not reach its credentials (it had no
-  ``OPENROUTER_API_BASE`` mapping, so gateways were silently ignored);
+* a saved OpenRouter base URL does not reach its credentials;
 * a keyless provider loses its saved host because no API key is configured;
 * a blank saved value surfaces as an empty base URL instead of "unset";
 * persisting a field does not write it where the next launch reads it, copies
@@ -18,7 +17,7 @@ temporary ``.env`` files and the real process environment, and fail when:
 * clearing an API key leaves a provider-owned alias behind or deletes another
   provider's key;
 * the global loader resolves a different ``.env`` than startup does on an
-  installed build (it searched the working directory first).
+  installed build.
 """
 
 from __future__ import annotations

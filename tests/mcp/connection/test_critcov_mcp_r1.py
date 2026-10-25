@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Second-pass critical-coverage tests for ``intellicrack.mcp.connection``.
+"""Critical-coverage tests for ``intellicrack.mcp.connection``.
 
 These cover what the first pass left: a stderr pipe the operating system cannot create, a server that offers no resource subscriptions,
 a handshake-era server that does not implement ``ping``, the reconnect budget running out, a change subscription that the server ends

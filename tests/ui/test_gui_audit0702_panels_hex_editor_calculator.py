@@ -2,18 +2,13 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Regression gate for GUI audit finding H24 in ``hex_editor/calculator.py``.
+"""Gate for the calculator "Signed" checkbox in ``hex_editor/calculator.py``.
 
-H24 -- The calculator tab's "Signed" checkbox (``_calc_signed_check``) was
-instantiated and added to the options row but never read anywhere: both
-the bridge-backed conversion path (``_on_convert_success``) and the
-local, no-bridge fallback path (``_convert_local`` ->
-``_add_sized_int_results``) unconditionally rendered every signed *and*
-unsigned sized-integer representation regardless of the checkbox's
-state. The fix reads ``self._calc_signed_check.isChecked()`` once, at
-convert time, in ``_on_convert`` and threads the resulting
-``signed_only`` flag through every one of those call sites so ticking
-the box hides the unsigned rows from the results tree.
+The calculator tab's "Signed" checkbox (``_calc_signed_check``) must be read: it is instantiated and added to the options row, but
+neither the bridge-backed conversion path (``_on_convert_success``) nor the local, no-bridge fallback path (``_convert_local`` ->
+``_add_sized_int_results``) may render every signed *and* unsigned sized-integer representation regardless of the checkbox's state.
+``_on_convert`` reads ``self._calc_signed_check.isChecked()`` once, at convert time, and threads the resulting ``signed_only``
+flag through every one of those call sites so ticking the box hides the unsigned rows from the results tree.
 
 Every test below drives the real ``CalculatorMixin`` wiring on a real
 ``HexEditorPanel``, exercising the genuine ``QCheckBox``/``QLineEdit``/
@@ -213,16 +208,14 @@ def _run_convert(
 
 
 class TestH24BridgePathSignedCheckboxFiltersResults:
-    """H24: the bridge-backed (little-endian) dict path honours the "Signed" checkbox."""
+    """The bridge-backed (little-endian) dict path honours the "Signed" checkbox."""
 
     def test_h24_bridge_signed_checked_hides_unsigned_rows(self, qapp: QApplication) -> None:
         """Ticking "Signed" before Convert hides every unsigned row from the bridge path.
 
-        Pre-fix, ``_on_convert_success``'s little-endian branch
-        unconditionally added ``uint8``/``uint16_LE``/``uint32_LE``/
-        ``uint64_LE`` regardless of the checkbox, so this would fail
-        because those keys would still be present. Post-fix, they are
-        only added when ``signed_only`` is ``False``.
+        ``_on_convert_success``'s little-endian branch must not unconditionally add ``uint8``/``uint16_LE``/``uint32_LE``/
+        ``uint64_LE`` regardless of the checkbox, or this test fails because those keys would still be present.
+        They must be added only when ``signed_only`` is ``False``.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -254,13 +247,12 @@ class TestH24BridgePathSignedCheckboxFiltersResults:
         Runs the same panel through two conversions of the same input
         over the real bridge dispatch path, toggling only the "Signed"
         checkbox between them. This is the genuine falsifiable gate for
-        the bridge path: pre-fix, ``_on_convert_success`` never read the
-        checkbox at all, so both runs would render an identical set of
-        rows (``uint8`` present in both); post-fix, the second run's
-        ``uint8`` row disappears solely because the checkbox was ticked.
+        the bridge path: a ``_on_convert_success`` that never reads the
+        checkbox would render an identical set of rows in both runs (``uint8`` present in both); the second run's
+        ``uint8`` row must disappear solely because the checkbox was ticked.
         A test that only ever exercises one checkbox state cannot show
-        this -- it would pass unchanged on the pre-fix code -- so both
-        states must be observed within the same test to gate the fix.
+        this -- it would pass unchanged on such code -- so both
+        states must be observed within the same test to gate the behaviour.
 
         Args:
             qapp: The shared QApplication fixture.
@@ -297,7 +289,7 @@ class TestH24BridgePathSignedCheckboxFiltersResults:
 
 
 class TestH24LocalFallbackSignedCheckboxFiltersResults:
-    """H24: the synchronous no-bridge fallback path honours the "Signed" checkbox."""
+    """The synchronous no-bridge fallback path honours the "Signed" checkbox."""
 
     def test_h24_local_big_endian_signed_checked_hides_unsigned_rows(self, qapp: QApplication) -> None:
         """Ticking "Signed" with no bridge attached hides unsigned rows in the big-endian path.
@@ -305,11 +297,9 @@ class TestH24LocalFallbackSignedCheckboxFiltersResults:
         Uses ``0xFFFFFFFF``, whose signed/unsigned interpretations
         genuinely differ at every width up to 32 bits (``-1`` vs a large
         positive number), so the assertions verify real computed values
-        rather than only key presence. Pre-fix, ``_add_sized_int_results``
-        had no ``signed_only`` parameter at all and always emitted both
-        rows for every width; this test fails against that code both
-        because the unsigned keys would still be present and because the
-        call would raise a ``TypeError`` for the unsupported keyword.
+        rather than only key presence. ``_add_sized_int_results`` must take a ``signed_only`` parameter; without one it
+        would always emit both rows for every width, so this test fails against that code both because the unsigned keys
+        would still be present and because the call would raise a ``TypeError`` for the unsupported keyword.
 
         Args:
             qapp: The shared QApplication fixture, required so the
@@ -343,14 +333,11 @@ class TestH24LocalFallbackSignedCheckboxFiltersResults:
         Runs the same panel through two conversions of ``0xFFFFFFFF``
         over the synchronous no-bridge, big-endian path, toggling only
         the "Signed" checkbox between them. This is the genuine
-        falsifiable gate for the local BE path: pre-fix,
-        ``_add_sized_int_results`` had no ``signed_only`` parameter at
-        all and always emitted both rows for every width, so both runs
-        would render an identical row set; post-fix, the second run's
-        unsigned rows disappear solely because the checkbox was ticked.
-        Exercising only the unchecked state would pass unchanged on the
-        pre-fix code, so both states must be observed within the same
-        test to gate the fix.
+        falsifiable gate for the local BE path: ``_add_sized_int_results`` must take a ``signed_only`` parameter, and without one
+        it would emit both rows for every width, so both runs would render an identical row set. The second run's
+        unsigned rows must disappear solely because the checkbox was ticked.
+        Exercising only the unchecked state would pass unchanged on such code,
+        so both states must be observed within the same test to gate the behaviour.
 
         Args:
             qapp: The shared QApplication fixture, required so the
@@ -391,10 +378,10 @@ class TestH24LocalFallbackSignedCheckboxFiltersResults:
         """The checkbox is read fresh on every Convert, not cached or ignored.
 
         Runs the same panel through two conversions of the same input
-        value, toggling only the "Signed" checkbox between them. Pre-fix
-        (the checkbox never read at all), the second run would render
+        value, toggling only the "Signed" checkbox between them. If the checkbox
+        were never read, the second run would render
         identically to the first -- ``uint8`` would still be present.
-        Post-fix, checking the box removes it.
+        Checking the box must remove it.
 
         Args:
             qapp: The shared QApplication fixture, required so the

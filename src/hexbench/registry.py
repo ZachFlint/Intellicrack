@@ -97,18 +97,14 @@ class DocumentInfo:
 class DocumentSlot:
     """One open document together with the lock that serialises writes to it.
 
-    The lock guards mutations only. It used to guard everything, because
-    ``HexDocument`` was a ``#[pyclass]`` whose mutating methods took an exclusive
-    PyO3 borrow, so two threads touching one document at once got
-    ``RuntimeError: Already borrowed`` no matter what either of them was doing.
-    The engine now carries its own reader-writer lock, so reads are safe to make
-    concurrently and :meth:`read` takes nothing at all -- which is the point,
-    since serialising them meant two entropy scans of the same document queued
+    The lock guards mutations only. The engine carries its own reader-writer
+    lock, so reads are safe to make concurrently and :meth:`read` takes nothing
+    at all: serialising them would queue two entropy scans of the same document
     behind each other for no reason.
 
-    What the lock still buys is the busy answer. A mutation holds the document
-    long enough to matter, so :meth:`borrow` keeps its timed acquire and callers
-    can report that the document is busy instead of stalling.
+    What the lock buys is the busy answer. A mutation holds the document long
+    enough to matter, so :meth:`borrow` uses a timed acquire and callers can
+    report that the document is busy instead of stalling.
     """
 
     def __init__(self, handle: str, document: HexDocument, origin: str, label: str) -> None:
@@ -210,11 +206,11 @@ class DocumentSlot:
                 return self._cached
         try:
             current = self._probe()
+            with self._meta:
+                self._cached = current
         finally:
             self._lock.release()
-        with self._meta:
-            self._cached = current
-            return current
+        return current
 
     def _probe(self) -> DocumentInfo:
         """Read live state directly from the document.
