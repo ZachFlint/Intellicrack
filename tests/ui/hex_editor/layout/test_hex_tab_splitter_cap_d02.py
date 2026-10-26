@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the splitter with the Hex Editor tab specifically active.
+"""Test for the splitter with the Hex Editor tab specifically active.
 
 ``ToolOutputPanel`` (``ui/tools.py``) docks every embedded tool -- including
 the built-in Hex Editor -- inside a ``main_splitter`` whose left column

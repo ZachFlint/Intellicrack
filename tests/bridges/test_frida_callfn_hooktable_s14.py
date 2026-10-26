@@ -18,7 +18,7 @@ idiom also used by ``tests/bridges/test_frida_hook_childgating_s14.py`` and
 ``tests/bridges/test_frida_scan_unload_s14.py``) and calls the real ``kernel32.dll!GetCurrentProcessId``
 export, a no-argument WinAPI function whose return value (the current process id) is known independently via
 ``os.getpid()``. It is parametrized across every integer return type plus ``pointer``, so a regression in
-either the integer branch or the pointer/64-bit branch of ``call_function``'s result extraction fails loudly.
+either the integer branch or the pointer/64-bit branch of ``call_function``'s result extraction fails the test.
 """
 
 from __future__ import annotations
@@ -104,7 +104,7 @@ def test_call_function_integer_return_types_match_real_pid(
 
     This test calls the real ``kernel32.dll!GetCurrentProcessId`` export, a WinAPI call with a known-correct answer
     (``os.getpid()``), through ``FridaBridge.call_function`` for each type in ``_INTEGER_RETURN_TYPES`` and asserts
-    the result is exactly the real PID. Falsifiable: if the integer-extraction branch
+    the result is exactly the real PID. If the integer-extraction branch
     still calls ``.toInt32()`` unconditionally (or the 64-bit branch still
     assumes ``.toString()`` unconditionally), the bridge raises ``ToolError``
     and this test fails with that exception instead of an equality mismatch.
@@ -131,7 +131,7 @@ def test_call_function_pointer_return_still_matches_real_pid(self_attached_bridg
     """Verify the ``return_type='pointer'`` path returns the real PID.
 
     This path is kept alongside the integer-return gate so a change to the shared ``call_function`` result-extraction
-    logic cannot fix the integer branch while silently breaking the pointer branch. Falsifiable: if the pointer/64-bit
+    logic cannot fix the integer branch while silently breaking the pointer branch. If the pointer/64-bit
     extraction branch is broken, the returned value will not equal the real PID.
 
     Args:
@@ -149,7 +149,7 @@ def test_call_function_pointer_return_still_matches_real_pid(self_attached_bridg
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
 def test_call_function_error_surfaces_real_javascript_reason(self_attached_bridge: FridaBridge) -> None:
-    """Verify a genuine in-script call failure surfaces the real error text, not a generic message.
+    """Verify an in-script call failure surfaces the real error text, not a generic message.
 
     This test forces a real uncaught script exception through a legitimate, memory-safe call: declaring one parameter
     type (``arg_types=['pointer']``) while supplying zero real arguments. Frida's NativeFunction argument marshaling
@@ -157,7 +157,7 @@ def test_call_function_error_surfaces_real_javascript_reason(self_attached_bridg
     raises a ``bad argument count`` script error, never a real invocation of ``GetCurrentProcessId``. That exercises
     the same ``on_message`` "error" path a broken return-type extraction would hit, without risk of crashing the host
     process. The bridge must carry the real error text in ``details['reason']`` rather than raising a bare
-    ``ToolError(_ERR_CALL_FAILED)``. Falsifiable: if the bridge
+    ``ToolError(_ERR_CALL_FAILED)``. If the bridge
     reverts to a bare ``ToolError(_ERR_CALL_FAILED)`` with no ``details``,
     ``reason`` is missing or empty and the assertions fail.
 

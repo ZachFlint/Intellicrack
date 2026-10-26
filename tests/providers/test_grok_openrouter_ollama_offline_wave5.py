@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable offline gates for Grok, OpenRouter, and Ollama providers.
+"""Offline tests for Grok, OpenRouter, and Ollama providers.
 
 Grok: chat_stream accumulation and the _open_grok_stream HTTP body.
 OpenRouter: chat enable_cache wiring, chat_stream accumulation, get_generation,

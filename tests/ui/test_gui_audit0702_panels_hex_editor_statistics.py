@@ -26,8 +26,7 @@ dispatched through a ``GenericCallableWorker``, and the dialog opens only from t
 Each test below drives the real ``StatisticsMixin`` slots through a small
 ``QWidget`` harness backed by document doubles (one whose
 ``digram_matrix`` sleeps and records the identity of the OS thread that
-executed it), asserting real, falsifiable outcomes without mocking Qt or the
-mixin itself.
+executed it); Qt and the mixin itself run unpatched.
 """
 
 from __future__ import annotations

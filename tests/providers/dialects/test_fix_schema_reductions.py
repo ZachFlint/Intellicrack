@@ -163,7 +163,7 @@ def _strict_ok(entry: dict[str, Any]) -> list[str]:
         entry: The rendered function entry.
 
     Returns:
-        list[str]: Every broken rule; empty when the claim is honest.
+        list[str]: Every broken rule; empty when the entry meets every strict-mode rule.
     """
     parameters = entry["parameters"]
     problems = list(_strict_violations(parameters, 0, "$"))

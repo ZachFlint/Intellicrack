@@ -7,7 +7,7 @@
 
 The overlay tests run the real ``qemu-img`` found in ``QEMU_INSTALL_DIR`` and read the result back with
 ``qemu-img info``. The WHPX and hypervisor probes are driven through the real ``subprocess`` machinery by
-putting small batch files named like the host tools on a confined ``PATH``, so the product reads genuine
+putting small batch files named like the host tools on a confined ``PATH``, so the product reads their
 process output. Launch outcomes are driven by batch files standing in for the emulator, because the real
 ``qemu-system-x86_64`` cannot load in the container. Channel, recorder and monitor paths use real asyncio
 streams, the real loopback protocol servers, and real child processes.

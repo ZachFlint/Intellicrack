@@ -3,9 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable recovery tests for the x64dbg named-pipe transport.
+"""Recovery tests for the x64dbg named-pipe transport.
 
-Each recovery behaviour is gated against the genuine Win32 named-pipe kernel transport. A standalone server child process hosts a real pipe, and no transport call is mocked:
+Each recovery behavior is exercised over the Win32 named-pipe kernel transport. A standalone server child process hosts the pipe:
 
 * ``NamedPipeClient.is_connected`` reports ``False`` once the background reader records a fatal failure, for example when the server drops the connection, even though the OS handle is still open. Callers re-establish the pipe instead of reusing a dead transport.
 * ``X64DbgBridge._send_pipe_command`` tears down a dead pipe client and reconnects on the next command rather than wedging on the stale client.
@@ -178,7 +178,7 @@ async def _drive_client_disconnect_scenario(
 def test_is_connected_false_after_server_drop() -> None:
     """``is_connected`` flips to ``False`` when the reader observes a server drop.
 
-    Drives the real client over a genuine kernel pipe, terminates the server so
+    Drives the client over a kernel named pipe, terminates the server so
     the production reader loop records a fatal failure, and asserts the client
     reports itself disconnected while its OS handle is still open. Reverting the
     ``is_connected`` guard (back to ``self._handle is not None``) leaves the
@@ -258,7 +258,7 @@ def test_bridge_reconnects_after_server_drop() -> None:
     endpoint and a second command is issued. The bridge tears down the
     dead client and reconnects, so the second command returns a real result.
 
-    Falsifiability: reverting the ``_send_pipe_command`` teardown (so a
+    Reverting the ``_send_pipe_command`` teardown (so a
     non-``None`` dead client is reused) makes ``_connect`` a no-op on the stale
     handle, so the second command raises ``ToolError("Pipe reader failed: ...")``
     instead of returning ``{"echo_command": "second"}`` and this test fails.
@@ -314,7 +314,7 @@ def test_concurrent_connect_calls_open_handle_exactly_once() -> None:
     """Two concurrent ``connect()`` calls race to a single real handle-open.
 
     Drives two overlapping ``connect()`` coroutines on the same
-    ``NamedPipeClient`` against a genuine single-instance Win32 named pipe
+    ``NamedPipeClient`` against a single-instance Win32 named pipe
     (``nMaxInstances=1``, hosted by the standalone echo server, exactly
     mirroring the x64dbg plugin's pipe). Without ``_connect_lock`` serialising
     the two callers, both would race real ``CreateFileW`` calls against the
@@ -322,7 +322,7 @@ def test_concurrent_connect_calls_open_handle_exactly_once() -> None:
     fails with ``ERROR_PIPE_BUSY`` (231), which ``connect()`` re-raises as a
     ``ToolError`` and ``asyncio.gather`` propagates - failing this test.
 
-    Falsifiability: removing the ``async with self._connect_lock:`` guard
+    Removing the ``async with self._connect_lock:`` guard
     from ``NamedPipeClient.connect`` (in
     ``src/intellicrack/bridges/named_pipe_client.py``) makes both concurrent
     calls invoke the real Win32 open path against the single-instance server
@@ -408,7 +408,7 @@ def test_reader_loop_survives_idle_gap_past_io_timeout() -> None:
     breakpoints). The client must stay connected throughout the gap, receive
     the delayed event, and still service a subsequent command.
 
-    Falsifiability: reverting ``_reader_loop`` (in
+    Reverting ``_reader_loop`` (in
     ``src/intellicrack/bridges/named_pipe_client.py``) to call
     ``self._read_message(frame_timeout=self._config.io_timeout)`` instead of
     ``frame_timeout=None`` makes the length-prefix read for the next frame
@@ -476,7 +476,7 @@ def test_bridge_concurrent_reconnect_after_drop_serialises_to_one_connect() -> N
     (231) or leaves an orphaned live connection that starves the pipe for
     the other, surfacing as ``ERROR_SEM_TIMEOUT`` (121) on the next connect.
 
-    Falsifiability: reverting ``X64DbgBridge._connect`` (in
+    Reverting ``X64DbgBridge._connect`` (in
     ``src/intellicrack/bridges/x64dbg.py``) to the unlocked
     create-if-``None``-then-connect form makes the two concurrent commands
     race the reconnect without serialisation; one of ``asyncio.gather``'s two

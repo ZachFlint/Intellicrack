@@ -5,12 +5,11 @@
 
 """Real-data coverage for :mod:`intellicrack.core.error_logging`.
 
-These tests exercise the genuine ``log_passthrough`` helper against a real
-structlog ``BoundLogger`` and capture the real event the helper emits. No
-behaviour is mocked: ``structlog.testing.capture_logs`` records the exact
-event dict that travels through the configured processor chain, so the
-assertions validate the helper's true output rather than that a call merely
-occurred.
+These tests exercise the ``log_passthrough`` helper against a structlog
+``BoundLogger`` and capture the event the helper emits.
+``structlog.testing.capture_logs`` records the exact event dict that travels
+through the configured processor chain, so the assertions validate the
+helper's output rather than that a call merely occurred.
 """
 
 from __future__ import annotations

@@ -127,7 +127,7 @@ def test_d33_fallback_tracks_a_live_edit_to_the_qss_asset_not_a_frozen_copy(
 ) -> None:
     """The fallback reflects a live edit to ``dark_theme.qss``, proving it is not a hardcoded copy.
 
-    This is the falsifiability check for the drift bug itself: a mutated selector in the real asset
+    This checks the drift bug itself: a mutated selector in the real asset
     must be reflected in what ``ThemeManager`` actually serves as a fallback, which a hand-maintained
     literal would never do. Here the real asset content is copied to
     a scratch directory with a marker appended, the packaged-resource read

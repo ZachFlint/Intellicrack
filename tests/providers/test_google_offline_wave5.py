@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Offline falsifiable gates for GoogleProvider.
+"""Offline gates for GoogleProvider.
 
 Every test uses only offline transport seams, real
 ``google.genai`` SDK types as independent oracles, and known-constant expected
-values.  No mock replaces the SUT or any of its decision dependencies.
+values.
 """
 
 from __future__ import annotations

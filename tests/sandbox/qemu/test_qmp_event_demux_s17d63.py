@@ -31,7 +31,7 @@ purpose - QEMU echoes it on the reply and never puts it on an event - and reads
 frames until the matching one arrives.
 
 These gates drive the production :class:`QMPClient` against a **real QEMU**, so
-the event ordering under test is the one QEMU genuinely produces rather than
+the event ordering under test is the one QEMU actually produces rather than
 one the test arranged.
 """
 

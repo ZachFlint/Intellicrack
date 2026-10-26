@@ -83,7 +83,7 @@ class TestRangeBreakpointButtonDrivesSetMemoryRangeBreakpointRpc:
     ) -> None:
         """Clicking Range BP must send ``SetMemoryRangeBPX 0x401000, 0x100, wss`` exactly.
 
-        Falsifiable: if ``X64DbgBridge.set_memory_range_breakpoint``
+        If ``X64DbgBridge.set_memory_range_breakpoint``
         (``bridges/x64dbg.py``) omitted the ``ss`` suffix for a checked
         Singleshot box, or hardcoded the access letter instead of using
         the access the panel's ``_on_add_range_breakpoint`` handler read
@@ -143,7 +143,7 @@ class TestRangeBreakpointButtonDrivesSetMemoryRangeBreakpointRpc:
     ) -> None:
         """An unparseable size must be rejected locally without any RPC dispatch.
 
-        Falsifiable: if the ``int(size_text, ...)`` guard in
+        If the ``int(size_text, ...)`` guard in
         ``_on_add_range_breakpoint`` were removed, this would either
         raise an uncaught ``ValueError`` or dispatch a malformed
         ``SetMemoryRangeBPX`` command instead of leaving the fake pipe

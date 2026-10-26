@@ -309,7 +309,7 @@ class TestSandboxInstance:
         """created_at and last_used are UTC datetimes bracketed by the call instant.
 
         Gates the real SandboxInstance from intellicrack.sandbox.manager using
-        datetime.now(UTC) as an independent oracle. Three falsifiable properties:
+        datetime.now(UTC) as an independent oracle. Three properties:
           1. Both fields are timezone-aware datetime objects (not None, not naive).
           2. Both fields have zero UTC offset confirming they are UTC-zoned, so a
              naive or local-time timestamp fails.
@@ -414,8 +414,8 @@ class TestSandboxInstance:
         first the real SandboxInstance starts with binary_path=None (no binary
         associated); then an assignment writes a concrete Path and both phases
         are asserted independently.  A no-op implementation that always returns
-        None fails the post-assignment check.  A self-fulfilling injected-value
-        tautology is avoided by checking the BEFORE state first.
+        None fails the post-assignment check.  The BEFORE state is checked
+        first, so a path already present before the assignment also fails.
         """
         sb = InMemorySandbox()
         inst = SandboxInstance(sandbox=sb, sandbox_type="windows")

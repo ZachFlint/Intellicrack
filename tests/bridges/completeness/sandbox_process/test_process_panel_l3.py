@@ -266,7 +266,7 @@ class TestMemoryTabDecommitWiringL3:
     ) -> None:
         """_on_decommit dispatches the coroutine from bridge.decommit_memory with the exact pid/address/size.
 
-        Falsified by: removing the ``self._bridge.decommit_memory(pid, addr,
+        Removing the ``self._bridge.decommit_memory(pid, addr,
         size)`` call in ``memory_tab.py``'s ``_on_decommit`` (or wiring the
         Decommit button to any other handler) turns this red, since the
         captured coroutine would no longer come from
@@ -352,8 +352,8 @@ class TestSystemTabPipeReadWriteWiringL3:
     ) -> None:
         """_on_pipe_read dispatches bridge.pipe_read with the selected pipe's handle and the read-size spinbox value.
 
-        Falsified by: the Read button's ``clicked`` connection being removed
-        or rewired away from ``_on_pipe_read``, or ``_on_pipe_read`` reading
+        Fails if the Read button's ``clicked`` connection is removed
+        or rewired away from ``_on_pipe_read``, or ``_on_pipe_read`` reads
         the wrong handle/size.
 
         Args:
@@ -408,9 +408,9 @@ class TestSystemTabPipeReadWriteWiringL3:
     ) -> None:
         """_on_pipe_write dispatches bridge.pipe_write with the selected handle and the parsed hex-input bytes.
 
-        Falsified by: the Write button's ``clicked`` connection being
+        Fails if the Write button's ``clicked`` connection is
         rewired away from ``_on_pipe_write``, or the hex-to-bytes parsing
-        being broken so the wrong payload reaches the bridge.
+        is broken so the wrong payload reaches the bridge.
 
         Args:
             system_tab: SystemTab fixture.

@@ -71,8 +71,8 @@ class TestGetAvailableTypesSubprocessCalledOnce:
     def test_probe_called_once_per_type_across_five_calls(self) -> None:
         """Five calls to get_available_types trigger exactly one real probe per type.
 
-        The delegating counter wraps the REAL _probe_type so the actual
-        subprocess or OS check executes on the first call. The cache then
+        The delegating counter wraps _probe_type so the subprocess or OS
+        check executes on the first call. The cache then
         serves cached results on calls 2-5. The counter records how many
         times the real implementation is invoked.
         """
@@ -110,9 +110,9 @@ class TestGetAvailableTypesSubprocessCalledOnce:
     def test_successful_result_returned_consistently(self) -> None:
         """Cached result is returned on every subsequent call with no re-probe.
 
-        Uses the REAL _probe_type wrapped by a delegating counter so the
-        actual OS availability check runs exactly once. Expected values are
-        derived from the real first-call result, not from a fake return.
+        Uses _probe_type wrapped by a delegating counter so the OS
+        availability check runs exactly once. Expected values are derived
+        from the first-call result.
         """
         manager = _make_manager()
         probe_calls: dict[SandboxType, int] = {"windows": 0, "qemu": 0}
@@ -215,12 +215,11 @@ class TestIsAvailableCachesSuccess:
     def test_cached_success_stored_in_dict(self) -> None:
         """After a real probe the result is stored correctly in availability_cache.
 
-        Uses the REAL _probe_type wrapped by a delegating counter so the
-        actual subprocess or OS check executes. The cache entry is then
+        Uses _probe_type wrapped by a delegating counter so the subprocess
+        or OS check executes. The cache entry is then
         validated against independently observable facts: the entry exists,
         its available flag matches what the probe actually returned (derived
-        from availability_cache itself after the call, not from a fake
-        constant), its timestamp falls within the measured test window, and
+        from availability_cache itself after the call), its timestamp falls within the measured test window, and
         the probe ran exactly once.
         """
         manager = _make_manager()

@@ -8,7 +8,7 @@ Covers entropy correctness, byte distribution histogram accuracy, byte-type
 percentages, and content classification.
 
 These tests run the real :func:`compute_statistics` and the real
-:class:`StatisticsMixin` rendering pipeline over a REAL Windows PE
+:class:`StatisticsMixin` rendering pipeline over a Windows PE
 (``kernel32.dll``). Entropy is independently recomputed from the byte
 distribution and compared, the histogram total is checked against the document
 length, and the rendered labels are validated against the real computed values
@@ -55,10 +55,10 @@ def qapp() -> Generator[QApplication]:
 
 
 def _open_document(path: Path) -> intellicrack_hexcore.HexDocument:
-    """Open a real binary as a hexcore document.
+    """Open an on-disk binary as a hexcore document.
 
     Args:
-        path: Path to a real binary on disk.
+        path: Path to a binary on disk.
 
     Returns:
         intellicrack_hexcore.HexDocument: The opened hexcore document.

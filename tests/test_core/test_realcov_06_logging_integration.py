@@ -5,10 +5,10 @@
 
 """End-to-end real-data coverage for :mod:`intellicrack.core.logging` setup.
 
-These tests run the real logging pipeline: they call ``setup_logging`` with a
-real :class:`LogConfig`, emit real events through a real bound logger, and
-then read the real log file off disk to confirm the structured payload was
-serialised. Nothing about the pipeline is mocked. Each test restores the
+These tests run the logging pipeline: they call ``setup_logging`` with a
+:class:`LogConfig`, emit events through a bound logger, and
+then read the log file off disk to confirm the structured payload was
+serialised. Each test restores the
 process-wide logging/structlog configuration afterwards so it does not leak
 handlers into later tests.
 """

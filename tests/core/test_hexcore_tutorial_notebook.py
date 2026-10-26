@@ -14,8 +14,8 @@ still claiming to be verified.
 This module parses the notebook, runs every code cell in
 order in a single shared namespace exactly as a Jupyter kernel would, and
 fails the moment any embedded assertion breaks -- the compiled cell filename
-names the offending cell in the traceback. That makes it a genuine falsifiable
-gate against two independent kinds of regression:
+names the offending cell in the traceback. It catches two independent kinds of
+regression:
 
 * the notebook drifting away from the shipped extension (stale documentation);
 * the extension regressing away from its documented, test-vector-backed

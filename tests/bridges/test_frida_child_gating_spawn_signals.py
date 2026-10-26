@@ -17,12 +17,12 @@ The bridge subscribes to ``"spawn-added"`` and ``"spawn-removed"``, makes ``get_
 pid through to ``Device.resume`` on the resume path. The disable path detaches its listeners with ``Device.off``, so
 repeated enable/disable cycles do not stack duplicate listeners.
 
-These tests drive the REAL ``FridaBridge`` child-gating methods
+These tests drive the ``FridaBridge`` child-gating methods
 (``enable_child_gating``, ``disable_child_gating``, ``get_pending_children``,
 ``resume_child``) against a hand-written device double that mirrors the
 exact ``on``/``off``/``enable_spawn_gating``/``disable_spawn_gating``/
 ``enumerate_pending_spawn``/``resume`` contract of ``frida.Device`` with
-genuine state (a real per-signal listener registry and a real pending-spawn
+stateful behavior (a per-signal listener registry and a pending-spawn
 map), rather than a ``Mock`` whose return values are merely configured and
 echoed back. Only the external Frida transport is substituted; every line of
 bridge logic under test (signal names, closures, bookkeeping, resume
@@ -30,7 +30,7 @@ plumbing) executes unmodified. No real Frida device or spawn-gating support
 is required, so this suite is unaffected by platforms (including this
 project's own Windows sandbox) where the real Frida local device raises
 ``frida.NotSupportedError`` from ``enable_spawn_gating`` -- see
-``tests/bridges/test_frida_hook_childgating_s14.py`` for that discriminator.
+``tests/bridges/test_frida_hook_childgating_s14.py`` for that check.
 """
 
 from __future__ import annotations
@@ -125,12 +125,12 @@ class _FakeSpawn:
 class _SpawnGatingDevice:
     """Device double reproducing ``frida.Device``'s spawn-gating contract.
 
-    ``on``/``off`` maintain a genuine per-signal listener registry (mirroring
+    ``on``/``off`` maintain a per-signal listener registry (mirroring
     ``GObject``'s real multi-listener semantics), and
     ``enable_spawn_gating``/``disable_spawn_gating``/``enumerate_pending_spawn``/
     ``resume`` track real pending-spawn state so :meth:`simulate_spawn` can
     deliver a synthetic ``spawn-added`` event exactly like a real device
-    would, and :meth:`resume` genuinely removes the spawn and fires
+    would, and :meth:`resume` removes the spawn and fires
     ``spawn-removed`` -- no return value is pre-canned; every method mutates
     and reads the same real ``dict``/``list`` state the assertions inspect.
     """
@@ -212,7 +212,7 @@ def test_enable_child_gating_arms_device_and_registers_spawn_signals() -> None:
 
     The bridge must keep calling ``Device.enable_spawn_gating`` (device-wide behavior) while listening on the device's
     own ``"spawn-added"``/``"spawn-removed"`` signals -- not the session-scoped ``"child-added"`` signal a real
-    ``frida.Device`` never emits. Falsifiable: if the bridge registered ``device.on("child-added", ...)`` instead, the
+    ``frida.Device`` never emits. If the bridge registered ``device.on("child-added", ...)`` instead, the
     ``spawn-added``/``spawn-removed`` listener lists would be empty and this assertion would fail; if
     ``enable_spawn_gating`` stopped being called, ``gating_enabled`` would stay ``False``.
     """
@@ -237,7 +237,7 @@ def test_get_pending_children_returns_simulated_spawn_and_dispatches_message() -
     closures, ``device.simulate_spawn`` fires them exactly like a real
     device would, and ``get_pending_children`` must report the pid. Also
     confirms the ``spawn_added`` dispatch message reaches
-    ``set_message_handler`` with the correct pid. Falsifiable: if the
+    ``set_message_handler`` with the correct pid. If the
     registered callback were a no-op (or registered under the wrong signal), neither the returned list nor
     the captured message would contain the simulated pid.
     """
@@ -265,9 +265,9 @@ def test_get_pending_children_reflects_device_state_even_when_event_never_fired(
     Populates the device double's ground-truth pending-spawn map directly, WITHOUT going through ``simulate_spawn`` (so
     no ``spawn-added`` callback ever fires -- exactly the "missed event" scenario, for example a spawn that arrived
     before the signal handlers were registered). ``get_pending_children`` must still report it because it queries
-    ``Device.enumerate_pending_spawn`` directly. Falsifiable: an implementation that returns only the in-memory
-    event-populated cache (``list(self._gated_children)``); since no event ever fired here, that cache would be empty
-    and this assertion would fail.
+    ``Device.enumerate_pending_spawn`` directly. An implementation that returned only the in-memory
+    event-populated cache (``list(self._gated_children)``) would fail this assertion, since no event ever fired here
+    and that cache would be empty.
     """
     bridge = FridaBridge()
     device = _SpawnGatingDevice()
@@ -288,7 +288,7 @@ def test_get_pending_children_raises_toolerror_without_device() -> None:
     """Verify ``get_pending_children`` raises when no Frida device is available.
 
     The device guard makes a caller with no device attached get a clear error instead of a silent empty list.
-    Falsifiable: if the guard were removed, this call would return an empty list instead of raising and
+    If the guard were removed, this call would return an empty list instead of raising and
     ``pytest.raises`` would fail with "DID NOT RAISE".
     """
     bridge = FridaBridge()
@@ -304,7 +304,7 @@ def test_resume_child_calls_device_resume_and_untracks_pid() -> None:
     (enable gating, simulate a spawn, resume it) and asserts the device
     double's ``resume`` was invoked with the correct pid, and that the
     pid is no longer reported by a subsequent ``get_pending_children``
-    call. Falsifiable: if ``resume_child`` called the wrong device method
+    call. If ``resume_child`` called the wrong device method
     or passed the wrong argument, ``device.resumed_pids`` would not equal
     ``[777]``; if it failed to untrack the pid, it would still appear in
     the follow-up ``get_pending_children`` result.
@@ -329,7 +329,7 @@ def test_reenable_child_gating_after_disable_does_not_duplicate_handlers() -> No
     previous ``spawn-added``/``spawn-removed`` callbacks attached forever;
     the next ``enable_child_gating`` call would then register a second
     pair alongside them, so a single simulated spawn would dispatch its
-    ``spawn_added`` message twice. Falsifiable: if ``disable_child_gating``
+    ``spawn_added`` message twice. If ``disable_child_gating``
     (or the shared detach helper) stopped calling ``Device.off``, the
     listener lists would grow to length 2 after this enable/disable/enable
     cycle instead of staying at 1, and the final simulated spawn would be

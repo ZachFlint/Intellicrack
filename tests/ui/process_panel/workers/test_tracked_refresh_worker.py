@@ -118,7 +118,7 @@ class TestTrackedRefreshWorkerError:
         """Worker must NOT emit ``refresh_finished`` when an exception occurs.
 
         A caught error must not fall through to ``refresh_finished.emit([])``, which would make
-        an empty list indistinguishable from a successful refresh of a genuinely empty tracked list.
+        an empty list indistinguishable from a successful refresh of an empty tracked list.
 
         Args:
             qapp: Qt application fixture.

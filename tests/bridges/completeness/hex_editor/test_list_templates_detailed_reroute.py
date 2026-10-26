@@ -20,8 +20,8 @@ a real ``HexEditorPanel`` against a real
 ``intellicrack_hexcore.HexDocument``; the only test double is a
 recording ``HexEditorBridge`` subclass (``RecordingHexEditorBridge`` in
 ``conftest.py``) that delegates to the real ``list_templates_detailed``
-after appending to its call ledger, so the combo's contents remain a
-genuine end-to-end result rather than a canned response.
+after appending to its call ledger, so the combo's contents remain an
+end-to-end result rather than a canned response.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ class TestPopulateTemplateComboRoutesThroughBridge:
     def test_populate_with_bridge_dispatches_bridge_and_matches_its_names(qapp: QApplication) -> None:
         """Populating the combo with a bridge attached must call the bridge and render its names exactly.
 
-        Falsifiable: if ``_populate_template_combo`` were reverted to
+        If ``_populate_template_combo`` were reverted to
         call ``self._populate_template_combo_fallback()``
         unconditionally (the unrouted behaviour),
         ``list_templates_detailed_calls`` would stay at 0 even though a

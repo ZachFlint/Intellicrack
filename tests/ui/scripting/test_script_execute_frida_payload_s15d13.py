@@ -5,7 +5,7 @@
 
 """Live Frida gate for the Scripts panel Execute button.
 
-Driving Execute for the ``frida`` script type against a genuinely attached
+Driving Execute for the ``frida`` script type against an attached
 process showed the panel rendering ``{}`` for a script that had answered:
 ``_execute_script_and_wait`` merged only object payloads into its result and
 dropped every other ``send()`` value, even though such a payload still

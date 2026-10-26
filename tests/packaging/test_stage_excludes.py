@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable tests that installer staging drops dev/build-only artifacts.
+r"""Tests that installer staging drops dev/build-only artifacts.
 
 ``packaging/stage.ps1`` mirrors two trees whose sources carry material that must
 never reach the shipped installer:
@@ -15,11 +15,11 @@ never reach the shipped installer:
 
 A plain ``robocopy /E`` would ship all of it into ``Setup.exe`` (~100 MB of dead
 runtime binaries plus the entire hexbench test suite). The stager passes
-``/XD``/``/XF`` exclusions on both calls. These gates hold that behavior honest
+``/XD``/``/XF`` exclusions on both calls. These gates check that behavior
 end to end: they parse the *actual* exclude arguments out of ``stage.ps1`` -- so
 the exclude set is derived from production rather than restated -- and then drive
-real ``robocopy`` with them against a synthetic source tree, proving the excluded
-entries do not survive the mirror while a genuine payload file does. Reverting
+real ``robocopy`` with them against a synthetic source tree, checking that the excluded
+entries do not survive the mirror while a payload file does. Reverting
 either exclusion in ``stage.ps1`` shrinks the parsed set, the synthetic artifact
 survives the copy, and the assertion fails.
 
@@ -40,7 +40,7 @@ import pytest
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _STAGE_PS1 = _REPO_ROOT / "packaging" / "stage.ps1"
 
-# robocopy reports success as a bitmask; only >= 8 is a genuine failure (1 == files
+# robocopy reports success as a bitmask; only >= 8 is a failure (1 == files
 # copied, 2 == extra files/dirs present, 3 == both). Anything below 8 is success.
 _ROBOCOPY_FAILURE_FLOOR = 8
 

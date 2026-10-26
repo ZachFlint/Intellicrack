@@ -12,8 +12,8 @@ threaded through to ``SandboxBridge.create``.
 Each test patches ``run_bridge_coroutine_logged`` in the ``sandbox_panel``
 module (not the bridge) and asserts the coroutine handed to it is the exact
 coroutine object returned by the real ``SandboxBridge.create`` mock, called
-with the exact keyword arguments read from the toolbar widgets -- a genuine
-gate on the handler's wiring logic, not the bridge implementation (which has
+with the exact keyword arguments read from the toolbar widgets -- a check
+on the handler's wiring logic, not the bridge implementation (which has
 its own dedicated L1 gate in ``test_sandbox_l1_l2.py`` driving a real
 in-process ``SandboxManager``).
 """
@@ -221,9 +221,9 @@ class TestSandboxCreateConfigWiringL3:
     ) -> None:
         """_on_create calls bridge.create with the exact timeout/network/memory values set on the widgets.
 
-        Falsified by: reverting ``sandbox_panel.py``'s ``_on_create`` to call
+        Reverting ``sandbox_panel.py``'s ``_on_create`` to call
         ``self._bridge.create(sandbox_type=sandbox_type)`` without threading
-        ``**config`` (the behaviour a regression would restore)
+        ``**config`` (the behavior a regression would restore)
         turns this red, since the mock would then be called with only
         ``sandbox_type`` and this test's keyword-argument assertion would fail.
 

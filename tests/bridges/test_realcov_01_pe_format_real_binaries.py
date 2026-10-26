@@ -17,7 +17,7 @@ This module drives the same pure-byte helpers
 :func:`is_pe64_optional_header`, :func:`unpack_optional_header_image_base`,
 :func:`iterate_section_headers`, :func:`get_data_directory_offset`,
 :func:`read_data_directory_entry`, :func:`rva_to_file_offset`,
-:func:`detect_format`, :func:`detect_format_and_arch`) against genuine
+:func:`detect_format`, :func:`detect_format_and_arch`) against system
 binaries resolved at runtime and cross-checks every result against an
 independent oracle (:mod:`pefile` for PE, recorded format constants for
 ELF / Mach-O).
@@ -215,8 +215,8 @@ def _raw_e_lfanew(data: bytes) -> int:
     linker-inserted DOS stub's length is not fixed by the spec, so this value
     cannot be a portable hardcoded constant. Reading it independently here --
     with a raw ``struct.unpack_from`` rather than either the helper under test
-    or the ``pefile`` library -- keeps the assertion a genuine third oracle
-    that is still falsifiable: a helper regression to any other offset or
+    or the ``pefile`` library -- keeps the assertion a third, independent
+    oracle: a helper regression to any other offset or
     byte order would disagree with this independently computed value on any
     real kernel32.dll, regardless of which Windows build supplies it.
 
@@ -492,7 +492,7 @@ class TestPeFormatHelpersAgainstRealDlls:
 
 
 class TestDetectFormatAgainstRealBinaries:
-    """Validate magic-byte and architecture detection against real binaries."""
+    """Validate magic-byte and architecture detection against on-disk binaries."""
 
     def test_real_pe_detection(self, real_pe_dlls: list[Path]) -> None:
         """Verify real DLLs report PE x86_64 64-bit.
@@ -576,7 +576,7 @@ class TestElfArchDetectionAgainstRealBinary:
         """Verify detection agrees with the real ELF's raw header fields.
 
         Independently reads ``EI_CLASS`` (offset 4), ``EI_DATA``
-        (offset 5) and ``e_machine`` (offset 0x12) from the genuine ELF,
+        (offset 5) and ``e_machine`` (offset 0x12) from the ELF file,
         confirms those fields encode an ELFCLASS64 little-endian x86-64
         binary, then asserts the public :func:`detect_format_and_arch`
         decoder reports the same architecture and bitness.

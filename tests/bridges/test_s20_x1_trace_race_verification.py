@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates: trace/animate verification must not miss fast settles.
+"""Trace/animate verification must not miss fast settles.
 
 A poll of ``status`` on a fixed interval only accepts the transient running (or paused)
 state it happens to catch inside its window; a conditional trace or an animate-stop that settles between two polls
@@ -24,7 +24,7 @@ every positive test below fail, because ``status`` alone never reports the
 expected state within ``VERIFY_TIMEOUT``.
 
 The negative control (``test_trace_into_raises_when_neither_event_nor_status_settle``)
-guards the other direction: a genuinely stuck debugger - no paused event, and
+guards the other direction: a stuck debugger - no paused event, and
 ``status`` never reporting the expected transition - must still raise
 ``ToolError``. The fix must close the false-negative race without turning
 verification into an unconditional success.
@@ -240,7 +240,7 @@ async def test_animate_stop_verifies_via_paused_event_when_status_never_shows_pa
 
 @pytest.mark.asyncio
 async def test_trace_into_raises_when_neither_event_nor_status_settle(bridge: X64DbgBridge) -> None:
-    """A genuinely stuck trace must still raise, event race notwithstanding.
+    """A stuck trace must still raise, event race notwithstanding.
 
     No ``paused`` event ever fires and ``status`` never reports running, so
     the fix must not mask a real failure: ``trace_into`` must still raise

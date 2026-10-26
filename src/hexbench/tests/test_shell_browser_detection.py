@@ -138,7 +138,7 @@ class FindBrowserResolvesOperaLauncherTests(Assertions, unittest.TestCase):
         r"""A bare ``Opera\opera.exe`` file, with no launcher present, must still be found.
 
         This is the control for the launcher test above: it proves the
-        root-patching setup genuinely exercises real disk lookups rather than
+        root-patching setup performs disk lookups rather than
         always returning a fixed answer, by locating a different file through
         a different :data:`_BROWSERS` entry in the same directory tree.
         """

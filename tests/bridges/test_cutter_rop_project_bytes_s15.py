@@ -5,9 +5,9 @@
 
 """Real-backend regression tests for CutterBridge ROP, project and byte-search defects.
 
-These tests drive a genuine rizin/radare2 backend against a real, on-disk
-System32 PE binary -- never a mocked or recorded ``rzpipe``/``r2pipe``
-response -- so every assertion is anchored to the actual analysis engine's
+These tests drive the rizin/radare2 backend against an on-disk
+System32 PE executable rather than a recorded ``rzpipe``/``r2pipe``
+response, so every assertion is anchored to the actual analysis engine's
 output, matching the idiom established by ``test_realcov_03c_cutter.py`` and
 ``test_realcov_03d_cutter_decompile_cfg.py``.
 
@@ -125,7 +125,7 @@ class TestSearchRopGadgetsS15D03:
 
         Disassembling the exact address ``search_rop_gadgets`` reports for a
         gadget must yield that gadget's own first instruction, proving the
-        address genuinely names the gadget's entry instruction rather than a
+        address names the gadget's entry instruction rather than a
         default-zero or otherwise unrelated value. A gadget that contains
         ``pop rdi`` may begin with an earlier instruction, so the expected
         mnemonic is taken from the gadget's own instruction string.
@@ -205,8 +205,8 @@ class TestProjectRoundTripS15D04:
     async def test_list_projects_reflects_empty_storage(self, pe_bridge: CutterBridge, tmp_path: Path) -> None:
         """A freshly provisioned, empty projects directory lists no projects.
 
-        Falsifies a naive fix that always returns a canned nonempty list
-        instead of genuinely reflecting the storage directory's contents.
+        Catches a naive fix that always returns a canned nonempty list
+        instead of reflecting the storage directory's contents.
 
         Args:
             pe_bridge: Analyzed ``where.exe`` bridge.

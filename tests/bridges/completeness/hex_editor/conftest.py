@@ -12,13 +12,13 @@ sandbox-reroute fix in ``ui/panels/hex_editor/sandbox.py``, the
 ``auto_detect_pattern`` reroute in ``sections.py``, and the new VA-mapping /
 annotated-export GUI surfaces (``va_mapping.py`` / ``export_report.py``).
 
-Every test in this package drives the REAL, unmodified ``HexEditorBridge``
-against a real ``intellicrack_hexcore.HexDocument`` opened on a real temp
-file (or a real system PE), and the REAL panel mixins dispatched through the
-real ``run_bridge_coroutine`` / ``run_bridge_coroutine_logged`` machinery
+Every test in this package drives ``HexEditorBridge``
+against an ``intellicrack_hexcore.HexDocument`` opened on a temp
+file (or a system PE), and the panel mixins dispatched through the
+``run_bridge_coroutine`` / ``run_bridge_coroutine_logged`` machinery
 (``ui/panels/async_bridge.py``). The only test double used anywhere in this
 package is a fake ``SandboxBridge`` collaborator registered under
-``ToolName.SANDBOX`` -- the genuine external boundary that cannot run inside
+``ToolName.SANDBOX`` -- the external boundary that cannot run inside
 the Docker test sandbox (no real sandbox VM/container manager is available
 there). That fake never replaces the ``HexEditorBridge`` method under test;
 it only stands in for the downstream sandbox tool the hex-editor bridge
@@ -226,7 +226,7 @@ def drain_deferred_unlinks() -> Generator[None]:
 
     Yields control for the whole session, then -- after every widget and
     worker has been collected -- forces a final garbage-collection pass and
-    retries each deferred unlink. Any file still mapped (a genuinely leaked
+    retries each deferred unlink. Any file still mapped (a leaked
     handle) is left in the ephemeral container's temp directory rather than
     masking a real error; the retry simply avoids failing otherwise-passing
     tests on Windows mmap lifetime timing.
@@ -442,7 +442,7 @@ class RecordingHexEditorBridge(HexEditorBridge):
     THIS bridge method rather than falling back to its local implementation. Every override still performs the
     real, unmodified operation via ``super()`` -- only the call ledger
     is added -- so assertions on the returned/rendered data remain
-    genuine end-to-end checks, not canned responses.
+    end-to-end checks, not canned responses.
     """
 
     base_convert_calls: ClassVar[list[dict[str, Any]]] = []

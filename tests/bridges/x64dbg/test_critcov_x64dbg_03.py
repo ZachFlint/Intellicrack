@@ -205,7 +205,7 @@ def _unknown_command() -> ToolError:
 
 
 def _remote_error() -> ToolError:
-    """Build the error a plugin reports for a command that genuinely failed.
+    """Build the error a plugin reports for a command that failed.
 
     Returns:
         ToolError: Error carrying the ``remote_error`` x64dbg error code.

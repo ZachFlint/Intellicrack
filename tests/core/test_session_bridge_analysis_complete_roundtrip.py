@@ -9,7 +9,7 @@ bridge contributed data" signal, and Full Analysis relies on it to decide
 whether to tell the user that no disassembler backend is connected. The codec must carry the field both ways: the serializer writes it and the
 deserializer reads it. Without that, the dataclass default (``False``)
 silently replaces the real value on every load, so a session saved with a
-genuinely complete analysis would come back claiming no bridge had contributed.
+complete analysis would come back claiming no bridge had contributed.
 
 Both persistence routes are gated here against a real on-disk SQLite store
 and a real JSON export, with no doubles anywhere: the flag is written by the

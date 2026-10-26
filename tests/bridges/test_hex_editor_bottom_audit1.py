@@ -5,7 +5,7 @@
 
 """Tests for HexEditorBridge bottom-half behavior in ``src/intellicrack/bridges/hex_editor.py``.
 
-Each test uses a real ``intellicrack_hexcore.HexDocument`` where applicable, so the bridge methods exercise their genuine code paths rather than mocks. Tests for paths that do not require a backing document (the disabled ``run_python_script``, validation in ``base_convert``, etc.) call the bridge methods directly. Where tests operate on the disk, they use :func:`tempfile.NamedTemporaryFile` so no fixture data is checked into the repository.
+Each test uses a real ``intellicrack_hexcore.HexDocument`` where applicable, so the bridge methods run their full code paths against a backing document. Tests for paths that do not require a backing document (the disabled ``run_python_script``, validation in ``base_convert``, etc.) call the bridge methods directly. Where tests operate on the disk, they use :func:`tempfile.NamedTemporaryFile` so no fixture data is checked into the repository.
 """
 
 from __future__ import annotations
@@ -318,12 +318,12 @@ class TestSetVaBaseRaisesWithoutBackend:
         Args:
             bridge: Fresh HexEditorBridge fixture.
         """
-        bridge.document = _DocWithoutVAMapping()
+        bridge.document = cast("intellicrack_hexcore.HexDocument", _DocWithoutVAMapping())
         with pytest.raises(RuntimeError, match="VA mapping"):
             _run(bridge.set_va_base(0, 0x400000, 4096))
 
 
-# set_chunk_size / set_memory_budget honest failure
+# set_chunk_size / set_memory_budget failure when unsupported
 
 
 class TestChunkAndBudgetHonest:
@@ -344,7 +344,7 @@ class TestChunkAndBudgetHonest:
         Args:
             bridge: Fresh HexEditorBridge fixture.
         """
-        bridge.document = _DocWithoutVAMapping()
+        bridge.document = cast("intellicrack_hexcore.HexDocument", _DocWithoutVAMapping())
         with pytest.raises(ValueError, match="positive integer"):
             _run(bridge.set_chunk_size(0))
 
@@ -354,7 +354,7 @@ class TestChunkAndBudgetHonest:
         Args:
             bridge: Fresh HexEditorBridge fixture.
         """
-        bridge.document = _DocWithoutVAMapping()
+        bridge.document = cast("intellicrack_hexcore.HexDocument", _DocWithoutVAMapping())
         with pytest.raises(RuntimeError, match="chunk size hints"):
             _run(bridge.set_chunk_size(4096))
 
@@ -364,7 +364,7 @@ class TestChunkAndBudgetHonest:
         Args:
             bridge: Fresh HexEditorBridge fixture.
         """
-        bridge.document = _DocWithoutVAMapping()
+        bridge.document = cast("intellicrack_hexcore.HexDocument", _DocWithoutVAMapping())
         with pytest.raises(RuntimeError, match="memory budget hints"):
             _run(bridge.set_memory_budget(1 << 20))
 

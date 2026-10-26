@@ -5,12 +5,12 @@
 
 """Real-data coverage for :mod:`intellicrack.core._optional_imports`.
 
-The success path runs the genuine ``importlib.import_module("yara")`` and
-asserts the returned object is the real yara module. The failure path drives
-the SAME real import machinery to actually fail by installing a real
-``MetaPathFinder`` that refuses the ``yara`` name and evicting any cached
-module, so ``require_yara`` raises against a genuine ``ImportError`` rather than
-a mocked stand-in. The emitted warning is captured from the real logger.
+The success path runs ``importlib.import_module("yara")`` and asserts the
+returned object is the yara module. The failure path drives the same import
+machinery to fail by installing a ``MetaPathFinder`` that refuses the ``yara``
+name and evicting any cached module, so ``require_yara`` raises against an
+``ImportError`` from the import system. The emitted warning is captured from
+the logger.
 """
 
 from __future__ import annotations
@@ -36,10 +36,9 @@ if TYPE_CHECKING:
 class _BlockYaraFinder:
     """Real ``sys.meta_path`` finder that refuses to import ``yara``.
 
-    Installing this finder ahead of the standard finders forces the genuine
-    import machinery to fail for the ``yara`` name, reproducing a real
-    deployment where yara-python is not installed without faking the function
-    under test.
+    Installing this finder ahead of the standard finders forces the import
+    machinery to fail for the ``yara`` name, reproducing a deployment where
+    yara-python is not installed.
     """
 
     def find_spec(
@@ -61,7 +60,7 @@ class _BlockYaraFinder:
 
         Raises:
             ModuleNotFoundError: When the requested name is ``yara``, so the
-                whole ``sys.meta_path`` chain reports a genuine import failure.
+                whole ``sys.meta_path`` chain reports an import failure.
         """
         del path, target
         if name == "yara" or name.startswith("yara."):
@@ -71,7 +70,7 @@ class _BlockYaraFinder:
 
 
 def test_require_yara_returns_real_module() -> None:
-    """``require_yara`` returns the genuine yara module when it is installed."""
+    """``require_yara`` returns the yara module when it is installed."""
     if importlib.util.find_spec("yara") is None:
         pytest.skip("yara-python is not installed in this environment")
     module = require_yara()
@@ -86,7 +85,7 @@ def yara_import_blocked() -> Generator[None]:
 
     Removes any cached ``yara`` module and installs a real meta-path finder
     that refuses the name, then restores both on teardown so other tests still
-    see the genuine module.
+    see the installed module.
 
     Yields:
         None: Control returns to the test while yara importing is blocked.
@@ -105,7 +104,7 @@ def yara_import_blocked() -> Generator[None]:
 
 @pytest.mark.usefixtures("yara_import_blocked")
 def test_require_yara_raises_sandbox_error_on_real_import_failure() -> None:
-    """A genuine import failure surfaces as ``SandboxError`` with a warning log."""
+    """An import failure surfaces as ``SandboxError`` with a warning log."""
     with capture_logs() as captured, pytest.raises(SandboxError) as exc_info:
         require_yara()
 

@@ -26,7 +26,7 @@ One launcher state is deliberately gated one layer down. ``launch_failed`` is wr
 ``Start-Process`` itself fails, and the only per-monitor input that loop has is the script path:
 measured on a real Windows host, ``Test-Path`` accepts a directory under a monitor's name, and
 ``Start-Process`` then launches ``powershell.exe`` - which Windows resolves through its App Paths
-registry entry even with an empty ``PATH`` - whatever that path points at. There is no honest way to
+registry entry even with an empty ``PATH`` - whatever that path points at. There is no way to
 make one monitor's ``Start-Process`` throw from outside the script, so that state is driven through
 the host parser instead, carrying the exact diagnostic a failing ``Start-Process`` produces.
 """

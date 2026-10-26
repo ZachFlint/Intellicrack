@@ -17,8 +17,8 @@ address must find that address and must NOT find the second (proving results
 are confined to the requested range); widening the bound to cover the whole
 scratch region must then surface the second address too, proving the earlier
 exclusion was the bound doing real filtering rather than a vacuous absence of
-any out-of-range match. No mocking is involved in that scan: the bridge, the
-scratch memory, and the Qt async dispatch are all real.
+any out-of-range match. The scan uses the live bridge, the allocated
+scratch memory, and the Qt async dispatch.
 
 ``TestInvalidAddressRangeRejected`` and
 ``TestEmptyBoundsDispatchUnboundedSearch`` cover the fast wiring paths

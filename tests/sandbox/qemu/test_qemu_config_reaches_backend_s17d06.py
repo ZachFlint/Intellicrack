@@ -89,7 +89,7 @@ def _make_disk_image(tmp_path: Path) -> Path:
     """Create a real, minimal qcow2 file so the command builder accepts it.
 
     ``_build_qemu_command`` requires the configured image path to exist on
-    disk. A valid qcow2 v3 header is written so the fixture is a genuine (if
+    disk. A valid qcow2 v3 header is written so the fixture is a valid (if
     empty) qcow2 file rather than arbitrary bytes.
 
     Args:
@@ -182,7 +182,7 @@ class _BackendBuildingManager(SandboxManager):
     ``SandboxManager.create`` normally probes host availability and boots the
     guest, neither of which can run inside the test container. This subclass
     keeps the part under test real - the ``qemu_config`` handed down by the
-    bridge is used to construct a genuine :class:`QEMUSandbox` - and skips only
+    bridge is used to construct a :class:`QEMUSandbox` - and skips only
     the host probe and the VM boot.
 
     Attributes:
@@ -235,7 +235,7 @@ class _BackendBuildingManager(SandboxManager):
         )
         instance.is_busy = mark_busy
         # Registered exactly as the real create does, and marked running, so
-        # the inherited run_binary can genuinely find it: a manager that never
+        # the inherited run_binary can find it: a manager that never
         # registered anything would make the reuse assertion vacuous.
         instance.state.status = "running"
         self._instances[instance.id] = instance
@@ -431,7 +431,7 @@ class TestBridgeForwardsQemuConfig:
         assert cmd[cmd.index("-smp") + 1] == f"cores={_EXPECTED_CPU_CORES}"
         assert cmd[cmd.index("-m") + 1] == str(_EXPECTED_MEMORY_MB)
 
-    def test_creating_qemu_without_a_config_still_fails_loudly(self, tmp_path: Path) -> None:
+    def test_creating_qemu_without_a_config_still_raises_sandbox_error(self, tmp_path: Path) -> None:
         """Omitting the config leaves no image, and the backend refuses to build.
 
         Args:

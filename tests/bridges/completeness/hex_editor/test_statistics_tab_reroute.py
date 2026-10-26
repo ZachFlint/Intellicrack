@@ -20,9 +20,8 @@ and routes ``_update_statistics`` / ``_on_show_digram_matrix`` to them whenever
 a bridge is attached, falling back to the original document-direct functions
 otherwise.
 
-Every test drives the REAL, unmodified statistics mixin functions against a
-real ``HexEditorBridge`` and real ``intellicrack_hexcore.HexDocument``
-instances backed by real temporary files; the only test double is a
+Every test drives the statistics mixin functions against ``HexEditorBridge``
+and ``intellicrack_hexcore.HexDocument`` instances backed by temporary files; the only test double is a
 ``HexEditorBridge`` subclass that appends to a call ledger before delegating
 to the real implementation via ``super()``.
 """
@@ -62,7 +61,7 @@ class _StatsRecordingBridge(HexEditorBridge):
     """``HexEditorBridge`` subclass recording every statistics accessor call.
 
     Every override delegates to the real implementation via ``super()`` after
-    recording, so the returned numbers are genuine hexcore computations.
+    recording, so the returned numbers are computed by hexcore.
     """
 
     def __init__(self) -> None:
@@ -184,7 +183,7 @@ class TestComputeStatisticsViaBridgeMatchesDirectComputation:
     def test_bridge_statistics_match_document_direct_statistics(tmp_path: Path) -> None:
         """Every field of the bridge-routed result must equal the document-direct result.
 
-        Falsifiable: if ``compute_statistics_via_bridge`` mis-mapped a bridge
+        If ``compute_statistics_via_bridge`` mis-mapped a bridge
         accessor's return shape (e.g. treating ``get_byte_type_distribution``'s
         dict keys in the wrong order, or forgetting to route entropy through
         ``get_entropy``), the corresponding field would diverge from the
@@ -224,7 +223,7 @@ class TestComputeStatisticsViaBridgeMatchesDirectComputation:
     def test_bridge_digram_matrix_matches_document_direct_matrix(tmp_path: Path) -> None:
         """The bridge-routed digram matrix must equal the document-direct matrix.
 
-        Falsifiable: if ``compute_digram_matrix_via_bridge`` failed to
+        If ``compute_digram_matrix_via_bridge`` failed to
         request the full matrix (e.g. leaving ``top_k`` non-zero) or
         mis-extracted the ``"matrix"`` key, the returned list would not
         match the document-direct oracle.
@@ -255,7 +254,7 @@ class TestStatisticsTabWiring:
     def test_update_statistics_routes_through_bridge(qapp: QApplication, tmp_path: Path) -> None:
         """Loading a file with a bridge attached must dispatch every statistics accessor.
 
-        Falsifiable: if ``_update_statistics`` were reverted to always pass
+        If ``_update_statistics`` were reverted to always pass
         ``compute_statistics`` to the worker, every ``get_*`` counter on the
         bridge would stay ``0`` even though the entropy label ends up
         populated (from the document-direct fallback instead).
@@ -299,7 +298,7 @@ class TestStatisticsTabWiring:
         ``DigramMatrixDialog.exec`` is monkeypatched to a no-op so the modal
         dialog opened on success never blocks this headless test.
 
-        Falsifiable: if ``_on_show_digram_matrix`` were reverted to always
+        If ``_on_show_digram_matrix`` were reverted to always
         pass ``compute_digram_matrix`` to the worker, ``get_digram_matrix_calls``
         would stay ``0``.
 

@@ -166,7 +166,7 @@ class TestAnalysisExtrasIsScrollable:
         A standalone, never-shown ``GhidraAnalysisExtrasWidget``
         cannot exercise this -- Qt only starves a plain (non-scrolling)
         container's children below their declared minimums when that
-        container is genuinely part of a visible layout chain that has
+        container is part of a visible layout chain that has
         nowhere else to put the deficit (here, the Analysis Extras tab page
         of a real, shown ``GhidraPanel`` squeezed shorter than the widget's
         natural content height); a bare top-level widget instead gets

@@ -11,7 +11,7 @@ config construction, and the LRU :class:`ModelCache`) against real
 ``torch`` dtypes and real ``transformers`` quantization-config objects.
 No model weights are downloaded; the cache tests build real
 :class:`LoadedModel` records around real ``torch.nn`` modules and real
-CPU ``torch.device`` instances so eviction frees genuine objects.
+CPU ``torch.device`` instances so eviction frees live objects.
 """
 
 from __future__ import annotations
@@ -378,7 +378,7 @@ class TestModelCacheBookkeeping:
 
 
 class TestLoadModelForXpuErrorPath:
-    """Validate the XPU loader's error path when XPU is genuinely absent."""
+    """Validate the XPU loader's error path when XPU is absent."""
 
     @staticmethod
     def test_raises_runtime_error_when_xpu_unavailable() -> None:

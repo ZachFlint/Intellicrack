@@ -277,7 +277,7 @@ def marker_blob_path(tmp_path: Path) -> Path:
 def real_search_bridge(marker_blob_path: Path) -> Iterator[CutterBridge]:
     """Provide a CutterBridge backed by a real Rizin session over the marker blob.
 
-    Drives the genuine ``initialize`` -> ``load_binary`` -> ``analyze`` path
+    Drives the ``initialize`` -> ``load_binary`` -> ``analyze`` path
     against the installed rizin/radare2 backend (no doubles), then yields the
     bridge for byte-search assertions and tears the session down afterwards.
 
@@ -584,8 +584,8 @@ def _path_without_backends(path_value: str) -> str:
     """Return ``path_value`` with every directory holding a backend binary removed.
 
     Strips any PATH entry containing a real ``rizin``/``radare2`` executable so
-    the genuine :meth:`CutterBridge.is_available` discovery path observes no
-    backend, without mocking ``shutil.which``.
+    the :meth:`CutterBridge.is_available` discovery path observes no
+    backend.
 
     Args:
         path_value: The ``os.pathsep``-joined PATH string to filter.
@@ -612,7 +612,7 @@ class TestInitialize:
     async def test_raises_when_rizin_not_available(self, tmp_path: Path) -> None:
         """Verify initialize raises ToolError when no backend is discoverable.
 
-        Drives the real :meth:`is_available` check: PATH is genuinely scrubbed
+        Drives the real :meth:`is_available` check: PATH is scrubbed
         of every rizin/radare2 directory and ``tool_path`` points at an empty
         directory holding no backend binary, so the bridge truly cannot find a
         backend. No ``shutil.which`` mock is involved, so the assertion gates
@@ -637,7 +637,7 @@ class TestInitialize:
     async def test_stores_tool_path_modifies_env(self, tmp_path: Path) -> None:
         """Verify initialize prepends a real tool_path directory to PATH.
 
-        Calls the genuine ``initialize`` with a real on-disk directory and
+        Calls ``initialize`` with an on-disk directory and
         asserts the directory becomes the first PATH entry, exercising the
         real environment-mutation branch with no patching.
 

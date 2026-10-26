@@ -58,7 +58,7 @@ def _bridge_over(path: Path) -> HexEditorBridge:
 def test_generic_import_applies_whole_target_length(tmp_path: Path, source: bytes, target: bytes, *, is_bps: bool) -> None:
     """A BPS/UPS patch through the generic dispatcher reproduces the target exactly.
 
-    Falsifiable: applying the target with ``write_bytes(0, target)`` leaves the
+    Applying the target with ``write_bytes(0, target)`` leaves the
     source length in place, so the grow cases read ``b"ABCD"`` and the shrink
     cases keep ``b"CDEFGH"`` after the new bytes.
 
@@ -106,7 +106,7 @@ def test_generic_import_rejects_patch_for_another_source(tmp_path: Path) -> None
 def test_write_bytes_past_end_raises_and_leaves_document_unchanged(tmp_path: Path) -> None:
     """An overwrite that would run past the end is reported, not silently clamped.
 
-    Falsifiable: without the length check the engine writes the first two
+    Without the length check the engine writes the first two
     bytes, drops the rest, and the bridge returns True.
 
     Args:

@@ -247,7 +247,7 @@ def _windows_install_iso(path: Path) -> Path:
     """Write an ISO whose header set matches this host's real Windows media.
 
     The provisioner validates install media by reading the descriptor set and
-    the boot catalog straight out of the file, so a genuine header layout is
+    the boot catalog straight out of the file, so a valid header layout is
     all that separates a medium it accepts from one it refuses. The data area
     past the descriptors is left as a hole, which is why a three gibibyte
     fixture costs no real storage.

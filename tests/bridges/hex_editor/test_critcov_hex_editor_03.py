@@ -35,8 +35,6 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterator
     from pathlib import Path
 
-    from intellicrack.core.types import HexDocumentFull
-
 
 _NO_DOCUMENT = "no document open"
 _TEMPLATE_NAME = "TestStruct"
@@ -146,7 +144,7 @@ def _adopt_bytes(bridge: HexEditorBridge, data: bytes, path: Path) -> intellicra
         intellicrack_hexcore.HexDocument: The adopted document.
     """
     document = intellicrack_hexcore.HexDocument.open_bytes(data)
-    bridge.adopt_document(cast("HexDocumentFull", document), path)
+    bridge.adopt_document(document, path)
     return document
 
 

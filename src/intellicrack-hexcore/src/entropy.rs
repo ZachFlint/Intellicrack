@@ -3,6 +3,10 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Byte statistics: Shannon entropy over the whole buffer or per block, byte
+//! and byte-pair distributions, byte classes and per-block content
+//! classification. Large inputs are counted in parallel.
+
 use rayon::prelude::*;
 
 /// Inputs at least this long are split across the rayon pool.
@@ -61,26 +65,37 @@ pub fn byte_distribution(data: &[u8]) -> [u64; 256] {
         }
         counts
     } else {
-        let chunk_size = (data.len() / rayon::current_num_threads()).max(65536);
-        let chunk_counts: Vec<[u64; 256]> = data
-            .par_chunks(chunk_size)
-            .map(|chunk| {
-                let mut local = [0u64; 256];
-                for &b in chunk {
-                    local[usize::from(b)] += 1;
-                }
-                local
-            })
-            .collect();
-
-        let mut merged = [0u64; 256];
-        for counts in chunk_counts {
-            for (total, count) in merged.iter_mut().zip(counts) {
-                *total += count;
-            }
-        }
-        merged
+        byte_distribution_chunked(data, parallel_chunk_size(data.len()))
     }
+}
+
+/// The chunk size the parallel counters split `len` bytes into: one chunk per
+/// rayon thread, but never under 64 KiB.
+fn parallel_chunk_size(len: usize) -> usize {
+    (len / rayon::current_num_threads()).max(65536)
+}
+
+/// [`byte_distribution`] counted over `chunk_size`-byte chunks in parallel and
+/// merged.
+fn byte_distribution_chunked(data: &[u8], chunk_size: usize) -> [u64; 256] {
+    let chunk_counts: Vec<[u64; 256]> = data
+        .par_chunks(chunk_size)
+        .map(|chunk| {
+            let mut local = [0u64; 256];
+            for &b in chunk {
+                local[usize::from(b)] += 1;
+            }
+            local
+        })
+        .collect();
+
+    let mut merged = [0u64; 256];
+    for counts in chunk_counts {
+        for (total, count) in merged.iter_mut().zip(counts) {
+            *total += count;
+        }
+    }
+    merged
 }
 
 /// Counts of `(null, printable, control, high)` bytes, in [`byte_class`]
@@ -134,19 +149,25 @@ pub fn classify_bytes(data: &[u8]) -> Vec<u8> {
 /// byte, so each pair spanning a chunk seam is counted exactly once.
 #[must_use]
 pub fn digram_matrix(data: &[u8]) -> Vec<u64> {
-    fn count_pairs(chunk: &[u8]) -> Vec<u64> {
-        let mut matrix = vec![0u64; 65536];
-        for window in chunk.windows(2) {
-            matrix[usize::from(window[0]) * 256 + usize::from(window[1])] += 1;
-        }
-        matrix
-    }
-
     if data.len() < PARALLEL_THRESHOLD {
         return count_pairs(data);
     }
+    digram_matrix_chunked(data, parallel_chunk_size(data.len()))
+}
 
-    let chunk_size = (data.len() / rayon::current_num_threads()).max(65536);
+/// The digram grid of one slice; see [`digram_matrix`].
+fn count_pairs(chunk: &[u8]) -> Vec<u64> {
+    let mut matrix = vec![0u64; 65536];
+    for window in chunk.windows(2) {
+        matrix[usize::from(window[0]) * 256 + usize::from(window[1])] += 1;
+    }
+    matrix
+}
+
+/// [`digram_matrix`] counted over `chunk_size`-byte chunks in parallel, each
+/// extended one byte into the next so the pair across every seam is counted
+/// by exactly one chunk.
+fn digram_matrix_chunked(data: &[u8], chunk_size: usize) -> Vec<u64> {
     let chunks: Vec<&[u8]> = (0..data.len())
         .step_by(chunk_size)
         .map(|start| &data[start..(start + chunk_size + 1).min(data.len())])
@@ -220,33 +241,30 @@ fn classify_block(block: &[u8]) -> u8 {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_entropy_uniform() {
-        let data = vec![0x42u8; 1000];
-        let ent = compute_entropy(&data);
-        assert!(
-            ent < 0.01,
-            "uniform data should have near-zero entropy, got {ent}"
-        );
+    /// The exact bits of `value`, so a float result is compared exactly.
+    fn bits(value: f64) -> u64 {
+        value.to_bits()
     }
 
     #[test]
-    fn test_entropy_random() {
+    fn test_entropy_of_a_constant_buffer_is_exactly_zero() {
+        let data = vec![0x42u8; 1000];
+        assert_eq!(bits(compute_entropy(&data)), bits(0.0));
+    }
+
+    /// Each of the 256 values has p = 1/256 exactly, so the sum is exactly 8.
+    #[test]
+    fn test_entropy_of_a_byte_ramp_is_exactly_eight() {
         let mut data = vec![0u8; 256 * 100];
         for (i, b) in data.iter_mut().enumerate() {
             *b = i.to_le_bytes()[0];
         }
-        let ent = compute_entropy(&data);
-        // Each of the 256 values has p = 1/256 exactly, so the sum is exactly 8.0.
-        assert!(
-            (ent - 8.0).abs() < f64::EPSILON,
-            "uniform distribution must have entropy exactly 8.0, got {ent}"
-        );
+        assert_eq!(bits(compute_entropy(&data)), bits(8.0));
     }
 
     #[test]
     fn test_entropy_empty() {
-        assert!(compute_entropy(&[]).abs() < f64::EPSILON);
+        assert_eq!(bits(compute_entropy(&[])), bits(0.0));
     }
 
     #[test]
@@ -256,9 +274,10 @@ mod tests {
             *b = 0xFF;
         }
         let map = entropy_map(&data, 1024);
-        assert_eq!(map.len(), 2);
-        assert!(map[0].abs() < f64::EPSILON);
-        assert!(map[1].abs() < f64::EPSILON);
+        assert_eq!(
+            map.iter().copied().map(bits).collect::<Vec<_>>(),
+            vec![bits(0.0); 2]
+        );
     }
 
     #[test]
@@ -267,12 +286,8 @@ mod tests {
         data.extend_from_slice(&[0x41, 0x42]);
         let map = entropy_map(&data, 1024);
         assert_eq!(map.len(), 3);
-        assert!(map[0].abs() < f64::EPSILON);
-        assert!(
-            (map[2] - 1.0).abs() < f64::EPSILON,
-            "tail entropy {}",
-            map[2]
-        );
+        assert_eq!(bits(map[0]), bits(0.0));
+        assert_eq!(bits(map[2]), bits(1.0), "tail entropy {}", map[2]);
         assert_eq!(content_classification(&data, 1024), vec![0, 0, 1]);
     }
 
@@ -287,6 +302,61 @@ mod tests {
         four_and_half.extend(std::iter::repeat_n(b'a', 128));
         four_and_half.extend(std::iter::repeat_n(b'b', 128));
         assert_eq!(classify_block(&four_and_half), 4);
+    }
+
+    /// The null arm needs strictly more than 90% zeros: 900 zeros and 100
+    /// `A`s (ratio exactly 0.9, entropy 0.469) fall through to class 2, and
+    /// one more zero makes the block class 0.
+    #[test]
+    fn test_classify_block_null_arm_is_strict_above_ninety_percent() {
+        let mut at_threshold = vec![0u8; 900];
+        at_threshold.extend([b'A'; 100]);
+        let mut above = vec![0u8; 901];
+        above.extend([b'A'; 99]);
+        assert_eq!(classify_block(&at_threshold), 2);
+        assert_eq!(classify_block(&above), 0);
+    }
+
+    /// The printable arm needs strictly more than 70% printable bytes: 700
+    /// `A`s and 300 `0x80`s (ratio exactly 0.7, entropy 0.881) fall through to
+    /// class 2, and one more `A` makes the block class 1.
+    #[test]
+    fn test_classify_block_printable_arm_is_strict_above_seventy_percent() {
+        let mut at_threshold = vec![b'A'; 700];
+        at_threshold.extend([0x80u8; 300]);
+        let mut above = vec![b'A'; 701];
+        above.extend([0x80u8; 299]);
+        assert_eq!(classify_block(&at_threshold), 2);
+        assert_eq!(classify_block(&above), 1);
+    }
+
+    /// Each chunk extends one byte into the next, so every pair is counted by
+    /// exactly one chunk whatever the chunk size: 9 bytes alternating 1, 2
+    /// hold four `(1, 2)` and four `(2, 1)` pairs, and 10 000 zeros hold 9 999
+    /// `(0, 0)` pairs.
+    #[test]
+    fn test_digram_matrix_chunked_counts_each_seam_pair_once() {
+        let alternating = [1u8, 2, 1, 2, 1, 2, 1, 2, 1];
+        for chunk_size in 1..=4 {
+            let matrix = digram_matrix_chunked(&alternating, chunk_size);
+            assert_eq!(matrix[256 + 2], 4, "chunk size {chunk_size}");
+            assert_eq!(matrix[2 * 256 + 1], 4, "chunk size {chunk_size}");
+            assert_eq!(matrix.iter().sum::<u64>(), 8, "chunk size {chunk_size}");
+        }
+        let zeros = digram_matrix_chunked(&[0u8; 10_000], 1_000);
+        assert_eq!(zeros[0], 9_999);
+        assert_eq!(zeros.iter().sum::<u64>(), 9_999);
+    }
+
+    /// The parallel byte counts merge every chunk, including a short last one.
+    #[test]
+    fn test_byte_distribution_chunked_merges_every_chunk() {
+        let mut data = vec![7u8; 10_000];
+        data[9_999] = 9;
+        let counts = byte_distribution_chunked(&data, 999);
+        assert_eq!(counts[7], 9_999);
+        assert_eq!(counts[9], 1);
+        assert_eq!(counts.iter().sum::<u64>(), 10_000);
     }
 
     #[test]

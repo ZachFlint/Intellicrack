@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Ghidra read-path accessors that call PyGhidra/jfx_bridge APIs.
+"""Gates for the Ghidra read-path accessors that call PyGhidra/jfx_bridge APIs.
 
 Four user-facing ``GhidraBridge`` read accessors depend on a PyGhidra/jfx_bridge API call whose real behavior must match what the remote script assumes:
 
@@ -12,7 +12,7 @@ Four user-facing ``GhidraBridge`` read accessors depend on a PyGhidra/jfx_bridge
 * :meth:`GhidraBridge.search_symbols` must match glob patterns in Python over ``SymbolTable.getAllSymbols(boolean)`` using :mod:`fnmatch`. ``SymbolTable.getSymbolIterator(name, True)`` returns an empty iterator against a real Ghidra 12 program and is not used for matching.
 * :meth:`GhidraBridge.get_properties` must enumerate map names through ``UsrPropertyManager.propertyManagers()``. The ``PropertyMapManager`` interface has no ``propertyNames()`` method.
 
-These gates drive a real headless Ghidra 12.x instance through PyGhidra against a real PE (the running interpreter's own ``python.exe``) -- no ``ghidra_bridge`` RPC client is mocked and no Ghidra API call is stubbed. Each test performs the real read through the corresponding public bridge method and asserts on genuine data (real basic block counts, real memory block names and permissions, real symbol addresses, a real round-tripped property value), so each gate fails if the matching accessor regresses in ``src/intellicrack/bridges/ghidra.py``.
+These gates drive a real headless Ghidra 12.x instance through PyGhidra against a real PE (the running interpreter's own ``python.exe``) through the actual ``ghidra_bridge`` RPC client and Ghidra API calls. Each test performs the read through the corresponding public bridge method and asserts on the returned data (basic block counts, real memory block names and permissions, real symbol addresses, a real round-tripped property value), so each gate fails if the matching accessor regresses in ``src/intellicrack/bridges/ghidra.py``.
 
 Host-native only: the Docker sandbox has no JVM/Ghidra install, so this module skips itself (via ``pytestmark``) unless ``ghidra_bridge``, ``jpype`` and ``pyghidra`` are importable *and* a real Ghidra installation is named by ``GHIDRA_INSTALL_DIR`` or ``GHIDRA_HOME``. Run explicitly on a host with Ghidra installed via::
 
@@ -118,7 +118,7 @@ def _reserve_free_port() -> int:
 async def real_bridge(tmp_path_factory: pytest.TempPathFactory) -> AsyncGenerator[GhidraBridge]:
     """Boot a real, fully-analyzed headless Ghidra bridge on a real PE.
 
-    Launches ``analyzeHeadless`` through PyGhidra against the genuine Ghidra
+    Launches ``analyzeHeadless`` through PyGhidra against the Ghidra
     installation resolved by :func:`_resolve_ghidra_install`, imports the
     current interpreter's own executable, and runs full auto-analysis so
     real functions, basic blocks, and symbols exist for the read-path gates

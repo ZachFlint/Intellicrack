@@ -8,13 +8,13 @@
 The real x64dbg debugger process and its bridge plugin cannot run inside the
 Docker test sandbox (no interactive Windows debugger session, no target
 binary under active debugging). Every test in this package therefore drives
-the REAL, unmodified ``X64DbgBridge``/``X64DbgPanel``/``X64DbgAdvancedTab``
-production code and only substitutes the single genuine external boundary
+the ``X64DbgBridge``/``X64DbgPanel``/``X64DbgAdvancedTab``
+code and only substitutes the single external boundary
 that cannot execute in the sandbox: the named-pipe transport to the x64dbg
 plugin (``NamedPipeClient.send_command``). Everything upstream of that
 transport call -- RPC command selection, parameter framing, response
-parsing, local-state bookkeeping, GUI wiring, and table rendering -- is real
-production code and is what each test's assertions are falsified by.
+parsing, local-state bookkeeping, GUI wiring, and table rendering -- runs
+unchanged and is what each test's assertions check.
 """
 
 from __future__ import annotations

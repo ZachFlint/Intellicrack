@@ -476,7 +476,7 @@ class _InjectionFakeClient:
 
     ``remote_exec`` compiles and executes the bridge's generated script in a
     shared namespace, and ``remote_eval`` evaluates the readback expression in
-    that same namespace. Because the script is genuinely compiled and run, an
+    that same namespace. Because the script is compiled and run, an
     escaping defect in the bridge surfaces concretely: an unescaped quote or
     backslash breaks the string literal and raises :class:`SyntaxError` at
     compile time (which the bridge converts to :class:`ToolError`), while a
@@ -599,7 +599,7 @@ class TestStringInjectionPrevention:
 
     These tests drive the real ``GhidraBridge.set_label`` code-generation path
     end-to-end through an exec-backed ``ghidra_bridge`` double. The double
-    genuinely compiles and runs the generated script, so the independent
+    compiles and runs the generated script, so the independent
     oracle is the Python interpreter itself plus an independently recomputed
     escaped literal: a hostile label name must reach ``createLabel`` as a
     byte-for-byte data string with no side effect, the generated source must

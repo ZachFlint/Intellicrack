@@ -5,10 +5,10 @@
 
 """Real-disassembly coverage for :mod:`intellicrack.ui.panels.graph_view`.
 
-The control-flow graph view is verified against real binary code, not hand-authored graph
+The control-flow graph view is verified against disassembled System32 code, not hand-authored graph
 dicts: its block layout and edge generation are exercised on real disassembly.
 
-These tests disassemble a genuine code window from a real Windows System32
+These tests disassemble a code window from a real Windows System32
 PE ``.text`` section with :mod:`capstone`, split it into real basic blocks at
 real branch boundaries, and feed the resulting ``agj``-shaped blocks into
 :meth:`CFGGraphScene.load_graph`. Assertions verify the scene materialized one
@@ -59,7 +59,7 @@ def _disassemble_text_window(path: Path, byte_count: int = 2048) -> list[Any]:
     """Disassemble a real code window from a PE ``.text`` section.
 
     Skips the leading ``int3`` alignment padding so the returned stream starts
-    on genuine instructions.
+    on non-padding instructions.
 
     Args:
         path: Path to a real PE binary.

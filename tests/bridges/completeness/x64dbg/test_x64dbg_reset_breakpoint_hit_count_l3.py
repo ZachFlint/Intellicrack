@@ -66,7 +66,7 @@ class TestResetHitCountButtonSendsCommandAndVerifiesReadback:
     ) -> None:
         """A reset that ``bp_list`` confirms must report success with ``verified=True``.
 
-        Falsifiable: if ``X64DbgBridge.reset_breakpoint_hit_count``
+        If ``X64DbgBridge.reset_breakpoint_hit_count``
         (``bridges/x64dbg.py``) sent the wrong command text, or the
         Advanced tab's ``_on_reset_breakpoint_hit_count`` read a
         different address widget, the recorded ``exec`` command would
@@ -110,7 +110,7 @@ class TestResetHitCountButtonSendsCommandAndVerifiesReadback:
     ) -> None:
         """A stale ``hitCount`` reported by ``bp_list`` after the reset must surface as an error.
 
-        Falsifiable: a naive implementation that returns
+        A naive implementation that returns
         ``{"success": True, ..., "verified": True}`` without checking
         ``bp_list``'s readback would report success here even though
         the debugger's own ``hitCount`` field (7) proves the reset

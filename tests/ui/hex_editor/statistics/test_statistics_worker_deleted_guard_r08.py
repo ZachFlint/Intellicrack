@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate: a file switch must survive a dead statistics worker.
+"""A file switch must survive a dead statistics worker.
 
 ``HexEditorPanel._load_file_impl`` (``ui/panels/hex_editor/panel.py``) calls
 ``_update_statistics`` on every ``load_file``. That method supersedes any prior

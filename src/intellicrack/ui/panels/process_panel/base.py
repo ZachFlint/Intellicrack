@@ -171,7 +171,7 @@ class ProcessPanel(AnalysisPanelBase):
         Args:
             toolbar: The toolbar to populate.
         """
-        self.status_label = self._add_toolbar_label(toolbar, "Process Panel")
+        self.status_label: QLabel | None = self._add_toolbar_label(toolbar, "Process Panel")
 
     @override
     def _create_content(self) -> QWidget:

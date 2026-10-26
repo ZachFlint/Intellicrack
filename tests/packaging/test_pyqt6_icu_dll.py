@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable gates for the PyQt6 QtCore DLL load on Windows.
+r"""Tests for the PyQt6 QtCore DLL load on Windows.
 
 Qt 6.10+ Windows builds link ``Qt6Core.dll`` against the OS-provided,
 unversioned ``icuuc.dll``/``icu.dll`` pair instead of bundling their own ICU

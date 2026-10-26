@@ -343,7 +343,7 @@ class TestBridgeCompareFiles:
     def test_real_pe_single_byte_patch_pinpointed(self, bridge: HexEditorBridge, pe_binary: Path, tmp_path: Path) -> None:
         """Verify a one-byte patch to a real PE binary is pinpointed exactly.
 
-        A genuine PE fixture is copied and its entry-point opcode at the .text
+        A PE fixture is copied and its entry-point opcode at the .text
         raw offset (0x200) is flipped from ``0xCC`` to ``0x90``. The difflib
         oracle confirms a single replaced byte; the bridge must report
         ``total_differences == 1`` with a one-byte ``modified`` region at offset

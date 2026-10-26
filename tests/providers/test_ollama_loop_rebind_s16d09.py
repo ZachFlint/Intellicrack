@@ -189,7 +189,7 @@ def _install_concurrent_rebind_wipe(provider: OllamaProvider) -> None:
     """Patch ``provider`` to simulate a concurrent rebind racing every caller.
 
     Replaces ``provider._ensure_clients_on_loop`` with a wrapper that calls
-    the real implementation (performing the genuine per-loop rebind and
+    the real implementation (performing the per-loop rebind and
     returning the correct client references for the calling coroutine), then
     immediately clears ``self._local_client`` / ``self._cloud_client`` /
     their loop attributes to ``None``. This models the worst case of a

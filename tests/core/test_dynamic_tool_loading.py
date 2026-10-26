@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for dynamic tool loading and the empty-content-turn fix.
+"""Tests for dynamic tool loading and the empty-content-turn fix.
 
 Covers:
   ``_run_agent_loop`` appends the assistant message when
@@ -23,7 +23,7 @@ Covers:
             tail-truncating ``_enforce_tool_count_cap`` can never drop
             them.
 
-Every scripted provider here is a genuine ``LLMProviderBase`` subclass
+Every scripted provider here is an ``LLMProviderBase`` subclass
 implementing the real ``chat``/``chat_stream`` interface -- never a
 return-value mock -- driven through the orchestrator's actual
 ``process_user_input`` entry point.
@@ -120,7 +120,7 @@ class _BreakpointBridge(ToolBridgeBase):
     """Minimal x64dbg-shaped bridge exposing a real, search-matchable ``set_breakpoint``.
 
     Standing in for the real ``X64DbgBridge`` so the dynamic-loading tests
-    stay offline and self-contained while still exercising genuine
+    stay offline and self-contained while still exercising
     :class:`ToolSearchIndex` ranking against a realistic description.
     """
 

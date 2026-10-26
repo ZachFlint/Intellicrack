@@ -273,7 +273,7 @@ class TestH13CleanupUsesBoundedTeardownTimeout:
     ) -> None:
         """``_cleanup`` must return within the bounded timeout even if ``stop()`` hangs.
 
-        Uses the real ``run_bridge_coroutine`` dispatcher (not a stub) with
+        Uses the real ``run_bridge_coroutine`` dispatcher with
         the panel's cleanup timeout constant shrunk to a fraction of a
         second, and a bridge whose ``stop()`` sleeps for 30 seconds. Proves
         the caught ``TimeoutError`` path actually bounds the wall-clock
@@ -282,7 +282,7 @@ class TestH13CleanupUsesBoundedTeardownTimeout:
         ``_CLEANUP_STOP_TIMEOUT_S`` must exist, and the call site must pass
         a ``timeout_s``, otherwise
         ``future.result(timeout=None)`` would have blocked for the full 30
-        seconds (or forever, for a genuinely hung RPC) instead of returning
+        seconds (or forever, for a hung RPC) instead of returning
         in a fraction of a second.
 
         Args:

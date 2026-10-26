@@ -387,7 +387,7 @@ def _write_proc_files(root: Path, files: dict[str, str]) -> None:
 def _write_socket_owners(root: Path) -> None:
     """Create real per-process descriptor links for the fixture sockets.
 
-    The links are genuine symlinks whose targets are the ``socket:[inode]``
+    The links are symlinks whose targets are the ``socket:[inode]``
     strings the kernel publishes, so the agent's own ``readlink`` walk is what
     resolves them.
 

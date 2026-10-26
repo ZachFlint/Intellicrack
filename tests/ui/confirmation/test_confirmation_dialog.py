@@ -64,7 +64,7 @@ def reset_remembered_decisions() -> Iterator[None]:
 class _DecisionRecorder:
     """Recording slot that captures ``decision_made`` signal payloads.
 
-    Stands in for ``unittest.mock.Mock`` so the tests use no mock objects.
+    Stands in for ``unittest.mock.Mock`` as a plain recording object.
     """
 
     events: list[tuple[bool, bool]]

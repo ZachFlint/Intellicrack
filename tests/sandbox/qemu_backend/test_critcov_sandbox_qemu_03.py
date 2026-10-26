@@ -5,7 +5,7 @@
 
 """Coverage for the QEMU snapshot, capture, memory-dump and dropped-file operations.
 
-None of these operations needs a running QEMU to be exercised honestly: they
+None of these operations needs a running QEMU to be exercised: they
 build monitor commands, read what the monitor answered, move files in the shared
 folder and decide what to report. The monitor and guest-agent clients used here
 are subclasses of the real production clients whose wire exchange answers from a

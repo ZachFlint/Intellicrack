@@ -14,7 +14,7 @@ sub-tabs use, which ``CutterPanel._on_function_clicked`` calls for every functio
 functions sidebar.
 
 Every test drives a real ``CutterBridge`` (backed by a recording r2pipe
-double, the genuine external boundary a live rizin child process would
+double, at the external boundary a live rizin child process would
 occupy) and a real Qt ``FunctionDetailsTab``/``StaticAnalysisExtrasTab``, so
 the production bridge parsing and GUI handler code both run for real.
 """
@@ -141,7 +141,7 @@ class TestFunctionDetailsTabL3:
     def test_fetch_button_calls_afij_afvj_and_renders_params_locals(qapp: QApplication) -> None:
         """Clicking "Get Function Info" must issue ``afij``/``afvj`` and render the real params/locals/calling-convention.
 
-        Falsifiable: if ``FunctionDetailsTab._on_fetch`` never called
+        If ``FunctionDetailsTab._on_fetch`` never called
         ``self._bridge.get_function(address)``, 'afij' and 'afvj' would
         never appear in the recorder and the summary label/tree would stay
         empty. Broken production line: the
@@ -204,7 +204,7 @@ class TestFunctionDetailsTabL3:
     def test_no_function_at_address_shows_message_without_crashing(qapp: QApplication) -> None:
         """An address with no analyzed function must show a message and clear the tree, not raise.
 
-        Falsifiable: if the ``FunctionInfo`` isinstance guard were removed
+        If the ``FunctionInfo`` isinstance guard were removed
         from ``_apply_data``, an empty ``afij`` result (``get_function``
         returning ``None``) would raise ``AttributeError`` while trying to
         read ``result.name`` instead of showing the "not found" message.
@@ -269,7 +269,7 @@ class TestFunctionDetailsReachableFromFunctionSelectionL3:
     def test_construction_wires_function_details_tab(qapp: QApplication) -> None:
         """``StaticAnalysisExtrasTab`` must construct a real ``FunctionDetailsTab`` sub-tab.
 
-        Falsifiable: if the ``self._function_details_tab = FunctionDetailsTab()``
+        If the ``self._function_details_tab = FunctionDetailsTab()``
         construction (or its ``addTab`` call) were removed from
         ``StaticAnalysisExtrasTab.__init__``, this attribute access would
         raise ``AttributeError``.
@@ -286,7 +286,7 @@ class TestFunctionDetailsReachableFromFunctionSelectionL3:
     def test_show_function_forwards_address_to_function_details_tab(qapp: QApplication) -> None:
         """``show_function`` must populate the details tab's address input and issue a real ``get_function`` query.
 
-        Falsifiable: if ``show_function`` did not call
+        If ``show_function`` did not call
         ``self._function_details_tab.set_address(address)``, the address
         input would stay blank and 'afij' would never be recorded. Broken
         production line: the ``self._function_details_tab.set_address(address)``
@@ -327,12 +327,12 @@ class TestLateCallbackSurvivesDestroyedTab:
     into the Qt event loop (surfacing as "CALL ERROR: Exceptions caught in
     Qt event loop") instead of returning harmlessly.
 
-    Each gate drains the dispatched worker thread to a genuine stop with
+    Each test drains the dispatched worker thread to a full stop with
     ``drain_bridge_workers`` *before* forcing the tab's underlying object to
     be deleted with ``PyQt6.sip.delete``. That ordering matters:
     ``run_bridge_coroutine_logged`` starts its worker with ``parent=self``,
     so the worker thread is a Qt child of the tab; destroying the tab while
-    that thread were still genuinely running would abort the whole process
+    that thread were still running would abort the whole process
     with ``QThread: Destroyed while thread is still running`` instead of
     reproducing the callback race under test. Once the worker has already
     finished, its queued result/exception is waiting to be dispatched but
@@ -343,7 +343,7 @@ class TestLateCallbackSurvivesDestroyedTab:
     def test_apply_data_survives_tab_destroyed_before_callback(qapp: QApplication) -> None:
         """A ``get_function`` result arriving after its tab is destroyed must not raise.
 
-        Falsifiable: removing the ``_widget_is_alive`` guard from
+        Removing the ``_widget_is_alive`` guard from
         ``FunctionDetailsTab._apply_data`` (``cutter_static_extra_tab.py``)
         makes this callback run ``self._fetch_btn.setEnabled(True)`` against
         the deleted tab, raising ``RuntimeError: wrapped C/C++ object of
@@ -382,7 +382,7 @@ class TestLateCallbackSurvivesDestroyedTab:
         Uses an unparseable ``afij`` response so the bridge call fails and
         resolves through ``on_error`` instead of ``on_success``.
 
-        Falsifiable: removing the ``_widget_is_alive`` guard from
+        Removing the ``_widget_is_alive`` guard from
         ``FunctionDetailsTab._on_fetch_error`` (``cutter_static_extra_tab.py``)
         makes this callback run ``self._fetch_btn.setEnabled(True)`` against
         the deleted tab, raising ``RuntimeError: wrapped C/C++ object of

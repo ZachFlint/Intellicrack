@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates: x64dbg embed must locate the debugger's real window.
+"""Tests that the x64dbg embed locates the debugger's real window.
 
 x64dbg is launched on a dedicated, never-visible Win32 desktop (see
 ``intellicrack.core.win32_desktop_process.spawn_on_hidden_desktop``) so its
@@ -50,7 +50,7 @@ enumeration) makes
 ``test_desktop_scoped_finder_locates_window_plain_enum_windows_cannot`` fail
 outright, because the assertion is that the *plain* enumerator
 (``find_window_by_pid``, still imported unmodified from ``win32_embed``)
-genuinely cannot see this window - proving desktop-scoping, not just a PID
+cannot see this window - proving desktop-scoping, not just a PID
 match, is what makes the difference. Breaking the PID match (e.g. matching
 the first window found on the desktop regardless of owning process) is
 separately caught by
@@ -256,7 +256,7 @@ def test_desktop_scoped_finder_locates_window_plain_enum_windows_cannot(
     (fed the child's actual ``HDESK`` via ``get_desktop_handle_for_pid``)
     finds the real window, while the legacy ``find_window_by_pid`` -
     unmodified, still doing a plain ``EnumWindows`` against the test
-    process's own current desktop - genuinely cannot, because the window
+    process's own current desktop - cannot, because the window
     lives on a different, hidden desktop. A regression that makes
     ``find_window_by_pid_on_desktop`` ignore its ``hdesk`` argument (and so
     behave like the legacy finder) fails the first assertion.

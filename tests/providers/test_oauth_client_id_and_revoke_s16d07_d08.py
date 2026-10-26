@@ -88,7 +88,7 @@ class TestOAuthLoginMissingClientId:
         Builds a real ``OAuthConfig`` with ``client_id=""`` (mirroring the
         production ``OAUTH_CONFIGS`` entry when no ``*_OAUTH_CLIENT_ID``
         environment variable is set) and a real ``OAuthManager``. Driving
-        the coroutine to completion exercises the genuine
+        the coroutine to completion exercises the production
         ``OAuthManager.build_authorization_url`` guard, which raises
         ``OAuthConfigurationError``; the test then asserts the dialog's
         ``_on_error`` closure actually surfaces that failure to the user via
@@ -158,7 +158,7 @@ class _InMemoryKeyringBackend(keyring.backend.KeyringBackend):
     """A real, in-memory ``keyring.backend.KeyringBackend`` for isolated tests.
 
     Registered as the active backend for the duration of one test via
-    ``keyring.set_keyring`` so ``CredentialStore`` drives its genuine
+    ``keyring.set_keyring`` so ``CredentialStore`` drives its normal
     ``keyring.get_password`` / ``set_password`` / ``delete_password``
     dispatch against process memory instead of the host OS credential
     manager, so the user's real keyring is never touched.
@@ -376,7 +376,7 @@ class TestRevokeApiKeyProvider:
         deployments), and the sandbox this suite runs in ships real provider
         keys directly in the process environment. ``OPENROUTER_API_KEY``
         must therefore be cleared explicitly so the "nothing configured"
-        precondition genuinely holds, mirroring the ambient-credential
+        precondition holds, mirroring the ambient-credential
         isolation pattern used elsewhere in this test suite (e.g.
         ``tests/providers/credentials/test_store_wave5.py``'s
         ``_clear_ollama_env``).

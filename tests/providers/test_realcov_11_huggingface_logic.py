@@ -9,12 +9,12 @@ These tests exercise the provider's request/response translation logic
 that the live ``chat`` / ``chat_stream`` integration tests cannot reach
 without a paid inference endpoint: 503 error-body extraction, model-list
 normalization, tool-choice translation, output tool-call parsing, and
-stream-delta extraction. Every input is a *real* object from the
-production ``huggingface_hub`` SDK or ``httpx`` (a genuine
+stream-delta extraction. Every input is an instance of a type from the
+``huggingface_hub`` SDK or ``httpx`` (a
 ``ChatCompletionStreamOutput``, ``ChatCompletionOutputMessage``,
 ``ModelInfo``, or ``httpx.Response``) rather than a synthetic stand-in
-for the capability under test. The provider's own translation code is
-never mocked. A live round-trip against the real HuggingFace router is
+for the capability under test. The provider's own translation code runs
+unmodified. A live round-trip against the real HuggingFace router is
 included and gated on a configured token.
 """
 
@@ -137,7 +137,7 @@ async def _run_first_servable_chat(provider: HuggingFaceProvider) -> None:
     """List models and assert a chat round-trip works on the first servable one.
 
     Skips when no model is listed or none is servable via the router so a
-    genuine environment limitation never produces a false pass.
+    environment limitation never produces a false pass.
 
     Args:
         provider: A connected HuggingFace provider.
@@ -408,7 +408,7 @@ class TestProviderRoutingPolicy:
     legacy/non-generative models (embeddings, classification, translation,
     and similar) and never supports the conversational task, so pinning the
     SDK client to ``provider="hf-inference"`` makes every chat request fail
-    regardless of which model is selected. These tests fail loudly if the
+    regardless of which model is selected. These tests fail if the
     provider is ever pinned back to ``"hf-inference"`` instead of routing
     through the router's ``"auto"`` policy.
     """

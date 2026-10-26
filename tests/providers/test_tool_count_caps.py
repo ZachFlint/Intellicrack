@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for provider tool-count-cap enforcement.
+"""Tests for provider tool-count-cap enforcement.
 
 Intellicrack's tool registry flattens seven bridge :class:`ToolDefinition`
 containers into ~595 individual function schemas when a chat request is sent
@@ -17,8 +17,7 @@ bridges (the same 7-bridge/~595-function surface a live chat request would
 send) and drive it through each provider's actual public
 ``convert_tools_to_provider_format`` entry point -- the exact call
 ``chat()`` and ``chat_stream()`` make before constructing the wire request.
-No mocking of the conversion path is used anywhere, and no private/protected
-members are accessed.
+No private/protected members are accessed.
 """
 
 from __future__ import annotations

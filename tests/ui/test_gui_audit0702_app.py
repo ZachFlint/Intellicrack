@@ -141,7 +141,7 @@ class _DelayedHexEditorBridge(HexEditorBridge):
     Attributes:
         open_calls: Every ``(pid, address, size)`` tuple the coroutine body
             actually ran to completion for, in call order. Stays empty until
-            the coroutine is genuinely awaited to completion by a real,
+            the coroutine is awaited to completion by a real,
             running event loop.
     """
 
@@ -185,7 +185,7 @@ def test_c1_open_process_memory_resolves_via_background_loop_not_a_dormant_task(
     During real operation nothing drives that loop (``main.py`` is blocked inside a synchronous ``app.exec()`` for the app's
     entire usable lifetime), so the task never executes any of its steps and ``open_calls`` stays empty however long the test waits.
     Dispatch must go through ``run_bridge_coroutine_logged``, which runs the coroutine on the persistent background bridge loop
-    -- a real ``asyncio`` loop that is actively ``run_forever()``-ing on its own dedicated thread -- so the coroutine genuinely
+    -- a real ``asyncio`` loop that is actively ``run_forever()``-ing on its own dedicated thread -- so the coroutine actually
     completes and the result is delivered back via a queued signal once the Qt event loop is pumped.
 
     Args:
@@ -298,7 +298,7 @@ def test_h1_apply_sandbox_settings_returns_before_teardown_completes(
         patched_window: A constructed MainWindow with SandboxManager stubbed.
         monkeypatch: Pytest monkeypatch fixture used to restore the real
             ``SandboxManager`` so the post-teardown rebuild constructs a
-            genuine instance rather than the construction-time stub.
+            ``SandboxManager`` instance rather than the construction-time stub.
     """
     window = patched_window
     monkeypatch.setattr("intellicrack.ui.app.SandboxManager", SandboxManager)

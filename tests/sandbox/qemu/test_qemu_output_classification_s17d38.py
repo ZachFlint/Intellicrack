@@ -17,7 +17,7 @@ own stderr - carried into the sandbox through
 Only this one line is exempted. Every other line QEMU tags with its own
 ``warning:`` convention (``warn_report()`` is used throughout the QEMU tree,
 not only for this message) must still surface at the level an operator would
-notice - demoting more than the one known-benign line would hide a genuine
+notice - demoting more than the one known-benign line would hide a
 fault behind the same reasoning that excuses this one.
 :meth:`QemuOutputRecorder._classify_output_line` is the pure function both
 properties are gated against, and :meth:`QemuOutputRecorder._retain` is
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
 _WHPX_NULL_MSI_LINE: Final[str] = "qemu-system-x86_64: warning: Ignoring request for interrupt vector 0"
 _WHPX_NULL_MSI_LINE_BARE: Final[str] = "warning: Ignoring request for interrupt vector 0"
-_GENUINE_WARNING_LINE: Final[str] = "qemu-system-x86_64: warning: TCP_NODELAY failed: Unknown error"
+_UNRELATED_WARNING_LINE: Final[str] = "qemu-system-x86_64: warning: TCP_NODELAY failed: Unknown error"
 _ROUTINE_LINE: Final[str] = "VNC server running on 127.0.0.1:5900"
 
 _BENIGN: Final[str] = "benign"
@@ -54,8 +54,8 @@ _ROUTINE: Final[str] = "routine"
 class _TestableOutputRecorder(QemuOutputRecorder):
     """``QemuOutputRecorder`` subclass exposing its classification internals.
 
-    Only public wrappers are added; every wrapped method is the real
-    production implementation.
+    Only public wrappers are added; each one calls the inherited method
+    unchanged.
     """
 
     def classify(self, text: str) -> Literal["benign", "warning", "routine"]:
@@ -107,15 +107,15 @@ class TestTheWhpxNullMsiWarningIsClassifiedBenign:
         )
 
 
-class TestADifferentGenuineWarningStillSurfacesNormally:
-    """The discriminator: only the one known line is demoted, nothing else."""
+class TestADifferentWarningStillSurfacesNormally:
+    """Only the one known line is demoted, nothing else."""
 
     def test_a_different_warning_line_is_classified_warning_not_benign(self) -> None:
         """A real, unrelated QEMU warning must keep surfacing at its normal level."""
-        classification = _make_recorder().classify(_GENUINE_WARNING_LINE)
+        classification = _make_recorder().classify(_UNRELATED_WARNING_LINE)
         assert classification == _WARNING, (
-            f"an unrelated genuine QEMU warning was classified {classification!r} instead of {_WARNING!r}; "
-            f"line={_GENUINE_WARNING_LINE!r} - demoting more than the one known-benign line hides real faults"
+            f"an unrelated QEMU warning was classified {classification!r} instead of {_WARNING!r}; "
+            f"line={_UNRELATED_WARNING_LINE!r} - demoting more than the one known-benign line hides real faults"
         )
 
     def test_routine_output_carrying_neither_marker_is_classified_routine(self) -> None:
@@ -176,8 +176,8 @@ class TestTheRecorderLogsEachClassificationAtItsOwnLevel:
         assert "warning" not in recording.levels, f"the benign WHPX line reached logger.warning(...); levels={recording.levels!r}"
         assert "debug" in recording.levels, f"the benign WHPX line was not logged at all; levels={recording.levels!r}"
 
-    def test_retain_logs_a_genuine_warning_line_at_warning(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """A genuine warning line must reach ``logger.warning(...)``.
+    def test_retain_logs_an_unrelated_warning_line_at_warning(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A non-benign warning line must reach ``logger.warning(...)``.
 
         Args:
             monkeypatch: Standard pytest fixture, used to swap the module's
@@ -186,6 +186,6 @@ class TestTheRecorderLogsEachClassificationAtItsOwnLevel:
         recording = _RecordingLogger()
         monkeypatch.setattr(qemu_module, "_logger", recording)
 
-        _make_recorder().retain(_GENUINE_WARNING_LINE, "stderr")
+        _make_recorder().retain(_UNRELATED_WARNING_LINE, "stderr")
 
-        assert "warning" in recording.levels, f"a genuine QEMU warning line never reached logger.warning(...); levels={recording.levels!r}"
+        assert "warning" in recording.levels, f"the QEMU warning line never reached logger.warning(...); levels={recording.levels!r}"

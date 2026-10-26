@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the shared worker-liveness guards.
+"""Tests for the shared worker-liveness guards.
 
 ``GenericCallableWorker`` wires ``finished -> deleteLater``
 (``ui/panels/hex_editor``'s worker sites all rely on this), so once a worker
@@ -20,8 +20,8 @@ Every re-arm probe is centralised onto two helpers in
 * :func:`discard_worker` -- schedule a finished worker for deletion, tolerating
   a wrapper whose C++ object is already gone.
 
-These tests drive the real helpers against a **genuinely destroyed** real
-``GenericCallableWorker`` C++ object (not a mock): the worker runs to
+These tests drive the real helpers against an **already destroyed**
+``GenericCallableWorker`` C++ object: the worker runs to
 completion, its ``deleteLater`` is pumped through the event loop until the
 wrapper is dangling, and only then are the helpers exercised. Replacing either
 helper's ``try/except RuntimeError`` with a bare ``isRunning()``/``deleteLater()``
@@ -115,7 +115,7 @@ class TestWorkerIsRunning:
 
     @staticmethod
     def test_live_running_worker_reports_true(qapp: QApplication) -> None:
-        """A genuinely in-flight worker is reported as running.
+        """An in-flight worker is reported as running.
 
         Guards against a degenerate implementation that always returns
         ``False`` (which would pass every dead-wrapper case yet silently break

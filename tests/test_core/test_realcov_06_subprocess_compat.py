@@ -7,7 +7,7 @@
 
 The compat wrapper is the single auditable point through which the whole
 codebase reaches the standard-library ``subprocess`` module. These tests
-validate the genuinely exported objects, the platform-correct Win32 creation
+validate the exported objects, the platform-correct Win32 creation
 constants, the non-Windows ``_StartupInfoFallback`` surface, and that a real
 subprocess actually runs through the re-exported ``run``/``Popen`` callables
 against a real System32 executable.
@@ -141,7 +141,7 @@ def test_run_raises_real_called_process_error_on_failure() -> None:
 def test_popen_runs_real_system_executable() -> None:
     """``Popen`` launches a real System32 PE and reaps a real exit code.
 
-    Uses ``where.exe`` from System32, a genuine console PE that terminates on
+    Uses ``where.exe`` from System32, a console PE that terminates on
     its own, so the test reaps a real process exit code rather than relying on
     a synthetic stand-in.
     """

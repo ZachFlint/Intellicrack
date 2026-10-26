@@ -11,14 +11,14 @@ and ``Device.disable_spawn_gating``. On platforms where spawn gating is unsuppor
 ``except Exception`` fallback and raise a ``ToolError`` carrying the stable ``_ERR_CHILD_GATING_NOT_SUPPORTED``
 reason instead of the raw exception text. Any other exception type falls through to the generic classification.
 
-These tests drive the REAL ``FridaBridge.enable_child_gating`` /
+These tests drive the ``FridaBridge.enable_child_gating`` /
 ``disable_child_gating`` code paths against a minimal device double whose
 ``enable_spawn_gating`` / ``disable_spawn_gating`` raise real Frida exception
 instances (``frida.NotSupportedError`` for the not-supported case, a plain
-``RuntimeError`` for the discriminator case). Only the external Frida
+``RuntimeError`` for the generic-failure case). Only the external Frida
 transport object is substituted -- all bridge classification logic under
-test executes unchanged, and the assertions are made against the real,
-un-mocked ``ToolError`` the bridge raises. Requires frida-python.
+test executes unchanged, and the assertions are made against the
+``ToolError`` the bridge raises. Requires frida-python.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ except ImportError:
 _logger = logging.getLogger(__name__)
 
 _NOT_SUPPORTED_MESSAGE: Final[str] = "not yet supported on this OS"
-_GENERIC_FAILURE_MESSAGE: Final[str] = "synthetic device failure for A6/S14-D18 discriminator"
+_GENERIC_FAILURE_MESSAGE: Final[str] = "synthetic device failure for A6/S14-D18 generic-failure case"
 _EXPECTED_NOT_SUPPORTED_REASON: Final[str] = "child gating is not supported on this OS"
 _EXPECTED_GENERIC_MESSAGE: Final[str] = "child gating operation failed"
 
@@ -120,7 +120,7 @@ class _NotSupportedSpawnGatingDevice:
 class _GenericFailureSpawnGatingDevice:
     """Device double whose spawn-gating calls raise a non-Frida exception.
 
-    Used as the discriminator: an exception type other than
+    Used for the generic-failure case: an exception type other than
     ``frida.NotSupportedError`` must still fall through to the
     generic ``_ERR_CHILD_GATING_FAILED`` classification, proving that the
     not-supported branch is a real classification rather than every failure
@@ -160,7 +160,7 @@ def test_enable_child_gating_not_supported_yields_stable_reason() -> None:
     against a device double whose ``enable_spawn_gating`` raises the real
     ``frida.NotSupportedError``, and asserts the raised ``ToolError`` carries
     the stable ``_ERR_CHILD_GATING_NOT_SUPPORTED`` reason rather than the raw,
-    fragile ``str(e)`` text. Falsifiable: if the bridge still funnels this
+    fragile ``str(e)`` text. If the bridge still funnels this
     exception through the broad ``except Exception`` fallback, ``details['reason']``
     would instead equal the raw Frida message text and this assertion fails.
     """
@@ -182,14 +182,14 @@ def test_enable_child_gating_not_supported_yields_stable_reason() -> None:
 def test_enable_child_gating_other_exception_yields_generic_reason() -> None:
     """Verify a non-``NotSupportedError`` failure still yields the generic reason.
 
-    Discriminator: drives the real ``FridaBridge.enable_child_gating``
+    Drives the real ``FridaBridge.enable_child_gating``
     against a device double whose ``enable_spawn_gating`` raises a plain
     ``RuntimeError`` (not ``frida.NotSupportedError``), and asserts the raised
     ``ToolError`` still carries the generic classification
     (``_ERR_CHILD_GATING_FAILED`` with the raw exception text as the reason).
     This proves the ``frida.NotSupportedError`` branch is a real,
     type-specific classification rather than every failure collapsing onto
-    the same stable not-supported message. Falsifiable: if the bridge were
+    the same stable not-supported message. If the bridge were
     broken so every exception is classified as not-supported, ``reason``
     would equal ``_ERR_CHILD_GATING_NOT_SUPPORTED`` instead of the raw
     ``RuntimeError`` text and this assertion fails.
@@ -217,7 +217,7 @@ def test_disable_child_gating_not_supported_yields_stable_reason() -> None:
     ``disable_child_gating``. Drives the real ``FridaBridge.disable_child_gating`` (with ``_child_gating_enabled``
     pre-set so the operation does not take its early no-op return path) against a device double whose
     ``disable_spawn_gating`` raises the real ``frida.NotSupportedError``, and asserts the raised ``ToolError`` carries
-    the same stable ``_ERR_CHILD_GATING_NOT_SUPPORTED`` reason. Falsifiable: if this operation lost its branch and fell
+    the same stable ``_ERR_CHILD_GATING_NOT_SUPPORTED`` reason. If this operation lost its branch and fell
     through to the broad ``except Exception`` fallback, ``details['reason']`` would be absent (the generic branch on
     this operation does not attach a reason at all) and this assertion fails.
     """

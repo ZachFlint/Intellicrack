@@ -11,7 +11,7 @@ tests._helpers.realcov_pipe_server <pipe_name> <mode>``) without dragging the
 test harness into the child. The server hosts one duplex byte-stream named
 pipe, accepts a single client, and services length-prefixed JSON request
 frames according to the selected mode, replying with the matching frames. All
-I/O uses the genuine Win32 named-pipe APIs so the client under test exercises
+I/O uses the Win32 named-pipe APIs so the client under test exercises
 the real kernel transport. Running in a separate OS process keeps the blocking
 kernel I/O off the client's GIL.
 """

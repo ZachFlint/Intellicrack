@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates on ``scripts/git-push.ps1`` and ``scripts/git-rebase.ps1``.
+"""Tests for ``scripts/git-push.ps1`` and ``scripts/git-rebase.ps1``.
 
 ``just git-commit`` pushes through ``git-push.ps1``. When ``origin`` has moved
 ahead (dependabot auto-merges do this), the script rebases the commit it just

@@ -1037,7 +1037,7 @@ def _packed_bytes(count: int) -> bytes:
 
     A 64-bit linear congruential generator stands in for a packed or encrypted
     section. The output is reproducible across runs, so the derived figures stay
-    stable, while carrying genuine near-maximal entropy rather than a fabricated
+    stable, while carrying measured near-maximal entropy rather than a fabricated
     number.
 
     Args:
@@ -1094,7 +1094,7 @@ def _analysis_bytes() -> bytes:
     The 640 byte header alone is too small to exercise the entropy and
     classification scales: an eight byte window can carry at most three bits, so
     the high-entropy threshold would be unreachable by construction. This buffer
-    continues the same image with the regions a real binary actually contains, so
+    continues the same image with the regions a compiled executable contains, so
     every classification code and the full 0 to 8 bit entropy range appear.
 
     Returns:

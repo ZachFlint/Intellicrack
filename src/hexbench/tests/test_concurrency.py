@@ -31,7 +31,7 @@ Counting locks would not measure this. Reads take none, so a lock counter
 sees at most the single exclusive hold a mutation makes and reports depth one
 whatever the dispatcher does. :class:`_TrackingSlot` therefore records both
 access paths and the tracker counts *documents a thread is inside*, exclusive or
-shared. :class:`AccessTrackerFalsifiability` shows the instrument reporting two
+shared. :class:`AccessTrackerOverlapDetection` shows the instrument reporting two
 for a hand-nested pair, including the read-inside-a-hold shape that is exactly
 what the regression would look like, so a depth of one everywhere else means
 something.
@@ -179,7 +179,7 @@ _ONE_DOCUMENT: Final = 1
 """The greatest number of documents one thread may ever be inside at once."""
 
 _TWO_DOCUMENTS: Final = 2
-"""The depth the tracker must report when a thread genuinely is inside two."""
+"""The depth the tracker must report when a thread is inside two."""
 
 _NO_DOCUMENTS: Final = 0
 """The depth a tracker reports before any document has been reached."""
@@ -670,7 +670,7 @@ class UnguardedRaceControl(_ConcurrencyCase):
             )
 
 
-class AccessTrackerFalsifiability(_ConcurrencyCase):
+class AccessTrackerOverlapDetection(_ConcurrencyCase):
     """The instrument the next class relies on, shown to detect a violation."""
 
     def test_the_tracker_notices_two_documents_held_at_once(self) -> None:

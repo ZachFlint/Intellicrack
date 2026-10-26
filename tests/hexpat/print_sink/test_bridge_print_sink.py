@@ -28,7 +28,7 @@ to import.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -38,6 +38,8 @@ from intellicrack.bridges.hex_editor import HexEditorBridge
 if TYPE_CHECKING:
     from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack_hexcore import HexDocument
 
 
 class _StubDocument:
@@ -134,7 +136,7 @@ def loaded_bridge() -> HexEditorBridge:
     The fixture probes the real HexPat interpreter by executing a minimal
     pattern before returning. A broken or missing hexpat package raises
     ``RuntimeError`` (from the bridge's ``_get_interpreter`` guard) rather
-    than silently skipping at import time. A genuine
+    than silently skipping at import time. An
     ``ImportError`` / ``ModuleNotFoundError`` inside the interpreter package
     itself is the only condition that permits a legitimate skip.
 
@@ -143,7 +145,7 @@ def loaded_bridge() -> HexEditorBridge:
     """
     bridge = HexEditorBridge()
     _run(bridge.initialize())
-    bridge.document = _StubDocument(b"\x00" * 256)
+    bridge.document = cast("HexDocument", _StubDocument(b"\x00" * 256))
     try:
         _run(bridge.execute_pattern("u8 x @ 0x00;"))
     except ImportError as exc:
@@ -249,7 +251,7 @@ class TestExecutePatternWithOutputCapturesPrint:
     def test_pattern_without_print_returns_empty_hexpat_print(self, loaded_bridge: HexEditorBridge) -> None:
         """A silent pattern yields empty output while a printing pattern is captured.
 
-        The silent-pattern empty result alone is not falsifiable: a bridge with no print
+        The silent-pattern empty result alone cannot detect a missing sink: a bridge with no print
         sink wired also yields an empty string for every pattern.  This test therefore first drives a printing pattern
         through the same bridge/sink path and asserts the captured text is the
         expected non-empty content - anchoring that the sink IS wired - then
@@ -301,7 +303,7 @@ class TestExecutePatternToolFunctionRegistration:
         registered ``ToolFunction`` carries a non-empty description and return
         text, declares its required ``source`` parameter, and that the bare
         method name resolves to a real callable on the bridge - so the registry
-        entry genuinely points at the implementation.
+        entry points at the implementation.
 
         Args:
             loaded_bridge: Bridge fixture (used for its tool catalogue and method).

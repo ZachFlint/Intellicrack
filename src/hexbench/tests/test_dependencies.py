@@ -137,7 +137,7 @@ class ScanTests(Assertions, unittest.TestCase):
 
 
 class SourceReadingTests(Assertions, unittest.TestCase):
-    """The pieces the scan is built from behave on real input."""
+    """The pieces the scan is built from behave on the package's own source files."""
 
     def test_both_source_kinds_are_collected(self) -> None:
         """Modules and the build description are both read."""

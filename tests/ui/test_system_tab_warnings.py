@@ -145,7 +145,7 @@ def _make_tab(*, pid: int | None) -> SystemTab:
 
 
 def _make_real_bridge_tab(*, pid: int | None) -> SystemTab:
-    """Create a SystemTab wired to a genuine, unconnected ProcessBridge.
+    """Create a SystemTab wired to an unconnected ProcessBridge.
 
     Unlike :func:`_make_tab`, this uses the real production ``ProcessBridge`` so
     the unattached guard is exercised against a real bridge object rather than a
@@ -240,8 +240,8 @@ class TestUnattachedPidGuards:
     ) -> None:
         """Query Mitigations with no PID, on a real bridge, warns and skips dispatch.
 
-        Drives the guard against a genuine, unconnected ``ProcessBridge`` (not a
-        stub) so the real ``set_bridge``/``set_attached_pid`` wiring and the real
+        Drives the guard against an unconnected ``ProcessBridge``
+        so the real ``set_bridge``/``set_attached_pid`` wiring and the real
         early-guard path are exercised. Asserts the exact warning title and the
         exact not-attached message the production code surfaces, that the
         raw-output widget mirrors that message, and that the coroutine-dispatch

@@ -9,7 +9,7 @@ Covers two highlighter defects in :mod:`intellicrack.ui.highlighter`:
 - Block comments: ``_scan_block_comments`` must track string literals. A raw ``/*`` regex with no awareness of
   string literals treats a ``/*`` inside a double/single/backtick-quoted string
   (e.g. a Windows path fragment or a truncated URL extracted from a stripped
-  binary) as a genuine block-comment opener. With no matching ``*/`` on the same line,
+  binary) as a block-comment opener. With no matching ``*/`` on the same line,
   the highlighter's block state stays "inside a block comment" and every subsequent line is
   mis-highlighted until an unrelated ``*/`` is found.
 - Template literals: ``JavaScriptSyntaxHighlighter`` must track backtick template literals across
@@ -112,7 +112,7 @@ class TestH22BlockCommentExcludesStringLiterals:
         A scanner built on a raw
         ``self._comment_start.match(text)`` with no quote tracking, run against
         this same three-line text, would produce block states ``[1, 1, 1]``: the
-        ``/*`` inside ``"C:/temp/*"`` is treated as a genuine opener, has no
+        ``/*`` inside ``"C:/temp/*"`` is treated as an opener, has no
         matching ``*/`` on that line, so the block-comment state is set and
         carried into every following line. The scanner tracks string
         state via ``_block_comment_start_index`` and must leave every
@@ -139,7 +139,7 @@ class TestH22BlockCommentExcludesStringLiterals:
         self,
         theme_manager: ThemeManager,
     ) -> None:
-        """A genuine ``/*`` after a string with an embedded ``/*`` still tracks correctly.
+        """An unquoted ``/*`` after a string with an embedded ``/*`` still tracks correctly.
 
         Proves string exclusion does not disable block-comment
         tracking outright: the embedded ``/*`` inside ``"C:/temp/*"`` is

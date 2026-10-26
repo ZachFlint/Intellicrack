@@ -33,7 +33,7 @@ What each part of this module protects:
   be compared when deciding whether a running sandbox is stale, since a field missing
   from that comparator is the same defect one layer along.
 * **The backend.** ``_apply_telemetry_blocking`` builds the command and parses the reply;
-  only the guest transport differs from a local run, so the local run is a real gate.
+  only the guest transport differs from a local run, so the local run covers the same code.
 
 **How the real runs are kept away from this machine's own hosts file.** The script derives
 its target from ``Join-Path $env:SystemRoot 'System32\drivers\etc\hosts'``, so every run
@@ -243,7 +243,7 @@ class _RedirectedTelemetrySandbox(WindowsSandbox):
 
     Only the transport is replaced. ``_apply_telemetry_blocking`` builds the argv, this
     class decodes the very script that argv carries, re-encodes it behind a ``SystemRoot``
-    redirection and runs it through a real ``powershell.exe``, then hands the genuine
+    redirection and runs it through a real ``powershell.exe``, then hands the resulting
     ``(exit_code, stdout, stderr)`` back for the production parser to interpret. Reaching
     it at all while telemetry blocking is configured off is a failure, because the guest
     would have been touched against the analyst's wishes.

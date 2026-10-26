@@ -361,8 +361,8 @@ class ProcessManager:
         self._cleanup_in_progress = False
         self._original_sigint_handler: ProcessManager._SignalHandler = None
         self._original_sigterm_handler: ProcessManager._SignalHandler = None
-        self.atexit_registered = False
-        self.shutdown_event = threading.Event()
+        self.atexit_registered: bool = False
+        self.shutdown_event: threading.Event = threading.Event()
         self._initialized = True
         _logger.debug("process_manager_initialized")
 

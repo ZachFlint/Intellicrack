@@ -102,7 +102,7 @@ _ERR_NO_DEFINITION: Final[str] = "the generated Linux agent defines no {name}"
 
 
 class _StartPathSandbox(QEMUSandbox):
-    """``QEMUSandbox`` whose QEMU-hardware steps are genuine no-ops.
+    """``QEMUSandbox`` whose QEMU-hardware steps are no-ops.
 
     Everything the defect lives in is left untouched: ``_attach_qemu_agents``
     builds the real :class:`GuestAgentClient`, drives the real
@@ -446,7 +446,7 @@ class TestPeerCloseEndsTheChannel:
     async def test_close_clears_connected_before_the_next_command_runs(self) -> None:
         """After the agent hangs up the client must admit it is disconnected.
 
-        The first command proves the channel was genuinely live, so the state
+        The first command proves the channel was live, so the state
         that follows is produced by the peer's close and nothing else. Nothing
         may paper over that close: ``is_connected`` has to go False on its own,
         because that is the only signal anything - a caller, or the client's

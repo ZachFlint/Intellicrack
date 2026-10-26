@@ -3,6 +3,10 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Byte sources other than a document's file: an in-memory buffer and, on
+//! Windows, a range of another process's memory read and written through the
+//! process-memory APIs.
+
 use thiserror::Error;
 
 /// Errors raised by a [`DataSource`].
@@ -11,9 +15,15 @@ pub enum DataSourceError {
     /// An underlying I/O or OS error.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
-    /// The offset lies past the end of the source.
+    /// The offset lies outside the source: past its end for a read, at or past
+    /// it for a write.
     #[error("offset out of bounds: {offset} >= {length}")]
-    OutOfBounds { offset: usize, length: usize },
+    OutOfBounds {
+        /// The offset requested.
+        offset: usize,
+        /// The source's length in bytes.
+        length: usize,
+    },
     /// A process-memory call failed or transferred too few bytes.
     #[error("process error: {0}")]
     ProcessError(String),
@@ -31,11 +41,13 @@ pub trait DataSource: Send {
     /// Returns `DataSourceError` if the offset is out of bounds or the read fails.
     fn read(&self, offset: usize, length: usize) -> Result<Vec<u8>, DataSourceError>;
 
-    /// Writes data to the source at the given offset.
+    /// Writes data to the source at the given offset, clamped so the source
+    /// never grows.
     ///
     /// # Errors
     ///
-    /// Returns `DataSourceError` if the source is read-only, offset is out of bounds, or the write fails.
+    /// Returns `DataSourceError` if the source is read-only, if `offset` is at
+    /// or past the end (where no byte could be written), or if the write fails.
     fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), DataSourceError>;
 
     /// Returns the number of addressable bytes.
@@ -85,7 +97,7 @@ impl DataSource for BufferDataSource {
         if !self.writable {
             return Err(DataSourceError::ReadOnly);
         }
-        if offset > self.data.len() {
+        if offset >= self.data.len() {
             return Err(DataSourceError::OutOfBounds {
                 offset,
                 length: self.data.len(),
@@ -337,7 +349,7 @@ impl DataSource for ProcessDataSource {
         if !self.writable {
             return Err(DataSourceError::ReadOnly);
         }
-        if offset > self.region_size {
+        if offset >= self.region_size {
             return Err(DataSourceError::OutOfBounds {
                 offset,
                 length: self.region_size,
@@ -548,9 +560,27 @@ mod tests {
     #[test]
     fn test_write_length_overflow_guard_clamps_to_buffer_end() {
         let mut src = BufferDataSource::new(vec![0u8; 3], true);
-        src.write(3, &[0xFF]).unwrap();
         src.write(2, &[0x11, 0x22]).unwrap();
         assert_eq!(src.read(0, 3).unwrap(), vec![0x00, 0x00, 0x11]);
+    }
+
+    /// A write at the end offset has no byte to land on, so it is out of
+    /// bounds, as `HexDocument.write_bytes` treats it, and changes nothing.
+    #[test]
+    fn test_write_at_end_offset_is_out_of_bounds_like_write_bytes() {
+        let mut src = BufferDataSource::new(vec![0u8; 3], true);
+        let err = src.write(3, &[0xFF]).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                DataSourceError::OutOfBounds {
+                    offset: 3,
+                    length: 3
+                }
+            ),
+            "expected OutOfBounds{{offset:3, length:3}}, got {err:?}"
+        );
+        assert_eq!(src.read(0, 3).unwrap(), vec![0u8, 0, 0]);
     }
 
     #[test]
@@ -790,17 +820,16 @@ mod process_tests {
     fn test_write_offset_beyond_region_size_returns_out_of_bounds() {
         let mut src =
             ProcessDataSource::attach(std::process::id(), 0, 16, false).expect("attach failed");
-        let err = src.write(32, &[0xFF]).unwrap_err();
-        assert!(
-            matches!(
-                err,
-                DataSourceError::OutOfBounds {
-                    offset: 32,
-                    length: 16
-                }
-            ),
-            "expected OutOfBounds{{offset:32, length:16}}, got {err:?}"
-        );
+        for offset in [16, 32] {
+            let err = src.write(offset, &[0xFF]).unwrap_err();
+            assert!(
+                matches!(
+                    err,
+                    DataSourceError::OutOfBounds { offset: o, length: 16 } if o == offset
+                ),
+                "expected OutOfBounds{{offset:{offset}, length:16}}, got {err:?}"
+            );
+        }
     }
 
     #[test]

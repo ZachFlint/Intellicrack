@@ -7,10 +7,10 @@
 
 ``GoogleProvider._check_safety_block`` decides whether a Gemini response was
 halted by Google's safety, prohibited-content, blocklist, or SPII filters. The
-detection logic is exercised here against genuine ``google.genai`` SDK response
-objects constructed with the SDK's real ``FinishReason`` and ``BlockedReason``
-enum values, so the test drives the real safety-classification path over real
-SDK data structures (no fabricated stand-in for the operation under test).
+detection logic is exercised here against ``google.genai`` SDK response
+objects constructed with the SDK's ``FinishReason`` and ``BlockedReason``
+enum values, so the test drives the safety-classification path over SDK data
+structures.
 
 Live cancellation tests (gated on a real ``GOOGLE_API_KEY``) cover three
 distinct cancellation points: mid-stream after receiving at least one chunk,
@@ -202,8 +202,7 @@ class TestCheckSafetyBlockRealResponses:
           name.  Both substrings must appear, not merely one.
         - A structurally identical response where ``finish_reason`` is the
           non-blocking ``FinishReason.RECITATION`` must pass without raising,
-          making the test falsifiable: swapping the field value changes the
-          outcome.
+          so swapping the field value changes the outcome.
         """
         candidate = types.Candidate(finish_reason=types.FinishReason.SAFETY)
         response = types.GenerateContentResponse(candidates=[candidate])
@@ -291,7 +290,7 @@ class TestCheckSafetyBlockRealResponses:
     def test_normal_stop_finish_reason_does_not_raise() -> None:
         """A normal STOP completion is not treated as a safety block.
 
-        Falsifiable complement to the blocking tests: structurally identical
+        Complement to the blocking tests: structurally identical
         response but with ``FinishReason.STOP`` must pass without raising.
         """
         candidate = types.Candidate(finish_reason=types.FinishReason.STOP)
@@ -304,7 +303,7 @@ class TestCheckSafetyBlockRealResponses:
     def test_max_tokens_finish_reason_does_not_raise() -> None:
         """A MAX_TOKENS completion is not treated as a safety block.
 
-        Falsifiable complement: same structure as a blocking test but with
+        Complement to the blocking tests: same structure as a blocking test but with
         ``FinishReason.MAX_TOKENS`` must pass cleanly.
         """
         candidate = types.Candidate(finish_reason=types.FinishReason.MAX_TOKENS)

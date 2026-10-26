@@ -5,7 +5,7 @@
 """Real-data coverage for ``process_panel.memory_tab``.
 
 These tests attach a real :class:`ProcessBridge` to the running interpreter, read the
-genuine bytes at a real loaded-module image base (which always begins with the ``MZ``
+bytes at a loaded-module image base (which always begins with the ``MZ``
 PE signature), and verify ``_format_memory`` renders those real bytes. They also drive
 ``MemoryTab._refresh_regions`` so the region table is populated from the real
 ``get_memory_map`` enumeration of this process's address space.
@@ -142,7 +142,7 @@ def _ntdll_base(bridge: RealProcessBridgeProbe) -> int:
         bridge: Real bridge attached to this process.
 
     Returns:
-        int: The genuine image base of ntdll.dll.
+        int: The loaded image base of ntdll.dll.
     """
     modules = run_bridge_sync(bridge.get_modules(os.getpid()))
     for mod in modules:
@@ -154,7 +154,7 @@ def _ntdll_base(bridge: RealProcessBridgeProbe) -> int:
 def test_format_memory_renders_real_pe_header(real_bridge: RealProcessBridgeProbe, tab: _MemoryTabProbe) -> None:
     """``_format_memory`` must faithfully render bytes read from real memory.
 
-    Reads the first 32 bytes at the genuine ntdll image base (a real PE that
+    Reads the first 32 bytes at the ntdll image base (a real PE that
     starts with ``MZ``) and verifies the formatted hex/ASCII output contains
     the real signature bytes and the real base address, proving the formatter
     operates on real process memory rather than a synthetic blob.

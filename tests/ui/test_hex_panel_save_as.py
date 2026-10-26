@@ -11,9 +11,9 @@ handler does not satisfy the probe, so the original binary (e.g. a system DLL/EX
 would be overwritten silently with no Save-As prompt.
 
 These tests drive the real, public ``HexEditorPanel.save_as()`` against a
-genuine PE file loaded through ``load_file`` and a real
+PE file loaded through ``load_file`` and a real
 ``intellicrack_hexcore`` document, with only ``QFileDialog.getSaveFileName``
-monkeypatched (the one genuinely interactive piece). They assert the patched
+monkeypatched (the one interactive piece). They assert the patched
 bytes land at the new path chosen through the dialog, the original source
 file on disk is byte-for-byte untouched, and the dialog is seeded with a
 ``<stem>_patched<suffix>`` suggested filename so a user confirming the

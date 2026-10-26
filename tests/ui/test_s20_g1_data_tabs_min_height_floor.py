@@ -16,7 +16,7 @@ squeeze the whole 18-tab pane down to a sliver, no matter how tall the active ta
 content needs to be. That is the proximate cause of the Analysis Extras and Scripting
 tab crush/overlap findings.
 
-The floor is set to a genuinely usable height. Individual data tabs (Scripting, Analysis
+The floor is set to a usable height. Individual data tabs (Scripting, Analysis
 Extras) carry their own internal scrollable floor, so this constant only keeps the pane
 itself from collapsing below a usable size. Overflow within the active tab scrolls (see
 ``test_s20_g1_scripting_tab_scroll.py`` and
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 # A 32px floor is smaller than any real data tab could use without being crushed. The
-# floor must clear this by a wide margin so a genuinely usable amount of the active tab
+# floor must clear this by a wide margin so a usable amount of the active tab
 # stays visible before its own internal scroll area needs to take over.
 _MIN_USABLE_DATA_TABS_HEIGHT_PX = 150
 

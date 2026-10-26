@@ -23,7 +23,7 @@ Each test class targets one defect and fails against the defective behaviour:
   and emit ``selection_changed``.
 
 All tests drive a real :class:`HexEditorWidget` bound to a real
-``intellicrack_hexcore`` document (no mocks) under an offscreen QApplication.
+``intellicrack_hexcore`` document under an offscreen QApplication.
 """
 
 from __future__ import annotations
@@ -119,7 +119,7 @@ class TestOffsetColor:
         """The offset ink must be grey (offset_text), never the blue selection colour.
 
         Antialiasing blends ink toward the achromatic background, so the
-        falsifiable invariant is chroma: offset_text is grey (R approximately
+        invariant checked is chroma: offset_text is grey (R approximately
         B) while ``selection_bg`` is blue (B noticeably greater than R).
         Painting with ``selection_bg`` instead would fail this in both themes.
 
@@ -298,7 +298,7 @@ class _HugeDoc:
     """Minimal document exposing a >4 GiB length for offset-column sizing.
 
     A real 4 GiB document cannot be allocated in a test, so this stand-in
-    exercises the pure offset-width layout math with a genuine byte reader.
+    exercises the pure offset-width layout math with a zero-filling byte reader.
     """
 
     def __init__(self, length: int) -> None:

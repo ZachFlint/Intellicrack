@@ -125,7 +125,7 @@ check(
 
 const resizingWrite = writeBackPlan({ length: 8, truncated: false }, 16);
 check(
-  'a genuine length-changing transform is still flagged as a resize',
+  'an untruncated length-changing transform is still flagged as a resize',
   resizingWrite.truncated === false && resizingWrite.note !== null && resizingWrite.note.includes('source range'),
   `expected a resize note, got ${JSON.stringify(resizingWrite)}`,
 );
@@ -152,12 +152,12 @@ check(
 check(
   'the truncation note reads differently from an ordinary resize note',
   truncatedWrite.note !== resizingWrite.note,
-  'a truncated result produced the exact same note text as an unrelated genuine resize, which would misattribute the cause',
+  'a truncated result produced the exact same note text as an unrelated untruncated resize, which would misattribute the cause',
 );
 
 const truncatedAndResizedWrite = writeBackPlan({ length: 9000, truncated: true }, 8192);
 check(
-  'a truncated result that also genuinely resizes reports both the true length and a note',
+  'a truncated result that also changes length reports both the true length and a note',
   truncatedAndResizedWrite.trueLength === 9000 && truncatedAndResizedWrite.truncated === true && truncatedAndResizedWrite.note !== null,
   `expected a combined truncation+resize plan, got ${JSON.stringify(truncatedAndResizedWrite)}`,
 );

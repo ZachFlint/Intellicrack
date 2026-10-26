@@ -838,10 +838,10 @@ class TestToolDialogsReceiveRegistry:
         """A real ``ToolSettingsWidget.status_changed`` emission reaches the live MainWindow slot.
 
         Drives ``_on_configure_tools`` on a real window (blocking ``exec``
-        isolated), locates the genuine :class:`ToolSettingsWidget` children of
+        isolated), locates the :class:`ToolSettingsWidget` children of
         the constructed :class:`ToolConfigDialog`, emits one widget's real
         ``status_changed(tool_id, available)`` signal, and asserts the connected
-        ``_on_tool_status_changed`` slot ran by observing the genuine
+        ``_on_tool_status_changed`` slot ran by observing the resulting
         ``status_update`` side-effect. The slot maps ``available`` to the literal
         ``"available"``/``"unavailable"`` token, computed here independently from
         the production source, so a broken connection (or a slot that ignores the
@@ -1144,7 +1144,7 @@ class TestApplyProviderSettingsHandlesDisabled:
 class TestOrphanSignalWiringRuntime:
     """Drive each orphan signal through a live dialog/widget and assert the slot ran.
 
-    Every test constructs the genuine producer (dialog or widget) through the
+    Every test constructs the producer (dialog or widget) through the
     real :class:`MainWindow` slot (with only the blocking modal ``exec``
     isolated), emits the real Qt signal, and asserts an *observable* side-effect
     of the connected slot - a status-bar emission with an independently computed

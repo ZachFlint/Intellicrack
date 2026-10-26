@@ -210,7 +210,7 @@ class TestFindWindowByPid:
     def test_embeds_real_window_into_qt_parent(qapp: QApplication, *, native_hwnd_available: bool) -> None:
         """Verify a real foreign HWND is reparented into a Qt container.
 
-        Drives the full Win32 embedding path end-to-end: a genuine
+        Drives the full Win32 embedding path end-to-end: a native
         top-level window is created, shown, and its native handle handed to
         ``embed_window`` for reparenting under a Qt parent. The container's
         observable wiring (parent ownership and the production minimum-size
@@ -330,7 +330,7 @@ class TestPollAndEmbed:
         visible window of the current process: the poller must locate the
         window, embed it, and invoke the callback exactly once with the real
         container widget. The container's production minimum-size contract is
-        asserted to confirm a genuine embed rather than a spurious callback,
+        asserted to confirm a completed embed rather than a spurious callback,
         so a poller that never finds, never embeds, or never calls back fails.
 
         Skips automatically when the environment is headless and no native

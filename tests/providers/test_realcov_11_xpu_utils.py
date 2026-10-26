@@ -7,7 +7,7 @@
 
 These tests exercise the public XPU detection surface against the real
 machine. Detection helpers (:func:`is_xpu_available`,
-:func:`get_xpu_device_count`) run against the genuine ``torch.xpu``
+:func:`get_xpu_device_count`) run against the installed ``torch.xpu``
 runtime. Windows requirement checks and GPU enumeration spawn a real
 PowerShell ``Get-CimInstance`` query (hence the ``spawns_process``
 marker) and validate the parsed result. Out-of-range device handling

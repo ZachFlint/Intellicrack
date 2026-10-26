@@ -15,8 +15,8 @@ and refreshes the Tracked tab. These tests drive the real
 ``ProcessTab`` widget end to end -- populate a row, trigger the context menu
 (or its handler) exactly as a user right-click would, run the real
 background ``TrackedRefreshWorker`` QThread, and assert the Tracked table
-actually gains a row for that PID. No mocking of ``ProcessManager``: a real
-singleton instance and real OS PID are used throughout.
+actually gains a row for that PID. The ``ProcessManager`` singleton instance
+and a live OS PID are used throughout.
 """
 
 from __future__ import annotations
@@ -249,7 +249,7 @@ class TestTrackThisProcessSurfacesInTrackedTab:
     ) -> None:
         """After tracking a PID, the Tracked tab table must show a row for it.
 
-        This is the end-to-end falsifiable gate: invoking the Track This Process handler and
+        End-to-end check: invoking the Track This Process handler and
         then refreshing the Tracked tab (as ``_on_track_process`` itself also does) must
         produce a matching row in the Tracked table.
 

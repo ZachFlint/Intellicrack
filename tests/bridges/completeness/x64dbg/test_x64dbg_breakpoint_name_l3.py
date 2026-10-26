@@ -67,7 +67,7 @@ class TestSetBreakpointNameButtonDrivesTypeBranchedRpc:
     ) -> None:
         """An address this bridge never recorded must default to the software command.
 
-        Falsifiable: if ``X64DbgBridge.set_breakpoint_name``
+        If ``X64DbgBridge.set_breakpoint_name``
         (``bridges/x64dbg.py``) did not resolve the breakpoint type via
         ``_resolve_breakpoint_type``, or the Advanced tab's
         ``_on_set_breakpoint_name`` read a different address/name
@@ -111,7 +111,7 @@ class TestSetBreakpointNameButtonDrivesTypeBranchedRpc:
     ) -> None:
         """An empty name on a hardware breakpoint must still send the clearing command.
 
-        Falsifiable: this is the case a hardcoded software-only command,
+        This is the case a hardcoded software-only command,
         or a guard that skips sending on an empty name, cannot pass. If
         ``set_breakpoint_name`` sent ``SetBreakpointName`` regardless of
         ``bp_type``, or the GUI dropped the call when the name field is

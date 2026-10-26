@@ -118,7 +118,7 @@ class TestFileExtensionsRejected:
 
 
 class TestRealHostnamesAccepted:
-    """Genuine hostnames with valid TLDs must be accepted."""
+    """Hostnames with valid TLDs must be accepted."""
 
     @pytest.mark.parametrize(
         "hostname",
@@ -139,7 +139,7 @@ class TestRealHostnamesAccepted:
         """Valid hostnames with recognised TLDs must be accepted.
 
         Args:
-            hostname: A genuine hostname string that must be accepted by
+            hostname: A valid hostname string that must be accepted by
                 _looks_like_domain.
         """
         assert _looks_like_domain(hostname), f"{hostname!r} was not recognised as a valid domain hostname"
@@ -294,7 +294,7 @@ class TestExtractIocsIntegration:
         assert "payload.exe" not in domain_values, "payload.exe was incorrectly emitted as a domain IOC"
 
     def test_real_domain_in_registry_extracted(self) -> None:
-        """Genuine domains in registry values must still be extracted as IOCs."""
+        """Valid domains in registry values must still be extracted as IOCs."""
         report = _empty_report(
             registry_changes=[
                 {

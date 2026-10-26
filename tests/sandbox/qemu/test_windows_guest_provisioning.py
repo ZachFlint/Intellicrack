@@ -225,7 +225,7 @@ def _write_iso(
 ) -> Path:
     """Write a real ISO9660 volume descriptor set and El Torito catalog.
 
-    The result is a genuine ISO header layout: the parser under test reads it
+    The result is a valid ISO header layout: the parser under test reads it
     with no knowledge that the data area beyond the descriptors is zeroed.
 
     Args:
@@ -512,7 +512,7 @@ def _answer_tree() -> Element:
     """Render and parse the answer file with an independent parser.
 
     ``defusedxml`` is a different implementation from the one that wrote the
-    document, so a round trip through it is a genuine well-formedness oracle.
+    document, so a round trip through it is an independent well-formedness oracle.
 
     Returns:
         Element: Parsed ``unattend`` root element.
@@ -588,7 +588,7 @@ class TestInstallMediaIdentification:
         """
         probe = probe_iso_structure(_linux_iso(tmp_path / "debian.iso"))
 
-        assert probe.is_bios_bootable, "the fixture is genuinely BIOS bootable"
+        assert probe.is_bios_bootable, "the fixture is BIOS bootable"
         assert not probe.is_microsoft_media
         assert not probe.is_udf_bridged
         assert not probe.is_windows_install_candidate
@@ -675,7 +675,7 @@ class TestInstallMediaIdentification:
         assert [probe.path for probe in found] == [windows]
 
     def test_explicit_media_that_fails_validation_is_refused(self, tmp_path: Path) -> None:
-        """Naming a non-Windows ISO explicitly still fails loudly.
+        """Naming a non-Windows ISO explicitly still raises ``ProvisioningError``.
 
         Args:
             tmp_path: Per-test temporary directory.
@@ -894,7 +894,7 @@ class TestAnswerFileGeneration:
     def test_the_winpe_locale_component_is_not_reused_for_oobe(self) -> None:
         """The WinPE-scoped component must not stand in for the OOBE one.
 
-        This is the discriminator for the test above: the two components differ
+        Companion check for the test above: the two components differ
         only by a ``-WinPE`` suffix, and putting the WinPE one in ``oobeSystem``
         would look right while leaving OOBE prompting. It also pins the WinPE
         component to the pass it belongs in, so neither can be moved silently.

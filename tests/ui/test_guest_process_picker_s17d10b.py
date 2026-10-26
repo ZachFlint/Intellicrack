@@ -107,7 +107,7 @@ def test_selecting_a_row_enables_ok(qapp: QApplication) -> None:
 def test_accept_captures_the_pid_of_the_selected_row(qapp: QApplication) -> None:
     """Accepting after selecting a row captures that row's PID, not another row's.
 
-    Falsified by: an off-by-one row lookup in ``_on_accept`` (e.g. always
+    An off-by-one row lookup in ``_on_accept`` (e.g. always
     reading row 0) would make this assert the wrong PID for a selection on
     row 1 or row 2.
 
@@ -155,7 +155,7 @@ def test_double_click_accepts_immediately(qapp: QApplication) -> None:
 def test_reject_leaves_selected_pid_none(qapp: QApplication) -> None:
     """Rejecting (Cancel) after a selection must not capture any PID.
 
-    Falsified by: wiring the Cancel button to ``_on_accept`` instead of
+    Wiring the Cancel button to ``_on_accept`` instead of
     ``reject`` would make ``selected_pid()`` return the selected row's PID
     here instead of ``None``.
 

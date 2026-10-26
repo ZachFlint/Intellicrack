@@ -1874,7 +1874,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 ToolFunction(
                     name="x64dbg.trace_start",
                     description=(
-                        "Start a run-trace recording session in x64dbg (see trace_into/trace_over for a genuinely conditional trace)"
+                        "Start a run-trace recording session in x64dbg (see trace_into/trace_over for a conditional trace)"
                     ),
                     parameters=[
                         ToolParameter(
@@ -3104,7 +3104,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
         Keeps the existing bounded :meth:`_wait_for_pipe_ready` poll and
         then establishes the real pipe connection so
-        ``plugin_status["pipe_connected"]`` reflects a genuine, verified
+        ``plugin_status["pipe_connected"]`` reflects a verified
         transport before any command is issued.
 
         Raises:
@@ -3549,7 +3549,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         The bridge attaches a structured
         ``x64dbg_error_code`` to every ``ToolError`` raised from
         ``_send_pipe_command``; this helper inspects that code and
-        returns ``True`` only for codes that are genuinely recoverable
+        returns ``True`` only for codes that are recoverable
         via the alternative ``_send_command`` console-script path.
 
         A "pipe not connected" or "plugin unavailable" failure is
@@ -3580,7 +3580,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         be non-recoverable for fallbacks routed through
         :meth:`_send_command`.
 
-        Genuine remote errors (e.g. malformed input, semantic failure)
+        Other remote errors (e.g. malformed input, semantic failure)
         still propagate so the caller learns about real failures.
 
         Args:
@@ -3696,7 +3696,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
         Raises:
             ToolError: If load fails, or if the bridge pipe is not
-                genuinely connected once ``InitDebug`` has been issued.
+                connected once ``InitDebug`` has been issued.
         """
         if not await asyncio.to_thread(path.exists):
             msg = f"File not found: {path}"
@@ -3759,7 +3759,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
             bool: True when a dead process was found and cleaned up
             (the caller must relaunch via :meth:`_start_debugger`);
             False when ``self._process`` is already ``None`` or is
-            still genuinely running.
+            still running.
         """
         if self._process is None:
             return False
@@ -3869,7 +3869,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
             ToolError: If the target process architecture cannot be
                 determined (non-Windows host, ``OpenProcess`` denied,
                 ``IsWow64Process`` failed, etc.), or if the bridge pipe
-                is not genuinely connected once the attach command has
+                is not connected once the attach command has
                 been issued.
         """
         _logger.info("x64dbg_attaching", pid=pid)
@@ -4577,7 +4577,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         Raises:
             ToolError: If the pipe/session is dead or the plugin reports
                 a non-recoverable error. A dead session must never be
-                masked by silently returning the local breakpoint cache. Only a genuinely recoverable failure (an older
+                masked by silently returning the local breakpoint cache. Only a recoverable failure (an older
                 plugin build missing ``bp_list``) falls back to the
                 locally tracked breakpoints.
         """
@@ -4710,7 +4710,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         Raises:
             ToolError: If the pipe/session is dead or the plugin reports
                 a non-recoverable error. A dead session must never be
-                masked by silently returning the local watchpoint cache. Only a genuinely recoverable failure (an older
+                masked by silently returning the local watchpoint cache. Only a recoverable failure (an older
                 plugin build missing ``bp_list``) falls back to the
                 locally tracked watchpoints.
         """
@@ -6184,7 +6184,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         # so ctypes.get_last_error() would always read back 0 for calls made
         # through it. The retry loop below needs the real code
         # CreateToolhelp32Snapshot reported through GetLastError to tell a
-        # transient, retryable failure apart from a genuine one, so a
+        # transient, retryable failure apart from a permanent one, so a
         # dedicated handle with last-error tracking enabled is required here.
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
@@ -7563,7 +7563,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         can observe only the paused state on both sides of the
         transition and never the transient running state in between -
         reporting "the debugger never entered the running state" even
-        though the command genuinely ran and settled.
+        though the command ran and settled.
 
         The plugin already pushes an asynchronous ``paused`` event
         whenever x64dbg suspends the debuggee for any reason, and
@@ -7765,7 +7765,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
         (no new paused event will ever fire since the debugger never
         left the paused state). x64dbg only keeps one instruction of
         undo history, and clears it on any run/step-over/trace, so this
-        only succeeds immediately after a genuine single step.
+        only succeeds immediately after a single step.
 
         Returns:
             dict[str, Any]: Dict with ``success``, ``old_ip`` (hex
@@ -8691,7 +8691,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         :meth:`_default_trace_file_path`); note that, per x64dbg's own
         documentation, this alone still performs no instruction-level
         tracing until a stepping command such as ``trace_into``/
-        ``trace_over`` - which take a genuine break condition - runs
+        ``trace_over`` - which take a break condition - runs
         afterward. A bare ``condition`` with no ``log_text`` has no real
         command to bind to here (``TraceSetLog`` cannot set a condition
         without also setting text, and ``StartRunTrace`` accepts no
@@ -8725,7 +8725,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
                 "x64dbg has no command that applies a bare condition to trace_start - "
                 "TraceSetLog only accepts a log condition together with log text, and "
                 "StartRunTrace itself takes no condition at all; supply log_text "
-                "alongside condition, or use trace_into/trace_over for a genuine break "
+                "alongside condition, or use trace_into/trace_over for a break "
                 "condition"
             )
             raise ToolError(msg, tool_name="x64dbg", details={"condition": condition})
@@ -8765,7 +8765,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         *chance* (first/second/all) an exception breakpoint captures -
         it is not a break/ignore/log axis, so ``handling`` is not
         forwarded to it as a numeric code. ``break``
-        and ``log`` are instead implemented as genuine exception
+        and ``log`` are instead implemented as exception
         breakpoints scoped by chance: ``break`` captures first-chance
         occurrences and stops there, while ``log`` captures every
         chance and additionally sets a log action
@@ -9027,7 +9027,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         queued, not once x64dbg has rewritten the target bytes. A single
         immediate read-back therefore races the assemble and can observe
         the pre-patch bytes even when the patch ultimately succeeds - in one observed case the first read was unchanged and the ``mov eax, 1`` encoding was present ~0.4s later. Polling for up
-        to :attr:`VERIFY_TIMEOUT` absorbs that race so a genuine patch is
+        to :attr:`VERIFY_TIMEOUT` absorbs that race so an applied patch is
         not misreported as "memory unchanged".
 
         Args:
@@ -10378,7 +10378,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
         Returns:
             dict[str, Any]: A zero-count reply whose ``type`` is
             ``unknown``, distinguishing an unreachable plugin from a page
-            x64dbg genuinely holds no trace record for.
+            x64dbg holds no trace record for.
         """
         return {
             "address": hex(address),
@@ -10636,7 +10636,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         syntax, both ``arg1`` (the break condition) and ``arg2`` (the step
         budget) are optional, with ``arg2`` defaulting to 50000 when
         omitted; unlike ``TraceIntoConditional``, the condition here is a
-        genuine early exit layered on top of the coverage-boundary stop,
+        separate early exit layered on top of the coverage-boundary stop,
         not the trace's sole terminating condition. An omitted
         ``condition`` is still sent as the literal always-false expression
         ``0`` (the same sentinel :meth:`trace_into` sends) so the

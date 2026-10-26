@@ -87,7 +87,7 @@ class ToolConfirmationDialog(QDialog):
     ``decision_made`` and finish immediately without presenting UI.
     """
 
-    decision_made = pyqtSignal(bool, bool)
+    decision_made: pyqtSignal = pyqtSignal(bool, bool)
 
     _remembered_decisions: ClassVar[dict[_RememberKey, bool]] = {}
 

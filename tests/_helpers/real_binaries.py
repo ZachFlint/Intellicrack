@@ -3,25 +3,25 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Locators for real binary fixtures used by Intellicrack tests.
+"""Locators for compiled binary fixtures used by Intellicrack tests.
 
-Intellicrack's binary-analysis tests must operate on genuine, compiled
-executables rather than synthetic byte blobs. This module provides two
+Intellicrack's binary-analysis tests operate on compiled executables
+rather than synthetic byte blobs. This module provides two
 families of helpers:
 
-* Runtime resolvers that locate REAL Portable Executable (PE) binaries that
+* Runtime resolvers that locate Portable Executable (PE) binaries that
   already exist on the running Windows system. They work both on a developer's
   Windows host and inside the Windows Docker test container (workspace at
   ``C:/app``), where ``C:/Windows/System32`` holds the standard system DLLs and
   executables.
-* Corpus loaders that return the committed REAL ELF and Mach-O fixtures stored
+* Corpus loaders that return the committed ELF and Mach-O fixtures stored
   under ``tests/fixtures/binaries/``. These formats cannot be sourced from a
-  Windows system at runtime, so authentic compiled samples are committed to the
+  Windows system at runtime, so compiled samples are committed to the
   repository and validated against their recorded magic bytes.
 
 Every resolver validates that the file exists and begins with the correct
 format magic before returning it, so a test that receives a path is guaranteed
-a real binary of the expected format. When a target is genuinely unavailable
+a binary of the expected format. When a target is unavailable
 the helpers raise :class:`FixtureUnavailableError`, which the pytest fixtures
 translate into a precise ``pytest.skip`` reason rather than a fabricated pass.
 """
@@ -173,7 +173,7 @@ def resolve_real_pe_dlls() -> list[Path]:
 
     Resolves the standard system DLLs ``kernel32.dll``, ``ntdll.dll`` and
     ``user32.dll`` from ``C:/Windows/System32`` and validates each begins with
-    the MZ magic. Any DLL that is genuinely absent is skipped; the function
+    the MZ magic. Any DLL that is absent is skipped; the function
     returns every DLL it could validate.
 
     Returns:

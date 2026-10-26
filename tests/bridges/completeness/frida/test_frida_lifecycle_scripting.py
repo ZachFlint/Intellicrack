@@ -231,7 +231,7 @@ class TestAttachDispatchG1:
     def test_execute_tool_call_attach_with_numeric_pid_string(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
         """``frida.attach`` dispatched via ToolRegistry with a numeric-string pid must attach for real.
 
-        Falsifiable: if the tool-def's parameter were still named ``target``
+        If the tool-def's parameter were still named ``target``
         while ``attach()`` only accepts ``pid``, ``execute_tool_call`` would
         build ``attach(target=...)`` and raise ``TypeError`` -> wrapped as
         ``ToolError`` here, and this call would raise instead of returning.
@@ -254,7 +254,7 @@ class TestAttachDispatchG1:
     ) -> None:
         """``frida.attach`` dispatched via ToolRegistry with a name-shaped pid must resolve and attach.
 
-        Falsifiable: if ``attach()`` did not branch on non-numeric strings to
+        If ``attach()`` did not branch on non-numeric strings to
         ``attach_by_name``, this call would try ``int(pid)`` and raise
         ``ValueError`` (wrapped as ``ToolError``). Broken production line:
         the ``isinstance(pid, str) and not pid.strip()...isdigit()`` branch in
@@ -263,7 +263,7 @@ class TestAttachDispatchG1:
 
         The target is a dedicated, freshly-spawned ``notepad.exe`` (not the
         ambient test process) so the asserted PID is the real, unambiguous
-        PID of the process this test actually spawned -- a real gate that
+        PID of the process this test actually spawned; the test
         fails if ``attach_by_name`` resolves to the wrong process.
 
         Args:
@@ -281,7 +281,7 @@ class TestAttachDispatchG1:
     def test_attach_tool_def_parameter_is_named_pid_not_target(bridge: _TestableFridaBridge) -> None:
         """The registered ``frida.attach`` tool-def must declare a ``pid`` parameter, never ``target``.
 
-        Falsifiable: restoring a ``target`` parameter in place of ``pid`` fails both assertions here.
+        Restoring a ``target`` parameter in place of ``pid`` fails both assertions here.
         Broken production line: the ``ToolParameter`` list of the
         ``frida.attach`` ``ToolFunction`` entry in ``_FRIDA_FUNCTIONS``.
         """
@@ -309,7 +309,7 @@ class TestNotRegisteredMethodsG2:
     def test_tool_def_registered(bridge: _TestableFridaBridge, expected_name: str) -> None:
         """Each of these methods must have a real ToolFunction entry.
 
-        Falsifiable: removing any of these four ``ToolFunction`` entries from
+        Removing any of these four ``ToolFunction`` entries from
         ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes the containment
         check fail.
 
@@ -328,7 +328,7 @@ class TestNotRegisteredMethodsG2:
     ) -> None:
         """``frida.attach_by_name`` must dispatch through ToolRegistry and really attach.
 
-        Falsifiable: if the ``ToolFunction`` entry were missing ``execute_tool_call`` would raise ``ToolError`` for an
+        If the ``ToolFunction`` entry were missing ``execute_tool_call`` would raise ``ToolError`` for an
         unknown function name before ever reaching ``attach_by_name``.
         Broken production line: the ``frida.attach_by_name`` ``ToolFunction``
         registration in ``_FRIDA_FUNCTIONS``.
@@ -337,7 +337,7 @@ class TestNotRegisteredMethodsG2:
         ambient test process, whose name -- ``python.exe``/``pytest.exe`` --
         commonly collides with other concurrently-running interpreters) so
         the asserted PID is the real, unambiguous PID of the process this
-        test actually spawned -- a real gate that fails if
+        test actually spawned; the test fails if
         ``attach_by_name`` resolves to the wrong process.
 
         Args:
@@ -355,7 +355,7 @@ class TestNotRegisteredMethodsG2:
     def test_execute_persistent_script_and_unload_script_round_trip(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
         """``execute_persistent_script`` + ``unload_script`` must dispatch and perform the real operation.
 
-        Falsifiable: if ``frida.execute_persistent_script`` or
+        If ``frida.execute_persistent_script`` or
         ``frida.unload_script`` lacked a tool-def, ``execute_tool_call`` would
         raise before the script ever loaded/unloaded. If the underlying
         methods were stubs, the bridge's script table would never gain (then
@@ -385,7 +385,7 @@ class TestNotRegisteredMethodsG2:
     def test_unload_all_scripts_dispatchable_and_clears_registry(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
         """``frida.unload_all_scripts`` must dispatch and unload every tracked script.
 
-        Falsifiable: if the tool-def were missing, dispatch would raise
+        If the tool-def were missing, dispatch would raise
         before ``unload_all_scripts`` ran. If ``unload_all_scripts`` were a
         no-op stub, the bridge's script table would remain non-empty after
         the call. Broken production lines: the ``frida.unload_all_scripts``
@@ -415,7 +415,7 @@ class TestSessionDetachedListener:
         by calling ``session.detach()`` directly on the underlying Frida
         session object, bypassing the bridge's own ``detach()`` entirely.
 
-        Falsifiable: if the bridge only learned about detachment through its own ``detach()`` call,
+        If the bridge only learned about detachment through its own ``detach()`` call,
         an external detach would leave ``state.process_attached`` stuck at ``True``. Broken
         production line: ``session.on("detached", on_detached)`` registration
         inside ``_register_session_detached_handler`` (called from
@@ -444,7 +444,7 @@ class TestScriptMessagingLifecycle:
     def test_post_message_delivers_to_running_script(bridge: _TestableFridaBridge) -> None:
         """``post_message`` must really deliver a JSON payload into the running script's recv handler.
 
-        Falsifiable: if ``post_message`` silently dropped the call instead of
+        If ``post_message`` silently dropped the call instead of
         invoking ``script.post``, the persistent script would never see the
         message and the allocated marker byte would remain zero. Broken
         production line: ``await asyncio.to_thread(script.post, parsed)`` in
@@ -478,7 +478,7 @@ class TestScriptMessagingLifecycle:
     def test_post_message_invalid_json_raises_tool_error(bridge: _TestableFridaBridge) -> None:
         """``post_message`` must raise ``ToolError`` for a non-JSON message string.
 
-        Falsifiable: if the JSON validation were removed, malformed input
+        If the JSON validation were removed, malformed input
         would either silently fail inside the Frida call or crash with a
         raw ``JSONDecodeError`` instead of the documented ``ToolError``.
         Broken production line: the ``try: json.loads(message)`` /
@@ -494,7 +494,7 @@ class TestScriptMessagingLifecycle:
     def test_rpc_call_invokes_real_exported_function(bridge: _TestableFridaBridge) -> None:
         """``rpc_call`` must invoke a real ``rpc.exports`` function and return its value.
 
-        Falsifiable: if ``rpc_call`` used the wrong exports accessor or never
+        If ``rpc_call`` used the wrong exports accessor or never
         awaited the call, this would raise ``ToolError`` or return something
         other than the exact independently-known sum. Broken production
         line: ``getattr(script.exports_sync, method_name)`` /
@@ -518,7 +518,7 @@ class TestScriptMessagingLifecycle:
     def test_rpc_call_unknown_method_raises_tool_error(bridge: _TestableFridaBridge) -> None:
         """``rpc_call`` must raise ``ToolError`` for a method the script never exported.
 
-        Falsifiable: if the callable check were removed, this would instead
+        If the callable check were removed, this would instead
         raise an uncaught ``AttributeError``/``TypeError`` from Frida's proxy
         object rather than the documented ``ToolError``. Broken production
         line: the ``if not callable(rpc_method): raise ToolError(...)`` guard
@@ -533,7 +533,7 @@ class TestScriptMessagingLifecycle:
     def test_eternalize_script_removes_from_registry_but_keeps_running(bridge: _TestableFridaBridge) -> None:
         """``eternalize_script`` must call ``script.eternalize`` and drop bridge-side tracking.
 
-        Falsifiable: if ``eternalize_script`` were a no-op, the script would
+        If ``eternalize_script`` were a no-op, the script would
         remain in the bridge's script table after the call. Broken
         production line: ``await asyncio.to_thread(script.eternalize)``
         followed by ``del self._scripts[script_id]`` in
@@ -551,7 +551,7 @@ class TestScriptMessagingLifecycle:
     def test_eternalize_unknown_script_raises_tool_error(bridge: _TestableFridaBridge) -> None:
         """``eternalize_script`` must raise ``ToolError`` for an unknown script ID.
 
-        Falsifiable: without the membership guard, this would raise
+        Without the membership guard, this would raise
         ``KeyError`` on the ``self._scripts[script_id]`` lookup instead of
         the documented ``ToolError``. Broken production line: the
         ``if script_id not in self._scripts: raise ToolError(...)`` guard in
@@ -565,7 +565,7 @@ class TestScriptMessagingLifecycle:
     def test_create_cancellable_and_cancel_round_trip(bridge: _TestableFridaBridge) -> None:
         """``create_cancellable``/``cancel`` must create and later cancel a real ``frida.Cancellable``.
 
-        Falsifiable: if ``create_cancellable`` never stored the token in
+        If ``create_cancellable`` never stored the token in
         ``self._cancellables``, the subsequent ``cancel`` call would return
         ``False`` (not-found) instead of ``True``. If ``cancel`` never called
         ``cancellable.cancel()``, the retained real object's
@@ -587,7 +587,7 @@ class TestScriptMessagingLifecycle:
     def test_cancel_unknown_token_returns_false(bridge: _TestableFridaBridge) -> None:
         """``cancel`` on an unknown token must return ``False``, not raise.
 
-        Falsifiable: if the ``.pop(cancellable_id, None)`` guard were removed
+        If the ``.pop(cancellable_id, None)`` guard were removed
         in favour of direct indexing, this would raise ``KeyError`` instead
         of returning ``False``. Broken production line: the
         ``cancellable = self._cancellables.pop(cancellable_id, None)`` /
@@ -608,7 +608,7 @@ class TestRemoveRemoteDeviceA4:
     def test_tool_def_registered(bridge: _TestableFridaBridge) -> None:
         """``frida.remove_remote_device`` must have a real ``ToolFunction`` entry.
 
-        Falsifiable: removing the ``ToolFunction`` entry from
+        Removing the ``ToolFunction`` entry from
         ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes this fail.
         """
         names = {f.name for f in bridge.tool_definition.functions}
@@ -618,7 +618,7 @@ class TestRemoveRemoteDeviceA4:
     def test_remove_remote_device_drops_it_from_the_real_device_manager(registry: ToolRegistry) -> None:
         """``frida.remove_remote_device`` must actually remove the device from ``frida.DeviceManager``.
 
-        Falsifiable: if the tool-def entry were missing, ``execute_tool_call``
+        If the tool-def entry were missing, ``execute_tool_call``
         raises ``ToolError`` for an unknown function name before the real
         removal call ever runs. If ``remove_remote_device`` were a stub that
         never called ``manager.remove_remote_device``, the device would still
@@ -680,7 +680,7 @@ class TestDeviceChangeNotificationsA5:
     ) -> None:
         """``frida.enable_device_change_notifications`` must observe a real ``DeviceManager`` "changed" signal.
 
-        Falsifiable: if the tool-def entries were missing, ``execute_tool_call``
+        If the tool-def entries were missing, ``execute_tool_call``
         raises ``ToolError`` for an unknown function name before any
         registration happens. If ``enable_device_change_notifications`` never
         called ``manager.on("changed", ...)``, or registered the wrong signal
@@ -790,7 +790,7 @@ class TestDeviceLostNotificationsA6:
         hardware) that records real ``on``/``off`` calls, so every line of
         the bridge's own registration and callback logic executes for real.
 
-        Falsifiable: if the registration used the wrong signal name (the same class of defect as
+        If the registration used the wrong signal name (the same class of defect as
         ``"child-added"`` vs ``"spawn-added"``), ``lost_registrations`` would
         be empty and the first ``assert len(...) == 1`` fails; firing
         ``"lost"`` would then also no-op, failing the state-reset and
@@ -828,7 +828,7 @@ class TestGetFrontmostApplicationA9:
     def test_tool_def_registered(bridge: _TestableFridaBridge) -> None:
         """``frida.get_frontmost_application`` must have a real ``ToolFunction`` entry.
 
-        Falsifiable: removing the ``ToolFunction`` entry from
+        Removing the ``ToolFunction`` entry from
         ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes this fail.
         """
         names = {f.name for f in bridge.tool_definition.functions}
@@ -838,15 +838,15 @@ class TestGetFrontmostApplicationA9:
     def test_dispatchable_and_wraps_the_real_not_supported_error(registry: ToolRegistry) -> None:
         """``frida.get_frontmost_application`` must dispatch and wrap the real Frida ``NotSupportedError``.
 
-        Falsifiable: if the tool-def entry were missing, ``execute_tool_call``
+        If the tool-def entry were missing, ``execute_tool_call``
         raises ``ToolError`` for an unknown function name before the real
         device call ever runs. If the method body were a stub that never
-        calls ``device.get_frontmost_application``, no genuine
+        calls ``device.get_frontmost_application``, no
         ``frida.NotSupportedError`` would ever be caught, so
         ``ToolError.details["frida_error_type"]`` would not equal
         ``"NotSupportedError"`` (it would either not raise at all, or raise a
-        differently-shaped error) - this is what proves the *real* Frida
-        call executed, not a mock or an early return.
+        differently-shaped error), which shows the Frida call executed
+        rather than returning early.
 
         ``ToolRegistry.execute_tool_call`` (``core/tools.py``) re-raises any ``ToolError`` it catches as a
         *new* ``ToolError`` with empty ``details`` - chained via
@@ -872,7 +872,7 @@ class TestSpawnEnvCwdB2:
     def test_spawn_env_and_cwd_overrides_take_effect(bridge: _TestableFridaBridge, tmp_path: Path) -> None:
         """``frida.spawn``'s ``env``/``cwd`` kwargs must reach the real spawned process.
 
-        Falsifiable: if ``env``/``cwd`` were silently dropped (only ``argv`` forwarded), the batch
+        If ``env``/``cwd`` were silently dropped (only ``argv`` forwarded), the batch
         script's ``%IC_GATE_MARKER%``
         would expand to empty and ``%CD%`` would be the test runner's own
         working directory instead of ``tmp_path`` - both assertions below
@@ -907,7 +907,7 @@ class TestSpawnEnvCwdB2:
     def test_tool_def_declares_env_and_cwd_parameters(bridge: _TestableFridaBridge) -> None:
         """The registered ``frida.spawn`` tool-def must declare ``env`` and ``cwd`` parameters.
 
-        Falsifiable: if the ``ToolParameter`` entries were never added to the
+        If the ``ToolParameter`` entries were never added to the
         ``frida.spawn`` ``ToolFunction`` in ``_FRIDA_FUNCTIONS``, this fails.
         """
         defn = bridge.tool_definition
@@ -925,7 +925,7 @@ class TestSpawnStdioCaptureB3:
     def test_pipe_stdio_delivers_output_via_dispatch(bridge: _TestableFridaBridge) -> None:
         """``frida.spawn(stdio='pipe')`` must really capture the child's stdout via ``Device.on('output')``.
 
-        Falsifiable: if ``stdio`` were never forwarded to ``device.spawn``
+        If ``stdio`` were never forwarded to ``device.spawn``
         or the ``"output"`` handler were never registered,
         the process still runs (``echo`` always succeeds) but no
         ``process_output`` message ever arrives - the polling loop times out
@@ -967,7 +967,7 @@ class TestSpawnStdioCaptureB3:
     def test_tool_def_declares_stdio_parameter(bridge: _TestableFridaBridge) -> None:
         """The registered ``frida.spawn`` tool-def must declare a ``stdio`` parameter.
 
-        Falsifiable: if the ``ToolParameter`` entry were never added to the
+        If the ``ToolParameter`` entry were never added to the
         ``frida.spawn`` ``ToolFunction`` in ``_FRIDA_FUNCTIONS``, this fails.
 
         Args:
@@ -990,7 +990,7 @@ class TestKillArbitraryProcessB8:
     ) -> None:
         """``frida.kill`` must dispatch and actually terminate a process this bridge never attached to or spawned.
 
-        Falsifiable: ``execute_tool_call`` dispatches purely by
+        ``execute_tool_call`` dispatches purely by
         ``getattr(bridge, "kill")`` (``core/tools.py``, off-limits here), so
         if ``FridaBridge.kill`` were a no-op stub instead of really calling
         ``device.kill``, ``notepad_process.poll()`` would still be ``None``
@@ -1018,7 +1018,7 @@ class TestKillArbitraryProcessB8:
     def test_tool_def_registered(bridge: _TestableFridaBridge) -> None:
         """``frida.kill`` must have a real ``ToolFunction`` entry.
 
-        Falsifiable: removing the ``ToolFunction`` entry from
+        Removing the ``ToolFunction`` entry from
         ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes this fail.
 
         Args:
@@ -1045,7 +1045,7 @@ class TestSessionChildGatingC1:
     def test_tool_def_registered(bridge: _TestableFridaBridge, expected_name: str) -> None:
         """Each new session-child-gating method must have a real ToolFunction entry.
 
-        Falsifiable: removing any of these four ``ToolFunction`` entries from
+        Removing any of these four ``ToolFunction`` entries from
         ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes the containment
         check fail.
 
@@ -1064,11 +1064,11 @@ class TestSessionChildGatingC1:
         (``bridge.attach(os.getpid())``) and has the test code itself spawn a
         real child process via ``Popen`` while session gating is enabled.
         Since the gated target *is* the pytest process, any process it
-        spawns via any API is a genuine child Frida's child-gating
-        instrumentation observes - no synthetic/mocked ``Child`` object is
-        needed at all.
+        spawns via any API is a child that Frida's child-gating
+        instrumentation observes, so no synthetic ``Child`` object is
+        needed.
 
-        Falsifiable: if ``enable_session_child_gating`` mirrored the
+        If ``enable_session_child_gating`` mirrored the
         device-wide feature's signal/scope (called
         ``device.enable_spawn_gating`` and/or listened on ``"spawn-added"``
         instead of ``session.enable_child_gating`` + ``"child-added"``), or
@@ -1129,7 +1129,7 @@ class TestPrecompiledScriptD6:
     def test_compile_then_load_from_bytecode_round_trip(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
         """``frida.compile_script`` + ``frida.load_compiled_script`` must produce a real, runnable script.
 
-        Falsifiable: if ``compile_script`` returned a stub/empty value
+        If ``compile_script`` returned a stub/empty value
         instead of real ``Session.compile_script`` bytecode,
         ``create_script_from_bytes`` would raise on the malformed data (or
         load a script that never sends anything). Broken production lines:
@@ -1152,7 +1152,7 @@ class TestPrecompiledScriptD6:
         )
         assert isinstance(bytecode_hex, str)
         assert len(bytecode_hex) > 0
-        bytes.fromhex(bytecode_hex)  # must be genuinely valid hex, not a placeholder string
+        bytes.fromhex(bytecode_hex)  # must be valid hex
 
         received: list[dict[str, object]] = []
         bridge.set_message_handler(received.append)
@@ -1181,7 +1181,7 @@ class TestPrecompiledScriptD6:
     def test_tool_def_registered(bridge: _TestableFridaBridge, expected_name: str) -> None:
         """Each new precompiled-script method must have a real ToolFunction entry.
 
-        Falsifiable: removing either ``ToolFunction`` entry from
+        Removing either ``ToolFunction`` entry from
         ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes the containment
         check fail.
 
@@ -1201,7 +1201,7 @@ class TestScriptSnapshotD7:
     def test_snapshot_then_load_preserves_warmed_state(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
         """frida.snapshot_script + frida.load_script_with_snapshot must preserve real VM heap state.
 
-        Falsifiable: if snapshot_script returned empty/placeholder bytes, or
+        If snapshot_script returned empty/placeholder bytes, or
         load_script_with_snapshot ignored the snapshot argument and started a
         fresh VM instead, the global `warmedValue` the embed script defines
         would be undefined in the loaded script and the assertion below
@@ -1226,7 +1226,7 @@ class TestScriptSnapshotD7:
         )
         assert isinstance(snapshot_hex, str)
         assert len(snapshot_hex) > 0
-        bytes.fromhex(snapshot_hex)  # must be genuinely valid hex
+        bytes.fromhex(snapshot_hex)  # must be valid hex
 
         received: list[dict[str, object]] = []
         bridge.set_message_handler(received.append)
@@ -1264,7 +1264,7 @@ class TestScriptSnapshotD7:
     def test_tool_def_registered(bridge: _TestableFridaBridge, expected_name: str) -> None:
         """Each new script-snapshot method must have a real ToolFunction entry.
 
-        Falsifiable: removing either ``ToolFunction`` entry from
+        Removing either ``ToolFunction`` entry from
         ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes the containment
         check fail.
 
@@ -1284,7 +1284,7 @@ class TestScriptDebuggerD8:
     def test_enable_debugger_opens_a_real_listening_port(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
         """frida.enable_script_debugger must open a real, connectable inspector port; disable must close it.
 
-        Falsifiable: if enable_script_debugger were a stub that never called
+        If enable_script_debugger were a stub that never called
         the real Script.enable_debugger, no process anywhere would be
         listening on the chosen port and the socket.create_connection call
         would raise ConnectionRefusedError, failing this test. Broken
@@ -1327,7 +1327,7 @@ class TestScriptDebuggerD8:
     def test_tool_def_registered(bridge: _TestableFridaBridge, expected_name: str) -> None:
         """Each new script-debugger method must have a real ToolFunction entry.
 
-        Falsifiable: removing either ``ToolFunction`` entry from
+        Removing either ``ToolFunction`` entry from
         ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes the containment
         check fail.
 
@@ -1344,7 +1344,7 @@ class TestTerminateHungScriptD9:
     """Regression tests for forcibly terminating a hung script."""
 
     @staticmethod
-    def test_terminate_stops_a_genuinely_hung_script_promptly(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
+    def test_terminate_stops_a_hung_script_promptly(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
         """frida.terminate_script must forcibly and promptly stop a script whose runtime never yields.
 
         The injected script spins in a synchronous loop that never returns to
@@ -1362,7 +1362,7 @@ class TestTerminateHungScriptD9:
         through a pointer. Reading them back with a second Frida script would
         have to queue behind the unyielding loop being measured.
 
-        Falsifiable two independent ways, with no mocked value anywhere:
+        Two independent regressions are detected:
         a ``terminate_script`` that returned True without stopping the
         runtime (a no-op stub, or ``script.unload()`` against this loop)
         leaves the counter still advancing after the call and fails the
@@ -1373,7 +1373,7 @@ class TestTerminateHungScriptD9:
 
         The bounding asyncio.wait_for is load-bearing, not a nicety: without
         it, a regression that silently calls unload() against this
-        genuinely-never-yielding script would hang the test process instead
+        never-yielding script would hang the test process instead
         of failing it. The ``finally`` clause raises the stop flag so that a
         failing run cannot leave a core spinning and wedge the session either.
 
@@ -1431,7 +1431,7 @@ class TestTerminateHungScriptD9:
     def test_tool_def_registered(bridge: _TestableFridaBridge) -> None:
         """``frida.terminate_script`` must have a real ``ToolFunction`` entry.
 
-        Falsifiable: removing the ``ToolFunction`` entry from
+        Removing the ``ToolFunction`` entry from
         ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes this fail.
 
         Args:
@@ -1449,7 +1449,7 @@ class TestListRpcExportsE2:
     def test_list_rpc_exports_names_are_directly_usable_by_rpc_call(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
         """frida.list_rpc_exports must report real export names usable verbatim by frida.rpc_call.
 
-        Falsifiable: if list_rpc_exports were a stub returning [], the
+        If list_rpc_exports were a stub returning [], the
         containment assertion for "addTwo" fails. If it snake_cased the
         name (a plausible but wrong assumption, given rpc_call's own
         internal normalization), the returned name would be "add_two" and

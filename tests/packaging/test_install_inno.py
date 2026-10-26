@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable gates for the Inno Setup provisioning wiring.
+r"""Tests for the Inno Setup provisioning wiring.
 
 The installer is compiled by Inno Setup's ``ISCC.exe``, which is not a conda or
 PyPI package, so pixi cannot manage it. Instead ``scripts/install-inno.ps1``
@@ -20,7 +20,7 @@ the ``innosetup-`` prefix filter reddens a test below. The download itself is
 never exercised: it is network-bound, and the container the suite runs in is
 network-isolated, so only the pure selection logic is run.
 
-The remaining gates hold the wiring honest with real consistency checks: that
+The remaining tests check the wiring for consistency: that
 ``install-all.ps1``'s advertised step count matches the steps it actually runs
 (now including Inno Setup), that the build script drives the compile from the
 resolved path rather than a bare ``PATH`` lookup, that the portable install is
@@ -198,7 +198,7 @@ def test_justfile_exposes_install_inno_delegating_to_the_script() -> None:
 
 
 def test_install_all_provisions_inno_and_step_count_stays_consistent() -> None:
-    """``install-all.ps1`` runs install-inno and its advertised total is honest.
+    """``install-all.ps1`` runs install-inno and its advertised total matches its steps.
 
     The banner prints ``[step/$totalSteps]``, so a substep added without bumping
     ``$totalSteps`` (or vice versa) misreports progress. The total must equal the

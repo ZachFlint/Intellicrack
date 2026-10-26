@@ -41,7 +41,7 @@ _RUNNER = _REPO_ROOT / "docker" / "coverage_runner.py"
 
 # Generous ceiling for the whole runner invocation. A working runner finishes a
 # tiny synthetic suite in well under this even with an 8 s per-group timeout; a
-# regressed watchdog that fails to kill the hang blows past it and fails loudly.
+# regressed watchdog that fails to kill the hang blows past it and fails the test.
 _RUN_HARNESS_TIMEOUT_SEC = 180.0
 _GROUP_TIMEOUT_SEC = 8
 
@@ -229,7 +229,7 @@ def test_passing_group_produces_merged_reports(tmp_path: Path) -> None:
 
     This gates the reporting plumbing: JUnit merge, ``coverage combine`` over
     the per-group shard, and the ``--fail-under`` gate. The group's test imports
-    a real ``src/intellicrack`` module so genuine coverage data is produced;
+    a real ``src/intellicrack`` module so coverage data is produced;
     with the repository as workspace and ``--fail-under 0`` the run must exit 0
     and write both report artifacts. If merge or the coverage pipeline
     regresses, the artifacts are missing or malformed and the assertions fail.

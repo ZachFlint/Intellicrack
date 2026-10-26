@@ -44,7 +44,7 @@ class _HandlerBridge(QObject):
             :class:`LogRecordDict` for every record the handler accepts.
     """
 
-    record_received = pyqtSignal(dict)
+    record_received: pyqtSignal = pyqtSignal(dict)
 
 
 def _shared_processors() -> list[Processor]:

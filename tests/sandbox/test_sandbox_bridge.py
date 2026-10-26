@@ -443,7 +443,7 @@ class TestCreateDestroy:
     async def test_create_translates_unavailable_type_to_typed_tool_error(self) -> None:
         """Create against the real manager raises a typed ToolError pinned to the capability-absence reason.
 
-        Drives the genuine ``SandboxManager`` (created by ``initialize``), which probes
+        Drives the ``SandboxManager`` (created by ``initialize``), which probes
         ``WindowsSandbox.is_available()``. The oracle is the manager's own contract in
         ``intellicrack.sandbox.manager.SandboxManager.create``: when the type is not
         available it raises ``SandboxError("Sandbox type not available: windows")``, and
@@ -454,7 +454,7 @@ class TestCreateDestroy:
         stops translating the manager error / stops recording ``last_error``) no longer
         passes vacuously.
 
-        When the host genuinely provides Windows Sandbox the create-failure path cannot
+        When the host provides Windows Sandbox the create-failure path cannot
         be exercised, so the test skips rather than asserting a contradiction.
         """
         bridge = SandboxBridge()
@@ -1267,7 +1267,7 @@ class TestReportToDict:
 
 
 class _RealLocalManager:
-    """A real, non-mock manager that drives a genuine ``LocalProcessSandbox``.
+    """A manager that drives a ``LocalProcessSandbox``.
 
     Unlike the in-memory stub manager, this manager executes binaries as real
     OS subprocesses through :class:`LocalProcessSandbox`, captures their real
@@ -1452,7 +1452,7 @@ def _write_driver_script(directory: Path, *, artifact_name: str, payload: bytes,
     ),
 )
 class TestBridgeRealSandboxLifecycle:
-    """Drive the bridge against a genuine subprocess-executing sandbox.
+    """Drive the bridge against a subprocess-executing sandbox.
 
     These tests use a real ``LocalProcessSandbox`` rather than the
     fixture-heavy in-memory paths so a regression in how the bridge starts execution,
@@ -1506,7 +1506,7 @@ class TestBridgeRealSandboxLifecycle:
 
         created = [c for c in result["file_changes"] if c["operation"] == "created"]
         dropped = [c for c in created if c["path"] == "dropped.bin"]
-        assert len(dropped) == 1, f"bridge must surface the one genuinely created artefact, got {result['file_changes']}"
+        assert len(dropped) == 1, f"bridge must surface the one created artifact, got {result['file_changes']}"
         assert dropped[0]["size"] == len(payload)
 
         on_disk = local_process_sandbox.workdir / "dropped.bin"
@@ -1561,7 +1561,7 @@ class TestBridgeRealSandboxLifecycle:
             await bridge.run_binary(str(missing), time_limit=10)
 
     @pytest.mark.asyncio
-    async def test_extract_iocs_from_genuinely_observed_artifact_path(
+    async def test_extract_iocs_from_an_observed_artifact_path(
         self,
         local_process_sandbox: LocalProcessSandbox,
         tmp_path: Path,

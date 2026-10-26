@@ -15,8 +15,8 @@ Each test targets one defect and fails against the defective behaviour:
   ``Stretch`` and Address is ``ResizeToContents``.
 
 All tests drive real :class:`ClassesTab` / :class:`CallGraphTab` widgets and
-real ``_apply_data`` calls under an offscreen ``QApplication`` -- no mocks
-stand in for the Qt header-resize machinery being verified.
+real ``_apply_data`` calls under an offscreen ``QApplication``, so the Qt
+header-resize machinery being verified is the one that runs.
 """
 
 from __future__ import annotations

@@ -17,7 +17,7 @@ which tolerates the dead wrapper, and deletes it with ``discard_worker(existing)
 which tolerates an already-destroyed C++ object.
 
 This test drives the real ``_spawn_hex_worker`` on a real ``HexEditorPanel``
-with a genuinely destroyed prior worker as ``existing``: it asserts the method
+with an already destroyed prior worker as ``existing``: it asserts the method
 treats the dead wrapper as "not running", arms and returns a fresh live worker,
 and never raises. A bare ``existing.isRunning()`` call on the dead wrapper
 would raise ``RuntimeError``.

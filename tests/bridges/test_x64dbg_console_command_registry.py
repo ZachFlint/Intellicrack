@@ -15,7 +15,7 @@ Every command string the bridge emits is checked against three independent sourc
 * ``scriptabort`` - :meth:`script_abort` never aborted the running script. Replaced by the plugin's ``script_abort`` RPC, which calls the bridge SDK's ``DbgScriptAbort()``.
 * ``patchrestore`` and ``pluglist`` - console fallbacks that reported success while doing nothing, masking the real RPC failure. Neither fallback exists, so the RPC error reaches the caller.
 
-These gates record every ``(command, params)`` pair the bridge emits and assert the exact replacement plus an explicit negative assertion against the unregistered spelling, so a reversion fails loudly instead of silently issuing a command x64dbg will reject. The fake pipe client is defined locally so the module stays self-contained.
+These gates record every ``(command, params)`` pair the bridge emits and assert the exact replacement plus an explicit negative assertion against the unregistered spelling, so a reversion fails the test instead of silently issuing a command x64dbg will reject. The fake pipe client is defined locally so the module stays self-contained.
 """
 
 from __future__ import annotations

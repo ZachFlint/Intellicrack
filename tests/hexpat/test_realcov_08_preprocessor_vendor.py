@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Preprocessor coverage against the real vendor include corpus.
 
-These tests drive :class:`HexPatPreprocessor` against the genuine
+These tests drive :class:`HexPatPreprocessor` against the vendored
 ``vendor/ImHex-Patterns/includes`` standard library and a self-contained real
 vendor pattern, instead of the two-file temporary-directory setups the
 existing suite uses. They prove multi-level include flattening, transitive
@@ -96,7 +96,7 @@ class TestVendorIncludeFlattening:
         assert "#pragma once" not in processed, "#pragma once leaked into output"
 
         # Every structural token from std/io.pat must appear in the output,
-        # proving the file was genuinely inlined (not silently dropped).
+        # proving the file was inlined (not silently dropped).
         for token in expected_tokens:
             assert token in processed, f"std/io.pat token missing from flattened output: {token!r}"
 

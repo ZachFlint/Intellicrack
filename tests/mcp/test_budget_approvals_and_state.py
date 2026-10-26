@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates for the context budget, approval lifetime, and session state.
 
-These drive the real orchestrator helpers, the real approval and trust stores
-against real files on disk, and the real session store against a real SQLite
-database. Nothing is stubbed.
+These drive the orchestrator helpers, the approval and trust stores against
+files on disk, and the session store against a SQLite database.
 """
 
 from __future__ import annotations

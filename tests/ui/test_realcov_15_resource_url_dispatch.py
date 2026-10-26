@@ -8,9 +8,8 @@ These tests register a *real* in-process URL handler through
 :meth:`QDesktopServices.setUrlHandler`. Clicking a Resources button then runs
 the real ``_open_resource_url`` body, which calls the real
 ``QDesktopServices.openUrl``; Qt's own dispatcher delivers the URL to the
-registered handler. We assert on the genuine :class:`QUrl` Qt routed, proving
-end-to-end that the button wiring opens the correct URL without ever stubbing
-the function under test.
+registered handler. We assert on the :class:`QUrl` Qt routed, which checks
+end-to-end that the button wiring opens the correct URL.
 
 A real scheme handler is the standard test seam for ``openUrl``: it avoids
 launching an external browser (which is neither deterministic nor headless)

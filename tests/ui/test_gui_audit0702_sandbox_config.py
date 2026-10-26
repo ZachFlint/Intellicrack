@@ -108,8 +108,8 @@ class _SlowSandboxManager:
     Exercises the exact coroutine shape ``SandboxMonitorWidget._stop_via_manager``
     dispatches (an ``async def destroy_all(self)`` coroutine) using a real
     ``asyncio.sleep`` delay in place of VM/container teardown latency, so the
-    async dispatch can be measured against genuine wall-clock and
-    ordering behaviour instead of a mocked awaitable.
+    async dispatch can be measured against actual wall-clock and
+    ordering behavior.
 
     Attributes:
         delay_s: Simulated teardown latency, in seconds.

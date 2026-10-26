@@ -147,41 +147,80 @@ fn extract_ascii_strings_parallel(
     min_length: usize,
     max_results: usize,
 ) -> Vec<StringMatch> {
-    let chunk_spans: Vec<Vec<Span>> = data
-        .par_chunks(PARALLEL_CHUNK_SIZE)
-        .enumerate()
-        .map(|(index, chunk)| {
-            let base = index * PARALLEL_CHUNK_SIZE;
-            ascii_spans(chunk, min_length, max_results)
-                .into_iter()
-                .map(|span| Span {
-                    offset: span.offset + base,
-                    len: span.len,
-                })
-                .collect()
-        })
-        .collect();
-
-    // Stitch runs that abut a chunk seam back into a single continuous run
-    // before the min_length filter is applied, so a string split across the
-    // 64 KiB chunk boundary is neither fragmented nor dropped.
-    let mut stitched: Vec<Span> = Vec::new();
-    for span in chunk_spans.into_iter().flatten() {
-        if let Some(prev) = stitched.last_mut() {
-            if prev.offset + prev.len == span.offset {
-                prev.len += span.len;
-                continue;
-            }
-        }
-        stitched.push(span);
-    }
-
-    stitched
+    let batch_len = PARALLEL_CHUNK_SIZE * rayon::current_num_threads().max(1) * CHUNKS_PER_THREAD;
+    ascii_spans_batched(data, min_length, max_results, batch_len)
         .into_iter()
-        .filter(|span| span.len >= min_length)
-        .take(max_results)
         .map(|span| ascii_match(data, span))
         .collect()
+}
+
+/// Chunks each rayon thread scans per batch of [`ascii_spans_batched`], enough
+/// to keep the pool busy while bounding how much a batch holds.
+const CHUNKS_PER_THREAD: usize = 4;
+
+/// The first `max_results` printable-ASCII runs of `data` at least
+/// `min_length` long, found by scanning `batch_len` bytes at a time with the
+/// batch's chunks in parallel.
+///
+/// Runs that abut a chunk seam are stitched back into one continuous run
+/// before the `min_length` filter, so a string split across a chunk or batch
+/// boundary is neither fragmented nor dropped. The last run of a batch stays
+/// open until the next batch shows where it ends. Scanning stops as soon as
+/// `max_results` runs are final, and each chunk keeps only as many interior
+/// runs as are still needed, so the candidates held at once are bounded by one
+/// batch rather than by the size of `data`. `batch_len` must be a multiple of
+/// the chunk size, so chunk boundaries fall at the same offsets in every
+/// batch.
+fn ascii_spans_batched(
+    data: &[u8],
+    min_length: usize,
+    max_results: usize,
+    batch_len: usize,
+) -> Vec<Span> {
+    let mut kept: Vec<Span> = Vec::new();
+    if max_results == 0 {
+        return kept;
+    }
+    let mut open: Option<Span> = None;
+    for (batch_index, batch) in data.chunks(batch_len).enumerate() {
+        let needed = max_results - kept.len();
+        let batch_base = batch_index * batch_len;
+        let chunk_spans: Vec<Vec<Span>> = batch
+            .par_chunks(PARALLEL_CHUNK_SIZE)
+            .enumerate()
+            .map(|(index, chunk)| {
+                let base = batch_base + index * PARALLEL_CHUNK_SIZE;
+                ascii_spans(chunk, min_length, needed)
+                    .into_iter()
+                    .map(|span| Span {
+                        offset: span.offset + base,
+                        len: span.len,
+                    })
+                    .collect()
+            })
+            .collect();
+        for span in chunk_spans.into_iter().flatten() {
+            match open.as_mut() {
+                Some(prev) if prev.offset + prev.len == span.offset => prev.len += span.len,
+                _ => {
+                    if let Some(done) = open.replace(span) {
+                        if done.len >= min_length {
+                            kept.push(done);
+                            if kept.len() == max_results {
+                                return kept;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if let Some(done) = open {
+        if done.len >= min_length && kept.len() < max_results {
+            kept.push(done);
+        }
+    }
+    kept
 }
 
 /// Extracts UTF-16 strings in byte order `order` whose code units start at
@@ -199,29 +238,26 @@ fn extract_utf16_strings(
     let mut i = parity;
     loop {
         let unit = (i + 1 < data.len()).then(|| (data[i], data[i + 1]));
-        match unit.and_then(|(first, second)| order.printable_unit(first, second)) {
-            Some(byte) => {
-                if current.is_empty() {
-                    start_offset = i;
-                }
-                current.push(char::from(byte));
+        if let Some(byte) = unit.and_then(|(first, second)| order.printable_unit(first, second)) {
+            if current.is_empty() {
+                start_offset = i;
             }
-            None => {
-                if !current.is_empty() && current.len() >= min_length {
-                    results.push(StringMatch {
-                        offset: start_offset,
-                        length: i - start_offset,
-                        encoding: order.label(),
-                        content: std::mem::take(&mut current),
-                    });
-                    if results.len() >= max_results {
-                        break;
-                    }
-                }
-                current.clear();
-                if unit.is_none() {
+            current.push(char::from(byte));
+        } else {
+            if !current.is_empty() && current.len() >= min_length {
+                results.push(StringMatch {
+                    offset: start_offset,
+                    length: i - start_offset,
+                    encoding: order.label(),
+                    content: std::mem::take(&mut current),
+                });
+                if results.len() >= max_results {
                     break;
                 }
+            }
+            current.clear();
+            if unit.is_none() {
+                break;
             }
         }
         i += 2;
@@ -570,6 +606,60 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].offset, PARALLEL_CHUNK_SIZE - 3);
         assert_eq!(results[0].content, "BBBBBB");
+    }
+
+    /// The batched scan holds no more runs than it reports: on 2 MiB of dense
+    /// five-byte runs it returns exactly the first ten, at offsets 0, 5, … 45,
+    /// rather than ten per chunk across all 32 chunks.
+    #[test]
+    fn test_ascii_batched_scan_stops_at_max_results() {
+        let data = b"ABCD\0".repeat((2 << 20) / 5);
+        let spans = ascii_spans_batched(&data, 4, 10, 2 * PARALLEL_CHUNK_SIZE);
+        let offsets: Vec<usize> = spans.iter().map(|span| span.offset).collect();
+        assert_eq!(offsets, (0..10).map(|i| i * 5).collect::<Vec<_>>());
+        assert!(spans.iter().all(|span| span.len == 4));
+        assert_eq!(
+            ascii_spans_batched(&data, 4, 0, 2 * PARALLEL_CHUNK_SIZE).len(),
+            0
+        );
+    }
+
+    /// Runs that cross a chunk seam or a batch seam come out whole and in
+    /// order, the same runs a single sequential scan finds, including one
+    /// that spans an entire batch.
+    #[test]
+    fn test_ascii_batched_scan_matches_a_sequential_scan_across_batch_seams() {
+        let chunk = PARALLEL_CHUNK_SIZE;
+        let batch = 2 * chunk;
+        let mut data = vec![0u8; 7 * chunk + 123];
+        for (start, len) in [
+            (chunk - 3, 6),
+            (batch - 2, 5),
+            (2 * batch + 10, batch + 20),
+            (5 * chunk + 7, 3),
+            (7 * chunk + 100, 23),
+        ] {
+            data[start..start + len].fill(b'Z');
+        }
+        let sequential: Vec<(usize, usize)> = ascii_spans(&data, 4, usize::MAX)
+            .into_iter()
+            .filter(|span| span.len >= 4)
+            .map(|span| (span.offset, span.len))
+            .collect();
+        let batched: Vec<(usize, usize)> = ascii_spans_batched(&data, 4, usize::MAX, batch)
+            .into_iter()
+            .map(|span| (span.offset, span.len))
+            .collect();
+        assert_eq!(
+            batched,
+            vec![
+                (chunk - 3, 6),
+                (batch - 2, 5),
+                (2 * batch + 10, batch + 20),
+                (7 * chunk + 100, 23)
+            ]
+        );
+        assert_eq!(batched, sequential);
     }
 
     #[test]

@@ -108,7 +108,7 @@ class TestCreateThreadButtonDrivesCreateThreadRpc:
     ) -> None:
         """Clicking Create must send ``createthread 0x402000, 0x0``, read ``$result``, and verify it.
 
-        Falsifiable: if ``_on_create_thread`` read a different address
+        If ``_on_create_thread`` read a different address
         widget, or ``X64DbgBridge.create_thread`` (``bridges/x64dbg.py``)
         queued a different console command, skipped the ``$result``
         readback, or never polled ``thread_detail`` to confirm the new
@@ -194,7 +194,7 @@ class TestKillThreadButtonDrivesKillThreadRpc:
     ) -> None:
         """Clicking Kill must send ``killthread 1234, 0`` and verify ``thread_detail`` no longer lists it.
 
-        Falsifiable: if ``_on_kill_thread`` read a different table column,
+        If ``_on_kill_thread`` read a different table column,
         or ``X64DbgBridge.kill_thread`` (``bridges/x64dbg.py``) queued a
         different console command or never polled ``thread_detail`` for
         absence, the recorded command sequence would not match, and the
@@ -243,7 +243,7 @@ class TestKillThreadButtonDrivesKillThreadRpc:
     ) -> None:
         """A ``thread_detail`` that still lists the tid after ``killthread`` must surface as an error.
 
-        Falsifiable: a naive implementation that returns ``{"success":
+        A naive implementation that returns ``{"success":
         True, ..., "verified": True}`` without checking ``thread_detail``
         would report success here even though the debugger's own thread
         listing proves the kill never took effect; this test only passes

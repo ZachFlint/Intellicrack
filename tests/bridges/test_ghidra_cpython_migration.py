@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Ghidra bridge PyGhidra/CPython runtime.
+"""Tests for the Ghidra bridge PyGhidra/CPython runtime.
 
 Ghidra 11.3+/12.x removed the bundled Jython interpreter, so the bridge drives ``analyzeHeadless``
 through PyGhidra, and every remote-exec payload runs under real CPython/jpype. The bridge allocates
@@ -76,7 +76,7 @@ _PACKAGES_AVAILABLE: Final[bool] = (
     and importlib.util.find_spec("pyghidra") is not None
 )
 # Committed live-audit target: a real, licensed IDA component executable
-# with a genuine import table and a sizeable .text section, staged under the
+# with an import table and a sizeable .text section, staged under the
 # system temp directory (never inside the repo).
 _TARGET_BINARY: Final[Path] = Path(tempfile.gettempdir()) / "ic_audit_targets" / "ida_lc.exe"
 
@@ -119,7 +119,7 @@ def _file_bytes_at_rva(target: Path, rva: int, length: int) -> bytes:
     Uses ``pefile`` as an independent oracle for the RVA-to-file-offset
     mapping (consulting the real PE section table) rather than assuming any
     fixed relationship between virtual and file offsets, so the comparison
-    against Ghidra's own ``read_bytes`` is a genuine cross-check.
+    against Ghidra's own ``read_bytes`` is an independent cross-check.
 
     Args:
         target: Real, on-disk PE file to read from.
@@ -143,12 +143,12 @@ def _file_bytes_at_rva(target: Path, rva: int, length: int) -> bytes:
 async def real_bridge(tmp_path_factory: pytest.TempPathFactory) -> AsyncGenerator[GhidraBridge]:
     """Boot a real headless Ghidra bridge, load, and fully analyze a real PE.
 
-    Launches ``analyzeHeadless`` through PyGhidra against the genuine Ghidra
+    Launches ``analyzeHeadless`` through PyGhidra against the Ghidra
     installation resolved by :func:`_resolve_ghidra_install`, waits for the
     bridge RPC server to come up on the bridge's default port, imports the committed live-audit
         target, and runs full auto-analysis so the
     function list and data-type/import surfaces this module exercises are
-    genuinely populated (not just the raw import-time stubs).
+    populated (not just the raw import-time stubs).
 
     Deliberately does *not* override the RPC port: the bridge's default of
     ``GhidraBridge.DEFAULT_PORT`` (4768) is asserted directly by
@@ -204,7 +204,7 @@ async def test_start_headless_binds_default_port_and_finds_functions(
     failed to start the bridge server (for example because a live Jython
     extension shadowed the CPython launch), the fixture's ``start_headless``/``load_binary``/``analyze`` calls
     would already have raised before this test ever ran. Reaching the final
-    assertion also proves auto-analysis genuinely ran against a real
+    assertion also shows auto-analysis ran against the loaded
     program, since ``get_functions`` returning an empty list would mean
     analysis silently produced nothing.
 
@@ -357,7 +357,7 @@ async def test_create_data_type_enum_is_retrievable_via_data_type_manager(
         The readback is independent of
     ``create_data_type``'s own success flag: it re-queries the program's
     ``DataTypeManager`` directly by category path through
-    ``execute_script``, proving the enum genuinely persisted rather than
+    ``execute_script``, showing the enum persisted rather than
     trusting the mutator's own report.
 
     Args:
@@ -387,7 +387,7 @@ async def test_get_imports_returns_nonempty_without_none_type_error(
     ``get_imports`` binds ``sym.getParentSymbol()`` once and guards both the parent and the
     symbol name against ``None``, because a real PE's external symbol table routinely contains
     symbols with no parent library symbol. On a real,
-    fully analyzed PE the import table always includes genuine
+    fully analyzed PE the import table always includes
     KERNEL32/api-ms-* style imports, so a non-empty result also confirms
     real import data was returned, not a masked empty fallback.
 

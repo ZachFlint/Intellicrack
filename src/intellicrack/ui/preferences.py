@@ -481,8 +481,8 @@ class PreferencesDialog(QDialog):
             dialog against state it cannot reach.
     """
 
-    settings_changed = pyqtSignal(Config)
-    mcp_settings_requested = pyqtSignal()
+    settings_changed: pyqtSignal = pyqtSignal(Config)
+    mcp_settings_requested: pyqtSignal = pyqtSignal()
 
     def __init__(self, config: Config, parent: QWidget | None = None) -> None:
         """Initialize the PreferencesDialog with application configuration.

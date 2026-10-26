@@ -3,11 +3,11 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Shared fixtures: real binaries, real documents, and the API without a socket.
+"""Shared fixtures: copied executables, open documents, and the API without a socket.
 
 Four things every suite in this package needs are built here once.
 
-The first is a genuine binary to analyse, which is a copy of something already
+The first is a binary to analyze, which is a copy of something already
 installed rather than a blob committed beside the tests. :func:`copy_executable`
 copies the running interpreter, a real PE with a real DOS header, section table
 and checksum field; :func:`copy_engine_binary` copies the compiled hexcore
@@ -25,7 +25,7 @@ tests while still exercising authentication, routing and error rendering for
 real.
 
 The third is :meth:`Session.run_recipe`, which joins the recipe table to the
-dispatcher. It fails loudly by default: an operation whose recipe declares no
+dispatcher. It raises by default: an operation whose recipe declares no
 tolerated failure kinds must succeed, and any other outcome propagates rather
 than being recorded and forgiven.
 
@@ -278,7 +278,7 @@ def scratch_directory(prefix: str = _SCRATCH_PREFIX) -> Generator[Path]:
 def copy_executable(directory: Path, *, name: str = _EXECUTABLE_COPY_NAME) -> Path:
     """Copy the running interpreter into a directory as an analysis subject.
 
-    The interpreter is a genuine PE image: it carries an ``MZ`` signature, a DOS
+    The interpreter is a PE image: it carries an ``MZ`` signature, a DOS
     header the template engine can parse, and a checksum field the PE operations
     can verify and repair. Copying it rather than committing a fixture keeps this
     directory free of binary blobs and cleanly deletable.

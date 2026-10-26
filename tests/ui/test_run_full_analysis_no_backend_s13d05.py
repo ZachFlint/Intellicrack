@@ -16,14 +16,14 @@ connected, in which case it falls back to the pre-loaded ``BinaryInfo``
 metadata, appends a "No bridges connected" note, and sets
 ``complete=False``. The ``isinstance`` check is therefore always true, and the handler
 must not report "Full analysis complete" for a misleading 0-functions result that looks
-as if the binary genuinely had no functions.
+as if the binary had no functions.
 
 The handler also checks ``result.complete`` (the aggregator's own signal that at least one
 bridge actually contributed data). When it is ``False``, the handler shows an actionable
 "no backend connected" warning instead of the "complete" status.
 
 This test drives the real ``_run_bridge_analysis`` -> ``AnalysisAggregator``
-pipeline end to end against a real ``BinaryInfo`` (parsed from a genuine
+pipeline end to end against a real ``BinaryInfo`` (parsed from a
 Windows system DLL via the orchestrator's own ``_load_binary``) with an
 otherwise-empty ``ToolRegistry`` -- i.e. no Ghidra/Cutter bridge registered,
 the real "no backend connected" condition -- through

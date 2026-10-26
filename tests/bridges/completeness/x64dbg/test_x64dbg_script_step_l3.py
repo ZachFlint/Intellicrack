@@ -49,7 +49,7 @@ class TestScriptStepSendsDedicatedPipeCommand:
     def test_step_sends_script_step_then_queries_script_error_in_order() -> None:
         """Stepping must send ``script_step`` (no params) then the ``script.iserror()`` readback, in order.
 
-        Falsifiable: if ``script_step`` sent ``exec`` with
+        If ``script_step`` sent ``exec`` with
         ``"scriptstep"`` instead of the dedicated ``script_step`` RPC
         (the non-existent console command this order explicitly
         forbids), ``fake.sent`` would never contain a ``script_step``
@@ -79,7 +79,7 @@ class TestScriptStepSendsDedicatedPipeCommand:
     def test_step_with_script_iserror_set_raises_tool_error() -> None:
         """A non-zero ``script.iserror()`` after stepping must raise ``ToolError``, not a fabricated success.
 
-        Falsifiable: a wrapper that claimed ``success: True``
+        A wrapper that claimed ``success: True``
         unconditionally (the pattern that the sibling script-op tests guard against for ``script_load``/``script_run``/
         ``script_abort``) would not raise here even though x64dbg's own
         error register proves the step failed.
@@ -130,7 +130,7 @@ class TestScriptStepButtonDispatchesRpc:
     ) -> None:
         """Clicking Step must send ``script_step`` and report a verified success.
 
-        Falsifiable: if the Step button were never wired to
+        If the Step button were never wired to
         ``_on_script_step``/``bridge.script_step()`` (a DEAD-CONTROL),
         no ``script_step`` command would ever be recorded and the
         status label would never update.

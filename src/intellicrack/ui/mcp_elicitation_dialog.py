@@ -370,7 +370,7 @@ class McpElicitationDialog(QDialog):
     Emits ``answered(action: str)`` with ``accept``, ``decline`` or ``cancel`` once the operator has decided.
     """
 
-    answered = pyqtSignal(str)
+    answered: pyqtSignal = pyqtSignal(str)
 
     def __init__(
         self,

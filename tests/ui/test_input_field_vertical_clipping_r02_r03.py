@@ -253,7 +253,7 @@ def test_process_panel_input_fields_not_vertically_clipped(themed_qapp: QApplica
                 measured += _assert_visible_fields_not_clipped(tab, threshold, factory.__name__)
         tab.close()
 
-    assert measured >= 10, f"expected to measure the real input fields, only saw {measured}"
+    assert measured >= 10, f"expected to measure at least 10 input fields, only saw {measured}"
 
 
 @pytest.mark.parametrize("theme", ["dark", "dark2", "light", "light2"])

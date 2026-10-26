@@ -520,7 +520,7 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
         timeout: Socket timeout for one connection, so an idle client is dropped.
     """
 
-    timeout = _CALLBACK_HANDLER_TIMEOUT_S
+    timeout: ClassVar[float | None] = _CALLBACK_HANDLER_TIMEOUT_S
 
     def do_GET(self) -> None:
         """Handle a GET request, recording it only if it is the real redirect."""

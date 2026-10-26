@@ -359,7 +359,7 @@ class TestInterceptReturnAndReplaceFunctionPopulateHooksTable:
         Ret" toolbar button would (dialogs monkeypatched to fixed values, the
         bridge call itself real and dispatched synchronously), targeting the
         spawned notepad process's real ``kernel32.dll!GetCurrentProcessId``
-        export. Falsifiable: without the row insertion, ``hooks_row_count()`` stays 0 and
+        export. Without the row insertion, ``hooks_row_count()`` stays 0 and
         ``hook_ids_snapshot()`` stays empty even though the bridge call succeeds, so this test
         fails on the row-count/id assertions.
 
@@ -415,8 +415,8 @@ class TestInterceptReturnAndReplaceFunctionPopulateHooksTable:
         real ``kernel32.dll!GetTickCount`` export with a constant-returning
         ``NativeCallback`` (the same target/replacement idiom already proven
         safe in ``tests/bridges/test_realcov_03a_frida_modules.py``).
-        Falsifiable: without the row insertion, the row never appears even though
-        ``FridaBridge.replace_function`` genuinely installed the replacement.
+        Without the row insertion, the row never appears even though
+        ``FridaBridge.replace_function`` installed the replacement.
 
         Args:
             synchronous_dispatch: Captures and drains dispatched coroutines.
@@ -463,7 +463,7 @@ class TestInterceptReturnAndReplaceFunctionPopulateHooksTable:
         """A failed Intercept-Ret install must remove its pending row, not leave it stuck.
 
         Targets an export that does not exist so the real bridge call
-        genuinely fails, then asserts the pending row -- inserted before
+        fails, then asserts the pending row -- inserted before
         dispatch so the row is visible while installing -- is cleaned up
         rather than left showing "Installing..." forever.
 
@@ -540,8 +540,8 @@ class TestAdvancedTabSystemFunctionCallLayout:
     def test_advanced_tab_is_hosted_in_a_scroll_area(qapp: QApplication) -> None:
         """The Advanced tab's content must be wrapped in a scroll area, not clipped in the dock.
 
-        Falsifiable: if ``_right_tabs.addTab`` received the bare
-        Advanced-section container directly, so this widget lookup would not
+        If ``_right_tabs.addTab`` received the bare
+        Advanced-section container directly, this widget lookup would not
         be a ``QScrollArea`` and the assertion fails.
 
         Args:
@@ -568,7 +568,7 @@ class TestAdvancedTabSystemFunctionCallLayout:
         The three ``SystemFunctionCallControls`` rows (address/args/call,
         return-type/arg-types/convention, value/errno/GetLastError) must be hosted in a horizontally scrolling control row.
         Plain ``QHBoxLayout``s would let Qt shrink every label/combo/input below its ``sizeHint`` when the panel narrows,
-        which renders the reported "Return/Value labels render on top of the combos" symptom. Falsifiable: if the rows are no longer hosted in a
+        which renders the reported "Return/Value labels render on top of the combos" symptom. If the rows are no longer hosted in a
         horizontally-scrolling control row, either the "must overflow"
         assertion fails (nothing to scroll), a control's rendered width drops
         below its natural size, or two controls' geometries intersect.

@@ -74,7 +74,7 @@ class _AntiEvasionSandbox(QEMUSandbox):
 
         Deriving the count from the inherited
         :meth:`QEMUSandbox._anti_evasion_registry_commands` keeps the control
-        honest without restating the guest-side command set in the test.
+        count in step with production without restating the guest-side command set in the test.
 
         Returns:
             int: Number of registry commands this profile dispatches.
@@ -138,7 +138,7 @@ class _AbsentAgent(GuestAgentClient):
         args: Sequence[str] | None = None,
         time_limit: float = 30.0,
     ) -> tuple[int, str, str]:
-        """Fail loudly: a disconnected agent must never be asked to run anything.
+        """Raise AssertionError: a disconnected agent must never be asked to run anything.
 
         Args:
             command: Command name (ignored).

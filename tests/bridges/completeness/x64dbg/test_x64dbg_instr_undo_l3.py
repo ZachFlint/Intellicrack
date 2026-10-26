@@ -86,7 +86,7 @@ class TestUndoButtonDrivesInstrUndoRpc:
         first call and ``0x401000`` on the second, modelling the real
         before/after instruction-pointer change an ``InstrUndo`` causes.
 
-        Falsifiable: if ``instr_undo`` read the registers in the wrong
+        If ``instr_undo`` read the registers in the wrong
         order, sent a different console command, or reported the wrong
         old/new IP pairing, the recorded command sequence would not show
         ``reg_all`` before ``exec``/``InstrUndo`` and another ``reg_all``

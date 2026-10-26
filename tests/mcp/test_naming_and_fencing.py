@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates for MCP tool naming, provider wire names, untrusted text and catalog isolation.
 
-These exercise the real functions against real values. Nothing here is mocked:
-the wire-name gate drives ``intellicrack.providers.tool_names`` itself, and the
-isolation gate drives a real :class:`ToolRegistry`.
+The wire-name gate drives ``intellicrack.providers.tool_names``, and the
+isolation gate drives a :class:`ToolRegistry`.
 """
 
 from __future__ import annotations

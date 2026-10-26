@@ -382,7 +382,7 @@ class SplashScreen(QSplashScreen):
         progress_updated: Qt signal emitted on progress change with (value, message).
     """
 
-    progress_updated = pyqtSignal(int, str)
+    progress_updated: pyqtSignal = pyqtSignal(int, str)
 
     def __init__(self, version: str = "") -> None:
         """Initialize the SplashScreen with the given version string.
@@ -635,7 +635,7 @@ class SplashScreen(QSplashScreen):
         self._status_label.setVisible(False)
 
         border_radius = max(1, _PROGRESS_BAR_BASE_HEIGHT // 2)
-        self.progress_bar = QProgressBar()
+        self.progress_bar: QProgressBar = QProgressBar()
         self._progress_bar = self.progress_bar
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)

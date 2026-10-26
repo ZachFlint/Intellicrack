@@ -52,7 +52,12 @@ pub enum IoError {
     NoFilePath,
     /// A single byte was requested at or past the end of the document.
     #[error("offset out of bounds: {offset} >= {length}")]
-    OffsetOutOfBounds { offset: usize, length: usize },
+    OffsetOutOfBounds {
+        /// The offset requested.
+        offset: usize,
+        /// The document's length in bytes.
+        length: usize,
+    },
 }
 
 /// A file's bytes, held so that they cannot change while they are borrowed.
@@ -82,11 +87,22 @@ impl Deref for FileBytes {
 /// already write it. Elsewhere it is always copied, since no lock can stop a
 /// truncation that would fault a mapping.
 ///
+/// Only a regular file is loaded. A directory, FIFO or device is refused up
+/// front: its metadata length says nothing about its contents, and opening a
+/// FIFO for reading blocks until a writer appears.
+///
 /// # Errors
 ///
-/// Returns the error from opening, mapping or reading the file, including an
+/// Returns `InvalidInput` for a path that is not a regular file, and otherwise
+/// the error from opening, mapping or reading the file, including an
 /// `OutOfMemory` error when a copy of it cannot be allocated.
 pub(crate) fn load_stable(path: &Path) -> io::Result<FileBytes> {
+    if !fs::metadata(path)?.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("{} is not a regular file", path.display()),
+        ));
+    }
     match map_locked(path)? {
         Some(mmap) => Ok(FileBytes::Mapped(mmap)),
         None => read_snapshot(path).map(FileBytes::Owned),
@@ -115,14 +131,17 @@ impl MmapDocument {
     ///
     /// An empty file, one another handle can already write, and on platforms
     /// other than Windows every file, is copied into memory instead, so the
-    /// document never reads bytes that can change or fault underneath it.
+    /// document never reads bytes that can change or fault underneath it. The
+    /// path is stored absolute, so a later change of the working directory
+    /// cannot make it name a different file.
     ///
     /// # Errors
     ///
-    /// Returns [`IoError::Io`] if the file cannot be opened, mapped or read, or
-    /// if a copy of it cannot be allocated.
+    /// Returns [`IoError::Io`] if the path cannot be made absolute, if it is not
+    /// a regular file, if the file cannot be opened, mapped or read, or if a
+    /// copy of it cannot be allocated.
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, IoError> {
-        let path = path.as_ref().to_path_buf();
+        let path = std::path::absolute(path.as_ref())?;
         let (piece_table, mmap) = match load_stable(&path)? {
             FileBytes::Mapped(mmap) => (PieceTable::from_mmap(Arc::clone(&mmap)), Some(mmap)),
             FileBytes::Owned(data) => (PieceTable::from_vec(data), None),
@@ -246,33 +265,118 @@ impl MmapDocument {
     /// it.
     pub fn save<P: AsRef<Path>>(&mut self, path: P) -> Result<(), IoError> {
         let path = path.as_ref();
-        let data = self.piece_table.try_materialize().map_err(|e| {
-            io::Error::new(
+        let data = self.snapshot_for_save(path)?;
+        let prepared = Self::prepare_save(path, data)?;
+        self.commit_save(prepared)
+    }
+
+    /// Copies the document's bytes for a save to `path`, the first of the three
+    /// phases [`MmapDocument::save`] runs.
+    ///
+    /// The phases exist apart so a caller that guards the document with a lock
+    /// can hold it only where the document is touched: a shared lock for this
+    /// copy, none for [`MmapDocument::prepare_save`], and an exclusive one for
+    /// [`MmapDocument::commit_save`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IoError::Io`] with [`io::ErrorKind::OutOfMemory`] when a copy
+    /// of the document cannot be allocated.
+    pub fn snapshot_for_save(&self, path: &Path) -> Result<Vec<u8>, IoError> {
+        self.piece_table.try_materialize().map_err(|e| {
+            IoError::Io(io::Error::new(
                 io::ErrorKind::OutOfMemory,
                 format!(
                     "cannot allocate {} bytes to save {}: {e}",
                     self.piece_table.length(),
                     path.display()
                 ),
-            )
-        })?;
-        let temp = TempFile::write_beside(path, |file| file.write_all(&data))?;
-        let spare = if self.maps_file(path) {
+            ))
+        })
+    }
+
+    /// Writes `data` to a new temp file beside the file a save to `path`
+    /// replaces, and flushes it to disk.
+    ///
+    /// This touches no document, so it needs no lock. Dropping the result
+    /// without committing it removes the temp file and leaves `path` alone.
+    /// On Unix a symlink `path` is followed, so the temp file sits beside the
+    /// linked file and the link survives the save; see [`resolve_target`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IoError::Io`] if `path` cannot be made absolute or has no file
+    /// name, if it is a dangling symlink, or if creating, writing or flushing
+    /// the temp file fails.
+    pub fn prepare_save<P: AsRef<Path>>(path: P, data: Vec<u8>) -> Result<PreparedSave, IoError> {
+        let target = std::path::absolute(path.as_ref())?;
+        let destination = resolve_target(&target)?;
+        let temp = TempFile::write_beside(&destination, |file| file.write_all(&data))?;
+        Ok(PreparedSave {
+            target,
+            destination,
+            data,
+            temp,
+        })
+    }
+
+    /// Renames a prepared save over its target and makes the target this
+    /// document's file.
+    ///
+    /// `prepared` must hold this document's current bytes, which a caller that
+    /// let other edits run since [`MmapDocument::snapshot_for_save`] has to
+    /// check first; a stale save is dropped instead and the save run again.
+    /// When the target is the file this document maps, the mapping is released
+    /// before the rename, since some Windows hosts refuse to replace a mapped
+    /// file. On success the document adopts the target and maps and locks it,
+    /// or keeps the saved bytes in memory when it cannot.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IoError::Io`] if renaming the temp file fails, or, on
+    /// Windows, if another program has the target open for writing. The
+    /// document's bytes, path and modified state are then unchanged, although
+    /// a document saving over its own file no longer maps it.
+    pub fn commit_save(&mut self, prepared: PreparedSave) -> Result<(), IoError> {
+        let PreparedSave {
+            target,
+            destination,
+            data,
+            temp,
+        } = prepared;
+        let spare = if self.maps_file(&target) {
             self.detach(data);
             None
         } else {
             Some(data)
         };
-        temp.persist(path)?;
+        temp.persist(&destination)?;
 
-        self.path = Some(path.to_path_buf());
+        let mapped = map_locked(&destination);
+        self.path = Some(target);
         self.detached_changes = false;
-        match (map_locked(path), spare) {
-            (Ok(Some(mmap)), _) => self.adopt_mapping(mmap),
+        self.adopt_saved(mapped.ok().flatten(), spare);
+        Ok(())
+    }
+
+    /// Makes the file just saved the baseline: its mapping when that holds
+    /// exactly the bytes this document wrote, and otherwise those bytes in
+    /// memory.
+    ///
+    /// Another process can replace the file between the rename and the remap,
+    /// so a mapping is adopted only after its bytes are compared with the ones
+    /// saved: `spare`, or, for a document that saved over its own file and
+    /// already holds them, its own. A mismatch keeps the saved bytes, so the
+    /// document never adopts content it did not write.
+    fn adopt_saved(&mut self, mapping: Option<Arc<Mmap>>, spare: Option<Vec<u8>>) {
+        match (mapping, spare) {
+            (Some(mmap), Some(data)) if mmap[..] == data[..] => self.adopt_mapping(mmap),
+            (Some(mmap), None) if self.piece_table.content_equals(&mmap) => {
+                self.adopt_mapping(mmap);
+            }
             (_, Some(data)) => self.adopt_owned(data),
             (_, None) => {}
         }
-        Ok(())
     }
 
     /// Saves the document back to its own file path.
@@ -299,13 +403,7 @@ impl MmapDocument {
     /// writing, flushing or renaming the temp file fails, or, on Windows, if
     /// another program has `path` open for writing.
     pub fn write_copy<P: AsRef<Path>>(&self, path: P) -> Result<(), IoError> {
-        let path = path.as_ref();
-        TempFile::write_beside(path, |file| {
-            let mut out = io::BufWriter::new(file);
-            self.piece_table.write_to(&mut out)?;
-            out.flush()
-        })?
-        .persist(path)?;
+        write_file_with(path, |out| self.piece_table.write_to(out).map(|()| true))?;
         Ok(())
     }
 
@@ -317,8 +415,28 @@ impl MmapDocument {
     /// and a later save all work. Its path and modified state are unchanged,
     /// and closing a document that maps nothing does nothing.
     pub fn close(&mut self) {
-        if self.mmap.is_some() {
+        if self.is_mapped() {
             let data = self.piece_table.materialize();
+            self.close_with(data);
+        }
+    }
+
+    /// Reports whether the document reads its file through a mapping, which is
+    /// what [`MmapDocument::close`] releases.
+    #[must_use]
+    pub fn is_mapped(&self) -> bool {
+        self.mmap.is_some()
+    }
+
+    /// [`MmapDocument::close`] with the copy of the current bytes made by the
+    /// caller, so a caller that guards the document with a lock can make the
+    /// copy under a shared lock and hold the exclusive one only to swap it in.
+    ///
+    /// `data` must be this document's current bytes; a caller that let edits
+    /// run since copying them has to check that first. A document that maps
+    /// nothing is left alone.
+    pub fn close_with(&mut self, data: Vec<u8>) {
+        if self.is_mapped() {
             self.detach(data);
         }
     }
@@ -403,7 +521,13 @@ fn open_locked(path: &Path) -> io::Result<File> {
     File::open(path)
 }
 
-/// Reports whether an open failed because another handle can write the file.
+/// Reports whether an open by [`open_locked`] failed with a sharing violation.
+///
+/// That is what another handle that can write the file causes, which is why
+/// the callers treat the file as one being written: [`map_locked`] copies it
+/// instead and [`replace_target`] refuses to replace it. A handle that denies
+/// read sharing causes the same error; the copy then fails with its own
+/// sharing violation, which is reported.
 #[cfg(windows)]
 fn writer_holds(err: &io::Error) -> bool {
     use windows_sys::Win32::Foundation::ERROR_SHARING_VIOLATION;
@@ -411,7 +535,8 @@ fn writer_holds(err: &io::Error) -> bool {
     err.raw_os_error().and_then(|code| u32::try_from(code).ok()) == Some(ERROR_SHARING_VIOLATION)
 }
 
-/// Reports whether an open failed because another handle can write the file.
+/// Reports whether an open failed because another handle can write the file;
+/// other platforms have no share modes, so never.
 #[cfg(not(windows))]
 fn writer_holds(_err: &io::Error) -> bool {
     false
@@ -438,8 +563,11 @@ fn map_locked(path: &Path) -> io::Result<Option<Arc<Mmap>>> {
     // while it is mapped, because the mapping is read as `&[u8]`. On Windows
     // `open_locked` denied every other handle write access. Had any other
     // handle or mapped view been able to write the file, the open would have
-    // failed with a sharing violation and returned above, and while this
-    // handle is open no handle can be opened to write, truncate or extend it.
+    // failed with a sharing violation and returned above; a writable view
+    // keeps that write access after its own file and section handles close
+    // (`test_writable_view_keeps_the_file_locked_after_its_handles_close`).
+    // While this handle is open no handle can be opened to write, truncate or
+    // extend the file.
     // memmap2 duplicates the handle into the map and closes it only when the
     // map is dropped, so the lock lasts exactly as long as the mapping. This
     // process never writes a mapped file either: edits go to the piece
@@ -477,6 +605,84 @@ fn read_snapshot(path: &Path) -> io::Result<Vec<u8>> {
     Ok(data)
 }
 
+/// A save whose bytes are flushed to a temp file beside the target, waiting for
+/// [`MmapDocument::commit_save`] to rename it over the target.
+///
+/// Dropping it uncommitted removes the temp file and leaves the target alone.
+pub struct PreparedSave {
+    /// The path the document adopts once the save commits.
+    target: PathBuf,
+    /// The file the rename replaces: `target` with a symlink resolved.
+    destination: PathBuf,
+    /// The saved bytes, which the document adopts when it cannot map the
+    /// target.
+    data: Vec<u8>,
+    /// The flushed temp file holding `data`.
+    temp: TempFile,
+}
+
+/// Writes `path` atomically from bytes that `fill` streams into a temp file
+/// beside it.
+///
+/// `fill` writes through a buffered writer and returns whether the copy is
+/// complete. Only a complete copy is renamed over `path`, keeping its existing
+/// metadata as a save does; an abandoned one is removed and `path` is left as
+/// it was. Returns whether `path` was written.
+///
+/// # Errors
+///
+/// Returns [`IoError::Io`] if `path` has no file name, if `fill` or creating,
+/// flushing or renaming the temp file fails, or, on Windows, if another program
+/// has `path` open for writing.
+pub fn write_file_with<P, F>(path: P, fill: F) -> Result<bool, IoError>
+where
+    P: AsRef<Path>,
+    F: FnOnce(&mut dyn Write) -> io::Result<bool>,
+{
+    let destination = resolve_target(&std::path::absolute(path.as_ref())?)?;
+    let mut complete = false;
+    let temp = TempFile::write_beside(&destination, |file| {
+        let mut out = io::BufWriter::new(file);
+        complete = fill(&mut out)?;
+        out.flush()
+    })?;
+    if complete {
+        temp.persist(&destination)?;
+    }
+    Ok(complete)
+}
+
+/// The file a save to `target` replaces.
+///
+/// On Unix a symlink is followed to its file, so the temp file is created
+/// beside that file, where a rename can reach it (a rename cannot cross
+/// filesystems, and the link's own directory may be read-only), and the link
+/// itself survives the save. A dangling symlink is refused rather than
+/// replaced by a regular file. A target that does not exist yet is used as
+/// given. Windows uses `target` as given.
+///
+/// # Errors
+///
+/// Returns the error from resolving an existing `target`, such as `NotFound`
+/// for a symlink whose file is missing.
+fn resolve_target(target: &Path) -> io::Result<PathBuf> {
+    if cfg!(windows) {
+        return Ok(target.to_path_buf());
+    }
+    match fs::canonicalize(target) {
+        Ok(resolved) => Ok(resolved),
+        Err(err) if fs::symlink_metadata(target).is_ok() => Err(err),
+        Err(_) => Ok(target.to_path_buf()),
+    }
+}
+
+/// Longest prefix of the target's name, in bytes, that a temp file name keeps.
+///
+/// The temp name adds a dot, the process id, a sequence number and `.tmp` to
+/// it, so keeping at most this much keeps the name inside the 255-byte (Unix)
+/// and 255-unit (Windows) component limits for a target name of any length.
+const TEMP_STEM_LIMIT: usize = 100;
+
 /// A uniquely named file beside a save target, removed unless persisted.
 struct TempFile {
     path: PathBuf,
@@ -495,18 +701,39 @@ impl TempFile {
         target: &Path,
         write: impl FnOnce(&mut File) -> io::Result<()>,
     ) -> io::Result<Self> {
+        let sequence = std::iter::repeat_with(|| TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed));
+        Self::write_beside_with_seqs(target, sequence, write)
+    }
+
+    /// [`TempFile::write_beside`] trying the sequence numbers `seqs` yields, at
+    /// most [`TEMP_NAME_ATTEMPTS`] of them, until one names a file that does not
+    /// exist yet.
+    ///
+    /// On Unix the file is created readable and writable by its owner only, so
+    /// the new bytes are never readable by others before the replace gives the
+    /// file the target's own mode.
+    fn write_beside_with_seqs(
+        target: &Path,
+        seqs: impl IntoIterator<Item = u64>,
+        write: impl FnOnce(&mut File) -> io::Result<()>,
+    ) -> io::Result<Self> {
         let name = target.file_name().ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
                 format!("save path {} has no file name", target.display()),
             )
         })?;
+        let name = name.to_string_lossy();
+        let stem = &name[..name.floor_char_boundary(TEMP_STEM_LIMIT)];
         let dir = target.parent().unwrap_or_else(|| Path::new("."));
         let pid = std::process::id();
-        for _ in 0..TEMP_NAME_ATTEMPTS {
-            let seq = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-            let path = dir.join(format!(".{}.{pid}-{seq}.tmp", name.to_string_lossy()));
-            match OpenOptions::new().write(true).create_new(true).open(&path) {
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+        for seq in seqs.into_iter().take(TEMP_NAME_ATTEMPTS as usize) {
+            let path = dir.join(format!(".{stem}.{pid}-{seq}.tmp"));
+            match options.open(&path) {
                 Ok(file) => return Self::fill(path, file, write),
                 Err(err) if err.kind() == io::ErrorKind::AlreadyExists => {}
                 Err(err) => return Err(err),
@@ -539,16 +766,60 @@ impl TempFile {
         written.map(|()| temp)
     }
 
-    /// Moves the temp file onto `target`; on failure the temp is removed.
+    /// Moves the temp file onto `target`, keeping the existing file's access
+    /// control and attributes; see [`replace_target`].
     ///
-    /// When `target` already exists its access control and attributes are
-    /// carried onto the saved file rather than lost to a fresh inode, so a
-    /// read-only, hidden or ACL-restricted file keeps those after a save.
-    fn persist(mut self, target: &Path) -> io::Result<()> {
-        replace_target(&self.path, target)?;
-        self.persisted = true;
-        Ok(())
+    /// A replace that fails with `target` untouched removes the temp file. One
+    /// that fails after vacating `target`'s name moves the saved bytes into it,
+    /// and if even that fails the temp file is kept, since it then holds the
+    /// only copy of the saved bytes, and the error names it.
+    fn persist(self, target: &Path) -> io::Result<()> {
+        self.persist_with(target, replace_target)
     }
+
+    /// [`TempFile::persist`] with the replace step supplied by the caller.
+    fn persist_with(
+        mut self,
+        target: &Path,
+        replace: impl FnOnce(&Path, &Path) -> Result<(), ReplaceFailure>,
+    ) -> io::Result<()> {
+        let replaced = match replace(&self.path, target) {
+            Ok(()) => Ok(()),
+            Err(ReplaceFailure::Untouched(err)) => return Err(err),
+            Err(ReplaceFailure::TargetVacated(err)) => {
+                fs::rename(&self.path, target).map_err(|move_err| {
+                    io::Error::new(
+                        err.kind(),
+                        format!(
+                            "replacing {} failed partway ({err}) and moving the saved bytes into its place failed too ({move_err}); they are kept in {}",
+                            target.display(),
+                            self.path.display()
+                        ),
+                    )
+                })
+            }
+        };
+        self.persisted = true;
+        replaced?;
+        make_durable(target).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!(
+                    "{} now holds the saved bytes, but its directory could not be flushed to disk: {err}",
+                    target.display()
+                ),
+            )
+        })
+    }
+}
+
+/// How replacing a save target failed.
+enum ReplaceFailure {
+    /// The target was left as it was.
+    Untouched(io::Error),
+    /// The replace failed after the target's name was already vacated, so the
+    /// saved bytes are only in the temp file.
+    TargetVacated(io::Error),
 }
 
 /// Replaces `target` with `temp`, preserving the existing file's metadata.
@@ -556,7 +827,8 @@ impl TempFile {
 /// On Windows an existing target is replaced with `ReplaceFileW`, which keeps
 /// the replaced file's security descriptor, attributes and alternate data
 /// streams; a target that does not exist yet is a plain rename, since there is
-/// nothing to preserve.
+/// nothing to preserve. A target whose existence cannot be checked is treated
+/// as absent, and the rename then replaces it without those.
 ///
 /// A target another handle can write is refused rather than replaced: the
 /// replace would orphan that writer's file object, so everything it wrote
@@ -565,36 +837,39 @@ impl TempFile {
 /// [`open_locked`] for the whole replace, which both detects such a writer
 /// (the open fails with a sharing violation) and keeps a new one from opening
 /// the file between that check and the replace.
+///
+/// `ReplaceFileW` can fail partway. `ERROR_UNABLE_TO_MOVE_REPLACEMENT` leaves
+/// the target removed and `ERROR_UNABLE_TO_MOVE_REPLACEMENT_2` leaves it under
+/// another name, with the new bytes still in `temp` in both cases; those are
+/// reported as [`ReplaceFailure::TargetVacated`]. Every other failure leaves
+/// the target as it was.
 #[cfg(windows)]
-fn replace_target(temp: &Path, target: &Path) -> io::Result<()> {
-    use std::os::windows::ffi::OsStrExt;
+fn replace_target(temp: &Path, target: &Path) -> Result<(), ReplaceFailure> {
+    use windows_sys::Win32::Foundation::{
+        ERROR_UNABLE_TO_MOVE_REPLACEMENT, ERROR_UNABLE_TO_MOVE_REPLACEMENT_2,
+    };
     use windows_sys::Win32::Storage::FileSystem::ReplaceFileW;
 
     if !target.exists() {
-        return fs::rename(temp, target);
+        return fs::rename(temp, target).map_err(ReplaceFailure::Untouched);
     }
 
     let _writer_lock = match open_locked(target) {
         Ok(file) => Some(file),
         Err(err) if writer_holds(&err) => {
-            return Err(io::Error::new(
+            return Err(ReplaceFailure::Untouched(io::Error::new(
                 err.kind(),
                 format!(
                     "cannot replace {}: another program has it open for writing ({err})",
                     target.display()
                 ),
-            ));
+            )));
         }
         Err(_) => None,
     };
 
-    let wide = |path: &Path| {
-        let mut units: Vec<u16> = path.as_os_str().encode_wide().collect();
-        units.push(0);
-        units
-    };
-    let target_w = wide(target);
-    let temp_w = wide(temp);
+    let target_w = verbatim_wide(target);
+    let temp_w = verbatim_wide(temp);
     // SAFETY: both arguments are valid null-terminated UTF-16 strings that
     // outlive the call; the backup-file and reserved pointers are null and the
     // flags are zero, the documented "replace in place, preserve metadata,
@@ -610,24 +885,89 @@ fn replace_target(temp: &Path, target: &Path) -> io::Result<()> {
             std::ptr::null(),
         )
     };
-    if ok == 0 {
-        return Err(io::Error::last_os_error());
+    if ok != 0 {
+        return Ok(());
     }
-    Ok(())
+    let err = io::Error::last_os_error();
+    match err.raw_os_error().and_then(|code| u32::try_from(code).ok()) {
+        Some(ERROR_UNABLE_TO_MOVE_REPLACEMENT | ERROR_UNABLE_TO_MOVE_REPLACEMENT_2) => {
+            Err(ReplaceFailure::TargetVacated(err))
+        }
+        _ => Err(ReplaceFailure::Untouched(err)),
+    }
+}
+
+/// `path` as a null-terminated UTF-16 string, in verbatim (`\\?\`) form when
+/// it is a normalized absolute path.
+///
+/// Rust's own file APIs lift the `MAX_PATH` limit this way, and `ReplaceFileW`
+/// is called directly, so a path longer than 260 characters reaches it in the
+/// form it accepts. Verbatim paths are not normalized by Windows, so a path
+/// that is relative, already verbatim, or written with forward slashes is
+/// passed as it is.
+#[cfg(windows)]
+fn verbatim_wide(path: &Path) -> Vec<u16> {
+    use std::os::windows::ffi::OsStrExt;
+    use std::path::{Component, Prefix};
+
+    let wide: Vec<u16> = path.as_os_str().encode_wide().collect();
+    let normalized = !wide.contains(&u16::from(b'/'));
+    let mut units = match path.components().next() {
+        Some(Component::Prefix(prefix)) if normalized => match prefix.kind() {
+            Prefix::Disk(_) => r"\\?\".encode_utf16().chain(wide).collect(),
+            Prefix::UNC(..) => r"\\?\UNC"
+                .encode_utf16()
+                .chain(wide.into_iter().skip(1))
+                .collect(),
+            _ => wide,
+        },
+        _ => wide,
+    };
+    units.push(0);
+    units
 }
 
 /// Replaces `target` with `temp`, preserving the existing file's mode.
 ///
-/// A symlink target is resolved first, so the file it points at is replaced
-/// and the link is kept, and the existing file's permission bits are copied
-/// onto the saved file rather than left at the creating umask.
+/// The caller passes the target with any symlink already resolved (see
+/// [`resolve_target`]), so the file a link points at is replaced and the link
+/// is kept. The existing file's permission bits are copied onto the saved file
+/// rather than left at the owner-only mode it was created with.
 #[cfg(not(windows))]
-fn replace_target(temp: &Path, target: &Path) -> io::Result<()> {
-    let resolved = fs::canonicalize(target).unwrap_or_else(|_| target.to_path_buf());
-    if let Ok(metadata) = fs::metadata(&resolved) {
-        fs::set_permissions(temp, metadata.permissions())?;
+fn replace_target(temp: &Path, target: &Path) -> Result<(), ReplaceFailure> {
+    if let Ok(metadata) = fs::metadata(target) {
+        fs::set_permissions(temp, metadata.permissions()).map_err(ReplaceFailure::Untouched)?;
     }
-    fs::rename(temp, &resolved)
+    fs::rename(temp, target).map_err(ReplaceFailure::Untouched)
+}
+
+/// Makes a rename onto `target` survive a crash.
+///
+/// On Unix the directory holding `target` is flushed, since the rename lives
+/// in the directory, not in the renamed file. A file system that cannot flush
+/// a directory reports `InvalidInput` or `Unsupported`; nothing more can be
+/// done there, so that is accepted. NTFS journals the rename itself, and
+/// Windows does not open directories as files, so there is nothing to do.
+///
+/// # Errors
+///
+/// Returns the error from opening or flushing the directory.
+fn make_durable(target: &Path) -> io::Result<()> {
+    if cfg!(windows) {
+        return Ok(());
+    }
+    let dir = target.parent().unwrap_or_else(|| Path::new("."));
+    match File::open(dir).and_then(|handle| handle.sync_all()) {
+        Err(err)
+            if matches!(
+                err.kind(),
+                io::ErrorKind::InvalidInput | io::ErrorKind::Unsupported
+            ) =>
+        {
+            Ok(())
+        }
+        result => result,
+    }
 }
 
 impl Drop for TempFile {
@@ -641,7 +981,6 @@ impl Drop for TempFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Seek, SeekFrom};
 
     /// Lists this process's temp files for the save target named `name`.
     fn leftover_temps(dir: &Path, name: &str) -> Vec<PathBuf> {
@@ -698,7 +1037,13 @@ mod tests {
         let doc = MmapDocument::from_bytes(b"ABC");
         assert_eq!(doc.read_byte(0).unwrap(), b'A');
         assert_eq!(doc.read_byte(2).unwrap(), b'C');
-        assert!(doc.read_byte(3).is_err());
+        assert!(matches!(
+            doc.read_byte(3),
+            Err(IoError::OffsetOutOfBounds {
+                offset: 3,
+                length: 3
+            })
+        ));
     }
 
     #[test]
@@ -743,7 +1088,7 @@ mod tests {
         assert!(!doc.is_modified());
 
         let saved = fs::read(&save_path).unwrap();
-        assert_eq!(&saved[..8], b"Modified");
+        assert_eq!(saved, b"Modified content".to_vec());
 
         drop(doc);
         let _ = fs::remove_file(&path);
@@ -758,6 +1103,8 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn test_save_refuses_target_another_handle_is_writing() {
+        use std::io::{Seek, SeekFrom};
+
         let dir = std::env::temp_dir();
         let name = format!("hexcore_writer_held_{}.bin", std::process::id());
         let target = dir.join(&name);
@@ -996,23 +1343,379 @@ mod tests {
         let _ = fs::remove_file(&path);
     }
 
-    /// A save never opens a file that already exists beside its target.
+    /// A unique path in the temp directory for one test.
+    fn scratch(label: &str) -> PathBuf {
+        std::env::temp_dir().join(format!("hexcore_{label}_{}.bin", std::process::id()))
+    }
+
+    /// A temp name that already exists is skipped, not opened: the stale file
+    /// at the first candidate keeps its bytes and the next candidate is used.
     #[test]
-    fn test_save_leaves_a_stale_temp_name_untouched() {
-        let dir = std::env::temp_dir();
-        let target = dir.join("hexcore_test_tmpname_target.bin");
-        let stale = dir.join(".hexcore_test_tmpname_target.bin.tmp");
+    fn test_write_beside_skips_existing_candidate_names() {
+        let target = scratch("seq_target");
+        let name = target.file_name().unwrap().to_string_lossy().into_owned();
+        let pid = std::process::id();
+        let stale = target.with_file_name(format!(".{name}.{pid}-7.tmp"));
         fs::write(&stale, b"STALE").unwrap();
 
-        let mut doc = MmapDocument::from_bytes(b"NEW");
+        let temp =
+            TempFile::write_beside_with_seqs(&target, [7u64, 8], |f| f.write_all(b"NEW")).unwrap();
+        let used = temp.path.clone();
+        let written = fs::read(&used).unwrap();
+        drop(temp);
+        let stale_bytes = fs::read(&stale).unwrap();
+        fs::remove_file(&stale).unwrap();
+
+        assert_eq!(used, target.with_file_name(format!(".{name}.{pid}-8.tmp")));
+        assert_eq!(written, b"NEW".to_vec());
+        assert_eq!(stale_bytes, b"STALE".to_vec());
+        assert!(!used.exists(), "an unpersisted temp file must be removed");
+    }
+
+    /// When every candidate name exists, the save gives up with
+    /// `AlreadyExists` and touches none of them.
+    #[test]
+    fn test_write_beside_reports_exhaustion_when_every_candidate_exists() {
+        let target = scratch("seq_exhausted");
+        let name = target.file_name().unwrap().to_string_lossy().into_owned();
+        let pid = std::process::id();
+        let stale = target.with_file_name(format!(".{name}.{pid}-3.tmp"));
+        fs::write(&stale, b"STALE").unwrap();
+
+        let result =
+            TempFile::write_beside_with_seqs(&target, [3u64, 3, 3], |f| f.write_all(b"NEW"));
+        let stale_bytes = fs::read(&stale).unwrap();
+        fs::remove_file(&stale).unwrap();
+
+        assert_eq!(
+            result.err().map(|err| err.kind()),
+            Some(io::ErrorKind::AlreadyExists)
+        );
+        assert_eq!(stale_bytes, b"STALE".to_vec());
+    }
+
+    /// A target name too long to fit in a temp name still saves, both as a
+    /// new file and over the existing one, so the temp name keeps only a
+    /// prefix of it. On Windows the full path also runs past `MAX_PATH`.
+    #[test]
+    fn test_save_accepts_a_target_name_longer_than_a_temp_name_allows() {
+        let target = std::env::temp_dir().join(format!("{}.bin", "a".repeat(246)));
+        let mut doc = MmapDocument::from_bytes(b"FIRST");
         doc.save(&target).unwrap();
-
-        assert_eq!(fs::read(&stale).unwrap(), b"STALE".to_vec());
-        assert_eq!(fs::read(&target).unwrap(), b"NEW".to_vec());
-
+        let first = fs::read(&target).unwrap();
+        doc.overwrite(0, b"NEXT!");
+        doc.save(&target).unwrap();
+        let second = fs::read(&target).unwrap();
         drop(doc);
-        let _ = fs::remove_file(&stale);
-        let _ = fs::remove_file(&target);
+        fs::remove_file(&target).unwrap();
+
+        assert_eq!(first, b"FIRST".to_vec());
+        assert_eq!(second, b"NEXT!".to_vec());
+    }
+
+    /// A save that fails after vacating the target's name moves the saved
+    /// bytes into it, so the target holds them and no temp file is left.
+    #[test]
+    fn test_persist_recovers_when_the_replace_vacates_the_target() {
+        let target = scratch("vacated_recovered");
+        fs::write(&target, b"OLD").unwrap();
+        let temp = TempFile::write_beside(&target, |f| f.write_all(b"NEW")).unwrap();
+        let temp_path = temp.path.clone();
+
+        let result = temp.persist_with(&target, |_, target| {
+            fs::remove_file(target).unwrap();
+            Err(ReplaceFailure::TargetVacated(io::Error::other(
+                "moved away",
+            )))
+        });
+        let saved = fs::read(&target).unwrap();
+        fs::remove_file(&target).unwrap();
+
+        assert!(result.is_ok(), "{result:?}");
+        assert_eq!(saved, b"NEW".to_vec());
+        assert!(!temp_path.exists());
+    }
+
+    /// When the bytes cannot be moved into a vacated target either, the temp
+    /// file is kept, holding the only copy of them, and the error names it.
+    #[test]
+    fn test_persist_keeps_the_temp_when_a_vacated_target_cannot_be_filled() {
+        let target = scratch("vacated_blocked");
+        fs::write(&target, b"OLD").unwrap();
+        let temp = TempFile::write_beside(&target, |f| f.write_all(b"NEW")).unwrap();
+        let temp_path = temp.path.clone();
+
+        let result = temp.persist_with(&target, |_, target| {
+            fs::remove_file(target).unwrap();
+            fs::create_dir(target).unwrap();
+            Err(ReplaceFailure::TargetVacated(io::Error::other(
+                "moved away",
+            )))
+        });
+        let kept = fs::read(&temp_path).unwrap();
+        fs::remove_file(&temp_path).unwrap();
+        fs::remove_dir(&target).unwrap();
+
+        let message = result.unwrap_err().to_string();
+        assert_eq!(kept, b"NEW".to_vec());
+        assert!(
+            message.ends_with(&format!("they are kept in {}", temp_path.display())),
+            "{message}"
+        );
+    }
+
+    /// A replace that fails with the target untouched removes the temp file.
+    #[test]
+    fn test_persist_removes_the_temp_when_the_target_is_untouched() {
+        let target = scratch("untouched");
+        fs::write(&target, b"OLD").unwrap();
+        let temp = TempFile::write_beside(&target, |f| f.write_all(b"NEW")).unwrap();
+        let temp_path = temp.path.clone();
+
+        let result = temp.persist_with(&target, |_, _| {
+            Err(ReplaceFailure::Untouched(io::Error::other("refused")))
+        });
+        let on_disk = fs::read(&target).unwrap();
+        fs::remove_file(&target).unwrap();
+
+        assert_eq!(result.unwrap_err().to_string(), "refused");
+        assert_eq!(on_disk, b"OLD".to_vec());
+        assert!(!temp_path.exists());
+    }
+
+    /// An absolute Windows path reaches `ReplaceFileW` in verbatim form, and
+    /// a path Windows would otherwise normalize is passed as it is.
+    #[cfg(windows)]
+    #[test]
+    fn test_verbatim_wide_prefixes_only_normalized_absolute_paths() {
+        let text = |path: &str| String::from_utf16(&verbatim_wide(Path::new(path))).unwrap();
+        assert_eq!(text(r"C:\dir\file.bin"), "\\\\?\\C:\\dir\\file.bin\0");
+        assert_eq!(text(r"\\server\share\f"), "\\\\?\\UNC\\server\\share\\f\0");
+        assert_eq!(text(r"dir\file.bin"), "dir\\file.bin\0");
+        assert_eq!(text("C:/dir/file.bin"), "C:/dir/file.bin\0");
+        assert_eq!(text(r"\\?\C:\dir"), "\\\\?\\C:\\dir\0");
+    }
+
+    /// A mapping is adopted only when it holds the bytes the document saved;
+    /// a file replaced by someone else before the remap leaves the document
+    /// with its own saved bytes, unmapped and unmodified.
+    #[cfg(windows)]
+    #[test]
+    fn test_adopt_saved_maps_only_the_bytes_this_document_wrote() {
+        let other = scratch("foreign_remap");
+        let same = scratch("matching_remap");
+        fs::write(&other, b"FOREIGN CONTENT WRITTEN BY ANOTHER TOOL").unwrap();
+        fs::write(&same, b"NEW-BYTES").unwrap();
+
+        let mut replaced = MmapDocument::from_bytes(b"NEW-BYTES");
+        replaced.adopt_saved(map_locked(&other).unwrap(), Some(b"NEW-BYTES".to_vec()));
+        let mut own = MmapDocument::from_bytes(b"NEW-BYTES");
+        own.adopt_saved(map_locked(&other).unwrap(), None);
+        let mut matching = MmapDocument::from_bytes(b"NEW-BYTES");
+        matching.adopt_saved(map_locked(&same).unwrap(), Some(b"NEW-BYTES".to_vec()));
+        let outcomes = [
+            (
+                replaced.read_all(),
+                replaced.is_mapped(),
+                replaced.is_modified(),
+            ),
+            (own.read_all(), own.is_mapped(), own.is_modified()),
+            (
+                matching.read_all(),
+                matching.is_mapped(),
+                matching.is_modified(),
+            ),
+        ];
+        drop((replaced, own, matching));
+        fs::remove_file(&other).unwrap();
+        fs::remove_file(&same).unwrap();
+
+        assert_eq!(
+            outcomes,
+            [
+                (b"NEW-BYTES".to_vec(), false, false),
+                (b"NEW-BYTES".to_vec(), false, false),
+                (b"NEW-BYTES".to_vec(), true, false),
+            ]
+        );
+    }
+
+    /// A save over the document's own file that the OS refuses keeps the
+    /// edited bytes and the modified state, and leaves the file and the
+    /// directory as they were.
+    #[cfg(windows)]
+    #[test]
+    fn test_failed_self_save_keeps_the_edits() {
+        use std::os::windows::fs::OpenOptionsExt;
+        use windows_sys::Win32::Storage::FileSystem::FILE_SHARE_READ;
+
+        let path = scratch("self_save_refused");
+        fs::write(&path, b"Original").unwrap();
+        let mut doc = MmapDocument::open(&path).unwrap();
+        doc.overwrite(0, b"Edited!!");
+        let blocker = OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ)
+            .open(&path)
+            .unwrap();
+
+        let result = doc.save(&path);
+        let bytes = doc.read_all();
+        let modified = doc.is_modified();
+        drop(blocker);
+        let on_disk = fs::read(&path).unwrap();
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        let leftovers = leftover_temps(&std::env::temp_dir(), &name);
+        drop(doc);
+        fs::remove_file(&path).unwrap();
+
+        assert!(result.is_err());
+        assert_eq!(bytes, b"Edited!!".to_vec());
+        assert!(modified);
+        assert_eq!(on_disk, b"Original".to_vec());
+        assert_eq!(leftovers, Vec::<PathBuf>::new());
+    }
+
+    /// A relative path is stored absolute, so a later change of the working
+    /// directory cannot make the document's path name another file.
+    #[test]
+    fn test_open_stores_an_absolute_path() {
+        let doc = MmapDocument::open("Cargo.toml").unwrap();
+        let path = doc.file_path().unwrap().to_path_buf();
+        drop(doc);
+        assert!(path.is_absolute(), "{}", path.display());
+        assert_eq!(path, std::env::current_dir().unwrap().join("Cargo.toml"));
+    }
+
+    /// Only regular files open; a directory is refused up front with
+    /// `InvalidInput`, a missing file reports `NotFound`, and an empty file
+    /// opens as an empty, unmapped document.
+    #[test]
+    fn test_open_accepts_only_regular_files() {
+        let empty = scratch("empty_file");
+        fs::write(&empty, b"").unwrap();
+        let directory = MmapDocument::open(std::env::temp_dir()).err();
+        let missing = MmapDocument::open(scratch("missing_file")).err();
+        let opened = MmapDocument::open(&empty).unwrap();
+        let empty_state = (opened.document_size(), opened.is_mapped());
+        drop(opened);
+        fs::remove_file(&empty).unwrap();
+
+        assert!(
+            matches!(directory, Some(IoError::Io(ref e)) if e.kind() == io::ErrorKind::InvalidInput),
+            "{directory:?}"
+        );
+        assert!(
+            matches!(missing, Some(IoError::Io(ref e)) if e.kind() == io::ErrorKind::NotFound),
+            "{missing:?}"
+        );
+        assert_eq!(empty_state, (0, false));
+    }
+
+    /// A document with no path cannot save in place, and a save path with no
+    /// file name is refused before anything is written.
+    #[test]
+    fn test_save_without_a_usable_path_is_refused() {
+        let mut doc = MmapDocument::from_bytes(b"BYTES");
+        assert!(matches!(doc.save_in_place(), Err(IoError::NoFilePath)));
+        let root = Path::new(std::path::MAIN_SEPARATOR_STR);
+        assert!(matches!(
+            doc.save(root),
+            Err(IoError::Io(ref e)) if e.kind() == io::ErrorKind::InvalidInput
+        ));
+        assert_eq!(doc.file_path(), None);
+    }
+
+    /// On Unix the temp file is created owner-only, so the new bytes are never
+    /// readable by others before the save gives the file the target's mode.
+    #[cfg(unix)]
+    #[test]
+    fn test_temp_file_is_created_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let target = scratch("owner_only");
+        let temp = TempFile::write_beside(&target, |f| f.write_all(b"x")).unwrap();
+        let mode = fs::metadata(&temp.path).unwrap().permissions().mode() & 0o777;
+        drop(temp);
+        assert_eq!(mode, 0o600);
+    }
+
+    /// On Unix a save through a symlink replaces the file it points at, keeps
+    /// that file's mode, and keeps the link.
+    #[cfg(unix)]
+    #[test]
+    fn test_save_through_a_symlink_keeps_the_mode_and_the_link() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let real = scratch("link_real");
+        let link = scratch("link_itself");
+        fs::write(&real, b"OLD").unwrap();
+        fs::set_permissions(&real, fs::Permissions::from_mode(0o755)).unwrap();
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        let saved = MmapDocument::from_bytes(b"NEW").save(&link);
+        let bytes = fs::read(&real).unwrap();
+        let mode = fs::metadata(&real).unwrap().permissions().mode() & 0o777;
+        let still_link = fs::symlink_metadata(&link)
+            .unwrap()
+            .file_type()
+            .is_symlink();
+        fs::remove_file(&link).unwrap();
+        fs::remove_file(&real).unwrap();
+
+        assert!(saved.is_ok(), "{saved:?}");
+        assert_eq!(bytes, b"NEW".to_vec());
+        assert_eq!(mode, 0o755);
+        assert!(still_link);
+    }
+
+    /// On Unix a dangling symlink is refused with `NotFound` rather than
+    /// replaced by a regular file, and the link survives.
+    #[cfg(unix)]
+    #[test]
+    fn test_save_through_a_dangling_symlink_keeps_the_link() {
+        let link = scratch("dangling_link");
+        std::os::unix::fs::symlink(scratch("dangling_missing"), &link).unwrap();
+
+        let saved = MmapDocument::from_bytes(b"NEW").save(&link);
+        let still_link = fs::symlink_metadata(&link)
+            .unwrap()
+            .file_type()
+            .is_symlink();
+        fs::remove_file(&link).unwrap();
+
+        assert!(
+            matches!(saved, Err(IoError::Io(ref e)) if e.kind() == io::ErrorKind::NotFound),
+            "{saved:?}"
+        );
+        assert!(still_link);
+    }
+
+    /// On Unix the temp file goes beside the file a symlink points at, so a
+    /// save succeeds even when the link's own directory cannot be written.
+    #[cfg(unix)]
+    #[test]
+    fn test_save_through_a_symlink_writes_the_temp_beside_the_real_file() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let base = std::env::temp_dir().join(format!("hexcore_link_dirs_{}", std::process::id()));
+        let link_dir = base.join("links");
+        let real_dir = base.join("files");
+        fs::create_dir_all(&link_dir).unwrap();
+        fs::create_dir_all(&real_dir).unwrap();
+        let real = real_dir.join("real.bin");
+        let link = link_dir.join("link.bin");
+        fs::write(&real, b"OLD").unwrap();
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        fs::set_permissions(&link_dir, fs::Permissions::from_mode(0o555)).unwrap();
+
+        let saved = MmapDocument::from_bytes(b"NEW").save(&link);
+        let bytes = fs::read(&real).unwrap();
+        fs::set_permissions(&link_dir, fs::Permissions::from_mode(0o755)).unwrap();
+        fs::remove_dir_all(&base).unwrap();
+
+        assert!(saved.is_ok(), "{saved:?}");
+        assert_eq!(bytes, b"NEW".to_vec());
     }
 
     /// Temp files beside one target get distinct names, and one that
@@ -1143,6 +1846,8 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn test_open_copies_a_file_another_handle_is_writing() {
+        use std::io::{Seek, SeekFrom};
+
         let dir = std::env::temp_dir();
         let path = dir.join("hexcore_test_writer_snapshot.bin");
         let mut writer = OpenOptions::new()
@@ -1167,6 +1872,73 @@ mod tests {
         drop(writer);
         drop(doc);
         let _ = fs::remove_file(&path);
+    }
+
+    /// A writable view another handle mapped keeps the file write-locked after
+    /// that writer closes its file and section handles, so `open_locked` still
+    /// fails with a sharing violation and the file is copied, not mapped, for
+    /// as long as the view can change its bytes. Once the view is unmapped the
+    /// file maps again.
+    #[cfg(windows)]
+    #[test]
+    fn test_writable_view_keeps_the_file_locked_after_its_handles_close() {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Foundation::{CloseHandle, ERROR_SHARING_VIOLATION};
+        use windows_sys::Win32::System::Memory::{
+            CreateFileMappingW, MapViewOfFile, UnmapViewOfFile, FILE_MAP_WRITE, PAGE_READWRITE,
+        };
+
+        let path =
+            std::env::temp_dir().join(format!("hexcore_writable_view_{}.bin", std::process::id()));
+        fs::write(&path, b"ORIGINAL").unwrap();
+        let writer = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&path)
+            .unwrap();
+        // SAFETY: `writer` is a live file handle opened for reading and
+        // writing; the security-attributes and name pointers are null, which
+        // the API accepts, and zero sizes map the whole file. The returned
+        // section handle is checked before use and closed below.
+        let section = unsafe {
+            CreateFileMappingW(
+                writer.as_raw_handle(),
+                std::ptr::null(),
+                PAGE_READWRITE,
+                0,
+                0,
+                std::ptr::null(),
+            )
+        };
+        assert!(!section.is_null(), "{}", io::Error::last_os_error());
+        // SAFETY: `section` is the live read-write section created above, and
+        // a zero offset and length map all of it. The view is checked before
+        // use and unmapped below, before the file is removed.
+        let view = unsafe { MapViewOfFile(section, FILE_MAP_WRITE, 0, 0, 0) };
+        assert!(!view.Value.is_null(), "{}", io::Error::last_os_error());
+        // SAFETY: `section` is a handle this test owns and closes exactly once;
+        // the view keeps the section alive on its own.
+        unsafe { CloseHandle(section) };
+        drop(writer);
+
+        let locked = open_locked(&path).map(drop);
+        let mapped_while_viewed = map_locked(&path).unwrap().is_some();
+        // SAFETY: `view` is the live view mapped above, unmapped exactly once.
+        unsafe { UnmapViewOfFile(view) };
+        let mapped_after = map_locked(&path).unwrap().is_some();
+        fs::remove_file(&path).unwrap();
+
+        let err = locked.expect_err("a writable view must keep writers' share access");
+        assert_eq!(
+            err.raw_os_error(),
+            i32::try_from(ERROR_SHARING_VIOLATION).ok(),
+            "{err}"
+        );
+        assert!(
+            !mapped_while_viewed,
+            "a file with a writable view must be copied"
+        );
+        assert!(mapped_after, "the file must map once the view is gone");
     }
 
     /// Saving over the mapped file round-trips and locks it again, and

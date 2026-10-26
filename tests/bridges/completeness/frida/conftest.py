@@ -53,8 +53,8 @@ def notepad_process() -> Generator[Popen[bytes]]:
     resolve to a different PID than ``os.getpid()`` without the
     production code being at fault. Spawning a dedicated ``notepad.exe``
     gives each test a target whose PID is known unambiguously (via the
-    ``Popen`` handle) so the assertion is a genuine regression gate
-    rather than a race against ambient same-named processes.
+    ``Popen`` handle) so the assertion checks that process rather than
+    racing against ambient same-named processes.
 
     Yields:
         Popen[bytes]: The running notepad process handle.

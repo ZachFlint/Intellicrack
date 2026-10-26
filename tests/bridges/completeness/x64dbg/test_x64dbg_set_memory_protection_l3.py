@@ -10,7 +10,7 @@ method with a matching Memory Map toolbar control (``_protect_addr_input``/
 ``_protect_rights_combo``/``_protect_guard_check``/``_protect_btn``) in
 ``x64dbg_panel.py``. This module gates two independent things: the exact
 ``setpagerights`` command framing (via the fake pipe boundary, no real
-process required) and the real post-command verification against a genuine
+process required) and the real post-command verification against a live
 process's address space (via ``get_memory_regions``'s real ``VirtualQueryEx``
 walk, which this bridge-completeness test package's own ``conftest``
 documents as unable to run inside the Docker sandbox - so that second class
@@ -101,7 +101,7 @@ class TestSetProtectionButtonSendsExactSetPageRightsCommand:
     ) -> None:
         """Selecting ReadOnly with Guard checked must send ``setpagerights <addr>, GReadOnly``.
 
-        Falsifiable: if ``_on_set_memory_protection`` dropped the "G" guard
+        If ``_on_set_memory_protection`` dropped the "G" guard
         prefix, read a different combo, or the bridge built the rights
         argument incorrectly, the recorded ``exec`` command would not
         match ``setpagerights 0x401000, GReadOnly`` exactly. Because this
@@ -158,7 +158,7 @@ class TestSetProtectionButtonSendsExactSetPageRightsCommand:
     ) -> None:
         """Selecting Execute with Guard unchecked must send ``setpagerights <addr>, Execute`` (no "G").
 
-        Falsifiable: if ``_on_set_memory_protection`` always prepended
+        If ``_on_set_memory_protection`` always prepended
         "G" regardless of the checkbox state, the recorded ``exec``
         command would carry a spurious guard flag instead of matching
         ``setpagerights 0x402000, Execute`` exactly.
@@ -207,12 +207,12 @@ class TestSetProtectionButtonSendsExactSetPageRightsCommand:
 @pytest.mark.skipif(not _x64dbg_release_exists(), reason="vendored x64dbg install not present on this host")
 @pytest.mark.asyncio
 class TestSetMemoryProtectionRealVerification:
-    """``set_memory_protection`` must genuinely change and verify real page protection."""
+    """``set_memory_protection`` must change and verify the page protection."""
 
     async def test_setting_read_only_on_an_allocated_page_is_observed_by_get_memory_regions(self) -> None:
         """Allocate a real RW page, set it read-only, and confirm ``get_memory_regions`` reports ``r--``.
 
-        Falsifiable: before a correct implementation, either the
+        Without a correct implementation, either the
         ``setpagerights`` command would never be sent (so the real page
         stays RW and this assertion fails), or the verification step
         could claim ``verified=True`` without the real protection having

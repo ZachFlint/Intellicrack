@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable gates on the ``.pre-commit-config.yaml`` hook pins.
+r"""Checks on the ``.pre-commit-config.yaml`` hook pins.
 
 The pre-commit framework is only useful while the ruff it downloads can read the
 project's own ruff configuration. Drift between the two breaks it silently: a pin
@@ -156,7 +156,7 @@ def _candidate_ruff_executables() -> list[Path]:
 
     The pinned hook's ruff lives in the pre-commit cache; the toolchain ruff
     lives in the pixi environment. The cache is searched first so the gate
-    exercises the genuinely pinned build whenever the hook has been installed.
+    exercises the pinned build whenever the hook has been installed.
 
     Returns:
         list[Path]: Existing ruff executables, pre-commit cache entries first.

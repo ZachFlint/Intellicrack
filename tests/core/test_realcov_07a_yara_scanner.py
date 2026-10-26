@@ -5,11 +5,11 @@
 """Real-data coverage tests for ``intellicrack.core.yara_scanner``.
 
 These tests exercise the ``YaraScanner`` public API directly, not only through
-the hex-editor bridge, against REAL System32 PE binaries with
-REAL YARA rules:
+the hex-editor bridge, against System32 PE binaries with
+compiled YARA rules:
 
-* ``compile_source`` / ``compile_rules`` (file-based) compile genuine YARA
-  syntax and the compiled rules match real binary content.
+* ``compile_source`` / ``compile_rules`` (file-based) compile YARA
+  syntax and the compiled rules match on-disk PE content.
 * ``scan_data`` / ``scan_file`` find real header magic and a real imported
   symbol (``LoadLibraryA``) at its true file offset inside ``kernel32.dll``.
 * ``scan_data_async`` / ``scan_file_async`` / ``compile_source_async`` /
@@ -18,7 +18,7 @@ REAL YARA rules:
   ``StringMatch`` object format (via a real scan) AND the legacy
   ``(offset, identifier, data)`` tuple format used by yara-python <4.x.
 * Timeout behaviour is forced with a real, expensive rule over a large buffer
-  so a genuine ``yara.TimeoutError`` is raised.
+  so the engine raises ``yara.TimeoutError``.
 
 Compilation and scanning are done with the real yara-python engine; nothing
 about the operation under test is mocked.
@@ -203,7 +203,7 @@ class TestCompileErrors:
 
         The real yara-python ``SyntaxError`` is not a ``ValueError``/``OSError``/
         ``RuntimeError`` subclass, so ``compile_source`` does not re-wrap it;
-        the genuine engine error propagates and is asserted here.
+        the engine error propagates and is asserted here.
         """
         del scanner
         with pytest.raises(yara.Error):
@@ -274,7 +274,7 @@ class TestConvertMatchesBothFormats:
             real_pe_dll: Real ``kernel32.dll`` resolved from System32.
 
         Exercises the object-based branch of ``_convert_matches`` end to end
-        using genuine yara-python 4.x ``StringMatch``/``StringMatchInstance``
+        using yara-python 4.x ``StringMatch``/``StringMatchInstance``
         objects produced by a real scan.
         """
         rules = YaraScanner.compile_source(_LOADLIB_RULE)
@@ -318,7 +318,7 @@ class TestConvertMatchesBothFormats:
 
 
 class TestTimeoutBehaviour:
-    """Genuine YARA timeout enforcement."""
+    """YARA timeout enforcement."""
 
     def test_scan_data_raises_on_timeout(self) -> None:
         """A heavy rule over a large buffer raises ``yara.TimeoutError``.

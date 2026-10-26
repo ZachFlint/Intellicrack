@@ -14,10 +14,10 @@ flow for a running instance and a clear, non-misleading fallback for an applicat
 Tests drive the real ``FridaPanel`` widget: the tab/table/button widgets are
 inspected directly (proving the control is actually reachable, not merely
 described), the real ``_populate_application_table`` callback is exercised
-with genuine ``FridaApplicationInfo`` dataclass instances (the exact shape
+with ``FridaApplicationInfo`` dataclass instances (the exact shape
 ``FridaBridge.enumerate_applications`` returns), and the real
 ``_on_refresh_applications`` handler is driven against a real (uninitialized)
-``FridaBridge`` to prove the Refresh button is genuinely wired to the bridge
+``FridaBridge`` to show the Refresh button is wired to the bridge
 method end to end, not a dead control.
 """
 
@@ -116,7 +116,7 @@ def synchronous_dispatch(monkeypatch: pytest.MonkeyPatch) -> list[Coroutine[obje
 def test_applications_tab_is_reachable_beside_processes_tab() -> None:
     """Verify the Applications browser exists as a real, reachable tab.
 
-    Falsifiable: a panel lacking the ``_target_tabs``, ``_application_table``, and
+    A panel lacking the ``_target_tabs``, ``_application_table``, and
     ``_refresh_apps_btn`` attributes, where the process browser is the sole widget in that pane, fails
     this construction and these attribute/type/tab-label assertions.
     """
@@ -143,13 +143,13 @@ def test_populate_application_table_renders_identifier_name_and_pid() -> None:
 
     Drives the real ``_populate_application_table`` (the exact
     ``on_success`` callback ``_on_refresh_applications`` wires up) with
-    genuine ``FridaApplicationInfo`` rows -- one currently running, one
+    ``FridaApplicationInfo`` rows -- one currently running, one
     not -- and asserts the rendered cells. The not-running row's PID cell
     must render empty (not the literal ``"0"``), because
     ``_on_application_double_click`` relies on that exact convention to
     decide whether a row can be attached to directly.
 
-    Falsifiable: without that callback and table, constructing the panel and reading ``_application_table``
+    Without that callback and table, constructing the panel and reading ``_application_table``
     raises ``AttributeError``; a naive implementation rendering ``"0"``
     for a stopped application would fail the empty-PID assertion.
     """
@@ -188,7 +188,7 @@ def test_double_click_running_application_targets_and_attaches(monkeypatch: pyte
     ``_on_attach`` is monkeypatched to a spy so this test verifies routing
     without needing a real attachable process.
 
-    Falsifiable: without an ``_on_application_double_click`` handler (``AttributeError``), a broken routing that forgets to
+    Without an ``_on_application_double_click`` handler (``AttributeError``), a broken routing that forgets to
     call ``_on_attach`` or writes the wrong value would fail these
     assertions instead.
 
@@ -221,7 +221,7 @@ def test_double_click_stopped_application_does_not_attach(monkeypatch: pytest.Mo
     the identifier is copied into the target field for reference and no
     attach attempt is made; the console must explain why.
 
-    Falsifiable: a naive copy of the process browser's double-click
+    A naive copy of the process browser's double-click
     behaviour would call ``_on_attach`` unconditionally, which this
     ``attach_calls == []`` assertion would catch; a handler that leaves
     the target field untouched or is silent about the skipped attach
@@ -255,7 +255,7 @@ def test_double_click_stopped_application_does_not_attach(monkeypatch: pytest.Mo
 def test_refresh_applications_button_is_wired_to_real_bridge_method(
     synchronous_dispatch: list[Coroutine[object, object, object]],
 ) -> None:
-    """Verify Refresh genuinely dispatches ``FridaBridge.enumerate_applications``.
+    """Verify Refresh dispatches ``FridaBridge.enumerate_applications``.
 
     Drives the real ``_on_refresh_applications`` handler against a real
     (uninitialized) ``FridaBridge`` -- no device is attached, so the real
@@ -264,7 +264,7 @@ def test_refresh_applications_button_is_wired_to_real_bridge_method(
     proves the button reaches the actual bridge method end to end rather
     than being cosmetically present with nothing behind it.
 
-    Falsifiable: a decorative button with no ``clicked`` connection, or a
+    A decorative button with no ``clicked`` connection, or a
     handler that calls the wrong bridge method, would leave
     ``synchronous_dispatch`` empty; a handler that swallows the failure
     instead of routing it to ``_on_refresh_applications_error`` would leave

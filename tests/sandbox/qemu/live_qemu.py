@@ -5,8 +5,8 @@
 """A real, disposable QEMU process with an open QMP monitor, for host-native gates.
 
 Gates that judge what QEMU actually answers need QEMU, not a description of it.
-This module starts a genuine ``qemu-system-x86_64`` with a genuine qcow2
-attached and a genuine QMP monitor listening, so the production monitor client
+This module starts ``qemu-system-x86_64`` with a qcow2
+attached and a QMP monitor listening, so the production monitor client
 talks to the real protocol implementation.
 
 The guest deliberately runs under TCG with no boot media. These gates exercise

@@ -98,10 +98,10 @@ def test_m54_long_filename_grows_taller_at_narrow_width_instead_of_clipping() ->
     Drives the real ``QLabel.heightForWidth`` layout math on the actual label:
     with ``setWordWrap(True)`` a long, multi-word database name must break onto
     several lines at the narrow side-panel width and so report a greater height
-    than at a wide width where it fits on one line. The name carries genuine
+    than at a wide width where it fits on one line. The name carries
     word boundaries because ``QLabel`` word wrap breaks at whitespace; without
     the ``setWordWrap(True)`` call the height would not grow as the width
-    shrinks, so this assertion is falsified by removing the call.
+    shrinks, so removing the call fails this assertion.
     """
     host = _SignaturesHost()
     host.build_tab()

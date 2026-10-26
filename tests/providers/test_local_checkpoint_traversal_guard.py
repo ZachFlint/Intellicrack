@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the local sharded-checkpoint traversal guard.
+"""Tests for the local sharded-checkpoint traversal guard.
 
 A sharded HuggingFace checkpoint records its shard file names in a
 ``*.index.json`` ``weight_map``. ``transformers`` resolves those names for a
@@ -17,8 +17,8 @@ local models through :func:`load_model_for_cpu` / :func:`load_model_for_xpu` and
 These gates build **real** sharded safetensors checkpoints with ``torch`` /
 ``transformers`` and hand-crafted index files, then assert:
 
-* an unguarded ``transformers`` load genuinely reads weights from outside the
-  checkpoint folder (so the exploit - and therefore the gate - is real); and
+* an unguarded ``transformers`` load reads weights from outside the
+  checkpoint folder (so the exploit is reachable); and
 * :func:`validate_local_checkpoint` and the real loader reject every escaping or
   reserved-device shard entry while permitting legitimate in-folder shards.
 
@@ -106,7 +106,7 @@ class TestTraversalCheckpointIsRejectedButReallyExploitable:
     def test_unguarded_transformers_reads_weights_outside_the_folder(tmp_path: Path) -> None:
         """Without the guard, a ``../`` shard entry loads weights from another folder.
 
-        This pins the gate to a genuine, reachable exploit: if the join in
+        This pins the gate to a reachable exploit: if the join in
         ``transformers`` were not attacker-reachable, the reloaded weights would
         not match the out-of-folder originals and this assertion would fail.
         """
@@ -157,7 +157,7 @@ class TestLegitimateCheckpointIsPermitted:
 
     @staticmethod
     def test_validate_allows_a_real_multishard_checkpoint(tmp_path: Path) -> None:
-        """The guard does not raise on a genuine multi-shard safetensors checkpoint.
+        """The guard does not raise on a valid multi-shard safetensors checkpoint.
 
         A guard that rejected in-folder shard names (for example by comparing
         against the wrong base directory) would raise here on a legitimate load.

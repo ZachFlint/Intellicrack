@@ -13,9 +13,9 @@ real export tables (including ordinal-only and forwarded exports), the
 full multi-section layout of a real DLL, or the disk-path fast path in
 :meth:`HexEditorBridge._open_pe_for_inspection`.
 
-This module loads genuine ``System32`` DLLs through the real
+This module loads ``System32`` DLLs through the
 ``intellicrack_hexcore`` document backend via
-:meth:`HexEditorBridge.open_file` and asserts on verifiable real-world
+:meth:`HexEditorBridge.open_file` and asserts on verifiable
 results: the actual section names, real imported DLL names and function
 symbols (``LoadLibraryA``, ``GetProcAddress``), real exported symbols,
 and hash digests cross-checked against :mod:`hashlib`. Every assertion
@@ -29,7 +29,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import importlib.util
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pefile
 import pytest
@@ -414,7 +414,7 @@ class TestOpenCloseLifecycle:
             assert result["modified"] is False
             doc = bridge.document
             assert doc is not None
-            assert cast("int", doc.length()) == expected_size
+            assert doc.length() == expected_size
         finally:
             closed = await bridge.close_file()
         assert closed is True

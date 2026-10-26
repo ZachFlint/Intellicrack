@@ -40,7 +40,7 @@ Two modes:
   pixi constraint, rewrite ``[project.dependencies]`` in place, and exit zero. A
   module imported but declared in no manifest at all (the one case a constraint
   cannot be sourced for) is reported and exits non-zero even under ``--fix``,
-  because that is a genuine undeclared-everywhere error, not a prune. The
+  because that is an undeclared-everywhere error, not a prune. The
   ``just git-commit`` prep runs this before ``git add -A``, with ``HEAD`` still
   holding the pre-prune manifest, so an agent that drops dependencies is fully
   healed before the commit is formed (see :func:`apply_fix` for the two sources).
@@ -400,8 +400,8 @@ def collect_violations(repo_root: Path) -> list[str]:
         repo_root: The repository root containing ``pyproject.toml`` and ``src``.
 
     Returns:
-        list[str]: Human-readable violation messages; empty when the manifest is
-        honest.
+        list[str]: Human-readable violation messages; empty when the manifest
+        matches the shipped runtime.
     """
     messages: list[str] = []
     analysis = analyse_missing(repo_root)
@@ -520,7 +520,7 @@ def apply_fix(repo_root: Path) -> MissingAnalysis:
     """Restore every sourceable missing declaration and report what remains.
 
     Two sources feed the restore, both constrained by the pixi manifest so a fix
-    only ever re-adds a genuine, still-declared runtime dependency:
+    only ever re-adds a runtime dependency the pixi manifest still declares:
 
     * **Import surface** - a distribution imported at module scope in
       ``src/intellicrack`` but absent from ``[project.dependencies]``.
@@ -572,7 +572,7 @@ def _run_report(repo_root: Path) -> int:
         repo_root: The repository root to check.
 
     Returns:
-        int: ``0`` when the manifest is honest, ``1`` otherwise.
+        int: ``0`` when the manifest matches the shipped runtime, ``1`` otherwise.
     """
     violations = collect_violations(repo_root)
     if violations:
@@ -595,7 +595,7 @@ def _run_fix(repo_root: Path) -> int:
         repo_root: The repository root to heal.
 
     Returns:
-        int: ``0`` when the manifest is now honest, ``1`` when a module is imported
+        int: ``0`` when the manifest now matches the shipped runtime, ``1`` when a module is imported
         whose provider is declared in no manifest (a constraint cannot be sourced).
     """
     analysis = apply_fix(repo_root)

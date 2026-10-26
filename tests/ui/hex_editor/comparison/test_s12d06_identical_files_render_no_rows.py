@@ -12,7 +12,7 @@ diff type would render as a spurious row even though the "Files are
 identical" banner was correct.
 
 This test drives the real ``HexEditorBridge.compare_files`` path (real temp
-files, real ``intellicrack_hexcore`` native module) over two genuinely
+files, real ``intellicrack_hexcore`` native module) over two byte-for-byte
 identical byte buffers, feeds the resulting dict into the panel's real
 completion handler, and asserts both halves of the contract agree: the
 summary banner reads "Files are identical" and the results tree carries zero
@@ -142,7 +142,7 @@ def test_identical_files_render_zero_rows_through_the_real_bridge(
     bridge: HexEditorBridge,
     tmp_path: Path,
 ) -> None:
-    """Comparing two genuinely identical files must render no rows at all.
+    """Comparing two byte-identical files must render no rows at all.
 
     The engine's diff over two identical buffers reports ``files_identical``
     together with a single whole-file ``match`` region; the panel must not
@@ -186,7 +186,7 @@ def test_identical_result_renders_no_rows_even_if_the_region_type_string_drifts(
     comparison as a whole is identical -- that fact must not depend on a
     string spelling elsewhere in the payload staying frozen forever.
 
-    This drives one genuine identical-files comparison through the real
+    This drives one identical-files comparison through the real
     bridge, then re-renders that same real result with only the region's
     ``diff_type`` field swapped for a value the row filter has never seen, to
     prove the tree is driven by the ``files_identical`` flag rather than by

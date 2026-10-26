@@ -48,10 +48,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-# Real-world PE constants used to build a valid PE header so the
+# Standard PE constants used to build a valid PE header so the
 # auto-bookmark walk traverses the DOS header, the PE signature, the
 # optional header and a single section entry. These mirror the offsets the
-# production walk reads from real binaries.
+# production walk reads from PE files.
 _PE_LFANEW: int = 0x40
 _PE_OPTIONAL_HEADER_OFFSET: int = 24
 _PE_OPTIONAL_HEADER_SIZE: int = 224

@@ -330,7 +330,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $PixiEnv 'python.exe'))) {
     try {
         # --locked: a plain `pixi install` silently updates pixi.lock when the
         # manifest has drifted, which would mutate a tracked file mid-build and
-        # ship a runtime that differs from the locked one. Fail loudly instead.
+        # ship a runtime that differs from the locked one. Stop with an error instead.
         & pixi install --locked -e runtime
         if ($LASTEXITCODE -ne 0) {
             throw "pixi install --locked -e runtime failed (exit $LASTEXITCODE); run 'pixi install -e runtime' and commit the updated pixi.lock"
@@ -590,7 +590,7 @@ hand-written list of packages:
 1. Every unconditional module-level third-party import in the staged application
    source must resolve. An import that is a direct child of a module body is one
    the interpreter always executes when that module is loaded, so the core
-   runtime alone has to satisfy it. Genuinely optional dependencies are guarded
+   runtime alone has to satisfy it. Optional dependencies are guarded
    with ``try``/``except ImportError`` throughout the codebase and are therefore
    excluded here, which is what keeps ``torch`` and ``transformers`` from being
    demanded of a runtime that deliberately no longer carries them.
@@ -766,7 +766,7 @@ Write-Success 'tool subset staged'
 # not the legacy Jython interpreter, so Ghidra/Features/Jython must never
 # reach the shipped installer: a live Jython extension beside PyGhidra
 # causes a script-manager outage. The mirror excludes it, and the post-copy
-# assertion below keeps that exclusion honest -- a re-stage that forgets it (or
+# assertion below enforces that exclusion -- a re-stage that forgets it (or
 # mirrors from a source tree where Jython was never disabled) fails the build
 # instead of silently shipping it.
 Write-Step 'STAGE' 'Step 8/15: staging Ghidra...'

@@ -9,18 +9,16 @@ The unit tests for ``NamedPipeClient`` intentionally stub the
 four synchronous Win32 transport methods (``_open_handle``,
 ``_read_exact_sync``, ``_write_sync``, ``_close_handle``) with an in-memory
 ``_FakePipe``. That design exercises the async orchestration cross-platform but
-never touches the real kernel pipe, so it cannot prove ``WaitNamedPipeW``,
-``CreateFileW``, ``ReadFile``, ``WriteFile``, ``CloseHandle`` behaviour or real
+never touches the kernel pipe, so it cannot exercise ``WaitNamedPipeW``,
+``CreateFileW``, ``ReadFile``, ``WriteFile``, ``CloseHandle`` behavior or
 ``GetLastError`` propagation.
 
-This module closes that gap. Every test here drives the *unmodified* production
-``NamedPipeClient`` against a **real** Windows kernel named pipe served by a
-separate operating-system process created with ``CreateNamedPipeW``. Nothing in
-:mod:`intellicrack.bridges.named_pipe_client` is monkeypatched, faked, or
-stubbed: the client's real ``_open_handle`` blocks on a real ``WaitNamedPipeW``,
-its real ``_write_sync`` issues real ``WriteFile`` calls, its real
-``_read_exact_sync`` issues real ``ReadFile`` calls, and its real
-``_close_handle`` issues a real ``CloseHandle``. The server side is a genuine
+This module closes that gap. Every test here drives the production
+``NamedPipeClient`` against a Windows kernel named pipe served by a
+separate operating-system process created with ``CreateNamedPipeW``: the
+client's ``_open_handle`` blocks on ``WaitNamedPipeW``, its ``_write_sync``
+issues ``WriteFile`` calls, its ``_read_exact_sync`` issues ``ReadFile``
+calls, and its ``_close_handle`` issues ``CloseHandle``. The server side is a
 duplex byte-stream named pipe, so the length-prefixed framed-message protocol
 round-trips over the operating-system kernel exactly as it would against the
 x64dbg plugin.
@@ -242,7 +240,7 @@ async def _drive_connect_and_close(pipe_name: str, server: subprocess.Popen[byte
 
 
 def test_real_connect_and_close_against_kernel_pipe() -> None:
-    """Real ``connect``/``close`` open and shut a genuine kernel pipe handle.
+    """Real ``connect``/``close`` open and shut a kernel pipe handle.
 
     Drives the production ``_open_handle`` (``WaitNamedPipeW`` +
     ``CreateFileW``) and ``_close_handle`` (``CloseHandle``) against a real
@@ -261,9 +259,9 @@ def test_real_connect_and_close_against_kernel_pipe() -> None:
 def test_real_send_command_round_trip() -> None:
     """A command round-trips over the real kernel pipe and matches by id.
 
-    Proves the full real path: real ``WriteFile`` of the request frame, the
-    server's real ``ReadFile`` decode, the server's real ``WriteFile`` reply,
-    and the client's real ``ReadFile`` plus future dispatch. The
+    Covers the full path: the client's ``WriteFile`` of the request frame, the
+    server's ``ReadFile`` decode, the server's ``WriteFile`` reply, and the
+    client's ``ReadFile`` plus future dispatch. The
     ``pytest.mark.timeout(30)`` guard ensures the test fails fast if the
     server process hangs or the pipe never becomes ready, rather than blocking
     indefinitely on ``_require_pipe`` or the async ``wait_for`` inner timeout.

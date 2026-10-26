@@ -301,7 +301,7 @@ class TestMemoryTabWorkingSetWiringL3:
     ) -> None:
         """_on_working_set dispatches bridge.get_process_memory_mb with the attached pid.
 
-        Falsified by: removing the ``self._bridge.get_process_memory_mb(pid)``
+        Fails on regressions such as:removing the ``self._bridge.get_process_memory_mb(pid)``
         call, rewiring the button to another handler, or passing the wrong pid.
 
         Args:
@@ -352,7 +352,7 @@ class TestSystemTabDeviceOpenWiringL3:
     ) -> None:
         """_on_device_open dispatches bridge.device_open with the entered device path.
 
-        Falsified by: rewiring the Open button away from ``_on_device_open`` or
+        Fails on regressions such as:rewiring the Open button away from ``_on_device_open`` or
         reading the wrong widget for the device path.
 
         Args:
@@ -405,7 +405,7 @@ class TestSystemTabDeviceIoctlWiringL3:
     ) -> None:
         """_on_device_ioctl dispatches bridge.device_ioctl with the selected handle, parsed code, input, and output size.
 
-        Falsified by: rewiring Send IOCTL away from ``_on_device_ioctl``, using
+        Fails on regressions such as:rewiring Send IOCTL away from ``_on_device_ioctl``, using
         ``int()`` without base-0 hex parsing for the IOCTL code, dropping the
         input payload, or reading the wrong output-size widget.
 
@@ -440,7 +440,7 @@ class TestSystemTabDeviceIoctlWiringL3:
     ) -> None:
         """_on_device_ioctl passes ``None`` for input_data when the input field is blank.
 
-        Falsified by: passing an empty string instead of ``None`` for a blank
+        Fails on regressions such as:passing an empty string instead of ``None`` for a blank
         input field (breaks the ``input_text or None`` marshalling).
 
         Args:
@@ -523,7 +523,7 @@ class TestSystemTabDeviceCloseWiringL3:
     ) -> None:
         """_on_device_close dispatches bridge.device_close with the selected device handle.
 
-        Falsified by: rewiring Close away from ``_on_device_close`` or reading a
+        Fails on regressions such as:rewiring Close away from ``_on_device_close`` or reading a
         handle other than the selected device row's.
 
         Args:
@@ -573,7 +573,7 @@ class TestSystemTabCreateSectionWiringL3:
     ) -> None:
         """_on_create_section dispatches bridge.create_section with the size spinbox and name field.
 
-        Falsified by: rewiring Create Section away from ``_on_create_section`` or
+        Fails on regressions such as:rewiring Create Section away from ``_on_create_section`` or
         reading the wrong size/name widgets.
 
         Args:
@@ -599,7 +599,7 @@ class TestSystemTabCreateSectionWiringL3:
     ) -> None:
         """_on_create_section passes ``None`` as the section name when the name field is blank.
 
-        Falsified by: passing an empty string instead of ``None`` for an
+        Fails on regressions such as:passing an empty string instead of ``None`` for an
         anonymous section (breaks the ``name_text or None`` marshalling).
 
         Args:
@@ -629,7 +629,7 @@ class TestSystemTabMapSectionWiringL3:
     ) -> None:
         """_on_map_section dispatches bridge.map_section with the selected section handle and map-size spinbox.
 
-        Falsified by: rewiring Map away from ``_on_map_section`` or reading the
+        Fails on regressions such as:rewiring Map away from ``_on_map_section`` or reading the
         wrong handle/size widgets.
 
         Args:
@@ -680,7 +680,7 @@ class TestSystemTabUnmapSectionWiringL3:
     ) -> None:
         """_on_unmap_section dispatches bridge.unmap_section with the selected view's base address.
 
-        Falsified by: rewiring Unmap away from ``_on_unmap_section`` or reading a
+        Fails on regressions such as:rewiring Unmap away from ``_on_unmap_section`` or reading a
         base address other than the selected view row's.
 
         Args:
@@ -730,7 +730,7 @@ class TestSystemTabEnumerateHandlesWiringL3:
     ) -> None:
         """_on_enumerate_handles dispatches bridge.enumerate_handles with the parsed PID filter.
 
-        Falsified by: rewiring Enumerate (Raw) away from ``_on_enumerate_handles``
+        Fails on regressions such as:rewiring Enumerate (Raw) away from ``_on_enumerate_handles``
         or failing to parse the PID-filter field.
 
         Args:
@@ -755,7 +755,7 @@ class TestSystemTabEnumerateHandlesWiringL3:
     ) -> None:
         """_on_enumerate_handles passes ``None`` (all processes) when the PID-filter field is blank.
 
-        Falsified by: substituting a non-None value for an empty PID filter.
+        Fails on regressions such as:substituting a non-None value for an empty PID filter.
 
         Args:
             system_tab: SystemTab fixture.
@@ -805,7 +805,7 @@ class TestSystemTabEnumHandlesWiringL3:
     ) -> None:
         """_on_enum_handles dispatches bridge.enum_handles with the parsed PID filter.
 
-        Falsified by: rewiring Enumerate (Typed) away from ``_on_enum_handles``
+        Fails on regressions such as:rewiring Enumerate (Typed) away from ``_on_enum_handles``
         or dispatching enumerate_handles instead of enum_handles.
 
         Args:
@@ -835,7 +835,7 @@ class TestSystemTabEnumerateServicesWiringL3:
     ) -> None:
         """_on_enumerate_all_services dispatches enumerate_services(active=True) when the checkbox is checked.
 
-        Falsified by: hard-coding the ``active`` kwarg or ignoring the checkbox state.
+        Fails on regressions such as:hard-coding the ``active`` kwarg or ignoring the checkbox state.
 
         Args:
             system_tab: SystemTab fixture.
@@ -859,7 +859,7 @@ class TestSystemTabEnumerateServicesWiringL3:
     ) -> None:
         """_on_enumerate_all_services dispatches enumerate_services(active=False) when the checkbox is unchecked.
 
-        Falsified by: hard-coding the ``active`` kwarg to True regardless of the checkbox.
+        Fails on regressions such as:hard-coding the ``active`` kwarg to True regardless of the checkbox.
 
         Args:
             system_tab: SystemTab fixture.
@@ -887,7 +887,7 @@ class TestSystemTabMitigationPolicyWiringL3:
     ) -> None:
         """_on_mitigation_summary dispatches bridge.get_mitigation_policy with the attached pid.
 
-        Falsified by: rewiring Summary Policy away from ``_on_mitigation_summary``
+        Fails on regressions such as:rewiring Summary Policy away from ``_on_mitigation_summary``
         or dispatching a different policy method.
 
         Args:
@@ -912,7 +912,7 @@ class TestSystemTabMitigationPolicyWiringL3:
     ) -> None:
         """_on_extension_policy dispatches bridge.get_extension_policy with the attached pid.
 
-        Falsified by: rewiring Extension Policy away from ``_on_extension_policy``
+        Fails on regressions such as:rewiring Extension Policy away from ``_on_extension_policy``
         or dispatching get_mitigation_policy instead.
 
         Args:
@@ -942,7 +942,7 @@ class TestSystemTabReadRegistryTypedWiringL3:
     ) -> None:
         """_on_read_registry_typed dispatches bridge.read_registry with the hive, key path, and value name.
 
-        Falsified by: rewiring Read (Typed) away from ``_on_read_registry_typed``
+        Fails on regressions such as:rewiring Read (Typed) away from ``_on_read_registry_typed``
         or reading the wrong hive/key/value widgets.
 
         Args:
@@ -1002,7 +1002,7 @@ class TestSystemTabEnumerateSystemProcessesWiringL3:
     ) -> None:
         """_on_enumerate_system_processes dispatches bridge.enumerate_system_processes with no arguments.
 
-        Falsified by: rewiring Enumerate away from ``_on_enumerate_system_processes``
+        Fails on regressions such as:rewiring Enumerate away from ``_on_enumerate_system_processes``
         or passing spurious arguments to the system-wide enumeration.
 
         Args:

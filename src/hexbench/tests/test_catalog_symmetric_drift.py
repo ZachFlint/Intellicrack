@@ -58,7 +58,7 @@ class SymmetricDriftDetectionTests(Assertions, unittest.TestCase):
         ``length`` is a real, argument-free method on the compiled
         ``HexDocument`` class, so if the symmetric check is missing this
         does not blow up on an unrelated ``AttributeError`` while building the
-        one genuine operation -- it falls straight through to a clean, normal
+        one existing operation -- it falls straight through to a clean, normal
         return, which is what a stale stub entry gets when nothing checks the
         reverse direction.
         """

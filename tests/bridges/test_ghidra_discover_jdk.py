@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Ghidra JDK discovery version check.
+"""Tests for the Ghidra JDK discovery version check.
 
 Ghidra 11.4.x declares ``application.java.min=21`` and its JVM refuses to
 launch against an older runtime. :meth:`GhidraBridge._discover_jdk` rejects a

@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the GhidraBridge CFG, P-code, flow, slice, callgraph and frame accessors.
+"""Tests for the GhidraBridge CFG, P-code, flow, slice, callgraph and frame accessors.
 
 Methods gated: get_pcode, get_basic_blocks, get_instruction_flow, get_slice, get_callers, get_program_tree, get_properties, get_register_value, get_stack_frame.
 

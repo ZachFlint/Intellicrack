@@ -9,7 +9,7 @@ dicts. These tests instead emit *real* events through the application's
 configured ``structlog`` pipeline (via the ``configured_logging`` fixture,
 which calls :func:`intellicrack.core.logging.setup_logging`) and then point a
 :class:`LogFileTailReader` at the resulting ``intellicrack.log`` file. This
-proves the reader's field parsing matches the genuine on-disk JSON-Lines
+checks that the reader's field parsing matches the on-disk JSON-Lines
 format the application actually produces.
 """
 

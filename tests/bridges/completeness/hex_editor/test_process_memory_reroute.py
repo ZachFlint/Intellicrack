@@ -13,8 +13,8 @@ entirely. The dialog routes ``ProcessMemoryDialog._on_list_regions`` through ``r
 when a bridge is attached on Windows, with a local ``ctypes``/``/proc``
 fallback preserved for the no-bridge/non-Windows cases.
 
-Real Win32 ``VirtualQueryEx`` calls against the live test-runner process are
-used throughout -- no fake process-memory data.
+Win32 ``VirtualQueryEx`` calls against the live test-runner process are
+used throughout.
 """
 
 from __future__ import annotations
@@ -98,7 +98,7 @@ class TestListRegionsDialogRoutesThroughBridge:
     def test_list_regions_with_bridge_populates_table_from_real_bridge_call(qapp: QApplication) -> None:
         """Clicking "List Regions" with a bridge attached must dispatch through ``HexEditorBridge.list_process_regions``.
 
-        Falsifiable: the dialog is attached to a ``RecordingHexEditorBridge``
+        The dialog is attached to a ``RecordingHexEditorBridge``
         whose ``list_process_regions`` override records each call (and still
         delegates to the real Rust implementation via ``super()``). If
         ``_on_list_regions`` were reverted to the unrouted path that

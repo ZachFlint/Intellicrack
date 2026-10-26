@@ -185,7 +185,7 @@ try {
 check(
   'a token with no palette entry throws rather than inventing a colour',
   unknownTokenThrew !== null && /--hb-not-a-token/.test(unknownTokenThrew.message),
-  `asking for a token this module declares no value for must fail loudly; got ${unknownTokenThrew === null ? 'no error at all' : unknownTokenThrew.message}`,
+  `asking for a token this module declares no value for must throw; got ${unknownTokenThrew === null ? 'no error at all' : unknownTokenThrew.message}`,
 );
 
 check(

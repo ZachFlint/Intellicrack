@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Gate for the PyQt6 stub fixer that keeps CI's type check honest.
+"""Gate for the PyQt6 stub fixer that CI's type check depends on.
 
 PyQt6 6.11.0 ships 35 ``.pyi`` stubs with two defects: they use
 ``collections.abc.*`` while importing only ``collections``, and they define
@@ -108,7 +108,7 @@ def _stubs_missing_the_import(directory: Path) -> list[str]:
 
 
 def test_the_fixture_reproduces_the_shipped_defect(shipped_stubs: Path) -> None:
-    """The copied stubs must be defective, or the next gate proves nothing.
+    """The copied stubs must carry the shipped defect for the patching tests to detect a fix.
 
     Args:
         shipped_stubs: Stubs carrying the wheel's own import line.

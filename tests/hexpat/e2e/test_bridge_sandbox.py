@@ -4,11 +4,11 @@
 """End-to-end tests for HexEditorBridge sandbox integration.
 
 These tests drive the real :class:`HexEditorBridge` against a real
-:class:`ToolRegistry` holding a real :class:`SandboxBridge`. No bridge or
-tool response is mocked: the document/registry/sandbox-bridge precondition
-checks, the cross-bridge ``ToolName.SANDBOX`` lookup, and the forwarding of
-the ``sandbox_type`` argument into the sandbox bridge's own validation are
-all exercised through to the genuine error each layer produces.
+:class:`ToolRegistry` holding a real :class:`SandboxBridge`. The
+document/registry/sandbox-bridge precondition checks, the cross-bridge
+``ToolName.SANDBOX`` lookup, and the forwarding of the ``sandbox_type``
+argument into the sandbox bridge's own validation are all exercised through
+to the error each layer produces.
 """
 
 from __future__ import annotations
@@ -188,7 +188,7 @@ class TestSaveToSandboxPreconditionOrdering:
         The lookup is exercised against a real, empty ToolRegistry. The exact
         ``sandbox bridge not available`` message can only be produced after
         ``registry.get(ToolName.SANDBOX)`` returns None, so the test asserts
-        that lookup returns ``None`` first to prove the genuine cross-bridge
+        that lookup returns ``None`` first to show the cross-bridge
         lookup path is taken rather than an unrelated guard.
 
         The happy-path boundary is asserted in the same test: a registry that

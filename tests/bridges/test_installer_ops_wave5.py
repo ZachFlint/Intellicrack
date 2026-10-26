@@ -109,7 +109,7 @@ class _FakeSubprocessRun:
 
 
 class TestProbeVersionCommandRealBinary:
-    """Verify _probe_version_command parses a real binary's output correctly.
+    """Verify _probe_version_command parses an installed tool's output correctly.
 
     Uses the FRIDA ToolInfo entry from TOOL_REGISTRY, which issues
     ``sys.executable -c "import frida; print(frida.__version__)"`` — a real

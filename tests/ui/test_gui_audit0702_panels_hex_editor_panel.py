@@ -274,7 +274,7 @@ class TestM51EncodingComboFitsLongDescriptions:
             panel.deleteLater()
 
     def test_m51_long_codec_description_is_fully_recoverable_via_tooltip(self, qapp: QApplication) -> None:
-        """A genuinely long hexcore codec description must be fully recoverable via tooltip.
+        """A long hexcore codec description must be fully recoverable via tooltip.
 
         Uses ``intellicrack_hexcore``'s real ``list_encodings()`` registry
         (which includes descriptions such as "ISO-8859-16 (Latin-10,
@@ -342,7 +342,7 @@ class TestM52SharedTreeFactoryResizesColumns:
         """A long mangled import name must widen the Function column instead of clipping.
 
         Uses the real ``_imports_tree`` built by ``_make_tree`` inside a
-        live ``HexEditorPanel`` and feeds it a genuinely long C++ mangled
+        live ``HexEditorPanel`` and feeds it a long C++ mangled
         import name -- the exact scenario the finding describes. The default
         ``Interactive`` resize mode must not leave the column pinned near
         Qt's small default section width regardless of content length.

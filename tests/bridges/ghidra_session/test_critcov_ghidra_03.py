@@ -15,7 +15,7 @@ Two kinds of real object drive it:
 
 * a ``GhidraBridge`` subclass whose remote script and remote eval exchanges
   replay one chosen outcome (a returned value or a raised exception), attached
-  to a genuine, never-connected ``ghidra_bridge`` RPC client; every other line
+  to a never-connected ``ghidra_bridge`` RPC client; every other line
   of the bridge under test is the production code;
 * one module-scoped headless Ghidra session on a copy of a System32 binary,
   started once through PyGhidra and shut down in ``finally``, for the checks

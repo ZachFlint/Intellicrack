@@ -9,9 +9,9 @@ These tests drive the production registry end to end:
 
 * ``execute_tool_call`` dispatches to the real :class:`HexEditorBridge` against
   a real Windows System32 PE, opening the file through the Rust hexcore and
-  reading back the genuine ``MZ`` magic bytes. The result is the actual bridge
+  reading back the ``MZ`` magic bytes. The result is the actual bridge
   return value, not an injected sentinel.
-* The capability gate is exercised with a real method the bridge genuinely
+* The capability gate is exercised with a real method the bridge
   lacks the capability for (``run_python_script`` requires scripting; the hex
   editor disables it), proving the gate raises a real :class:`ToolError`.
 * ``get_tool_definitions`` is validated against each bridge's own
@@ -19,7 +19,7 @@ These tests drive the production registry end to end:
 * ``set_session`` propagation is verified by confirming the real bridge
   publishes its live :class:`ToolState` into the session after a real dispatch.
 
-The registry and bridges are the production classes; only genuinely absent
+The registry and bridges are the production classes; only absent
 external tools cause a documented skip.
 """
 
@@ -117,7 +117,7 @@ class TestExecuteToolCallRealDispatch:
     ) -> None:
         """Reading offset 0 of a real PE through the registry yields ``MZ``.
 
-        This proves the tool call actually reached the real binary's bytes:
+        The tool call must reach the PE file's own bytes:
         every PE begins with the literal ``MZ`` (``4D 5A``) DOS signature.
 
         Args:
@@ -177,7 +177,7 @@ class TestExecuteToolCallRealDispatch:
         must be the document that a ``"hex_editor"`` read and the bridge itself
         then see. A read through the lowercase name only returns the file's
         bytes when both names reached the same ``HexEditorBridge`` instance.
-        Falsifiability oracle: read the same range from the bridge directly and
+        Oracle: read the same range from the bridge directly and
         assert the dispatch result equals it and the bytes written.
 
         Args:

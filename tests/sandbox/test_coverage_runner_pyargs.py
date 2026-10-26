@@ -87,7 +87,7 @@ def test_group_dotted_names_match_their_directories(runner: ModuleType) -> None:
         runner: The loaded coverage runner module.
     """
     for group in runner.discover_groups(_TESTS_ROOT):
-        assert group.dotted is not None, f"group {group.name!r} under the real tests tree is not importable"
+        assert group.dotted is not None, f"group {group.name!r} under the repository tests tree is not importable"
         resolved = _REPO_ROOT / Path(*group.dotted.split("."))
         assert resolved.resolve() == Path(group.target).resolve(), (
             f"group {group.name!r} dotted name {group.dotted!r} resolves to {resolved}, not {group.target}"

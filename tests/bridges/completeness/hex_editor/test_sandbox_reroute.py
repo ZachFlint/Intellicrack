@@ -99,7 +99,7 @@ class TestSaveToSandboxRoutesThroughHexEditorBridge:
     ) -> None:
         """Clicking "Save to Sandbox" must route through create+copy_to via the hex-editor bridge.
 
-        Falsifiable: if ``_on_save_to_sandbox`` were reverted to call
+        If ``_on_save_to_sandbox`` were reverted to call
         ``SandboxBridge.copy_to`` directly against a pre-selected instance
         (the unrouted behaviour), the fake's ``create_calls`` list
         would stay empty (no auto-provisioning) while a ``copy_calls`` entry
@@ -145,7 +145,7 @@ class TestSaveToSandboxRoutesThroughHexEditorBridge:
         """A failed copy must trigger ``sandbox_bridge.destroy`` on the auto-created instance.
 
         This orphan-cleanup behaviour only exists in
-        ``HexEditorBridge.save_to_sandbox``'s ``finally`` block, never in a raw ``SandboxBridge.copy_to`` GUI path. Falsifiable: if the
+        ``HexEditorBridge.save_to_sandbox``'s ``finally`` block, never in a raw ``SandboxBridge.copy_to`` GUI path. If the
         GUI reverted to the raw-copy path, ``destroy_calls`` would stay
         empty since no instance was ever auto-created to clean up.
 
@@ -189,7 +189,7 @@ class TestTestInSandboxRoutesThroughHexEditorBridge:
     ) -> None:
         """Clicking "Test in Sandbox" must route through ``run_binary``, never the raw ``execute`` RPC.
 
-        Falsifiable: if ``_on_test_in_sandbox`` were reverted to call
+        If ``_on_test_in_sandbox`` were reverted to call
         ``SandboxBridge.execute`` directly, the fake's ``run_binary_calls``
         entries would carry ``_via_raw_execute: True`` and reference a
         pre-selected instance ID the test never set, instead of the
@@ -240,7 +240,7 @@ class TestTestInSandboxRoutesThroughHexEditorBridge:
     ) -> None:
         """An unsaved (no ``file_path``) document must warn the user and never reach the sandbox bridge.
 
-        Falsifiable: if the ``file_path is None`` guard in
+        If the ``file_path is None`` guard in
         ``SandboxMixin._on_test_in_sandbox`` were removed, no warning would be
         captured and the handler would dispatch ``bridge.test_in_sandbox``,
         flipping the status label to "Testing in sandbox..." and recording a
@@ -279,7 +279,7 @@ class TestTestInSandboxRoutesThroughHexEditorBridge:
     ) -> None:
         """A saved document with no hex-editor bridge attached must warn instead of dispatching.
 
-        Falsifiable: if the ``bridge is None`` guard in
+        If the ``bridge is None`` guard in
         ``SandboxMixin._on_test_in_sandbox`` were removed, the handler would
         fall through to ``bridge.test_in_sandbox(...)`` on ``None`` and raise
         ``AttributeError`` after setting the status label, and no warning
@@ -314,7 +314,7 @@ class TestSandboxButtonsWiredToRemediatedHandlers:
     def test_save_and_test_buttons_have_connected_slots(qapp: QApplication) -> None:
         """Both sandbox buttons must exist by their real label text and have a connected slot.
 
-        Falsifiable: if the buttons were removed from ``_create_sandbox_tab``
+        If the buttons were removed from ``_create_sandbox_tab``
         (``ui/panels/hex_editor/sandbox.py``), no ``QPushButton`` with the
         expected text would be found; if the ``clicked.connect(...)`` calls
         were removed, ``receivers`` would be ``0``.

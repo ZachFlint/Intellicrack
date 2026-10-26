@@ -285,9 +285,8 @@ def _bind_without_listening(port: int) -> socket.socket:
 def _connect_probe_says_free(port: int) -> bool:
     """Answer the question the superseded probe asked.
 
-    This is the discriminator, not a restatement of the code under test: it is
-    the *old* implementation, kept so the tests can show the two instruments
-    genuinely disagree about the same port.
+    This is the *old* implementation, kept so the tests can show the two
+    instruments disagree about the same port.
 
     Args:
         port: Port to probe.
@@ -313,7 +312,7 @@ class TestThePortProbeAsksWhetherItCanBind:
         occupied = _bind_without_listening(port)
         try:
             assert _connect_probe_says_free(port), (
-                "the discriminator is broken: a socket that never listens should still refuse connections"
+                "the connect probe is broken: a socket that never listens should still refuse connections"
             )
             assert not _PortTestSandbox.probe_port(port), f"port {port} is bound and cannot be bound again, but the probe called it free"
         finally:

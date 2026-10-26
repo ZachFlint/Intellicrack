@@ -201,7 +201,7 @@ class TestDeadSelectorsRemoved:
         Reads every real ``.py`` file under the ``ui`` package source tree and
         greps for ``setProperty("secondary"|"danger"|...)`` calls. If a dead
         attribute selector's backing property is reintroduced through code
-        even after being dropped from the stylesheets, this fails loudly.
+        even after being dropped from the stylesheets, this test fails and lists the offending calls.
         """
         offenders: list[str] = []
         for py_file in _UI_SOURCE_ROOT.rglob("*.py"):

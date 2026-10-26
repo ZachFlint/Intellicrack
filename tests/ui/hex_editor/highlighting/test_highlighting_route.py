@@ -580,7 +580,7 @@ class TestAddHighlightRoutesThoughBridge:
         This test covers the full route: dispatch → bridge invoked with exact
         args → confirmation event → widget.rules updated with exact values.
 
-        Falsifiability: deleting the ``run_bridge_coroutine_logged`` call in
+        Deleting the ``run_bridge_coroutine_logged`` call in
         ``_on_add_highlight_rule`` leaves ``recorder.calls`` empty, the
         ``resolved`` event is never set so ``resolved.wait()`` times out, and
         every subsequent assertion fires.  Replacing the dispatch with a direct
@@ -658,7 +658,7 @@ class TestAddHighlightRoutesThoughBridge:
         the rule_id, ``rules_list`` must show a correctly labelled item, and
         ``update()`` must have been called once.
 
-        Falsifiability: removing the ``add_rule_fn(widget_rule)`` call in
+        Removing the ``add_rule_fn(widget_rule)`` call in
         ``_apply_bridge_highlight_rule_added`` leaves ``host.widget.rules``
         empty and breaks the count and field assertions.  Corrupting the
         ``condition_params`` passed to ``HighlightRule`` breaks the field
@@ -736,7 +736,7 @@ class TestRemoveHighlightRoutesThoughBridge:
         with the exact rule_id → confirmation event → widget.rules emptied and active_ids
         cleared.
 
-        Falsifiability: removing the ``run_bridge_coroutine_logged`` call in
+        Removing the ``run_bridge_coroutine_logged`` call in
         ``_on_remove_highlight_rule`` leaves ``recorder.calls`` empty so the
         ``resolved`` event is never set; the timeout fires and every subsequent
         assertion fires.  Replacing the dispatch with a direct widget mutation would
@@ -806,7 +806,7 @@ class TestRemoveHighlightRoutesThoughBridge:
         the second rule_id, the ``QListWidget`` must have exactly one item
         with the correct label, and ``update()`` must have been called once.
 
-        Falsifiability: removing the ``remove_fn(rule_id)`` call in
+        Removing the ``remove_fn(rule_id)`` call in
         ``_apply_bridge_highlight_rule_removed`` leaves the widget with 2
         rules and breaks the count assertion.  Removing the
         ``_active_highlight_ids.pop(row)`` call leaves active_ids with 2

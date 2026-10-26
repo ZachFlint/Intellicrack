@@ -15,8 +15,8 @@ run's spec overwrote the first's argv, and ``_remove_stale_container``
 force-removed the sibling that was still running.
 
 These tests drive the real derivation functions and the real spec/exit-code
-writers; nothing is mocked. Container reaping is exercised against a stub
-``docker`` executable placed first on ``PATH``: the stub is a genuine program
+writers. Container reaping is exercised against a stub
+``docker`` executable placed first on ``PATH``: the stub is an executable program
 that answers ``docker ps`` from an inventory file and records every ``docker
 rm`` it receives, so the assertions observe real subprocess behaviour rather
 than a stubbed return value. No Docker daemon is contacted and no container is
@@ -821,7 +821,7 @@ def test_cleanup_spares_a_live_sibling_and_reaps_an_orphan(
     removed = _removed_names(rm_log)
     assert sibling not in removed, f"cleanup killed a concurrently running sibling; removed={removed!r}"
     assert unrelated not in removed, f"cleanup removed an unlabeled foreign container; removed={removed!r}"
-    assert orphan in removed, f"a genuinely orphaned container was not reaped; removed={removed!r}"
+    assert orphan in removed, f"an orphaned container was not reaped; removed={removed!r}"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="drives a Windows .cmd stub for the Windows container driver")

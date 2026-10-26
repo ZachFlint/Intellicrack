@@ -242,7 +242,7 @@ class TestResourcesButtonDispatch:
     ) -> None:
         """The Resources button must call ``get_resources`` with the entered module.
 
-        Falsifiable: if nothing in either panel file called
+        Fails if nothing in either panel file called
         ``get_resources`` at all, so ``capture.calls`` would stay empty and
         this assertion would fail; rewiring the button to a different
         bridge method makes the captured coroutine no longer
@@ -274,7 +274,7 @@ class TestResourcesButtonDispatch:
     ) -> None:
         """A blank module field must skip the ``get_resources`` dispatch entirely.
 
-        Falsifiable: dropping the ``if module_name is None: return`` guard in
+        Dropping the ``if module_name is None: return`` guard in
         ``_on_get_resources`` would let a blank field dispatch a bogus
         request, which this assertion forbids.
 
@@ -307,7 +307,7 @@ class TestTlsCallbacksButtonDispatch:
     ) -> None:
         """The TLS Callbacks button must call ``get_tls_callbacks`` with the entered module.
 
-        Falsifiable: if nothing in either panel file called
+        Fails if nothing in either panel file called
         ``get_tls_callbacks``; rewiring the button to a different bridge
         method makes the captured coroutine or call arguments wrong.
 
@@ -366,7 +366,7 @@ class TestBreakOnTlsCallbacksButtonDispatch:
     ) -> None:
         """The Break on TLS CBs button must call ``break_on_tls_callbacks`` with the entered module.
 
-        Falsifiable: if nothing in either panel file called
+        Fails if nothing in either panel file called
         ``break_on_tls_callbacks``; rewiring the button to a different
         bridge method makes the captured coroutine or call arguments wrong.
 
@@ -423,7 +423,7 @@ class TestApplyResourcesRendering:
     ) -> None:
         """Each resource-leaf field lands in the column matching its header.
 
-        Falsifiable: swapping any column index in ``_apply_resources`` (for
+        Swapping any column index in ``_apply_resources`` (for
         example writing ``id`` into the ``Name`` column) makes the
         corresponding cell assertion fail.
 
@@ -470,7 +470,7 @@ class TestApplyTlsCallbacksRendering:
     ) -> None:
         """Each TLS callback's index and address land in their own columns.
 
-        Falsifiable: swapping the ``index``/``address`` column assignment in
+        Swapping the ``index``/``address`` column assignment in
         ``_apply_tls_callbacks`` makes the corresponding cell assertion fail.
 
         Args:
@@ -505,7 +505,7 @@ class TestApplyTlsBreakResultRendering:
     ) -> None:
         """The status label reflects the bridge's real ``breakpoints_set`` count.
 
-        Falsifiable: hardcoding the label text or reading the wrong dict key
+        Hardcoding the label text or reading the wrong dict key
         in ``_apply_tls_break_result`` makes this assertion observe the
         wrong count.
 

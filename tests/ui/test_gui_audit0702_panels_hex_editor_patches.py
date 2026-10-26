@@ -346,7 +346,7 @@ class _PatchesHarness(QWidget, PatchesMixin):
 
 
 def _make_real_ips_patch() -> bytes:
-    """Produce a genuine IPS patch blob via the real hexcore backend.
+    """Produce an IPS patch blob via the real hexcore backend.
 
     Returns:
         bytes: Raw (not base64-encoded) IPS patch bytes covering a single

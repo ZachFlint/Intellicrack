@@ -23,11 +23,11 @@ source-filtered against the bridge's ``"bridge"`` tag, ``HexEditorPanel``
 guards against replaying its own open a second time when the notification
 echoes back (``_document_already_matches_bridge``).
 
-Every test drives the REAL, unmodified ``HexEditorPanel`` against a real
-``HexEditorBridge`` and real ``intellicrack_hexcore.HexDocument`` instances
-backed by real temporary files on disk; the only test double is a
+Every test drives ``HexEditorPanel`` against a
+``HexEditorBridge`` and ``intellicrack_hexcore.HexDocument`` instances
+backed by temporary files on disk; the only test double is a
 ``HexEditorBridge`` subclass that appends to a call ledger before delegating
-to the real implementation via ``super()``.
+to the base implementation via ``super()``.
 """
 
 from __future__ import annotations
@@ -73,8 +73,8 @@ class _OpenSaveRecordingBridge(HexEditorBridge):
     """``HexEditorBridge`` subclass recording ``open_file``/``close_file``/``save``/``save_as`` calls.
 
     Every override delegates to the real implementation via ``super()`` after
-    recording, so the resulting document state reflects genuine hexcore
-    behaviour rather than a canned response.
+    recording, so the resulting document state reflects hexcore
+    behavior rather than a canned response.
     """
 
     def __init__(self) -> None:
@@ -138,7 +138,7 @@ class TestOpenRoutesThroughBridge:
     def test_second_load_releases_previous_bridge_document(qapp: QApplication, tmp_path: Path) -> None:
         """A second ``load_file`` must close the bridge's previous document before opening the new one.
 
-        Falsifiable: if ``_load_file_impl`` were reverted to call
+        If ``_load_file_impl`` were reverted to call
         ``hexcore.HexDocument.open()`` directly (the unrouted behaviour),
         ``bridge.open_file_calls`` would stay empty and ``close_file_calls``
         would stay ``0`` even though two different files were loaded through
@@ -184,7 +184,7 @@ class TestOpenRoutesThroughBridge:
         ``_on_state_event``, that echo would call ``self.load_file`` a second
         time, appending a second entry to ``open_file_calls``.
 
-        Falsifiable: reverting the guard in ``_on_state_event`` (so
+        Reverting the guard in ``_on_state_event`` (so
         ``DOCUMENT_OPENED`` unconditionally calls ``self.load_file`` again)
         makes ``bridge.open_file_calls`` grow beyond a single entry for one
         user-driven open.
@@ -218,7 +218,7 @@ class TestSaveRoutesThroughBridge:
     def test_save_routes_through_bridge_save(qapp: QApplication, tmp_path: Path) -> None:
         """``panel.save()`` must dispatch to ``HexEditorBridge.save`` and persist the real write.
 
-        Falsifiable: if ``_on_save`` were reverted to call
+        If ``_on_save`` were reverted to call
         ``document.save()`` directly, ``bridge.save_calls`` would stay empty.
 
         Args:
@@ -251,7 +251,7 @@ class TestSaveRoutesThroughBridge:
     ) -> None:
         """``panel.save_as()`` must dispatch to ``HexEditorBridge.save_as`` and leave the source untouched.
 
-        Falsifiable: if ``_perform_save_as`` were reverted to call
+        If ``_perform_save_as`` were reverted to call
         ``document.save()`` directly, ``bridge.save_as_calls`` would stay
         empty even though the file was written to the new destination.
 

@@ -163,7 +163,7 @@ class McpContextBrowser(QDialog):
     Emits ``inserted(text)`` with the rendered resource or prompt the operator chose to insert.
     """
 
-    inserted = pyqtSignal(str)
+    inserted: pyqtSignal = pyqtSignal(str)
     _progressed = pyqtSignal(object)
 
     def __init__(self, manager: McpConnectionManager, parent: QWidget | None = None) -> None:

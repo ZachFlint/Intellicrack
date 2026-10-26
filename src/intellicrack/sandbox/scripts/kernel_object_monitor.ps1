@@ -257,7 +257,7 @@ public static class NtKernelObjects
     // so the per-sweep enumeration of the entire system handle table - which
     // can hold hundreds of thousands of entries - never crosses the
     // PowerShell interop boundary except for the handful of handles that are
-    // genuinely new since the previous sweep. The kernel object pointer is
+    // new since the previous sweep. The kernel object pointer is
     // part of the key so that a recycled handle value pointing at a different
     // object is reported as new rather than silently skipped.
     private static readonly HashSet<string> SeenHandleKeys = new HashSet<string>();
@@ -624,7 +624,7 @@ Write-KernelLifecycle -State 'started' -Detail "poll_interval_ms=$PollIntervalMi
 # already open system-wide (hundreds of thousands of handles on a typical
 # host) before the dedup set converges to steady state; that first pass can
 # take tens of seconds even though every later sweep only resolves the
-# handful of handles that are genuinely new. Consumers that need to know
+# handful of handles that are new. Consumers that need to know
 # "the monitor is now running at fast, steady-state cadence" - e.g. a test
 # or bridge caller about to create a short-lived object it expects the
 # monitor to catch - cannot infer that from an OpenProcess failure alone,

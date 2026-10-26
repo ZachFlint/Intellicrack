@@ -15,14 +15,14 @@ install.
 Non-runtime packages belong in the ``[project].optional-dependencies``
 extras and
 ``[dependency-groups]`` tables (``dev``, ``test``, ``docs``, ``profile``).
-The remaining ``[project].dependencies`` entries are the genuine runtime
+The remaining ``[project].dependencies`` entries are the runtime
 imports under ``src/intellicrack/`` plus their version constraints.
 
 These tests guard the regression by parsing the on-disk ``pyproject.toml``
 with :mod:`tomllib` and asserting three invariants:
 
 * a fixed BLOCKLIST of dev-only package names is absent from runtime deps,
-* a fixed ALLOWLIST of genuine runtime package names is present in runtime
+* a fixed ALLOWLIST of runtime package names is present in runtime
   deps,
 * the total runtime dependency count stays under a small ceiling so the
   prune does not silently regress in the future.
@@ -96,7 +96,7 @@ _BLOCKLIST: Final[frozenset[str]] = frozenset(
 )
 
 # Packages that MUST appear in [project].dependencies because they are
-# genuine runtime imports under ``src/intellicrack/``. The list is derived
+# runtime imports under ``src/intellicrack/``. The list is derived
 # from the runtime block of ``[tool.pixi]`` ``pypi-dependencies`` plus the
 # additional packages (``keyring``, ``psutil``, ``yara-python``,
 # ``cryptography``, ``pyyaml``, ``huggingface-hub``) that were already
@@ -227,7 +227,7 @@ def test_blocklist_absent_from_runtime_dependencies() -> None:
 def test_allowlist_present_in_runtime_dependencies() -> None:
     """Every required runtime package must be declared in runtime dependencies.
 
-    A failure here indicates the prune removed too much: a genuine
+    A failure here indicates the prune removed too much: a
     runtime import was deleted from ``[project].dependencies`` and
     end-user installs would crash on import.
     """
@@ -243,7 +243,7 @@ def test_allowlist_present_in_runtime_dependencies() -> None:
 def test_runtime_dependency_count_is_lean() -> None:
     """Runtime dependency list must stay small.
 
-    The list must contain only genuine runtime requirements. This test fails loudly if a
+    The list must contain only runtime requirements. This test fails if a
     future change re-inflates the list past a sane ceiling, which is the
     most common way the regression would creep back in.
     """

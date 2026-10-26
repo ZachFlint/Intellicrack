@@ -510,7 +510,7 @@ class UserInterfaceReachabilityTests(Assertions, unittest.TestCase):
         self.require_same(found, frozenset({"read"}), "a commented-out entry was read as a live one")
 
     def test_a_missing_manifest_is_reported(self) -> None:
-        """A registry that has been renamed away fails loudly instead of silently."""
+        """A registry that has been renamed away raises ManifestError instead of passing silently."""
         reported = False
         try:
             _declaration_body("const OTHER = [];\n", _CONTROL_SYMBOL)

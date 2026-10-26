@@ -295,7 +295,7 @@ class InterleavedEdits(_HistoryCase):
         self.equal(self.digest(handle), final)
 
     def test_a_document_opened_over_a_real_binary_undoes_the_same_way(self) -> None:
-        """The interpreter copy, a genuine PE, rewinds to its on-disk contents."""
+        """The interpreter copy, a PE image, rewinds to its on-disk contents."""
         handle = self.session.executable_document().handle
         original = self.digest(handle)
         length = self.info(handle).length

@@ -3,6 +3,9 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Built-in templates for PE images: the DOS, file and optional headers,
+//! section headers, data directories and the import and export directories.
+
 use super::{Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry};
 
 /// Registers the built-in PE/COFF structure templates into `registry`.

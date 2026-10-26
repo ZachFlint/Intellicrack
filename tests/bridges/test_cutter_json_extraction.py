@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the Cutter/rizin bridge JSON extraction and timeout.
+"""Tests for the Cutter/rizin bridge JSON extraction and timeout.
 
-These tests exercise the real ``_extract_rizin_json`` helper (not a mock)
+These tests exercise the ``_extract_rizin_json`` helper
 that both ``_cmd_json`` and ``get_libraries`` rely on to recover JSON payloads
 from rizin's ``j``-suffixed commands, which can emit non-JSON prefix/suffix
 bytes over the pipe. They also pin the command timeout so a regression back to

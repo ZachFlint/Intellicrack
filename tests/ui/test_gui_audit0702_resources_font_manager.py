@@ -11,8 +11,8 @@ values. Otherwise editing ``font_config.json``'s primary/fallback font lists or 
 
 Each test below points ``FontManager`` at a synthetic ``font_config.json``
 with font family names guaranteed not to exist on the test machine and font
-sizes distinct from every hardcoded default, then drives the real,
-unmocked font-resolution code path (``load_fonts`` /
+sizes distinct from every hardcoded default, then drives the
+font-resolution code path (``load_fonts`` /
 ``get_code_font`` / ``get_ui_font`` / ``get_heading_font``) and asserts the
 resolved family names and point sizes come from the config rather than the
 hardcoded constants.

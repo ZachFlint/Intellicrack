@@ -6,7 +6,7 @@
 
 These helpers drive the *real* :class:`~intellicrack.bridges.process.ProcessBridge`
 against the *real* running Python interpreter process so the process-panel
-tab widgets render genuine Win32 enumeration data (real thread IDs, real
+tab widgets render Win32 enumeration data (real thread IDs, real
 loaded DLLs such as ``ntdll.dll``/``kernel32.dll``, real token privileges,
 real process-image memory). No bridge method under test is mocked; a real
 Windows backend performs every enumeration.
@@ -69,7 +69,7 @@ class RealProcessBridgeProbe(ProcessBridge):
     """Real ProcessBridge subclass exposing a typed raw-memory read.
 
     The production raw-read helper is protected; exposing it from this
-    subclass lets tests read genuine process memory while remaining fully
+    subclass lets tests read process memory while remaining fully
     type-correct (protected members are accessible in subclasses).
     """
 
@@ -81,7 +81,7 @@ class RealProcessBridgeProbe(ProcessBridge):
             size: Number of bytes to read.
 
         Returns:
-            bytes: The genuine bytes read from process memory.
+            bytes: The bytes read from process memory.
         """
         return self._sync_read_memory(address, size)
 
@@ -90,7 +90,7 @@ def make_real_bridge_attached_to_self() -> RealProcessBridgeProbe:
     """Create a real ProcessBridge initialized and attached to this process.
 
     Opens the current interpreter process with full access so memory, thread,
-    module, and privilege enumeration return genuine data.
+    module, and privilege enumeration return live process data.
 
     Returns:
         RealProcessBridgeProbe: Initialized bridge attached to ``os.getpid()``.

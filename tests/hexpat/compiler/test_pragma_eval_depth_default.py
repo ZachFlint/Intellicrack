@@ -42,7 +42,7 @@ class TestPragmaDefaultEvalDepth:
     def test_default_eval_depth_handles_common_parent_recursion(self) -> None:
         """The default has enough headroom for typical parent-relative chains.
 
-        Real-world parent-walk patterns commonly nest 50+ levels deep when
+        Parent-walk patterns commonly nest 50+ levels deep when
         traversing pointer-rich file formats. A default of 256+ is the
         smallest safe headroom; the new constant must clear it.
         """

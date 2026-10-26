@@ -5,11 +5,11 @@
 
 """Coverage for the QEMU sandbox's launch, shutdown, cleanup, file-transfer and snapshot paths.
 
-QEMU is not installed in the test container and no virtual machine is started. What can be reached
-honestly is reached with real objects: the command line the backend builds, the process model around a
-real child process that stands in for the launcher, the guest-agent file and command primitives against
-the real loopback ``GuestAgentProtocolServer`` that models a guest, the temp-tree teardown against real
-files and a real locked file, and the monitor-protocol bookkeeping driven through subclasses of the
+QEMU is not installed in the test container and no virtual machine is started. The tests cover: the
+command line the backend builds, the process model around a
+child process that stands in for the launcher, the guest-agent file and command primitives against
+the loopback ``GuestAgentProtocolServer`` that models a guest, the temp-tree teardown against temp
+files and a locked file, and the monitor-protocol bookkeeping driven through subclasses of the
 production ``QMPClient`` and ``QemuGuestAgentClient`` that answer from a script instead of a socket.
 Every sandbox here is a subclass of the production ``QEMUSandbox`` that only exposes protected state.
 """

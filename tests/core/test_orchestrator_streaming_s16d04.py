@@ -16,7 +16,7 @@ Two gates:
     ``_should_use_streaming`` asserting it returns ``True`` for the
     initial tools-on turn in "auto" mode.
   * ``TestStreamedToolsOnTurnEmitsChunks`` — behavioral gate driving the real
-    orchestrator agent loop with a genuine streaming provider that yields
+    orchestrator agent loop with a streaming provider that yields
     several text deltas *and* finalizes a tool call from the stream, and
     asserting both that multiple ``stream_chunk`` events were observed and
     that the tool call was still collected and executed.
@@ -137,7 +137,7 @@ class _StreamProbeBridge(ToolBridgeBase):
 
 
 class _StreamingToolCallProvider(LLMProviderBase):
-    """Genuine streaming provider used to exercise the auto-mode streaming path.
+    """Streaming provider used to exercise the auto-mode streaming path.
 
     ``chat_stream`` yields several separate text deltas per turn (simulating
     token-by-token output) rather than a single blob. On the first
@@ -152,9 +152,8 @@ class _StreamingToolCallProvider(LLMProviderBase):
 
     ``chat`` is implemented as a real, functioning non-streaming fallback
     with equivalent per-turn semantics; it is not expected to be invoked by
-    these tests since streaming is what is under test, but it is not a
-    stub — it is a genuine, self-consistent implementation of the abstract
-    contract.
+    these tests since streaming is what is under test, but it is a
+    self-consistent implementation of the abstract contract.
     """
 
     def __init__(self) -> None:
@@ -425,8 +424,8 @@ class TestStreamedToolsOnTurnEmitsChunks:
     def test_initial_turn_streams_multiple_chunks_and_collects_tool_call(self, tmp_path: Path) -> None:
         """The initial tools-on turn emits multiple stream_chunk events and the tool call still fires.
 
-        Drives the real orchestrator agent loop end to end with a genuine
-        (non-mock) streaming provider. The provider yields four separate
+        Drives the real orchestrator agent loop end to end with a
+        streaming provider. The provider yields four separate
         text deltas on the initial turn before finalizing a
         ``process.probe`` tool call from the stream.
 

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the provider-panel action-button clipping.
+"""Test for the provider-panel action-button clipping.
 
 ``ProviderConfigDialog._setup_ui`` packs its eight action buttons two-per-row
 into a left panel pinned to ``_LIST_MIN_WIDTH``/``_LIST_MAX_WIDTH`` (200/250
@@ -136,7 +136,7 @@ def test_action_buttons_are_not_clipped(qapp: QApplication, monkeypatch: pytest.
     into a panel pinned at 200-250 px, so "Write .env Template" renders narrower than
     its label, and Qt centre-clips it to something
     like "Vrite .env Templat". This asserts every action button's real
-    rendered width, after a genuine layout pass, is at least the width its
+    rendered width, after a full layout pass, is at least the width its
     label needs under the live style.
 
     Args:

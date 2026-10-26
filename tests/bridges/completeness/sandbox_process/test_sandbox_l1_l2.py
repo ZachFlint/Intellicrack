@@ -55,7 +55,7 @@ class _StubQMPWithStop(StubQMP):
 
     ``tests.sandbox.conftest.StubQMP`` only implements ``cont()``, since
     it was built for the already-registered ``sandbox.cont`` path. The
-    genuine external boundary this slice's tests cannot cross is the real
+    external boundary this slice's tests cannot cross is the real
     QEMU QMP wire protocol; this stub stands in for that boundary only, while
     the real ``SandboxBridge.stop`` method body (state lookup, sandbox-type
     guard, QMP call, response handling, instance bookkeeping) executes for
@@ -98,7 +98,7 @@ def qemu_manager_with_stop() -> tuple[StubManager, _StubQMPWithStop, str]:
 class TestSandboxStopL1:
     """L1: ``SandboxBridge.stop`` performs a real QMP pause and returns real data.
 
-    Falsified by: reverting ``sandbox_bridge.py``'s ``stop`` method body
+    Reverting ``sandbox_bridge.py``'s ``stop`` method body
     (``sandbox_bridge.py:1621-1672``) to a stub/no-op, or breaking its QMP
     response handling, turns every assertion below red.
     """
@@ -150,7 +150,7 @@ class TestSandboxStopL1:
 class TestSandboxStopPcapL1:
     """L1: ``SandboxBridge.stop_pcap`` is a real, tolerant cleanup variant.
 
-    Falsified by: reverting ``sandbox_bridge.py:1876-1911`` (``stop_pcap``) to
+    Reverting ``sandbox_bridge.py:1876-1911`` (``stop_pcap``) to
     always raise, always report ``stopped=True``, or fail to consult
     ``_active_pcap_captures`` turns these red.
     """
@@ -166,7 +166,7 @@ class TestSandboxStopPcapL1:
 
     @pytest.mark.asyncio
     async def test_stop_pcap_stops_tracked_capture(self) -> None:
-        """stop_pcap() stops a genuinely tracked capture and clears bridge-side tracking.
+        """stop_pcap() stops a tracked capture and clears bridge-side tracking.
 
         The clearing of the internal ``_active_pcap_captures`` tracking dict is
         verified through observable behaviour rather than private-attribute
@@ -204,11 +204,11 @@ class _ConfigRecordingManager(StubManager):
     whether ``SandboxBridge.create`` actually built and forwarded a
     ``SandboxConfig`` with the caller's values. Real VM provisioning
     (``WindowsSandbox``/``QEMUSandbox`` availability probing and startup) is
-    the genuine external boundary this test cannot cross inside the sandbox
+    the external boundary this test cannot cross inside the sandbox
     environment, so this fake manager stands in for the manager layer only;
     ``SandboxBridge.create``'s own parameter-to-``SandboxConfig`` construction
     (``sandbox_bridge.py:1043-1090``) executes for real and is what this test
-    falsifies.
+    checks.
     """
 
     def __init__(self) -> None:
@@ -248,7 +248,7 @@ class TestSandboxCreateConfigL1:
     async def test_create_threads_timeout_network_memory_into_config(self) -> None:
         """create() builds a SandboxConfig with the exact caller-supplied timeout/network/memory values.
 
-        Falsified by: reverting ``sandbox_bridge.py``'s ``create`` to ignore
+        Reverting ``sandbox_bridge.py``'s ``create`` to ignore
         ``timeout_seconds``/``network_enabled``/``memory_limit_mb`` (or to
         build the ``SandboxConfig`` with hardcoded defaults instead of the
         caller's values) turns this red.

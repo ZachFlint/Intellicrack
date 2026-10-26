@@ -612,7 +612,7 @@ class TestProcessDispatchL2:
         await registry.shutdown()
 
     async def test_execute_tool_call_dispatches_read_registry(self, tmp_path: Path) -> None:
-        """execute_tool_call reaches the real read_registry implementation with a genuine registry read.
+        """execute_tool_call reaches the real read_registry implementation and performs a registry read.
 
         Args:
             tmp_path: Pytest temporary directory used as the tools install root.

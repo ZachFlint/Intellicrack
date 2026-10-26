@@ -71,7 +71,7 @@ def _tool_function(bridge: SandboxBridge, name: str) -> ToolFunction:
 class TestSandboxCreateRestartRunBinaryParamCompletenessL2:
     """L2: sandbox.create/restart/run_binary declare every real method parameter.
 
-    Falsified by: reverting any of the ``qemu_config``, ``block_telemetry``,
+    Reverting any of the ``qemu_config``, ``block_telemetry``,
     ``companions``, ``reuse_instance``, or ``instance_id`` ``ToolParameter``
     additions in ``sandbox_bridge.py``'s ``tool_definition`` turns the
     corresponding parametrised case red, since the declared parameter set
@@ -133,7 +133,7 @@ class TestSandboxCreateRestartRunBinaryParamCompletenessL2:
     def test_run_binary_time_limit_has_no_false_fixed_default(self) -> None:
         """run_binary's time_limit carries no fabricated default; it really means "use sandbox config value".
 
-        Falsified by: restoring ``default=300`` on the
+        Fails if ``default=300`` is restored on the
         ``sandbox.run_binary`` ``time_limit`` ``ToolParameter``, which claimed
         a fixed default that never matched the real method's
         ``time_limit: int | None = None`` and contradicted the parameter's

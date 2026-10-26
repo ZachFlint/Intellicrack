@@ -125,7 +125,7 @@ _RESULT_SENTINEL_BASE = "_intellicrack_ghidra_result_"
 # (``jfx_bridge.bridge.DEFAULT_RESPONSE_TIMEOUT``) and multiplies it by 100
 # for the ``remote_exec``/``remote_eval`` ceilings. A 2 second base is far too
 # small for Ghidra, whose auto-analysis and metadata sweeps routinely take
-# minutes on real binaries. This base is passed explicitly at bridge
+# minutes on large binaries. This base is passed explicitly at bridge
 # construction so both the base timeout and the derived exec/eval ceilings
 # scale proportionally (base 300s -> exec/eval ceiling 30000s), which is ample
 # headroom for the short polling RPCs the analyze loop issues.
@@ -3477,7 +3477,7 @@ metadata
         then blocks until they finish. Running ``analyzeAll`` (optionally
         followed by ``AutoAnalysisManager.waitForAnalysis``) inside a single
         synchronous RPC can exceed the bridge response-timeout ceiling on
-        real binaries, surfacing as a spurious ``timed out`` failure and an
+        large binaries, surfacing as a spurious ``timed out`` failure and an
         empty analysis view.
 
         To avoid that, this method launches ``analyzeAll`` on a background
@@ -6168,7 +6168,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         existing code units spanning the write range (``Memory.setBytes``
         otherwise raises ``MemoryAccessException`` when the target bytes
         fall inside an already-disassembled instruction -- the common case
-        for a real binary patch, e.g. overwriting a jump or a license
+        for a binary patch, e.g. overwriting a jump or a license
         check), writes via ``Memory.setBytes``, then reads the bytes back
         and compares them to the requested payload. The transaction is
         committed only when the readback matches; otherwise it is rolled

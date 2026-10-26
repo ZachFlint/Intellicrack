@@ -199,7 +199,7 @@ class TestLauncherSelection:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows where.exe PATH probe resolving cmd.exe for the Windows Sandbox launcher")
 class TestExeOnPathIsReal:
-    """The PATH probe must genuinely consult the OS, not always answer True."""
+    """The PATH probe must consult the OS, not always answer True."""
 
     def test_detects_a_real_executable_and_rejects_a_missing_one(self) -> None:
         """The probe resolves cmd.exe and rejects a name that cannot exist.
@@ -262,7 +262,7 @@ class TestStartupHealth:
         asyncio.run(sandbox.run_startup_health())
 
     def test_nonzero_launcher_exit_raises(self) -> None:
-        """A genuine non-zero launcher exit is still reported."""
+        """A non-zero launcher exit is still reported."""
         sandbox = _health_sandbox(3)
         with pytest.raises(SandboxError, match="launcher exit code 3"):
             asyncio.run(sandbox.run_startup_health())

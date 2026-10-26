@@ -105,7 +105,7 @@ _EXPECTED_CONNECTIONS: Final[int] = 1
 
 
 class _StartPathSandbox(QEMUSandbox):
-    """``QEMUSandbox`` whose QEMU-hardware steps are genuine no-ops.
+    """``QEMUSandbox`` whose QEMU-hardware steps are no-ops.
 
     The part the defect lives in is left entirely alone:
     ``_attach_qemu_agents`` builds the real :class:`GuestAgentClient` and drives

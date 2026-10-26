@@ -2,11 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable test gates for HuggingFaceProvider and LocalTransformersProvider.
+"""Tests for HuggingFaceProvider and LocalTransformersProvider.
 
-Every gate uses an independently-known oracle and is falsifiable by a nameable one-line
-production mutation. External boundaries (torch GPU APIs, model/tokenizer loaders, httpx
-transport, XPU cache) are monkeypatched; the SUT's own logic is never mocked.
+Every test compares against an independently-known oracle, so a one-line production
+mutation in the covered logic makes it fail. External boundaries (torch GPU APIs,
+model/tokenizer loaders, httpx transport, XPU cache) are monkeypatched; the SUT's own
+logic runs unpatched.
 """
 
 from __future__ import annotations
@@ -100,7 +101,7 @@ def _hf_status_code_fn(exc: BaseException) -> int:
 
 
 def _make_binary_tool() -> ToolDefinition:
-    """Build a real binary-analysis ToolDefinition for provider format tests.
+    """Build a binary-analysis ToolDefinition for provider format tests.
 
     Returns:
         ToolDefinition: A definition exposing ``binary.get_file_size``.

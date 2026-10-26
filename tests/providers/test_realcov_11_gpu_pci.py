@@ -7,7 +7,7 @@
 
 These tests drive ``intellicrack.providers.gpu_pci_resources`` and
 ``intellicrack.providers.xpu_utils`` against the real machine. BAR
-enumeration runs against the genuine PnP device instance IDs reported
+enumeration runs against the PnP device instance IDs reported
 by ``Win32_VideoController`` (via the production WMI query), so when an
 Intel Arc GPU is present the test reads the real allocated BAR size
 straight from ``cfgmgr32.dll``. Platform-specific and absent-hardware

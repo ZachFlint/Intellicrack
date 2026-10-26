@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Editing a real binary and getting the same bytes back out again.
+"""Editing a copied executable and getting the same bytes back out again.
 
 Every assertion here is checked against something that is not the engine. Sizes
 are compared with :meth:`pathlib.Path.stat`, digests with :mod:`hashlib`, and
@@ -12,8 +12,8 @@ engine that reported its own edits back consistently but wrongly would pass a
 test written against ``read`` alone; it cannot pass one written against a model
 built outside it.
 
-The subject is a copy of the running interpreter. That is a genuine PE with a
-real ``MZ`` signature rather than a fixture committed beside the tests, so this
+The subject is a copy of the running interpreter. That is a PE image with an
+``MZ`` signature rather than a fixture committed beside the tests, so this
 directory stays free of binary blobs and can be deleted whole.
 
 Everything runs through :meth:`hexbench.tests._support.Session.call`, which is
@@ -504,7 +504,7 @@ class BitEdits(_DocumentCase):
         """Setting and clearing each bit moves exactly that bit of the byte.
 
         The expectation is carried forward rather than recomputed from the
-        original value: clearing bit two of ``0x3C`` genuinely changes the byte,
+        original value: clearing bit two of ``0x3C`` changes the byte,
         so a model that reset every iteration would be asserting against a value
         the document no longer holds.
         """

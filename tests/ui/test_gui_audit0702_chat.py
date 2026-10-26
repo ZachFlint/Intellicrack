@@ -13,7 +13,7 @@
 All tests build a real :class:`~intellicrack.ui.chat.MessageBubble` from a
 real :class:`~intellicrack.core.types.Message` under an offscreen
 ``QApplication`` and inspect the actual child ``QLabel`` widgets it
-constructs -- no mocks or stubs stand in for the widget-construction logic.
+constructs.
 """
 
 from __future__ import annotations

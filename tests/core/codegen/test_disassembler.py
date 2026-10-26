@@ -52,8 +52,8 @@ def _make_elf64_header(*, e_machine: int, is_64bit: bool) -> bytes:
 
     The buffer carries a real ``\x7fELF`` magic, ``EI_CLASS`` / ``EI_DATA``
     identification bytes, and a little-endian ``e_machine`` field at the
-    architecturally correct offset (0x12). This is a genuine ELF header prefix
-    that :func:`detect_format_and_arch` parses exactly as it would a real binary
+    architecturally correct offset (0x12). This is a valid ELF header prefix
+    that :func:`detect_format_and_arch` parses exactly as it would a binary
     on disk - no monkeypatching of the detector is involved.
 
     Args:
@@ -158,7 +158,7 @@ _EXPECTED_32BIT_DECODE: list[tuple[int, str, str]] = [
 
 
 def test_f0002_auto_detect_arch_x86_64_elf_resolves_to_64bit_capstone_mode() -> None:
-    """A real x86-64 ELF header must resolve to a genuinely 64-bit capstone pair.
+    """A valid x86-64 ELF header must resolve to a 64-bit capstone pair.
 
     A structurally valid ELF64 header (``e_machine = EM_X86_64 = 62`` from the
     ELF gABI) is driven through the *real* :meth:`auto_detect_arch` pipeline -
@@ -167,7 +167,7 @@ def test_f0002_auto_detect_arch_x86_64_elf_resolves_to_64bit_capstone_mode() -> 
     is then fed into a live capstone disassembly of the mode-sensitive byte
     sequence ``48 31 c0 48 89 e5 c3``.
 
-    The oracle is the x86-64 ISA itself: in genuine 64-bit mode the REX.W
+    The oracle is the x86-64 ISA itself: in 64-bit mode the REX.W
     prefixes yield ``xor rax, rax`` / ``mov rbp, rsp`` / ``ret``. If the map
     entry were corrupted to ``("x86", "32")`` the same bytes would decode to the
     32-bit form (asserted separately below) and this test would go red.
@@ -184,7 +184,7 @@ def test_f0002_auto_detect_arch_x86_64_elf_resolves_to_64bit_capstone_mode() -> 
 
 
 def test_f0002_auto_detect_arch_x86_elf_resolves_to_32bit_capstone_mode() -> None:
-    """A real 32-bit x86 ELF header must resolve to a genuinely 32-bit capstone pair.
+    """A valid 32-bit x86 ELF header must resolve to a 32-bit capstone pair.
 
     Companion to the 64-bit case: an ELF32 header (``e_machine = EM_386 = 3``)
     is driven through the real pipeline and the same mode-sensitive sequence is

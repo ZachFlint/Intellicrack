@@ -168,7 +168,7 @@ class TestSetLabelVerification:
         assert result["text"] == "main_loop"
 
     async def test_set_label_raises_when_readback_text_differs(self, bridge: X64DbgBridge) -> None:
-        """A mismatched readback raises ``ToolError`` (no fake-success).
+        """A mismatched readback raises ``ToolError`` instead of reporting success.
 
         Args:
             bridge: Fixture bridge instance.

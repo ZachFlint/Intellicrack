@@ -420,8 +420,8 @@ class TestMainArgParsing:
     """Gate for _parse_args in main.py.
 
     No test_main.py existed. ``--log-dir`` is not a flag of the parser, so the tests cover the flags
-    the parser defines: --log-level, --verbose, --quiet, --config. Each assertion is falsified by
-    returning the wrong field value.
+    the parser defines: --log-level, --verbose, --quiet, --config. Each assertion fails if
+    the parser returns the wrong field value.
     """
 
     @staticmethod

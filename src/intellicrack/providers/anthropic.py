@@ -140,7 +140,7 @@ class AnthropicProvider(LLMProviderBase):
             raise ProviderError(_MSG_WITH_DETAIL % (_MSG_CONNECTION_FAILED, detail)) from e
         else:
             self._credentials = credentials
-            self.connected = True
+            self.connected: bool = True
             self._logger.info(
                 "anthropic_connected",
                 has_custom_base=credentials.api_base is not None,

@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the transaction handling of five user-facing ``GhidraBridge`` mutators.
+"""Tests for the transaction handling of five user-facing ``GhidraBridge`` mutators.
 
 Each of these mutators must wrap its program write in ``currentProgram.startTransaction`` and ``endTransaction``. Without that wrapper, a real Ghidra program raises ``NoTransactionException('Transaction has not been started')`` on the write:
 
@@ -127,7 +127,7 @@ def _reserve_free_port() -> int:
 async def real_bridge(tmp_path_factory: pytest.TempPathFactory) -> AsyncGenerator[GhidraBridge]:
     """Boot a real headless Ghidra bridge and load a real PE for the module.
 
-    Launches ``analyzeHeadless`` through PyGhidra against the genuine Ghidra
+    Launches ``analyzeHeadless`` through PyGhidra against the Ghidra
     installation resolved by :func:`_resolve_ghidra_install`, waits for the
     bridge RPC server to come up, and imports the current interpreter's own
     executable as the target program. Shared across every test in this

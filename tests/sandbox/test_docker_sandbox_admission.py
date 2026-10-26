@@ -8,8 +8,8 @@
 The host driver may be launched by several agents at once. Without a governor
 each launch would start a Windows container unconditionally, and oversubscribing
 the shared Host Compute Service has bugchecked this host. :mod:`scripts.sandbox.admission`
-adds two guarantees these tests exercise against real files, real processes, and
-a real cross-process lock -- nothing is mocked:
+adds two guarantees these tests exercise against files, processes, and
+a cross-process lock:
 
 * :func:`plan_capacity` derives a concurrency budget and a per-run memory/CPU
   share from host resources, so a set of concurrent runs fits with headroom.
@@ -17,7 +17,7 @@ a real cross-process lock -- nothing is mocked:
   blocks callers until a slot frees, and reclaims slots stranded by a driver
   that died before releasing.
 
-The crown jewel spawns four genuine subprocesses that each take a slot through
+The crown jewel spawns four subprocesses that each take a slot through
 the real lock against one shared reservations directory with a budget of two,
 and proves that no more than two ever held a slot simultaneously. Break the
 budget bookkeeping and the observed overlap exceeds two, reddening the gate.

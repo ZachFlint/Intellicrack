@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable offline gates for OpenAI provider offline transforms.
+"""Offline tests for OpenAI provider offline transforms.
 
 Covers four operations that lacked real offline coverage:
 
@@ -15,15 +15,14 @@ Covers four operations that lacked real offline coverage:
   ``temperature=1.0`` forced for o-series, tools forwarded).
 
 ``_translate_openai_errors`` is *already* gated in
-``test_openai_format_helpers.py`` with REAL assertions (auth, rate-limit,
-quota, transport, passthrough, unrelated propagation).  It is omitted here
+``test_openai_format_helpers.py`` with assertions on auth, rate-limit,
+quota, transport, passthrough, and unrelated propagation.  It is omitted here
 to avoid duplication.
 
 All tests are fully offline.  The seam is a real
 ``httpx2.AsyncBaseTransport`` subclass that feeds pre-built SSE bytes
 into the real ``openai.AsyncOpenAI`` SDK so every deserialisation and
-parsing layer executes without substitution.  No ``MagicMock`` or
-``AsyncMock`` is used anywhere in this module.
+parsing layer executes.
 """
 
 from __future__ import annotations
@@ -710,7 +709,7 @@ class TestOpenOpenAIStreamParamDispatch:
     The real ``openai.AsyncOpenAI`` client serialises the request arguments
     into a JSON body that the ``httpx2.AsyncBaseTransport`` intercepts.
     Asserting against the captured body verifies which branch of the 16-path
-    dispatch tree was taken without mocking the function under test.
+    dispatch tree was taken while the function under test runs unmodified.
     """
 
     @pytest.mark.asyncio

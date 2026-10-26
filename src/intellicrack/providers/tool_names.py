@@ -82,7 +82,7 @@ def _register_fallback(canonical: str, wire: str) -> str:
 
     Raises:
         ValueError: If ``wire`` is already registered for a *different*
-            canonical name. This can only happen on a genuine hash collision
+            canonical name. This can only happen on a hash collision
             and must never be silently resolved, since that would corrupt
             reversal for one of the two colliding tools.
     """

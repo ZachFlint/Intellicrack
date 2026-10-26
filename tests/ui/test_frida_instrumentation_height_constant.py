@@ -40,13 +40,13 @@ pytestmark = pytest.mark.usefixtures("qapp")
 
 
 class TestD40PostMessageHeightConstant:
-    """Falsifiable gates: the message box height must use its own named constant."""
+    """The message box height must use its own named constant."""
 
     @staticmethod
     def test_height_constant_has_intended_value() -> None:
         """The height constant must hold its own intended value, not derive from the width one.
 
-        Falsifiable: this fails if ``_POST_MESSAGE_INPUT_MAX_HEIGHT`` is
+        This fails if ``_POST_MESSAGE_INPUT_MAX_HEIGHT`` is
         edited away from the intended ``80`` (for example back to an
         expression tied to ``_ADDR_INPUT_MAX_WIDTH``).
         """
@@ -76,7 +76,7 @@ class TestD40PostMessageHeightConstant:
         then asserts the argument expression is a bare reference to
         ``_POST_MESSAGE_INPUT_MAX_HEIGHT`` and contains no reference to
         ``_ADDR_INPUT_MAX_WIDTH`` anywhere in its expression tree.
-        Falsifiable: a call site using ``setMaximumHeight(_ADDR_INPUT_MAX_WIDTH // 2)``
+        A call site using ``setMaximumHeight(_ADDR_INPUT_MAX_WIDTH // 2)``
         fails the "no ``_ADDR_INPUT_MAX_WIDTH`` reference" assertion even though the
         numeric result is unchanged.
         """

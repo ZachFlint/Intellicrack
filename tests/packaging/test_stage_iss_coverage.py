@@ -24,7 +24,7 @@ This module closes that direction twice, from two independent sources of truth:
 * **Dynamically, from a real ``build/stage`` tree.** Every staged file must be
   packaged by some ``Source``, modulo a deliberately empty, documented allowlist
   of build-only artifacts. The real tree exists only on a build host, so that gate
-  skips when it is absent; its detection logic is proven falsifiable against a
+  skips when it is absent; its detection logic is checked against a
   fake stage built in ``tmp_path``.
 
 The ``.iss`` parsing helpers are imported from the existing module rather than
@@ -228,7 +228,7 @@ def _read_real_iss_sources() -> list[tuple[str, bool]]:
 
 
 def test_every_asserted_stage_product_is_packaged_by_the_iss() -> None:
-    r"""Real gate: everything ``stage.ps1`` asserts into the stage reaches ``{app}``.
+    r"""Everything ``stage.ps1`` asserts into the stage reaches ``{app}``.
 
     This is the direction ``test_stage_matches_iss`` never had. It goes red the
     moment the stager gains an ``Assert-Produced`` under ``$Stage`` that no
@@ -278,7 +278,7 @@ def test_stage_product_resolver_follows_the_assignment_chain() -> None:
     ]
 
 
-def test_static_coverage_checker_is_falsifiable() -> None:
+def test_static_coverage_checker_flags_a_dropped_source_entry() -> None:
     """The static checker passes on a covering ``.iss`` and fails when one entry is dropped.
 
     Mirrors the real defect: a product the stager asserts, packaged by an exact
@@ -315,7 +315,7 @@ def test_wildcard_source_does_not_cover_a_sibling_prefix() -> None:
 
 
 def test_every_staged_file_is_packaged_by_the_iss() -> None:
-    """Real gate: no file in ``build/stage`` is left behind by the installer.
+    """No file in ``build/stage`` is left behind by the installer.
 
     Skips when the staging tree has not been built (the sandbox never assembles
     the ~100+ GB payload). On a build host this catches a whole staged directory
@@ -332,7 +332,7 @@ def test_every_staged_file_is_packaged_by_the_iss() -> None:
     )
 
 
-def test_staged_tree_coverage_checker_is_falsifiable(tmp_path: Path) -> None:
+def test_staged_tree_coverage_checker_reports_an_unpackaged_file(tmp_path: Path) -> None:
     """The tree walker reports a clean stage clean and an unpackaged file dirty.
 
     Args:
@@ -367,7 +367,7 @@ def test_stage_only_allowlist_suppresses_exactly_its_entry(tmp_path: Path) -> No
 
 
 def test_shipped_allowlist_excuses_nothing_that_the_iss_already_packages() -> None:
-    """Every allowlist entry must name a path the installer genuinely skips.
+    """Every allowlist entry must name a path the installer skips.
 
     An entry that a ``Source`` already covers is dead weight that hides nothing
     but invites the next omission to be parked beside it. Emptying the allowlist

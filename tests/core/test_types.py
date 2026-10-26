@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Genuine behavioral tests for Intellicrack core types module.
+"""Behavioral tests for the Intellicrack core types module.
 
 Each test drives production logic to a verified expected outcome derived from
 an independent oracle (PE flag bitmask specifications, Python language semantics,
@@ -605,7 +605,7 @@ def test_bridge_analysis_summary_str_contains_binary_name() -> None:
 
 
 # IntellicrackError hierarchy: construction, str, and isinstance tests
-# These tests are falsifiable: if the inheritance chain is broken the isinstance
+# If the inheritance chain is broken the isinstance
 # check will return False, or the str representation will not match.
 
 

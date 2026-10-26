@@ -57,7 +57,7 @@ check(
 );
 
 /* clamp() has no dependency on `this`, private fields or any import, so it
-   can be pulled out and genuinely executed instead of just pattern-matched. */
+   can be pulled out and executed instead of just pattern-matched. */
 const clampBlock = extractBlock(gridSource, /function clamp\(value, low, high\) \{/);
 const clamp = new Function('value', 'low', 'high', clampBlock.inner);
 

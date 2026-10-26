@@ -99,11 +99,10 @@ class _CountTokensResponse:
 class _RecordingModels:
     """Real ``models`` facade whose ``count_tokens`` runs caller-supplied behaviour.
 
-    This is a genuine object implementing the exact keyword-argument
-    ``count_tokens`` interface the script calls; it is the external Gemini
-    dependency, not the function under test, and it executes real behaviour
-    (returning a response or raising a real exception) rather than recording
-    calls like a mock.
+    This object implements the exact keyword-argument ``count_tokens``
+    interface the script calls; it stands in for the external Gemini
+    dependency, not the function under test, and it executes the supplied
+    behavior (returning a response or raising an exception).
     """
 
     def __init__(self, behavior: Callable[[str, str], _CountTokensResponse]) -> None:
@@ -131,9 +130,9 @@ class _RecordingModels:
 class _StubGeminiClient:
     """Real client object exposing the ``models``/``vertexai`` surface ``_count_tokens`` touches.
 
-    It is a concrete object (not a ``MagicMock``) implementing only the
-    attributes the script reads, so the real fallback-dispatch logic in
-    ``_count_tokens`` runs end to end against genuine exception instances.
+    It is a concrete object implementing only the attributes the script
+    reads, so the fallback-dispatch logic in ``_count_tokens`` runs end to
+    end against the raised exception instances.
     """
 
     def __init__(self, behavior: Callable[[str, str], _CountTokensResponse]) -> None:
@@ -281,7 +280,7 @@ class TestEstimateTokens:
     estimator against ``tiktoken`` (a different, trusted tokenizer) rather than
     re-deriving the implementation's own ``len // 3`` arithmetic.
 
-    Falsifiability:
+    Failure modes covered:
     - Changing the divisor from 3 to 2 inflates all estimates by 50%; the ratio
       upper-bound (1.8) holds trivially, but the lower-bound (0.6) would fail
       for the empty-string case if divisor changes from 3 to e.g. 10 (estimates
@@ -517,8 +516,8 @@ class TestCountTokensSuccessPath:
     def test_missing_total_tokens_falls_back_to_estimate(self) -> None:
         """Verify a response with ``total_tokens=None`` yields the local estimate.
 
-        Drives the real ``response.total_tokens is None`` branch with a genuine
-        response object and asserts the result equals the independent estimate
+        Drives the real ``response.total_tokens is None`` branch with a ``_CountTokensResponse``
+        object and asserts the result equals the independent estimate
         of the same text.
         """
         text = "x" * 300
@@ -530,12 +529,12 @@ class TestCountTokensFallback:
     """Real-exception fallback dispatch for the token counter.
 
     Each test runs the real ``_count_tokens`` against a concrete client whose
-    ``count_tokens`` raises a genuine ``google.genai`` / stdlib exception. The
+    ``count_tokens`` raises a ``google.genai`` / stdlib exception. The
     asserted fallback value is the independent character estimate for the exact
     same text, so a broken fallback (wrong text routed, estimate miscomputed,
     or the wrong branch taken) changes the number and fails the test.
 
-    Falsifiability:
+    Failure modes covered:
     - Removing the ``except (ClientError, ServerError)`` clause causes the
       ServerError/ClientError tests to propagate the exception and fail.
     - Removing the ``except ConnectionError`` clause causes the network test
@@ -550,8 +549,8 @@ class TestCountTokensFallback:
     def test_server_error_falls_back_to_estimate(self) -> None:
         """Verify a real ``ServerError`` (503) routes to the character estimate.
 
-        The stub raises a genuine ``google.genai.errors.ServerError`` instance
-        (not a monkeypatch or MagicMock) so the real except-clause dispatch
+        The stub raises a ``google.genai.errors.ServerError`` instance
+        so the real except-clause dispatch
         inside ``_count_tokens`` is exercised end-to-end.
         """
         text = "a" * 300
@@ -562,7 +561,7 @@ class TestCountTokensFallback:
     def test_client_error_falls_back_to_estimate(self) -> None:
         """Verify a real ``ClientError`` (400) routes to the character estimate.
 
-        The stub raises a genuine ``google.genai.errors.ClientError`` instance
+        The stub raises a ``google.genai.errors.ClientError`` instance
         so the real except-clause dispatch inside ``_count_tokens`` is exercised.
         """
         text = "b" * 600
@@ -573,8 +572,7 @@ class TestCountTokensFallback:
     def test_connection_error_falls_back_to_estimate(self) -> None:
         """Verify a real ``ConnectionError`` routes to the character estimate.
 
-        A genuine built-in ``ConnectionError`` (not a MagicMock side_effect) is
-        raised by the stub so the real ``except ConnectionError`` branch fires.
+        A built-in ``ConnectionError`` is raised by the stub so the real ``except ConnectionError`` branch fires.
         """
         text = "c" * 900
         client = _StubGeminiClient(_raise(ConnectionError("timeout")))
@@ -610,7 +608,7 @@ class TestCountTokensFallback:
 class TestCountTokensThrottle:
     """The token counter must throttle rapid calls by the exact computed delay.
 
-    Falsifiability:
+    Mechanics and failure modes covered:
     - A virtual clock replaces ``time.monotonic`` and ``time.sleep`` so the
       computed sleep duration can be asserted to sub-millisecond precision.
     - Removing the throttle sleep entirely produces an empty ``slept`` list,

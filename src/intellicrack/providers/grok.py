@@ -186,7 +186,7 @@ class GrokProvider(LLMProviderBase):
             raise ProviderError(_ERR_CONNECT_FAILED % detail) from e
         else:
             self._credentials = credentials
-            self.connected = True
+            self.connected: bool = True
             self._logger.info("grok_api_connected", base_url=base_url)
 
     async def _close_client(self) -> None:

@@ -10,7 +10,7 @@ messages, worker exceptions, streaming I/O errors). The label must enable word w
 text update into its tooltip so the complete message is always accessible regardless of the dialog's rendered width.
 
 All tests drive a real :class:`CustomCrcDialog` under an offscreen
-``QApplication`` (no mocks); each asserts the concrete Qt layout mechanism
+``QApplication``; each asserts the concrete Qt layout mechanism
 (``wordWrap`` / ``heightForWidth``) or the real tooltip content produced by
 the dialog's own error/result handlers.
 """

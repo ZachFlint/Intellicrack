@@ -3,6 +3,12 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Searching a buffer: exact bytes, hex patterns with nibble wildcards, text
+//! in any encoding, byte regular expressions and integers or floats of a given
+//! width, plus replacing every non-overlapping occurrence of a byte pattern.
+//! Large buffers are searched in parallel chunks that overlap by the pattern
+//! length, so a match across a seam is found once.
+
 use rayon::prelude::*;
 use thiserror::Error;
 
@@ -385,6 +391,27 @@ pub fn replace_all(data: &[u8], pattern: &[u8], replacement: &[u8]) -> (Vec<u8>,
     result.extend_from_slice(&data[last_end..]);
 
     (result, count)
+}
+
+/// The start of every non-overlapping occurrence of `pattern`, left to right,
+/// as [`replace_all`] finds them, or `None` once there are more than `limit`.
+///
+/// The bound lets a caller decide that a list of offsets would cost more than
+/// the alternative before the list has grown that large. An empty pattern has
+/// no occurrences.
+#[must_use]
+pub fn match_offsets_within(data: &[u8], pattern: &[u8], limit: usize) -> Option<Vec<usize>> {
+    if pattern.is_empty() {
+        return Some(Vec::new());
+    }
+    let mut offsets = Vec::new();
+    for offset in memchr::memmem::find_iter(data, pattern) {
+        if offsets.len() == limit {
+            return None;
+        }
+        offsets.push(offset);
+    }
+    Some(offsets)
 }
 
 fn decode_uint(bytes: &[u8], size: usize, big_endian: bool) -> u64 {
@@ -922,6 +949,97 @@ mod tests {
         assert_eq!(found, vec![500, CHUNK_SIZE + 1000]);
     }
 
+    /// The offsets of `results`, in order.
+    fn offsets_of(results: &[SearchResult]) -> Vec<usize> {
+        results.iter().map(|r| r.offset).collect()
+    }
+
+    /// Each parallel chunk keeps up to `max_results` matches, so the merged
+    /// list is cut to the first `max_results` overall: three matches in the
+    /// first chunk and one in the second return exactly the first two, for
+    /// byte, wildcard and numeric searches alike.
+    #[test]
+    fn test_parallel_searches_truncate_to_max_results_in_offset_order() {
+        let mut data = vec![0x11u8; CHUNK_SIZE + 100_000];
+        for offset in [64, 1000, 2000, CHUNK_SIZE + 40] {
+            data[offset..offset + 4].copy_from_slice(&0xDEAD_BEEFu32.to_le_bytes());
+        }
+        assert_eq!(
+            offsets_of(&search_bytes(&data, &0xDEAD_BEEFu32.to_le_bytes(), 2)),
+            vec![64, 1000]
+        );
+        assert_eq!(
+            offsets_of(&search_hex_with_wildcards(&data, "EF ?? AD", 2).unwrap()),
+            vec![64, 1000]
+        );
+        assert_eq!(
+            offsets_of(&search_numeric_int(&data, 0xDEAD_BEEF, 4, false, false, 1, 2).unwrap()),
+            vec![64, 1000]
+        );
+    }
+
+    /// A match whose last byte is the last byte of a chunk's overlap is found
+    /// once, at its exact offset, on both the exact and the masked path: the
+    /// overlap must reach `pattern length - 1` bytes past the chunk.
+    #[test]
+    fn test_match_ending_on_the_last_overlap_byte_is_found() {
+        let mut data = vec![0x11u8; CHUNK_SIZE + 100];
+        data[CHUNK_SIZE - 1..CHUNK_SIZE + 4].copy_from_slice(&[0xDE, 0xAD, 0x77, 0xEF, 0xCA]);
+        let exact = search_bytes(&data, &[0xDE, 0xAD, 0x77, 0xEF, 0xCA], 100);
+        let masked = search_hex_with_wildcards(&data, "DE AD ?? EF", 100).unwrap();
+        assert_eq!(
+            exact
+                .iter()
+                .map(|r| (r.offset, r.length))
+                .collect::<Vec<_>>(),
+            vec![(CHUNK_SIZE - 1, 5)]
+        );
+        assert_eq!(
+            masked
+                .iter()
+                .map(|r| (r.offset, r.length))
+                .collect::<Vec<_>>(),
+            vec![(CHUNK_SIZE - 1, 4)]
+        );
+    }
+
+    /// Range bounds are inclusive at both ends, signed and unsigned: of the
+    /// values 100, 1000, 99 and 1001 only the bounds match `100..=1000`, and of
+    /// -5, 5, 6 and -6 only the bounds match `-5..=5`.
+    #[test]
+    fn test_search_numeric_range_bounds_are_inclusive() {
+        let unsigned: Vec<u8> = [100u32, 1000, 99, 1001]
+            .iter()
+            .flat_map(|v| v.to_le_bytes())
+            .collect();
+        let signed: Vec<u8> = [-5i32, 5, 6, -6]
+            .iter()
+            .flat_map(|v| v.to_le_bytes())
+            .collect();
+        assert_eq!(
+            offsets_of(
+                &search_numeric_range(&unsigned, 100, 1000, 4, false, false, 4, 10).unwrap()
+            ),
+            vec![0, 4]
+        );
+        assert_eq!(
+            offsets_of(&search_numeric_range(&signed, -5, 5, 4, true, false, 4, 10).unwrap()),
+            vec![0, 4]
+        );
+    }
+
+    /// A float exactly `tolerance` away from the target matches: 1.5 against
+    /// 1.0 with tolerance 0.5, all exact in binary.
+    #[test]
+    fn test_search_numeric_float_tolerance_bound_is_inclusive() {
+        let mut data = vec![0x11u8; 16];
+        data[4..8].copy_from_slice(&1.5f32.to_le_bytes());
+        assert_eq!(
+            offsets_of(&search_numeric_float(&data, 1.0, 4, false, 0.5, 4, 10).unwrap()),
+            vec![4]
+        );
+    }
+
     #[test]
     fn test_search_numeric_int_parallel_over_chunk() {
         let total = CHUNK_SIZE + 100_000;
@@ -1177,8 +1295,8 @@ mod tests {
         );
     }
 
-    /// An unsigned range whose bounds are both negative must match nothing.
-    /// Clamping both to 0 would make `[-10, -1]` match every zero byte.
+    /// An unsigned range whose bounds are both negative matches nothing, since
+    /// no unsigned value is negative.
     #[test]
     fn test_search_numeric_range_unsigned_all_negative_is_empty() {
         assert_eq!(

@@ -659,7 +659,7 @@ class TestDiffMinMatch:
         modified/match. With ``min_match=7`` the gap is shorter than the
         minimum, so everything from the first change to the second becomes one
         eight-byte ``modified`` region, while ``total_differences`` stays the
-        two bytes that genuinely differ.
+        two bytes that differ.
 
         Args:
             hexcore: The native module fixture.

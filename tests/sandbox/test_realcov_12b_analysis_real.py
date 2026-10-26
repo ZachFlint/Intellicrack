@@ -17,7 +17,7 @@ These tests run end-to-end on Windows:
   :mod:`intellicrack.sandbox.log_parsers` functions into a real
   :class:`ExecutionReport`.
 * A controllable, real, observable signal is generated inside the live
-  capture window by opening genuine loopback (``127.0.0.1``) TCP
+  capture window by opening loopback (``127.0.0.1``) TCP
   connections to a passive in-test listener bound on a port the detector
   treats as a known C2 port (4444). The listener only accepts and holds
   connections; nothing is sent off-host and no command-and-control
@@ -111,7 +111,7 @@ def _resolve_pwsh() -> str:
 
 
 class _C2Listener:
-    """A real loopback TCP listener used to generate genuine C2-port traffic.
+    """A loopback TCP listener used to generate C2-port traffic.
 
     Binds an actual socket on ``127.0.0.1:4444`` and accepts connections in
     a background thread so that the live ``Get-NetTCPConnection`` table
@@ -158,7 +158,7 @@ class _C2Listener:
     def beacon(self) -> None:
         """Open and hold real client connections to the C2 port.
 
-        Each round opens a genuine TCP connection to ``127.0.0.1:4444`` and
+        Each round opens a TCP connection to ``127.0.0.1:4444`` and
         keeps it open, so the live endpoint table records real established
         connections on the C2 port during the monitor's capture window.
         """
@@ -624,7 +624,7 @@ async def test_match_behaviors_on_real_capture_is_consistent(tmp_path: Path) -> 
 
     A custom rule keyed on the real loopback C2 port (4444) must match the
     real captured network activity, proving the rule engine runs against
-    genuine observed state rather than fixtures.
+    captured host state rather than fixtures.
 
     Two independent oracles verify the evidence list is correctly filtered by
     ``remote_port``:
@@ -723,7 +723,7 @@ async def test_diff_reports_on_two_real_captures(tmp_path: Path) -> None:
     Two independent real captures of the same machine should share a large
     common core of long-lived processes (kernel, services) while differing
     in transient processes/connections, exercising the unique/common
-    partitioning on genuine data.
+    partitioning on two captured host snapshots.
 
     Args:
         tmp_path: Pytest temp directory.

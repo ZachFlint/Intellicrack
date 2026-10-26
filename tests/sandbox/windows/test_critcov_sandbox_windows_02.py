@@ -6,7 +6,7 @@
 """Coverage for the Windows Sandbox backend paths that need no running sandbox.
 
 Windows Sandbox cannot start inside the test container and is never launched here. What can be reached
-honestly is reached with real objects: the guard clauses that refuse work while the sandbox is down, the
+without a running sandbox is covered here: the guard clauses that refuse work while the sandbox is down, the
 shared-folder file operations against a directory under ``tmp_path``, the monitor-log bookkeeping, the
 teardown helpers against real child processes, and the polling loop that waits for a dispatcher result
 that never arrives. A guard clause is tested by arming the real backend with exactly the state that

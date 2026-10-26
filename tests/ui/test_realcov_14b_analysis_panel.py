@@ -9,12 +9,12 @@ This module checks that ``analysis_panel.py`` renders *real* parsed binary data:
 real section names (``.text``), real import/export symbols, real entropy, and
 real navigation addresses.
 
-These tests parse a genuine Windows System32 PE with :mod:`pefile`, build a
+These tests parse a Windows System32 PE with :mod:`pefile`, build a
 real :class:`~intellicrack.core.types.BridgeAnalysisSummary` from the parsed
 sections / imports / exports, push it through
 :meth:`BridgeAnalysisPanel.set_analysis`, and assert the panel's Qt tables hold
-the verbatim values that came out of the real binary. No mocks or synthetic
-byte blobs are used; the data originates entirely from the on-disk PE.
+the verbatim values that came out of the parsed file. The data originates
+entirely from the on-disk PE.
 """
 
 from __future__ import annotations
@@ -152,7 +152,7 @@ def _summary_from_binary(path: Path) -> BridgeAnalysisSummary:
         path: Path to a real PE binary on disk.
 
     Returns:
-        BridgeAnalysisSummary: Summary populated from the genuinely parsed
+        BridgeAnalysisSummary: Summary populated from the parsed
         sections, imports, and exports of ``path``.
     """
     pe = pefile.PE(str(path), fast_load=False)
@@ -260,7 +260,7 @@ class TestAnalysisPanelRendersRealSections:
 
     @staticmethod
     def test_header_reflects_real_format(dll_summary: BridgeAnalysisSummary) -> None:
-        """The header labels must reflect the real binary name and architecture.
+        """The header labels must reflect the parsed binary's name and architecture.
 
         Args:
             dll_summary: Real summary parsed from kernel32.dll.

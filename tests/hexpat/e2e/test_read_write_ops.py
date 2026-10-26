@@ -31,7 +31,7 @@ class TestFixtureIntegrity:
     """Independently verify the sample fixtures hold the identity byte sequence.
 
     These tests are the foundation every other test in this module leans on: they
-    prove ``sample_doc`` and ``sample_doc_from_bytes`` genuinely contain the
+    check that ``sample_doc`` and ``sample_doc_from_bytes`` contain the
     sequence where the byte at offset ``i`` equals ``i``, using the identity
     function itself as the oracle (not ``sample_bytes``).
     """
@@ -195,9 +195,8 @@ class TestWriteOps:
         The surrounding bytes are asserted against the identity-sequence oracle
         (``value == offset``), independently of ``sample_bytes``. The write at
         offsets 50-51 must leave offsets 48-49 and 52-53 holding their original
-        identity values, while offsets 50-51 must hold the new payload. Asserting
-        the payload landed and the neighbors are untouched makes the write's
-        boundary a real gate, not a tautology against the load source.
+        identity values, while offsets 50-51 must hold the new payload. The
+        expected neighbor values come from the oracle, not from the load source.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.

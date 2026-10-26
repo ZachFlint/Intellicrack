@@ -7,7 +7,7 @@
 Every test drives a real ``GhidraBridge`` method
 against an in-process fake of the external ``ghidra_bridge`` RPC transport
 (the only test double in this file; it stands in for the live Jython/Ghidra
-process, a genuine external boundary that cannot run in the sandbox) and/or
+process, an external boundary that cannot run in the sandbox) and/or
 dispatches through a real ``ToolRegistry`` so the exact production code path
 -- not a re-implementation of it -- is what makes each assertion pass or
 fail.
@@ -104,7 +104,7 @@ class TestAddCommentRepeatableRegression:
     ) -> None:
         """add_comment(comment_type='REPEATABLE') must emit CodeUnit.REPEATABLE_COMMENT, not EOL.
 
-        Falsifiable: reverting the ``comment_map`` fix (dropping the
+        Reverting the ``comment_map`` fix (dropping the
         ``"REPEATABLE": "CodeUnit.REPEATABLE_COMMENT"`` entry) restores
         the old ``.get(comment_type, "CodeUnit.EOL_COMMENT")`` fallback,
         which would emit ``CodeUnit.EOL_COMMENT`` instead -- failing the
@@ -126,7 +126,7 @@ class TestAddCommentRepeatableRegression:
     ) -> None:
         """add_comment must raise ToolError for an unrecognized comment_type, not silently write EOL.
 
-        Falsifiable: if the ``ghidra_type is None`` guard were removed
+        If the ``ghidra_type is None`` guard were removed
         and the old ``.get(comment_type, "CodeUnit.EOL_COMMENT")``
         fallback restored, this call would silently dispatch an EOL
         comment write instead of raising, and ``fake.exec_calls`` would
@@ -146,7 +146,7 @@ class TestAddCommentRepeatableRegression:
     ) -> None:
         """add_comment(comment_type='EOL') must still emit CodeUnit.EOL_COMMENT (no regression).
 
-        Falsifiable: if the comment_map dict were corrupted so 'EOL' no
+        If the comment_map dict were corrupted so 'EOL' no
         longer maps to CodeUnit.EOL_COMMENT, this assertion fails.
         """
         fake.eval_response = "normal"
@@ -162,7 +162,7 @@ class TestAddCommentRepeatableRegression:
     ) -> None:
         """ghidra.add_comment must dispatch a REPEATABLE request through the real ToolRegistry.
 
-        Falsifiable: if ``ghidra.add_comment``'s tool-def name diverged
+        If ``ghidra.add_comment``'s tool-def name diverged
         from the real method, or the REPEATABLE fix were reverted,
         either the dispatch would raise ToolError (unknown function) or
         the emitted script would reference EOL_COMMENT instead of
@@ -190,7 +190,7 @@ class TestRemoveComment:
     ) -> None:
         """remove_comment must emit setComment(type, None) and verify the readback is empty.
 
-        Falsifiable: reverting to a MISSING implementation would raise
+        Reverting to a MISSING implementation would raise
         AttributeError; dropping the ``None`` argument from the emitted
         ``setComment`` call would fail the containment assertion.
         """
@@ -209,7 +209,7 @@ class TestRemoveComment:
     ) -> None:
         """remove_comment(comment_type='REPEATABLE') must emit CodeUnit.REPEATABLE_COMMENT.
 
-        Falsifiable: if ``remove_comment`` hand-rolled its own
+        If ``remove_comment`` hand-rolled its own
         diverging comment-type map instead of reusing ``add_comment``'s,
         a REPEATABLE request could silently clear the wrong slot.
         """
@@ -224,7 +224,7 @@ class TestRemoveComment:
     ) -> None:
         """remove_comment must raise ToolError for an unrecognized comment_type before any RPC call.
 
-        Falsifiable: if the ``ghidra_type is None`` guard were removed,
+        If the ``ghidra_type is None`` guard were removed,
         this would dispatch an RPC call instead of raising, leaving
         ``fake.exec_calls`` non-empty.
         """
@@ -239,7 +239,7 @@ class TestRemoveComment:
     ) -> None:
         """remove_comment must raise ToolError when the post-clear readback still reports a value.
 
-        Falsifiable: if the post-clear readback verification were
+        If the post-clear readback verification were
         dropped, a silently-failed clear would still report
         ``success: True`` instead of raising.
         """
@@ -251,7 +251,7 @@ class TestRemoveComment:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.remove_comment must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here.
         """
         fake.eval_response = None
@@ -281,7 +281,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """remove_memory_block must emit Memory.removeBlock and return success on a found block.
 
-        Falsifiable: deleting the method or its ``ok=True``/``removeBlock``
+        Deleting the method or its ``ok=True``/``removeBlock``
         call would either raise AttributeError (method absent) or leave
         ``removeBlock`` out of the emitted script.
         """
@@ -300,7 +300,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """remove_memory_block must raise ToolError when the named block does not exist.
 
-        Falsifiable: if the ``found`` guard were removed, this would
+        If the ``found`` guard were removed, this would
         return a success dict instead of raising.
         """
         fake.eval_response = {"found": False, "ok": False}
@@ -315,7 +315,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """split_memory_block must emit Memory.split and return the exact hex split address.
 
-        Falsifiable: if ``hex(split_address)`` were replaced with the
+        If ``hex(split_address)`` were replaced with the
         raw int, or the ``memory.split`` call removed, this assertion
         fails.
         """
@@ -337,7 +337,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """split_memory_block must raise ToolError when the split address is outside the block.
 
-        Falsifiable: if the ``in_range`` guard were removed, the method
+        If the ``in_range`` guard were removed, the method
         would attempt the split (or report success) instead of raising.
         """
         fake.eval_response = {"found": True, "in_range": False, "ok": False}
@@ -352,7 +352,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """join_memory_blocks must return the exact joined block name reported by Ghidra.
 
-        Falsifiable: if ``info.get('joined_name', name1)`` were changed
+        If ``info.get('joined_name', name1)`` were changed
         to ignore the remote result and always return ``name1``, this
         assertion (which uses a joined_name distinct from either input)
         would fail.
@@ -375,7 +375,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """join_memory_blocks must raise ToolError when either named block is missing.
 
-        Falsifiable: if the ``found1``/``found2`` guards were removed,
+        If the ``found1``/``found2`` guards were removed,
         a missing block would silently produce a ToolError-less result.
         """
         fake.eval_response = {"found1": True, "found2": False, "joined_name": None, "ok": False}
@@ -390,7 +390,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """move_memory_block must emit Memory.moveBlock and return the exact hex new start.
 
-        Falsifiable: if ``memory.moveBlock`` were (incorrectly) swapped
+        If ``memory.moveBlock`` were (incorrectly) swapped
         for ``Memory.split``/``Memory.join`` (its nearest siblings by
         file position), the ``"memory.moveBlock(" in fake.exec_calls[0]``
         containment check fails immediately.
@@ -413,7 +413,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """move_memory_block must raise ToolError when the named block does not exist.
 
-        Falsifiable: if the ``found`` guard were removed, this would
+        If the ``found`` guard were removed, this would
         return a success dict instead of raising.
         """
         fake.eval_response = {"found": False, "ok": False}
@@ -425,7 +425,7 @@ class TestMemoryBlockOps:
     def test_move_memory_block_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.move_memory_block must dispatch via ToolRegistry and perform the real move.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here before move_memory_block ever ran.
         """
         fake.eval_response = {"found": True, "ok": True}
@@ -449,7 +449,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """rename_memory_block must emit MemoryBlock.setName and return the new/previous names.
 
-        Falsifiable: if ``block.setName`` were (incorrectly) replaced
+        If ``block.setName`` were (incorrectly) replaced
         by re-running ``create_memory_block``'s constructor path, the
         ``"block.setName(" in fake.exec_calls[0]`` containment check
         fails immediately.
@@ -471,7 +471,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """rename_memory_block must raise ToolError when the named block does not exist.
 
-        Falsifiable: if the ``found`` guard were removed, this would
+        If the ``found`` guard were removed, this would
         return a success dict instead of raising.
         """
         fake.eval_response = {"found": False, "ok": False}
@@ -486,7 +486,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """set_memory_block_comment must emit MemoryBlock.setComment and return the comment text.
 
-        Falsifiable: if ``block.setComment`` were (incorrectly) replaced
+        If ``block.setComment`` were (incorrectly) replaced
         by re-running ``create_memory_block``'s constructor path, the
         ``"block.setComment(" in fake.exec_calls[0]`` containment check
         fails immediately.
@@ -508,7 +508,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """set_memory_block_comment must raise ToolError when the named block does not exist.
 
-        Falsifiable: if the ``found`` guard were removed, this would
+        If the ``found`` guard were removed, this would
         return a success dict instead of raising.
         """
         fake.eval_response = {"found": False, "ok": False}
@@ -520,7 +520,7 @@ class TestMemoryBlockOps:
     def test_rename_memory_block_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.rename_memory_block must dispatch via ToolRegistry and perform the real rename.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here before rename_memory_block ever ran.
         """
         fake.eval_response = {"found": True, "ok": True}
@@ -553,7 +553,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """Each new memory-block tool-def must exist and declare the real method's parameter names.
 
-        Falsifiable: removing the ``ToolFunction`` entry or renaming a
+        Removing the ``ToolFunction`` entry or renaming a
         parameter so it drifts from the bound method signature fails
         this containment check.
         """
@@ -566,7 +566,7 @@ class TestMemoryBlockOps:
     ) -> None:
         """ghidra.split_memory_block must dispatch via ToolRegistry and perform the real split.
 
-        Falsifiable: if the tool-def were absent, dispatch would raise
+        If the tool-def were absent, dispatch would raise
         ToolError (unknown function) before ``split_memory_block`` ever
         ran; if the parameter names diverged (e.g. ``address`` instead
         of ``split_address``), dispatch would TypeError.
@@ -997,7 +997,7 @@ class TestCreateProgramTree:
     ) -> None:
         """create_program_tree must emit createRootModule and return the new root's name.
 
-        Falsifiable: if the implementation called ``getRootModule``
+        If the implementation called ``getRootModule``
         instead of ``createRootModule``, this assertion would fail.
         """
         fake.eval_response = {"already_exists": False, "created": True, "root_name": "NewTree"}
@@ -1044,7 +1044,7 @@ class TestEditProgramTree:
     ) -> None:
         """edit_program_tree(create_module) must emit createModule and return the exact operation echoed back.
 
-        Falsifiable: if the ``operation == 'create_module'`` branch were
+        If the ``operation == 'create_module'`` branch were
         removed from the emitted Jython, ``createModule`` would not
         appear in the script and this assertion would fail.
         """
@@ -1071,7 +1071,7 @@ class TestEditProgramTree:
     ) -> None:
         """edit_program_tree(create_fragment) must emit createFragment.
 
-        Falsifiable: if the operation dispatch branch mapped
+        If the operation dispatch branch mapped
         'create_fragment' to createModule instead, this containment
         check would fail.
         """
@@ -1088,7 +1088,7 @@ class TestEditProgramTree:
     ) -> None:
         """edit_program_tree must raise ToolError for an unrecognized operation before any RPC call.
 
-        Falsifiable: if the ``valid_operations`` guard were removed, an
+        If the ``valid_operations`` guard were removed, an
         arbitrary operation string would be forwarded to Ghidra instead
         of raising locally, and fake.exec_calls would be non-empty.
         """
@@ -1104,7 +1104,7 @@ class TestEditProgramTree:
     ) -> None:
         """edit_program_tree must raise ToolError when the parent module does not exist in the tree.
 
-        Falsifiable: if the ``parent_found`` guard were removed, a
+        If the ``parent_found`` guard were removed, a
         missing parent would silently be treated as success.
         """
         fake.eval_response = {"tree_found": True, "parent_found": False, "ok": False}
@@ -1116,7 +1116,7 @@ class TestEditProgramTree:
     def test_tool_def_registered_with_matching_params(connected_bridge: GhidraBridge) -> None:
         """ghidra.edit_program_tree's tool-def must declare all five real parameter names.
 
-        Falsifiable: a parameter rename/removal in either the method
+        A parameter rename/removal in either the method
         signature or the ``ToolFunction`` entry desynchronizes this set.
         """
         assert _tool_def_param_names(connected_bridge, "ghidra.edit_program_tree") == {
@@ -1131,7 +1131,7 @@ class TestEditProgramTree:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.edit_program_tree must dispatch via ToolRegistry and perform the real move_child call.
 
-        Falsifiable: an unregistered or parameter-mismatched tool-def
+        An unregistered or parameter-mismatched tool-def
         would raise before ``edit_program_tree`` ever executed.
         """
         fake.eval_response = {"tree_found": True, "parent_found": True, "ok": True}
@@ -1182,11 +1182,11 @@ class TestEditProgramTree:
         ``"moveChild(" not in script`` guard fires even on this correct
         script. No real call to ``removeChild`` is ever written with a
         ``.`` immediately followed by ``moveChild(``, so ``".moveChild("``
-        unambiguously identifies a genuine bare reorder-only call.
+        unambiguously identifies a bare reorder-only call.
 
-        Falsifiable: reverting to ``parent.moveChild(child_name, 0)`` removes every
+        Reverting to ``parent.moveChild(child_name, 0)`` removes every
         ``reparent(`` occurrence from the emitted script and reintroduces
-        a genuine ``.moveChild(`` call, failing both assertions below.
+        a ``.moveChild(`` call, failing both assertions below.
         """
         fake.eval_response = {"tree_found": True, "parent_found": True, "ok": True}
 
@@ -1214,7 +1214,7 @@ class TestEditProgramTree:
         runtime for any parent or child not literally named the same as
         the tree's root.
 
-        Falsifiable: reverting to ``root.getModule(``/``root.getFragment(``
+        Reverting to ``root.getModule(``/``root.getFragment(``
         removes every ``listing.getModule(``/``listing.getFragment(``
         occurrence from the emitted script, failing this assertion.
         """
@@ -1235,7 +1235,7 @@ class TestEditProgramTree:
     ) -> None:
         """move_child must raise a specific error when parent_module names a fragment, not silently no-op.
 
-        Falsifiable: if the ``parent_is_fragment`` guard were removed,
+        If the ``parent_is_fragment`` guard were removed,
         this scenario would fall through to the generic "Parent module
         not found" branch (or worse, silently report success) instead
         of the fragment-specific message.
@@ -1252,7 +1252,7 @@ class TestEditProgramTree:
     ) -> None:
         """move_child must raise ToolError when child_name does not exist anywhere in the tree.
 
-        Falsifiable: if the ``child_found`` guard were removed, a
+        If the ``child_found`` guard were removed, a
         nonexistent child would fall through to the generic
         "Edit program tree failed" message instead of this specific one.
         """
@@ -1268,7 +1268,7 @@ class TestEditProgramTree:
     ) -> None:
         """move_child must reject naming the same module as both parent_module and child_name.
 
-        Falsifiable: if the ``self_parent`` guard were removed, this
+        If the ``self_parent`` guard were removed, this
         would fall through to whatever the reparent branch happens to
         do with an old-parent list that never excludes the target,
         instead of raising this specific, clear error.
@@ -1285,7 +1285,7 @@ class TestEditProgramTree:
     ) -> None:
         """move_child must reject moving a module underneath one of its own descendants.
 
-        Falsifiable: if the ``circular`` guard (backed by
+        If the ``circular`` guard (backed by
         ``ProgramModule.isDescendant``) were removed, this would attempt
         the reparent and either corrupt the tree into a cycle or raise
         an opaque low-level error instead of this specific message.
@@ -1302,7 +1302,7 @@ class TestEditProgramTree:
     ) -> None:
         """move_child must reject moving a tree's root module, which has no parent to remove it from.
 
-        Falsifiable: if the ``no_prior_parent`` guard were removed, a
+        If the ``no_prior_parent`` guard were removed, a
         request naming the root as child_name would fall through to the
         generic "Edit program tree failed" message, or -- worse -- to
         the ``already_there`` branch reporting a bogus success.
@@ -1342,7 +1342,7 @@ class TestEditProgramTreeRealReparentSemantics:
     ) -> None:
         """A single-parent child must end up under the new parent and off the old one.
 
-        Falsifiable: reverting the production ``move_child`` branch to
+        Reverting the production ``move_child`` branch to
         ``parent.moveChild(child_name, 0)`` makes this test raise
         ``LookupError`` from the fake's faithful ``move_child`` (the
         child is not yet a direct child of ``new_parent``, matching
@@ -1376,8 +1376,8 @@ class TestEditProgramTreeRealReparentSemantics:
         """A fragment with two legitimate parents must end up under only the requested new parent.
 
         Ghidra program trees allow a fragment to have more than one
-        parent (``Group.getNumParents``/``getParents``). Falsifiable:
-        reverting to ``moveChild`` would raise ``LookupError`` here too
+        parent (``Group.getNumParents``/``getParents``).
+        Reverting to ``moveChild`` would raise ``LookupError`` here too
         (the child is not a direct child of ``new_parent``); a fix that
         only removed the *first* old parent instead of iterating
         ``getParents()`` would leave ``ParentB`` in the result, failing
@@ -1410,7 +1410,7 @@ class TestEditProgramTreeRealReparentSemantics:
     ) -> None:
         """Requesting a move to the child's only current parent must succeed without altering the tree.
 
-        Falsifiable: if the ``already_there`` branch were removed, this
+        If the ``already_there`` branch were removed, this
         would fall to ``no_prior_parent`` and ``ok`` would stay
         ``False``, failing the first assertion.
         """
@@ -1438,7 +1438,7 @@ class TestEditProgramTreeRealReparentSemantics:
         Real Ghidra's ``ModuleDB.reparent`` performs no cycle check of
         its own (unlike ``add``, which raises
         ``CircularDependencyException``); this fake mirrors that
-        omission faithfully. Falsifiable: if the production
+        omission faithfully. If the production
         ``child.isDescendant(parent)`` guard were removed, ``ok`` would
         stay ``False`` only by accident of this specific fixture -- the
         ``Descendant.reparent("Ancestor", root)`` call would actually
@@ -1479,7 +1479,7 @@ class TestEditProgramTreeRealReparentSemantics:
         X is circular too) and permanently shadow this branch --
         production would still refuse the move, but through a check that
         can never observe a real "no parent to remove from" case.
-        Falsifiable: swapping the checks back so ``isDescendant`` is
+        Swapping the checks back so ``isDescendant`` is
         evaluated before the empty-parents guard makes
         ``info["circular"]`` true and ``info["no_prior_parent"]`` false
         here, failing the first two assertions.
@@ -1528,10 +1528,10 @@ class TestEditProgramTreeDeleteRename:
     ) -> None:
         """edit_program_tree(delete) must emit parent.removeChild and return success.
 
-        Falsifiable: if the ``operation == 'delete'`` branch were
+        If the ``operation == 'delete'`` branch were
         removed from the emitted Jython, ``ok = bool(parent.removeChild(``
         would not appear in the script and this assertion would fail.
-        A bare ``"removeChild(" in ...`` check would NOT be falsifiable
+        A bare ``"removeChild(" in ...`` check would pass regardless
         here, since the pre-existing ``move_child`` branch's
         ``extra_parent.removeChild(...)`` call is always present in the
         same static script regardless of ``operation``.
@@ -1561,7 +1561,7 @@ class TestEditProgramTreeDeleteRename:
     ) -> None:
         """edit_program_tree(rename) must emit setName with the new name and return it.
 
-        Falsifiable: if the ``operation == 'rename'`` branch were
+        If the ``operation == 'rename'`` branch were
         removed, or ``new_name`` were not interpolated into the
         emitted script, this assertion would fail.
         """
@@ -1604,7 +1604,7 @@ class TestAssignFragmentRange:
     ) -> None:
         """assign_fragment_range must emit ProgramFragment.move, not a move_child-style reparent.
 
-        Falsifiable: if the method were (incorrectly) wired to reuse
+        If the method were (incorrectly) wired to reuse
         ``move_child``'s reparent-based mutation, ``fragment.move(``
         would not appear in the emitted script.
         """
@@ -1671,7 +1671,7 @@ class TestGetInstructionFlow:
     ) -> None:
         """get_instruction_flow must surface mnemonic/flow_type/fall_through/flows verbatim.
 
-        Falsifiable: if any field were read from the wrong dict key,
+        If any field were read from the wrong dict key,
         this would return None/empty for that field instead of the
         oracle value.
         """
@@ -1695,7 +1695,7 @@ class TestGetInstructionFlow:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.get_instruction_flow must dispatch via ToolRegistry.
 
-        Falsifiable: removing the ToolFunction entry
+        Removing the ToolFunction entry
         would raise ToolError here.
         """
         fake.eval_response = {
@@ -1722,7 +1722,7 @@ class TestGetRegisterValue:
     ) -> None:
         """get_register_value must return the exact tracked value and has_value flag from Ghidra.
 
-        Falsifiable: if 'value' were read from the wrong key, the
+        If 'value' were read from the wrong key, the
         assertion on the specific oracle integer would fail.
         """
         fake.eval_response = {"address": _TEST_ADDR, "register": "EAX", "value": 305419896, "has_value": True}
@@ -1740,7 +1740,7 @@ class TestGetRegisterValue:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.get_register_value must dispatch via ToolRegistry with the exact register name.
 
-        Falsifiable: a parameter-name mismatch between the tool-def and
+        A parameter-name mismatch between the tool-def and
         the real method signature would TypeError on dispatch.
         """
         fake.eval_response = {"address": _TEST_ADDR, "register": "RSP", "value": None, "has_value": False}
@@ -1768,7 +1768,7 @@ class TestThunkManagement:
     ) -> None:
         """get_thunk_info must surface thunked_function/thunked_address exactly when is_thunk is True.
 
-        Falsifiable: if the ``is_thunk`` guard were removed, this would
+        If the ``is_thunk`` guard were removed, this would
         return the thunk fields even for a non-thunk oracle.
         """
         fake.eval_response = {
@@ -1792,7 +1792,7 @@ class TestThunkManagement:
     ) -> None:
         """add_thunk must emit setThunkedFunction and return the exact hex addresses supplied.
 
-        Falsifiable: reverting to a MISSING implementation would raise
+        Reverting to a MISSING implementation would raise
         AttributeError; a broken transaction guard would fail to invoke
         setThunkedFunction.
         """
@@ -1813,7 +1813,7 @@ class TestThunkManagement:
     ) -> None:
         """add_thunk must raise ToolError when the thunk-side function does not exist.
 
-        Falsifiable: if the ``thunk_found`` guard were removed, this
+        If the ``thunk_found`` guard were removed, this
         would report success despite no function existing at the address.
         """
         fake.eval_response = {"ok": False, "thunk_found": False, "target_found": True}
@@ -1828,7 +1828,7 @@ class TestThunkManagement:
     ) -> None:
         """remove_thunk must raise ToolError when the function is not a thunk.
 
-        Falsifiable: if the ``was_thunk`` guard were removed, a
+        If the ``was_thunk`` guard were removed, a
         non-thunk function would report success without any mutation.
         """
         fake.eval_response = {"found": True, "was_thunk": False, "ok": False}
@@ -1843,8 +1843,8 @@ class TestThunkManagement:
     ) -> None:
         """remove_thunk must clear the relationship and return success for a real thunk.
 
-        Falsifiable: the ``setThunkedFunction(None)`` call missing from
-        the emitted script would fail this containment assertion.
+        If the ``setThunkedFunction(None)`` call were missing from
+        the emitted script, this containment assertion would fail.
         """
         fake.eval_response = {"found": True, "was_thunk": True, "ok": True}
 
@@ -1861,7 +1861,7 @@ class TestThunkManagement:
     def test_tool_defs_registered(connected_bridge: GhidraBridge, function_name: str) -> None:
         """Every thunk-management tool-def must exist in tool_definition.
 
-        Falsifiable: removing any of these ToolFunction entries makes
+        Removing any of these ToolFunction entries makes
         the ``next(...)`` lookup inside ``_tool_def_param_names`` raise
         StopIteration.
         """
@@ -1872,7 +1872,7 @@ class TestThunkManagement:
     def test_add_thunk_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.add_thunk must dispatch via ToolRegistry with address/thunked_address bound correctly.
 
-        Falsifiable: a parameter name mismatch (e.g. tool-def declares
+        A parameter name mismatch (e.g. tool-def declares
         ``target`` instead of ``thunked_address``) would TypeError here.
         """
         fake.eval_response = {"ok": True, "thunk_found": True, "target_found": True}
@@ -1899,7 +1899,7 @@ class TestReferenceEditing:
     ) -> None:
         """add_reference must verify the new reference appears in the readback list.
 
-        Falsifiable: if the readback verification comparison
+        If the readback verification comparison
         (``to_addr not in targets``) were removed, a silently-rejected
         reference add would still report success.
         """
@@ -1920,7 +1920,7 @@ class TestReferenceEditing:
     ) -> None:
         """add_reference must raise ToolError when the readback does not include the target address.
 
-        Falsifiable: removing the verification step means this call
+        Removing the verification step means this call
         would return success even though Ghidra silently rejected the
         reference.
         """
@@ -1936,7 +1936,7 @@ class TestReferenceEditing:
     ) -> None:
         """delete_reference must return success=True when Ghidra reports the reference was deleted.
 
-        Falsifiable: if the returned boolean from the remote script
+        If the returned boolean from the remote script
         were ignored, ``success`` would always be True regardless of
         the actual deletion outcome.
         """
@@ -1954,7 +1954,7 @@ class TestReferenceEditing:
     ) -> None:
         """delete_reference must return success=False when no matching reference exists.
 
-        Falsifiable: a hardcoded ``success: True`` return would falsely
+        A hardcoded ``success: True`` return would falsely
         report a deletion that never happened.
         """
         fake.eval_response = False
@@ -1967,7 +1967,7 @@ class TestReferenceEditing:
     def test_add_reference_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.add_reference must dispatch via ToolRegistry and perform the real add+verify.
 
-        Falsifiable: an absent/renamed tool-def would raise before the
+        An absent/renamed tool-def would raise before the
         bridge method ran, so ``fake.exec_calls`` would remain empty.
         """
         fake.set_eval_responder(lambda expr: [_TEST_ADDR2] if "getReferencesFrom" in expr else None)
@@ -1995,7 +1995,7 @@ class TestExternalReferences:
     ) -> None:
         """add_external_reference must emit addExternalReference and return the exact library/name.
 
-        Falsifiable: if the library/name literals were swapped in the
+        If the library/name literals were swapped in the
         return dict construction, this assertion fails.
         """
         fake.eval_response = {"ok": True}
@@ -2015,7 +2015,7 @@ class TestExternalReferences:
     ) -> None:
         """remove_external_reference must raise ToolError when zero references were removed.
 
-        Falsifiable: if the ``removed > 0`` guard were removed, this
+        If the ``removed > 0`` guard were removed, this
         would return success=True even when nothing was actually deleted.
         """
         fake.eval_response = {"removed": 0}
@@ -2030,7 +2030,7 @@ class TestExternalReferences:
     ) -> None:
         """get_external_references must return the exact library/type/external_name fields per entry.
 
-        Falsifiable: if 'library' were read from the wrong dict key,
+        If 'library' were read from the wrong dict key,
         this would return an empty string instead of the oracle value.
         """
         fake.eval_response = [
@@ -2051,7 +2051,7 @@ class TestExternalReferences:
     def test_tool_defs_registered(connected_bridge: GhidraBridge, function_name: str) -> None:
         """Every external-reference tool-def must exist in tool_definition.
 
-        Falsifiable: removing any of these ToolFunction entries would
+        Removing any of these ToolFunction entries would
         make the membership check fail.
         """
         names = {f.name for f in connected_bridge.tool_definition.functions}
@@ -2068,7 +2068,7 @@ class TestGetProperties:
     ) -> None:
         """get_properties must return the exact nested properties dict from Ghidra.
 
-        Falsifiable: if 'properties' were read from the wrong key,
+        If 'properties' were read from the wrong key,
         the nested dict would be missing/empty instead of matching the
         oracle.
         """
@@ -2083,7 +2083,7 @@ class TestGetProperties:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.get_properties must dispatch via ToolRegistry.
 
-        Falsifiable: an absent tool-def would raise ToolError before
+        An absent tool-def would raise ToolError before
         ``get_properties`` ever ran.
         """
         fake.eval_response = {"address": _TEST_ADDR, "properties": {}}
@@ -2104,7 +2104,7 @@ class TestGetCallGraph:
     ) -> None:
         """get_call_graph must return distinct callees and callers trees from one call.
 
-        Falsifiable: if the method collapsed to a single-direction
+        If the method collapsed to a single-direction
         result (like get_call_tree), one of the two lists would be
         empty/missing despite the oracle providing both non-empty.
         """
@@ -2127,7 +2127,7 @@ class TestGetCallGraph:
     ) -> None:
         """get_call_graph must raise ToolError when no function contains the given address.
 
-        Falsifiable: if the ``result is None`` guard were removed, this
+        If the ``result is None`` guard were removed, this
         would raise an unhandled TypeError instead of a documented
         ToolError.
         """
@@ -2140,7 +2140,7 @@ class TestGetCallGraph:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.get_call_graph must dispatch via ToolRegistry (this orphaned method has a real tool-def).
 
-        Falsifiable: removing the ToolFunction entry breaks dispatch.
+        Removing the ToolFunction entry breaks dispatch.
         """
         fake.eval_response = {"name": "main", "address": _TEST_ADDR, "callees": [], "callers": []}
         result = cast(
@@ -2160,7 +2160,7 @@ class TestGetFunctionSingular:
     ) -> None:
         """get_function must return a FunctionInfo whose name/address match the remote result.
 
-        Falsifiable: if the FunctionInfo construction read the wrong
+        If the FunctionInfo construction read the wrong
         dict key for name/address, these assertions fail.
         """
         fake.eval_response = {
@@ -2187,7 +2187,7 @@ class TestGetFunctionSingular:
     ) -> None:
         """get_function must return None when no function contains the address.
 
-        Falsifiable: a hardcoded fallback FunctionInfo would break this
+        A hardcoded fallback FunctionInfo would break this
         assertion.
         """
         fake.eval_response = None
@@ -2200,7 +2200,7 @@ class TestGetFunctionSingular:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.get_function must dispatch via ToolRegistry.
 
-        Falsifiable: an absent tool-def would raise before
+        An absent tool-def would raise before
         ``get_function`` ever ran.
         """
         fake.eval_response = {
@@ -2230,7 +2230,7 @@ class TestAddLabelPrimary:
     ) -> None:
         """add_label must return primary=True and emit sym.setPrimary() when primary is requested.
 
-        Falsifiable: if the ``primary_flag`` branch were dropped from
+        If the ``primary_flag`` branch were dropped from
         the emitted script, ``setPrimary`` would not appear.
         """
         fake.eval_response = {"created": True}
@@ -2251,7 +2251,7 @@ class TestAddLabelPrimary:
     ) -> None:
         """add_label without primary must not emit an unconditional sym.setPrimary() call.
 
-        Falsifiable: if the primary flag were ignored and setPrimary
+        If the primary flag were ignored and setPrimary
         always ran, the emitted script would call setPrimary
         unconditionally rather than gating it on primary_flag.
         """
@@ -2268,7 +2268,7 @@ class TestAddLabelPrimary:
     ) -> None:
         """add_label must raise ToolError when Ghidra reports the label was not created.
 
-        Falsifiable: if the ``created`` guard were removed, a failed
+        If the ``created`` guard were removed, a failed
         creation would silently be reported as success.
         """
         fake.eval_response = {"created": False}
@@ -2280,7 +2280,7 @@ class TestAddLabelPrimary:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.add_label must dispatch via ToolRegistry with the primary keyword bound correctly.
 
-        Falsifiable: a mismatch between the tool-def parameter name and
+        A mismatch between the tool-def parameter name and
         the real ``primary`` keyword-only argument would TypeError.
         """
         fake.eval_response = {"created": True}
@@ -2307,7 +2307,7 @@ class TestRemoveLabel:
     ) -> None:
         """remove_label must return address/name/success when Ghidra reports the symbol was deleted.
 
-        Falsifiable: if 'removed' were read from the wrong dict key,
+        If 'removed' were read from the wrong dict key,
         this would default to False and incorrectly raise instead of
         succeeding.
         """
@@ -2328,7 +2328,7 @@ class TestRemoveLabel:
     ) -> None:
         """remove_label must raise ToolError when no symbol at the address matches the given name.
 
-        Falsifiable: if the ``removed`` guard were removed, this would
+        If the ``removed`` guard were removed, this would
         silently report success despite nothing being deleted.
         """
         fake.eval_response = {"removed": False}
@@ -2340,7 +2340,7 @@ class TestRemoveLabel:
     def test_tool_def_registered_with_matching_params(connected_bridge: GhidraBridge) -> None:
         """ghidra.remove_label's tool-def must declare the real method's address/name parameters.
 
-        Falsifiable: a parameter rename/removal in either the method
+        A parameter rename/removal in either the method
         signature or the ``ToolFunction`` entry desynchronizes this set.
         """
         assert _tool_def_param_names(connected_bridge, "ghidra.remove_label") == {"address", "name"}
@@ -2349,7 +2349,7 @@ class TestRemoveLabel:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.remove_label must dispatch via ToolRegistry.
 
-        Falsifiable: an absent tool-def would raise ToolError before
+        An absent tool-def would raise ToolError before
         ``remove_label`` ever ran.
         """
         fake.eval_response = {"removed": True}
@@ -2377,7 +2377,7 @@ class TestRemoveBookmark:
     ) -> None:
         """remove_bookmark must return the exact removed count from the remote result.
 
-        Falsifiable: if 'removed' were read from the wrong dict key,
+        If 'removed' were read from the wrong dict key,
         this would default to 0 and incorrectly raise instead of
         succeeding.
         """
@@ -2398,7 +2398,7 @@ class TestRemoveBookmark:
     ) -> None:
         """remove_bookmark must raise ToolError when zero bookmarks matched the filters.
 
-        Falsifiable: if the ``removed <= 0`` guard were removed, this
+        If the ``removed <= 0`` guard were removed, this
         would silently report success despite nothing being removed.
         """
         fake.eval_response = {"removed": 0}
@@ -2410,7 +2410,7 @@ class TestRemoveBookmark:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.remove_bookmark must dispatch via ToolRegistry.
 
-        Falsifiable: an absent tool-def would raise ToolError before
+        An absent tool-def would raise ToolError before
         ``remove_bookmark`` ever ran.
         """
         fake.eval_response = {"removed": 1}
@@ -2433,7 +2433,7 @@ class TestCreateDataType:
     ) -> None:
         """create_data_type must return the exact kind/size/name reported by Ghidra for each type kind.
 
-        Falsifiable: if the kind literal were hardcoded to 'enum'
+        If the kind literal were hardcoded to 'enum'
         regardless of input, this parametrized assertion would fail
         for the other three kinds.
         """
@@ -2456,7 +2456,7 @@ class TestCreateDataType:
     ) -> None:
         """create_data_type must surface success=False (not raise) when Ghidra fails to add the type.
 
-        Falsifiable: if the ``created is not None`` branch always
+        If the ``created is not None`` branch always
         returned success=True, this assertion would fail.
         """
         fake.eval_response = {"name": "MyType", "kind": "enum", "size": 0, "success": False}
@@ -2472,7 +2472,7 @@ class TestCreateDataType:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.create_data_type must dispatch via ToolRegistry with the type_kind parameter bound correctly.
 
-        Falsifiable: a tool-def/method parameter-name mismatch on
+        A tool-def/method parameter-name mismatch on
         ``type_kind`` would TypeError on dispatch.
         """
         fake.eval_response = {"name": "MyUnion", "kind": "union", "size": 8, "success": True}
@@ -2499,7 +2499,7 @@ class TestGetDataTypeTree:
     ) -> None:
         """get_data_type_tree must emit Category.getCategories, never DataTypeManager.getAllStructures.
 
-        Falsifiable: if the implementation were (incorrectly) built by
+        If the implementation were (incorrectly) built by
         reusing ``get_structures``'s ``getAllStructures()`` iterator
         instead of walking the category tree, this would only ever
         surface structures -- defeating the purpose of this method.
@@ -2533,7 +2533,7 @@ class TestGetDataTypeTree:
     ) -> None:
         """get_data_type_tree must raise ToolError when the named category path does not exist.
 
-        Falsifiable: if the ``result is None`` not-found guard were
+        If the ``result is None`` not-found guard were
         removed, this would return a malformed payload instead of
         raising.
         """
@@ -2545,7 +2545,7 @@ class TestGetDataTypeTree:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.get_data_type_tree must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here.
         """
         fake.eval_response = {"name": "/", "path": "/", "subcategories": [], "data_types": []}
@@ -2566,7 +2566,7 @@ class TestImportCHeader:
     ) -> None:
         """import_c_header must dispatch CParserUtils.parseHeaderFiles and report types_added.
 
-        Falsifiable: if the ``CParserUtils.parseHeaderFiles`` call were
+        If the ``CParserUtils.parseHeaderFiles`` call were
         removed or replaced with a different API, the
         ``"parseHeaderFiles" in fake.exec_calls[0]`` containment check
         fails immediately.
@@ -2585,7 +2585,7 @@ class TestImportCHeader:
     def test_parse_failure_raises(connected_bridge: GhidraBridge, fake: FakeGhidraBridge) -> None:
         """import_c_header must raise ToolError surfacing Ghidra's parse error text on failure.
 
-        Falsifiable: if the ``results.successful()`` check were
+        If the ``results.successful()`` check were
         replaced by treating "no exception raised" as success, this
         would return a success dict instead of raising.
         """
@@ -2601,7 +2601,7 @@ class TestImportCHeader:
     ) -> None:
         """import_c_header must raise ToolError for a nonexistent header path without contacting Ghidra.
 
-        Falsifiable: if the path-existence check were removed, a
+        If the path-existence check were removed, a
         nonexistent path would be forwarded straight into the remote
         script instead of raising here, and ``fake.exec_calls`` would
         be non-empty.
@@ -2614,7 +2614,7 @@ class TestImportCHeader:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.import_c_header must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here before import_c_header ever ran.
         """
         fake.eval_response = {"success": True, "types_added": 2, "error": None}
@@ -2643,7 +2643,7 @@ class TestDataTypeArchiveRoundTrip:
     ) -> None:
         """Round-trip gate required by the mission brief: export N types, re-import, assert equality.
 
-        Falsifiable: if either half of the round trip silently dropped
+        If either half of the round trip silently dropped
         or duplicated types, ``types_imported`` would diverge from
         ``types_exported``.
         """
@@ -2668,7 +2668,7 @@ class TestDataTypeArchiveRoundTrip:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge, tmp_path: Path) -> None:
         """ghidra.export_data_type_archive must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here before export_data_type_archive ever ran.
         """
         fake.eval_response = {"path": str(tmp_path / "x.gdt"), "types_exported": 1}
@@ -2695,7 +2695,7 @@ class TestGetInstructionPcode:
     ) -> None:
         """get_instruction_pcode must read Instruction.getPcode(), never DecompInterface.
 
-        Falsifiable: ``get_pcode`` returns an empty ops list when decompilation fails, so routing
+        ``get_pcode`` returns an empty ops list when decompilation fails, so routing
         this method through DecompInterface instead of
         listing.getInstructionAt(...).getPcode() would make the
         'DecompInterface not in exec_calls' assertion fail immediately.
@@ -2725,7 +2725,7 @@ class TestGetInstructionPcode:
     ) -> None:
         """get_instruction_pcode must return an empty ops list when no instruction exists.
 
-        Falsifiable: a missing 'instr is None' guard would raise an
+        A missing 'instr is None' guard would raise an
         AttributeError on the remote side instead of this empty payload.
         """
         fake.eval_response = {"address": None, "mnemonic": None, "pcode_ops": []}
@@ -2736,7 +2736,7 @@ class TestGetInstructionPcode:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.get_instruction_pcode must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here.
         """
         fake.eval_response = {"address": _TEST_ADDR, "mnemonic": "NOP", "pcode_ops": []}
@@ -2757,7 +2757,7 @@ class TestDisassembleRange:
     ) -> None:
         """disassemble_range must emit DisassembleCommand and report the instruction delta.
 
-        Falsifiable: a fake "declare success without doing anything"
+        A fake "declare success without doing anything"
         regression that never calls DisassembleCommand would fail the
         containment assertion immediately.
         """
@@ -2781,7 +2781,7 @@ class TestDisassembleRange:
     ) -> None:
         """disassemble_range must raise ToolError when Ghidra rejects the command.
 
-        Falsifiable: dropping the applied-guard would silently report
+        Dropping the applied-guard would silently report
         success instead of raising.
         """
         fake.eval_response = {"applied": False, "instructions_created": 0}
@@ -2792,7 +2792,7 @@ class TestDisassembleRange:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.disassemble_range must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here.
         """
         fake.eval_response = {"applied": True, "instructions_created": 1}
@@ -2819,7 +2819,7 @@ class TestClearCodeBytes:
     ) -> None:
         """clear_code_bytes must emit Listing.clearCodeUnits over the requested range.
 
-        Falsifiable: swapping the mutating call for a different (or
+        Swapping the mutating call for a different (or
         no-op) Ghidra API call would fail the containment assertion.
         """
         fake.eval_response = {"had_code": True, "cleared": True}
@@ -2834,7 +2834,7 @@ class TestClearCodeBytes:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.clear_code_bytes must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here.
         """
         fake.eval_response = {"had_code": False, "cleared": True}
@@ -2861,7 +2861,7 @@ class TestSetRegisterValue:
     ) -> None:
         """set_register_value must emit setRegisterValue and verify the write via readback.
 
-        Falsifiable: swapping the mutating call for the read-only
+        Swapping the mutating call for the read-only
         getRegisterValue would fail the containment assertion.
         """
         fake.set_eval_responder(
@@ -2887,7 +2887,7 @@ class TestSetRegisterValue:
     ) -> None:
         """set_register_value must raise ToolError when the readback does not match.
 
-        Falsifiable: removing the post-write verification step would
+        Removing the post-write verification step would
         let a silently-rejected write report success=True instead.
         """
         fake.set_eval_responder(lambda expr: 0 if "getUnsignedValue" in expr or "getRegisterValue" in expr else {"set": True})
@@ -2908,7 +2908,7 @@ class TestSetRegisterValue:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.set_register_value must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here.
         """
         fake.set_eval_responder(lambda expr: {"set": True} if "setRegisterValue" in expr else 1)
@@ -2935,7 +2935,7 @@ class TestRenameFunctionVariable:
     ) -> None:
         """rename_function_variable must emit Variable.setName, never setDataType.
 
-        Falsifiable: this is the rename-vs-retype confusion the method must avoid. If the implementation were
+        This is the rename-vs-retype confusion the method must avoid. If the implementation were
         accidentally copied from set_function_variable_type without
         changing the mutating call, the second assertion fails
         immediately.
@@ -2963,7 +2963,7 @@ class TestRenameFunctionVariable:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.rename_function_variable must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here.
         """
         fake.eval_response = True
@@ -2990,7 +2990,7 @@ class TestSetFunctionFlags:
     ) -> None:
         """set_function_flags must emit setNoReturn(True) and only that call when only no_return is passed.
 
-        Falsifiable: if every flag setter were always emitted
+        If every flag setter were always emitted
         regardless of which arguments were passed, the negative
         containment assertions for setVarArgs/setInline would fail.
         """
@@ -3017,7 +3017,7 @@ class TestSetFunctionFlags:
     ) -> None:
         """A caller passing var_args=False must still emit setVarArgs(False), not skip it.
 
-        Falsifiable: an `if var_args:` (truthiness) check instead of
+        An `if var_args:` (truthiness) check instead of
         `if var_args is not None:` would drop this call entirely for a
         False value, silently leaving the existing flag untouched.
         """
@@ -3039,7 +3039,7 @@ class TestSetFunctionFlags:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.set_function_flags must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here.
         """
         fake.eval_response = {"name": "f", "address": _TEST_ADDR, "no_return": True, "var_args": False, "is_inline": False}
@@ -3066,7 +3066,7 @@ class TestFunctionTags:
     ) -> None:
         """create_function_tag must emit createFunctionTag and echo back the requested name/comment.
 
-        Falsifiable: reverting to a MISSING implementation would raise
+        Reverting to a MISSING implementation would raise
         AttributeError; dropping the ``createFunctionTag`` call from the
         emitted script would fail the containment assertion.
         """
@@ -3085,7 +3085,7 @@ class TestFunctionTags:
     ) -> None:
         """set_function_tags must raise ToolError for an unrecognized operation before any RPC call.
 
-        Falsifiable: if the ``valid_operations`` guard were removed, this
+        If the ``valid_operations`` guard were removed, this
         would dispatch an RPC call instead of raising, leaving
         ``fake.exec_calls`` non-empty.
         """
@@ -3100,7 +3100,7 @@ class TestFunctionTags:
     ) -> None:
         """operation='add' must emit Function.addTag and never Function.removeTag.
 
-        Falsifiable: if both branches were always emitted in one script
+        If both branches were always emitted in one script
         regardless of ``operation``, the negative containment assertion
         (``"removeTag(" not in ...``) would fail.
         """
@@ -3120,7 +3120,7 @@ class TestFunctionTags:
     ) -> None:
         """operation='remove' must emit Function.removeTag and never Function.addTag.
 
-        Falsifiable: companion to the 'add' case above -- if
+        Companion to the 'add' case above -- if
         ``set_function_tags`` were (incorrectly) changed to always call
         ``addTag`` regardless of ``operation``, this is the test that
         catches it (the 'add'-case test alone cannot, since a broken
@@ -3143,7 +3143,7 @@ class TestFunctionTags:
     ) -> None:
         """set_function_tags must raise ToolError when no function exists at the address.
 
-        Falsifiable: if the ``found`` guard were removed, this would
+        If the ``found`` guard were removed, this would
         report success despite no function existing at the address.
         """
         fake.eval_response = {"found": False, "applied": False}
@@ -3157,7 +3157,7 @@ class TestFunctionTags:
     ) -> None:
         """get_function_tags() with no address must emit getAllFunctionTags and return every tag.
 
-        Falsifiable: if the ``addr_literal is None`` branch were removed,
+        If the ``addr_literal is None`` branch were removed,
         this would fail to emit ``getAllFunctionTags`` for an
         address-less call.
         """
@@ -3170,7 +3170,7 @@ class TestFunctionTags:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.set_function_tags must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here.
         """
         fake.eval_response = {"found": True, "applied": True}
@@ -3197,7 +3197,7 @@ class TestPromoteSymbolToPrimary:
     ) -> None:
         """promote_symbol_to_primary must emit Symbol.setPrimary() and never re-create via createLabel.
 
-        Falsifiable: if the implementation re-created the label (via
+        If the implementation re-created the label (via
         ``createLabel``) with ``primary=True`` instead of looking up and
         promoting the already-existing symbol, the negative containment
         assertion (``"createLabel" not in ...``) would fail.
@@ -3223,7 +3223,7 @@ class TestPromoteSymbolToPrimary:
     ) -> None:
         """An already-primary symbol must report already_primary=True without raising.
 
-        Falsifiable: if the ``already_primary`` short-circuit were
+        If the ``already_primary`` short-circuit were
         removed and ``setPrimary()`` called unconditionally, this test
         would still pass by coincidence -- but it documents the intended
         telemetry distinction between 'already primary' and 'just
@@ -3244,7 +3244,7 @@ class TestPromoteSymbolToPrimary:
     ) -> None:
         """promote_symbol_to_primary must raise ToolError when no symbol with that name exists.
 
-        Falsifiable: if the ``promoted`` not-found guard were removed,
+        If the ``promoted`` not-found guard were removed,
         this would return a success dict instead of raising.
         """
         fake.eval_response = {"promoted": False, "already_primary": False}
@@ -3255,7 +3255,7 @@ class TestPromoteSymbolToPrimary:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.promote_symbol_to_primary must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here.
         """
         fake.eval_response = {"promoted": True, "already_primary": False}
@@ -3282,7 +3282,7 @@ class TestNonDefaultMemoryBlockTypes:
     ) -> None:
         """create_uninitialized_block must emit Memory.createUninitializedBlock and report success.
 
-        Falsifiable: if the wrong Memory API were (incorrectly) called
+        If the wrong Memory API were (incorrectly) called
         for this block kind, the containment assertion below fails
         immediately.
         """
@@ -3301,7 +3301,7 @@ class TestNonDefaultMemoryBlockTypes:
     ) -> None:
         """create_byte_mapped_block must emit Memory.createByteMappedBlock, never createBitMappedBlock.
 
-        Falsifiable: if create_byte_mapped_block were accidentally wired
+        If create_byte_mapped_block were accidentally wired
         to Memory.createBitMappedBlock (its nearest sibling by argument
         count), the positive containment check fails and the negative
         one catches the swap directly.
@@ -3322,7 +3322,7 @@ class TestNonDefaultMemoryBlockTypes:
     ) -> None:
         """create_bit_mapped_block must emit Memory.createBitMappedBlock and report success.
 
-        Falsifiable: if the wrong Memory API were (incorrectly) called
+        If the wrong Memory API were (incorrectly) called
         for this block kind, the containment assertion below fails
         immediately.
         """
@@ -3341,7 +3341,7 @@ class TestNonDefaultMemoryBlockTypes:
     ) -> None:
         """create_uninitialized_block must raise ToolError instead of silently returning success=False.
 
-        Falsifiable: a create_memory_block-style silent
+        A create_memory_block-style silent
         ``success: False`` return (instead of raising) would leave this
         ``pytest.raises`` block unsatisfied.
         """
@@ -3353,7 +3353,7 @@ class TestNonDefaultMemoryBlockTypes:
     def test_dispatchable_via_registry(registry: ToolRegistry, fake: FakeGhidraBridge) -> None:
         """ghidra.create_uninitialized_block must dispatch via ToolRegistry.
 
-        Falsifiable: a missing or misnamed ToolFunction entry would
+        A missing or misnamed ToolFunction entry would
         raise ToolError here before create_uninitialized_block ever ran.
         """
         fake.eval_response = {"name": ".bss", "start": 0x600000, "size": 4096, "success": True}
@@ -3380,7 +3380,7 @@ class TestAnalyzeConfigurableTimeout:
     ) -> None:
         """analyze() with no argument must still use the module's default deadline.
 
-        Falsifiable: if the ternary defaulting logic were inverted
+        If the ternary defaulting logic were inverted
         (using ``timeout_seconds`` even when ``None``), this would
         attempt an unbounded/None ``loop.time() + None`` and raise
         ``TypeError`` instead of completing normally.
@@ -3405,7 +3405,7 @@ class TestAnalyzeConfigurableTimeout:
     ) -> None:
         """A small explicit timeout_seconds must raise well before the 1800s module default would.
 
-        Falsifiable: if ``timeout_seconds`` were accepted but never
+        If ``timeout_seconds`` were accepted but never
         actually substituted into the deadline computation, this call
         would hang for (up to) 1800s instead of raising within a
         couple of seconds.

@@ -77,7 +77,7 @@ def _loaded_after_first_import(module: str) -> dict[str, list[str]]:
 def test_a_first_import_loads_neither_the_sdk_backed_submodules_nor_their_libraries(module: str) -> None:
     """A fresh interpreter that imports a bridge, the core or the providers package holds no SDK-backed provider module.
 
-    Falsifiable: with any of those submodules imported by the package, every
+    With any of those submodules imported by the package, every
     one of these first imports loads it and its library.
 
     Args:

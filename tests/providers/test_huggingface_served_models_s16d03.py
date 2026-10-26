@@ -11,7 +11,7 @@ The raw Hub text-generation catalog includes models that no provider serves,
 and requesting one produces an opaque HTTP 400 (``model_not_supported`` / an
 empty bad-request body) with no guidance.
 
-These tests validate two independent, falsifiable properties of the fix:
+These tests validate two independent properties of the fix:
 
 * :meth:`~intellicrack.providers.huggingface.HuggingFaceProvider.list_models`
   only ever returns models present in the router's own served-model set
@@ -115,7 +115,7 @@ async def test_list_models_only_returns_router_served_models(
 
     Re-reads the served-model set that ``list_models`` cached from a live
     router response and asserts that every ID it returned is a member of it.
-    This fails loudly if the intersection filter in
+    This fails if the intersection filter in
     :meth:`~intellicrack.providers.huggingface.HuggingFaceProvider.list_models`
     is ever removed or bypassed, since the unfiltered Hub catalog is known to
     include models tagged for text generation that no configured Inference
@@ -162,7 +162,7 @@ class TestValidateModelServedRejectsUnservedModel:
     constructed and its served-model cache is populated directly, exactly as
     :meth:`~intellicrack.providers.huggingface.HuggingFaceProvider.list_models`
     would populate it from a real router response. This isolates and
-    falsifies the validation logic itself, independent of network
+    tests the validation logic itself, independent of network
     availability.
     """
 

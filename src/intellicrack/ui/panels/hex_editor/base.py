@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import mmap
 import zlib
 from pathlib import Path
@@ -18,6 +17,7 @@ from intellicrack.core.logging import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
+    from types import ModuleType
 
 
 _CRC_STREAM_DEFAULT_CHUNK: Final[int] = 1 << 20
@@ -62,24 +62,16 @@ try:
 except ImportError:
     _logger.debug("hexpat_interpreter_import_unavailable")
 
+pefile: ModuleType | None
 try:
-    import pefile
+    import pefile as _pefile_module
 
+    pefile = _pefile_module
     pefile_available: bool = True
 except ImportError:
     pefile = None
     pefile_available = False
     _logger.debug("pefile_import_unavailable")
-
-_xxhash_mod: Any = None
-_xxhash_available: bool = False
-try:
-    import xxhash as _xxhash_import
-
-    _xxhash_mod = _xxhash_import
-    _xxhash_available = True
-except ImportError:
-    _logger.debug("xxhash_import_unavailable")
 
 hexcore: Any = None
 hexcore_available: bool = False
@@ -482,197 +474,28 @@ def _length_of(document: object) -> int:
     return raw
 
 
-def _compute_hash_stdlib(algo: str, data: bytes) -> str | None:
-    """Compute a hash using stdlib hashlib algorithms.
-
-    Args:
-        algo: Algorithm name string.
-        data: Input bytes to hash.
-
-    Returns:
-        str | None: Hex digest, or None if the algorithm is not handled here.
-    """
-    stdlib_map: dict[str, str] = {
-        "MD5": "md5",
-        "SHA-1": "sha1",
-    }
-    if algo in stdlib_map:
-        return hashlib.new(stdlib_map[algo], data).hexdigest()
-    attr_map: dict[str, Any] = {
-        "SHA-224": hashlib.sha224,
-        "SHA-256": hashlib.sha256,
-        "SHA-384": hashlib.sha384,
-        "SHA-512": hashlib.sha512,
-        "SHA3-256": hashlib.sha3_256,
-        "SHA3-512": hashlib.sha3_512,
-    }
-    if algo in attr_map:
-        return attr_map[algo](data).hexdigest()
-    if algo == "Blake2b-256":
-        return hashlib.blake2b(data, digest_size=32).hexdigest()
-    if algo == "Blake2s-256":
-        return hashlib.blake2s(data, digest_size=32).hexdigest()
-    return None
-
-
-def _compute_hash_xxhash(algo: str, data: bytes) -> str | None:
-    """Compute a hash using the xxhash library.
-
-    Args:
-        algo: Algorithm name string.
-        data: Input bytes to hash.
-
-    Returns:
-        str | None: Hex digest, or an error string, or None if not an xxhash algo.
-    """
-    if algo not in {"XXHash32", "XXHash64", "XXH3-64"}:
-        return None
-    if not _xxhash_available or _xxhash_mod is None:
-        return "Error: xxhash not installed"
-    if algo == "XXHash32":
-        return str(_xxhash_mod.xxh32(data).hexdigest())
-    if algo == "XXHash64":
-        return str(_xxhash_mod.xxh64(data).hexdigest())
-    return str(_xxhash_mod.xxh3_64(data).hexdigest())
-
-
-def _compute_hash_siphash(algo: str, data: bytes) -> str | None:
-    """Compute a SipHash digest.
-
-    Args:
-        algo: Algorithm name string.
-        data: Input bytes to hash.
-
-    Returns:
-        str | None: Hex digest, or an error string, or None if not a SipHash algo.
-    """
-    sip_attr_map: dict[str, str] = {
-        "SipHash64": "siphash13",
-        "SipHash128": "siphash24",
-    }
-    if algo not in sip_attr_map:
-        return None
-    sip_fn = getattr(hashlib, sip_attr_map[algo], None)
-    if sip_fn is None:
-        return "Error: SipHash not available (Python 3.12+ required)"
-    return sip_fn(b"\x00" * 16, data).hex()
-
-
-def _compute_hash_checksums(algo: str, data: bytes) -> str | None:
-    """Compute CRC or Adler checksum.
-
-    Args:
-        algo: Algorithm name string.
-        data: Input bytes to hash.
-
-    Returns:
-        str | None: Hex checksum string, or None if not a checksum algo.
-    """
-    if algo == "Adler32":
-        return f"{zlib.adler32(data) & 0xFFFFFFFF:08x}"
-    if algo == "CRC-8":
-        crc = compute_custom_crc(data, 8, 0x07, 0x00, ref_in=False, ref_out=False, xor_out=0x00)
-        return f"{crc:02x}"
-    if algo == "CRC-16":
-        crc = compute_custom_crc(data, 16, 0x8005, 0x0000, ref_in=True, ref_out=True, xor_out=0x0000)
-        return f"{crc:04x}"
-    if algo == "CRC-32":
-        return f"{zlib.crc32(data) & 0xFFFFFFFF:08x}"
-    if algo == "CRC-64":
-        crc = compute_custom_crc(
-            data,
-            64,
-            0x42F0E1EBA9EA3693,
-            0xFFFFFFFFFFFFFFFF,
-            ref_in=False,
-            ref_out=False,
-            xor_out=0xFFFFFFFFFFFFFFFF,
-        )
-        return f"{crc:016x}"
-    return None
-
-
-def _compute_hash_fnv(algo: str, data: bytes) -> str | None:
-    """Compute an FNV hash.
-
-    Args:
-        algo: Algorithm name string.
-        data: Input bytes to hash.
-
-    Returns:
-        str | None: Hex hash string, or None if not an FNV algo.
-    """
-    fnv32_prime = 16777619
-    fnv64_prime = 1099511628211
-    fnv32_offset = 2166136261
-    fnv64_offset = 14695981039346656037
-    fnv32_mask = 0xFFFFFFFF
-    fnv64_mask = 0xFFFFFFFFFFFFFFFF
-
-    if algo == "FNV1-32":
-        h = fnv32_offset
-        for b in data:
-            h = ((h * fnv32_prime) ^ b) & fnv32_mask
-        return f"{h:08x}"
-    if algo == "FNV1-64":
-        h = fnv64_offset
-        for b in data:
-            h = ((h * fnv64_prime) ^ b) & fnv64_mask
-        return f"{h:016x}"
-    if algo == "FNV1a-32":
-        h = fnv32_offset
-        for b in data:
-            h = ((h ^ b) * fnv32_prime) & fnv32_mask
-        return f"{h:08x}"
-    if algo == "FNV1a-64":
-        h = fnv64_offset
-        for b in data:
-            h = ((h ^ b) * fnv64_prime) & fnv64_mask
-        return f"{h:016x}"
-    return None
-
-
-def _compute_hash_impl(algo: str, data: bytes) -> str | None:
-    """Dispatch ``algo`` across the supported hash backends.
-
-    Args:
-        algo: Algorithm name string.
-        data: Input bytes to hash.
-
-    Returns:
-        str | None: Hex-encoded hash result, or ``None`` when no backend
-            recognized ``algo``.
-    """
-    result = _compute_hash_stdlib(algo, data)
-    if result is not None:
-        return result
-    result = _compute_hash_xxhash(algo, data)
-    if result is not None:
-        return result
-    result = _compute_hash_siphash(algo, data)
-    if result is not None:
-        return result
-    result = _compute_hash_checksums(algo, data)
-    return result if result is not None else _compute_hash_fnv(algo, data)
-
-
 def compute_hash(algo: str, data: bytes) -> str:
-    """Compute a hash or checksum of data using the specified algorithm.
+    """Compute a hash or checksum of ``data`` with the hex engine.
+
+    The digest comes from the same ``intellicrack_hexcore`` hashing the Hashing tab runs on a document,
+    so every label in :data:`HASH_ALGORITHMS` gives exactly the value the panel shows for the same bytes.
 
     Args:
-        algo: Algorithm name string.
+        algo: Algorithm label, one of :data:`HASH_ALGORITHMS` or any name the engine accepts.
         data: Input bytes to hash.
 
     Returns:
-        str: Hex-encoded hash result, or an error message prefixed with "Error:".
+        str: Hex-encoded digest, or an error message prefixed with ``"Error:"`` when the engine is not
+            built or rejects the algorithm.
     """
+    if not hexcore_available or hexcore is None:
+        return "Error: intellicrack_hexcore is not available"
     try:
-        result = _compute_hash_impl(algo, data)
-    except (ValueError, TypeError, OSError, RuntimeError, ImportError) as exc:
+        digest: object = hexcore.HexDocument.open_bytes(data).compute_hash(algo)
+    except ValueError as exc:
         _logger.exception("compute_hash_failed", algo=algo)
         return f"Error: {exc}"
-    else:
-        return result if result is not None else f"Error: unknown algorithm {algo}"
+    return str(digest)
 
 
 HASH_ALGORITHMS: list[str] = [

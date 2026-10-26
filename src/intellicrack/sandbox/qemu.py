@@ -1922,7 +1922,7 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
         merely wasteful: QEMU accepts this socket once, and the second connect
         is refused for the life of the VM.
 
-        Only a socket that has genuinely broken is closed here, which lets the
+        Only a socket that has broken is closed here, which lets the
         caller open a fresh one for the case where that can still work.
 
         Args:
@@ -2472,7 +2472,7 @@ class GuestAgentClient:
         self._vm_terminated = vm_terminated
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
-        self.connected = False
+        self.connected: bool = False
         self._lock = asyncio.Lock()
         self._message_queue: asyncio.Queue[GuestAgentMessage] = asyncio.Queue()
         self._reader_task: asyncio.Task[None] | None = None
@@ -3242,7 +3242,7 @@ class QemuOutputRecorder:
         WHPX rather than evidence of an accelerator fault, which is left at
         the same routine level as QEMU's ordinary output. No other warning is
         matched here: recognising more than this one known line would hide a
-        genuine fault behind the same reasoning that excuses this one.
+        separate fault behind the same reasoning that excuses this one.
 
         Args:
             text: One line of QEMU's stdout or stderr, already stripped.
@@ -6567,7 +6567,7 @@ $commandServer = {
     }
 
     # Which of the two renderings below an argument needs is decided by the callee,
-    # because the two parsers are genuinely different and neither escape survives
+    # because the two parsers are different and neither escape survives
     # the other. Everything reached here is a real executable, so only the command
     # interpreter itself reads its tail by its own rules.
     function Test-ShellParsedCallee($commandPath) {
@@ -9059,7 +9059,7 @@ if __name__ == "__main__":
 
         The creation is best-effort: a directory that already exists makes the
         guest-side ``mkdir`` fail, which is not an error, and a directory that
-        genuinely could not be created still surfaces through the
+        could not be created still surfaces through the
         :class:`SandboxError` :meth:`_open_guest_file` raises immediately
         afterward when the write that depends on it cannot proceed either.
 
@@ -9551,7 +9551,7 @@ if __name__ == "__main__":
 
         QEMU's job-based ``snapshot-delete`` is lenient where its siblings are
         not: it finishes ``concluded`` with no error for a tag no disk holds,
-        while ``snapshot-load`` of that same tag fails loudly and the
+        while ``snapshot-load`` of that same tag fails with an error and the
         block-layer command refuses it outright. Passing that leniency on lets
         an operator delete a tag they misspelled and be told it worked, so the
         tag is checked against the block layer's own records before the job is
@@ -10035,7 +10035,7 @@ if __name__ == "__main__":
            into the staging directory using ``shutil.copy2``.
 
         Whichever path ran, the staging directory must contain at least one
-        file or the call is treated as a genuine failure.
+        file or the call is treated as a failure.
 
         Args:
             output_path: Optional path to save the ZIP archive.

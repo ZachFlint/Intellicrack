@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates that Intellicrack's third-party licensing obligations hold.
+"""Checks that Intellicrack's third-party licensing obligations hold.
 
 Intellicrack is GPL-3.0-or-later and redistributes third-party software two ways:
 the x64dbg plugin SDK is committed under ``tools/x64dbg/pluginsdk`` (a build
@@ -82,7 +82,7 @@ def _read(path: Path) -> str:
 
 
 def test_every_required_license_text_is_vendored() -> None:
-    """Real gate: each third-party project's license text ships under ``licenses/``.
+    """Each third-party project's license text ships under ``licenses/``.
 
     GPL and LGPL both require the license to accompany the work. Deleting a text,
     or leaving behind an empty placeholder, turns this red.
@@ -97,7 +97,7 @@ def test_every_required_license_text_is_vendored() -> None:
 
 
 def test_x64dbg_license_is_the_modified_text_with_the_plugin_exception() -> None:
-    """Real gate: x64dbg's vendored text is its modified GPL-3.0, not stock GPLv3.
+    """The vendored x64dbg text is its modified GPL-3.0, not stock GPLv3.
 
     ``src/x64dbg-plugin`` links ``x64dbg.lib`` and ``x64bridge.lib``, making it a
     combined work with x64dbg. The inserted "Treatment of plugins" clause is what
@@ -116,7 +116,7 @@ def test_x64dbg_license_is_the_modified_text_with_the_plugin_exception() -> None
 
 
 def test_corresponding_source_link_matches_the_pinned_sdk_commit() -> None:
-    """Real gate: the documented source link names the exact vendored SDK commit.
+    """The documented source link names the exact vendored SDK commit.
 
     GPL-3.0 section 6(d) is satisfied by directions to the Corresponding Source for
     *the shipped build*. Bumping the SDK without updating the link would leave the
@@ -133,7 +133,7 @@ def test_corresponding_source_link_matches_the_pinned_sdk_commit() -> None:
 
 
 def test_every_vendored_license_is_documented_in_the_index() -> None:
-    """Real gate: no vendored license text is left undocumented.
+    """No vendored license text is left undocumented.
 
     ``licenses/`` is only useful if the index explains what each text covers.
     Adding a directory without documenting it turns this red.
@@ -145,7 +145,7 @@ def test_every_vendored_license_is_documented_in_the_index() -> None:
 
 
 def test_installer_both_stages_and_installs_the_license_texts() -> None:
-    """Real gate: the installer carries the license texts to the installed tree.
+    """The installer carries the license texts to the installed tree.
 
     ``stage.ps1`` building the payload and ``intellicrack.iss`` mapping it into
     ``{app}`` are two halves of one contract. If either half drops the licenses,

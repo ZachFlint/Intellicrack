@@ -20,11 +20,10 @@ straight into it. That is the state that wedges Docker until Docker Desktop is
 relaunched as administrator, and it is what
 :func:`test_the_gate_refuses_an_idle_engine_with_no_container_running` pins.
 
-Nothing here is asserted against a mock. The probes are injected because they
-describe the *host* -- whether an engine is up, whether a shutdown worked --
-and the logic deciding what to do about it is the real production code under
-test. Where a real host signal can be produced instead, it is: the process
-enumerator is gated against a genuine running process carrying an engine's
+The probes are injected because they describe the *host* -- whether an engine
+is up, whether a shutdown worked -- and the logic deciding what to do about it
+is the code under test. Where a host signal can be produced instead, it is: the process
+enumerator is gated against a running process carrying an engine's
 name, exactly as the container-side interlock gates its own.
 """
 

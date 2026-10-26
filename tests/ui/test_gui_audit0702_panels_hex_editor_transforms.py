@@ -13,9 +13,9 @@ Covers the arithmetic dispatch in ``transforms.py``:
   once through the non-blocking ``run_bridge_coroutine_logged``, refreshing the widget from the coroutine's success callback and
   warning the user from its error callback.
 
-Three independent gates prove the behaviour, all driving the *real*
-``run_bridge_coroutine_logged``/``BridgeCallWorker`` machinery (no mocking of
-the dispatcher itself) with a bridge stand-in whose coroutines sleep for a
+Three independent tests check the behavior, all driving the
+``run_bridge_coroutine_logged``/``BridgeCallWorker`` machinery
+with a bridge stand-in whose coroutines sleep for a
 measurable duration:
 
 1. :class:`TestH8NonBlockingDispatch` proves the calling thread returns
@@ -80,7 +80,7 @@ class _StubHexWidget:
 class _SlowArithmeticBridge:
     """Real async bridge stand-in whose coroutines sleep for a fixed delay.
 
-    Both methods are genuine coroutine functions (not mocks) so they must be
+    Both methods are coroutine functions, so they must be
     driven through an actual event loop -- either by blocking
     ``future.result()`` on the caller's thread (the blocking behaviour) or by the
     persistent background loop thread used by ``run_bridge_coroutine_logged``

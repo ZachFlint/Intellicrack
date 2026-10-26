@@ -79,7 +79,7 @@ class TestRunToUserCodeButtonDrivesRunToUserCodeRpc:
     ) -> None:
         """Clicking "User Code" must send exactly ``RunToUserCode`` and report the reached IP.
 
-        Falsifiable: if ``_on_run_to_user_code`` called a different bridge
+        If ``_on_run_to_user_code`` called a different bridge
         method, or ``X64DbgBridge.run_to_user_code`` sent a different
         console command, the recorded ``exec`` command list would not
         contain ``RunToUserCode`` exactly and the console would not report
@@ -132,7 +132,7 @@ class TestRunToPartyButtonDrivesRunToPartyRpc:
     ) -> None:
         """Clicking "Run To Party" with party=1 must send exactly ``RunToParty 1``.
 
-        Falsifiable: if the handler read a different widget, dropped the
+        If the handler read a different widget, dropped the
         entered party number, or the bridge built the command with a
         different party value, the recorded ``exec`` command list would
         not contain ``RunToParty 1`` exactly. This also pins the argument
@@ -187,7 +187,7 @@ class TestRunToPartyButtonDrivesRunToPartyRpc:
     ) -> None:
         """Non-numeric party input must be rejected locally without any RPC dispatch.
 
-        Falsifiable: if the ``int(party_text)`` guard in
+        If the ``int(party_text)`` guard in
         ``_on_run_to_party`` were removed, this would either raise an
         uncaught ``ValueError`` or dispatch a malformed ``RunToParty``
         command instead of leaving the fake pipe untouched.

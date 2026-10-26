@@ -1069,9 +1069,9 @@ async def test_pe_va_detection_maps_headers_and_sections_and_notifies_observers(
 
     assert mappings == [
         {"file_offset": 0, "virtual_address": 0x140000000, "length": 0x80},
-        {"file_offset": 0x200, "virtual_address": 0x140001000, "length": 0x300},
+        {"file_offset": 0x200, "virtual_address": 0x140001000, "length": 0x200},
     ]
-    assert document.list_va_mappings() == [(0, 0x140000000, 0x80), (0x200, 0x140001000, 0x300)]
+    assert document.list_va_mappings() == [(0, 0x140000000, 0x80), (0x200, 0x140001000, 0x200)]
     assert log.events == [(HexDocumentEvent.VA_MAPPING_CHANGED, {"mapping_count": 2})]
 
 

@@ -16,7 +16,7 @@ No test here touches the operating system's own keyring. The store runs over
 a real file-backed keyring in the test's own directory, sized like Credential
 Manager (:class:`~tests._helpers.private_keyring.CredentialManagerSizedKeyring`),
 whose writes additionally refuse an over-long entry name the way ``CredWrite``
-does: by raising the genuine ``win32ctypes`` ``pywintypes.error`` that
+does: by raising the ``win32ctypes`` ``pywintypes.error`` that
 ``WinVaultKeyring`` lets escape. The gate then asserts the store translates
 exactly that error, so it fails if the store's exception tuple stops covering
 the type the Windows backend raises.

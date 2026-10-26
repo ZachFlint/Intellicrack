@@ -12,7 +12,7 @@ away whatever QEMU said about it::
 
 Two faults follow from that.
 
-**The real cause was discarded.** QEMU answers a refused dump with a genuine
+**The real cause was discarded.** QEMU answers a refused dump with a specific
 description - measured against QEMU 10.1.0, aiming a dump at a directory that
 does not exist gives ``Could not create '<the dump path>': No such file or
 directory`` in two milliseconds - and the operator was shown the bare words

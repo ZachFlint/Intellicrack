@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate for the Ghidra Load-before-headless connect check.
+"""Tests for the Ghidra Load-before-headless connect check.
 
 Clicking "Connect" must not report a bridge as ready when no bridge server is listening on the
 target port. The upstream ``ghidra_bridge.GhidraBridge`` client is lazy: its constructor does not
@@ -18,8 +18,8 @@ RPC call raises a raw ``ConnectionRefusedError`` that is wrapped only as ``"Remo
 server that never started is reported at Connect time with clear guidance instead of a raw OS error
 from Load.
 
-These gates exercise the real ``GhidraBridge`` and ``GhidraPanel`` objects against a genuinely
-closed TCP port (no server, no mocks).
+These tests exercise the ``GhidraBridge`` and ``GhidraPanel`` objects against a closed TCP port
+with no server listening.
 """
 
 from __future__ import annotations
@@ -122,7 +122,7 @@ class TestInitializeGatesOnRealLivenessProbe:
     async def test_initialize_raises_clear_message_when_bridge_unreachable() -> None:
         """Connect must fail with clear guidance, not a raw WinError, when nothing listens.
 
-        Falsifiable: without the ``_probe_bridge_port`` gate in
+        Without the ``_probe_bridge_port`` gate in
         ``GhidraBridge.initialize``, the lazy ``ghidra_bridge.GhidraBridge`` client construction
         succeeds unconditionally, so no ``ToolError`` is raised here and this test fails.
         """
@@ -159,7 +159,7 @@ class TestPanelBlocksLoadBeforeBridgeIsReady:
         driver so the panel's real ``_on_connect`` / ``_on_connect_error`` /
         ``_sync_toolbar_state`` code paths run in-thread.
 
-        Falsifiable: without the ``initialize`` liveness-probe gate, Connect succeeds against the
+        Without the ``initialize`` liveness-probe gate, Connect succeeds against the
         dead port, which enables the Load button and lets ``panel.load_binary`` proceed instead of
         short-circuiting, so this test fails.
 

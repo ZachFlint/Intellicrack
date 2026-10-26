@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates: a bridge call must outlive the widget that dispatched it.
+"""A bridge call must outlive the widget that dispatched it.
 
 ``run_bridge_coroutine_async`` must not parent its ``BridgeCallWorker`` to the calling widget. Closing a panel or dialog while a call is
 in flight would let Qt delete a running ``QThread`` along with its parent, and Qt answers that with a native access violation that
@@ -13,7 +13,7 @@ The worker is dispatched unparented, carries the calling widget as its recorded 
 it, and its result is dropped when that owner's C++ object has been deleted.
 
 Every gate drives the real helpers against a real coroutine -- an HTTP request over a loopback socket the server holds open until the test
-releases it -- so the worker is genuinely blocked mid-call when the widget is deleted. The set covers:
+releases it -- so the worker is blocked mid-call when the widget is deleted. The set covers:
 
 * the dispatched worker must not be a Qt child of its delivery context (re-parent it and the widget is its parent again),
 * a live delivery context must still receive its result, on the main thread (a guard that dropped everything, or delivery that moved off
@@ -273,7 +273,7 @@ def test_a_live_delivery_context_receives_the_result_on_the_main_thread(
 ) -> None:
     """A result must still reach a live widget, and reach it on the GUI thread.
 
-    The delivery guard wraps the caller's callback, so this gate holds it honest in both directions: the wrapper must pass a real result
+    The delivery guard wraps the caller's callback, so this test checks it in both directions: the wrapper must pass the result
     through to a live widget, and it must not move that delivery off the thread the widget lives on.
 
     Args:

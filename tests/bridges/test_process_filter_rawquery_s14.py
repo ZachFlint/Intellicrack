@@ -5,8 +5,8 @@
 """Tests for process-list PID filtering and raw system query sizing.
 
 Exercises ``ProcessBridge`` against the real Windows process snapshot and
-``NtQuerySystemInformation`` APIs. No mocks: every assertion is derived from
-live process enumeration or a live kernel query, so a regression in either behaviour causes a genuine test failure.
+``NtQuerySystemInformation`` APIs. Every assertion is derived from
+live process enumeration or a live kernel query, so a regression in either behavior fails a test.
 """
 
 from __future__ import annotations

@@ -11,12 +11,11 @@ neither the bridge-backed conversion path (``_on_convert_success``) nor the loca
 flag through every one of those call sites so ticking the box hides the unsigned rows from the results tree.
 
 Every test below drives the real ``CalculatorMixin`` wiring on a real
-``HexEditorPanel``, exercising the genuine ``QCheckBox``/``QLineEdit``/
+``HexEditorPanel``, exercising the ``QCheckBox``/``QLineEdit``/
 ``QComboBox`` controls plus either the real, unmodified
 ``HexEditorBridge`` (dispatched asynchronously through
 ``run_bridge_coroutine_logged`` and pumped through the Qt event loop) or
-the synchronous local fallback. No mock or stub stands in for the
-filtering logic under test.
+the synchronous local fallback.
 """
 
 from __future__ import annotations
@@ -246,8 +245,7 @@ class TestH24BridgePathSignedCheckboxFiltersResults:
 
         Runs the same panel through two conversions of the same input
         over the real bridge dispatch path, toggling only the "Signed"
-        checkbox between them. This is the genuine falsifiable gate for
-        the bridge path: a ``_on_convert_success`` that never reads the
+        checkbox between them. On the bridge path, a ``_on_convert_success`` that never reads the
         checkbox would render an identical set of rows in both runs (``uint8`` present in both); the second run's
         ``uint8`` row must disappear solely because the checkbox was ticked.
         A test that only ever exercises one checkbox state cannot show
@@ -295,7 +293,7 @@ class TestH24LocalFallbackSignedCheckboxFiltersResults:
         """Ticking "Signed" with no bridge attached hides unsigned rows in the big-endian path.
 
         Uses ``0xFFFFFFFF``, whose signed/unsigned interpretations
-        genuinely differ at every width up to 32 bits (``-1`` vs a large
+        differ at every width up to 32 bits (``-1`` vs a large
         positive number), so the assertions verify real computed values
         rather than only key presence. ``_add_sized_int_results`` must take a ``signed_only`` parameter; without one it
         would always emit both rows for every width, so this test fails against that code both because the unsigned keys
@@ -332,8 +330,8 @@ class TestH24LocalFallbackSignedCheckboxFiltersResults:
 
         Runs the same panel through two conversions of ``0xFFFFFFFF``
         over the synchronous no-bridge, big-endian path, toggling only
-        the "Signed" checkbox between them. This is the genuine
-        falsifiable gate for the local BE path: ``_add_sized_int_results`` must take a ``signed_only`` parameter, and without one
+        the "Signed" checkbox between them. On the local BE path,
+        ``_add_sized_int_results`` must take a ``signed_only`` parameter, and without one
         it would emit both rows for every width, so both runs would render an identical row set. The second run's
         unsigned rows must disappear solely because the checkbox was ticked.
         Exercising only the unchecked state would pass unchanged on such code,

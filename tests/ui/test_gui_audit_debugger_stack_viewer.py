@@ -33,7 +33,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 class _CoroStackSource(X64DbgStackSource):
-    """Real stack source returning a genuine coroutine for dispatch tests.
+    """Real stack source returning a coroutine for dispatch tests.
 
     Subclasses the production x64dbg source so it is type-compatible with the
     panel's source registry while producing a real awaitable, letting the tests

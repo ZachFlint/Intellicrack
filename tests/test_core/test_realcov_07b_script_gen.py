@@ -103,7 +103,7 @@ class TestJavaScriptValidation:
 
     @pytest.mark.spawns_process
     def test_syntax_error_rejected_by_node_check(self) -> None:
-        """A genuine syntax error is reported as invalid with a node message."""
+        """A JavaScript syntax error is reported as invalid with a node message."""
         if not _NODE_AVAILABLE:
             pytest.skip("node runtime is not installed")
         content = "function broken( {\n  return 1;\n"

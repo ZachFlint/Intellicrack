@@ -119,7 +119,7 @@ class TestRemoveExceptionConfigButtonOmitsArgumentWhenCodeIsEmpty:
     ) -> None:
         """An empty exception-code field must send the argument-less "remove all" command.
 
-        Falsifiable: an implementation that always appends ``""`` or the
+        An implementation that always appends ``""`` or the
         literal text ``"None"`` would send ``DeleteExceptionBPX`` with a
         trailing argument here instead of the bare, argument-less
         command the docs require for "all exception breakpoints".
@@ -184,7 +184,7 @@ class TestEnableExceptionConfigButtonOmitsArgumentWhenCodeIsEmpty:
     ) -> None:
         """An empty exception-code field must send the argument-less "enable all" command.
 
-        Falsifiable: an implementation that always appends ``""`` or the
+        An implementation that always appends ``""`` or the
         literal text ``"None"`` would send ``EnableExceptionBPX`` with a
         trailing argument here instead of the bare, argument-less
         command the docs require for "all exception breakpoints".
@@ -249,7 +249,7 @@ class TestDisableExceptionConfigButtonOmitsArgumentWhenCodeIsEmpty:
     ) -> None:
         """An empty exception-code field must send the argument-less "disable all" command.
 
-        Falsifiable: an implementation that always appends ``""`` or the
+        An implementation that always appends ``""`` or the
         literal text ``"None"`` would send ``DisableExceptionBPX`` with
         a trailing argument here instead of the bare, argument-less
         command the docs require for "all exception breakpoints".

@@ -502,7 +502,7 @@ def test_etw_load_event_is_captured_when_admin(tmp_path: Path) -> None:
     # depends on the NT kernel trace, which such hosts do not deliver. That
     # diagnostic proves the monitor did not silently drop events, so the capability gap
     # is a skip, not a failure.
-    # A genuine silent drop produces no diagnostic and still fails below.
+    # A silent drop produces no diagnostic and still fails below.
     if "etw_unavailable_falling_back_to_wmi" in diag_text:
         pytest.skip(
             "realtime ETW kernel image-load provider unavailable on this host "

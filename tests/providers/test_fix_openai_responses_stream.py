@@ -6,7 +6,7 @@
 
 Every test connects a real :class:`OpenAIProvider` -- and so a real
 ``openai.AsyncOpenAI`` client -- to a loopback HTTP server that answers
-``POST /v1/responses`` with genuine Responses ``text/event-stream`` bytes. The
+``POST /v1/responses`` with Responses-format ``text/event-stream`` bytes. The
 SDK decodes those bytes into its typed stream events, and the assertions read
 what the provider made of them: visible text, reasoning, tool calls, usage,
 and the typed error a failure surfaces as.

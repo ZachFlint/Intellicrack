@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates that every declared repository URL names the real repository.
+"""Gates that every declared repository URL names the real repository.
 
 The canonical remote is ``https://github.com/ZachFlint/Intellicrack``. That URL is
 repeated across packaging and documentation metadata: the ``[project].urls`` table
@@ -21,7 +21,7 @@ These gates anchor each location on the canonical URL, so reverting any single o
 turns red. They read repository-root files that the sandbox does not mount, so
 they are registered ``host_native``.
 
-A companion gate keeps the ``Typing :: Typed`` trove classifier honest: that
+A companion test checks the ``Typing :: Typed`` trove classifier: that
 classifier promises downstream type checkers a ``py.typed`` marker, and the
 promise only holds while the marker actually ships inside the package.
 """
@@ -80,7 +80,7 @@ def _read_project_urls() -> dict[str, str]:
 
 
 def test_every_github_project_url_points_at_the_canonical_repository() -> None:
-    """Real gate: every GitHub URL in ``[project].urls`` names the real repository.
+    """Every GitHub URL in ``[project].urls`` names the canonical repository.
 
     These URLs are what a package page and any downstream index render as the
     project's Homepage, Issues, Source, and Changelog links. Pointing them at an
@@ -97,7 +97,7 @@ def test_every_github_project_url_points_at_the_canonical_repository() -> None:
 
 
 def test_metadata_url_matches_the_pyproject_homepage() -> None:
-    """Real gate: ``_metadata.__url__`` equals the declared project Homepage.
+    """``_metadata.__url__`` equals the declared project Homepage.
 
     ``__url__`` is the URL the running application reports as its own home. If it
     drifts from the packaging metadata, the app and the package disagree about
@@ -113,7 +113,7 @@ def test_metadata_url_matches_the_pyproject_homepage() -> None:
 
 
 def test_installer_appurl_points_at_the_canonical_repository() -> None:
-    """Real gate: the installer's ``AppUrl`` define names the real repository.
+    """The installer's ``AppUrl`` define names the canonical repository.
 
     Inno Setup writes ``AppUrl`` into the Windows uninstall entry, so a wrong value
     ships to every machine that installs Intellicrack and is visible in Add/Remove
@@ -127,7 +127,7 @@ def test_installer_appurl_points_at_the_canonical_repository() -> None:
 
 
 def test_docs_github_context_names_the_canonical_owner_and_repository() -> None:
-    """Real gate: the Sphinx GitHub context names the real owner and repository.
+    """The Sphinx GitHub context names the canonical owner and repository.
 
     ``html_context`` drives every "Edit on GitHub" and source link in the built
     documentation. A wrong owner or repository breaks all of them at once, and the
@@ -146,7 +146,7 @@ def test_docs_github_context_names_the_canonical_owner_and_repository() -> None:
 
 
 def test_typed_classifier_is_backed_by_a_py_typed_marker() -> None:
-    """Real gate: the ``Typing :: Typed`` classifier ships an actual ``py.typed``.
+    """The ``Typing :: Typed`` classifier is backed by a shipped ``py.typed`` marker.
 
     The classifier tells downstream type checkers that inline annotations are
     available, but PEP 561 only honours that when a ``py.typed`` marker is inside

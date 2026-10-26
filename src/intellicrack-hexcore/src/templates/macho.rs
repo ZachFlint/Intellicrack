@@ -3,6 +3,9 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Built-in templates for Mach-O: thin and fat headers and the common load
+//! commands, segments and sections, in both byte orders.
+
 use super::{Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry};
 
 /// Registers the built-in Mach-O structure templates into `registry`.

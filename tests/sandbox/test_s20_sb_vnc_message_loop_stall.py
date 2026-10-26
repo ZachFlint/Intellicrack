@@ -12,7 +12,7 @@ cycle. That must not be reported the same way as an actual protocol stall.
 message-type byte separately from the rest of a message that has already
 begun: a poll finding nothing pending raises the internal
 ``_NoMessagePendingError`` and is never logged, while a timeout partway
-through a message that did start is a genuine stall, logged as
+through a message that did start is a stall, logged as
 ``vnc_message_stalled`` and treated as a lost connection (the byte stream is
 left unsynced, so nothing downstream can be trusted).
 
@@ -101,7 +101,7 @@ async def test_a_stall_partway_through_a_message_is_logged_and_disconnects(
             )
 
     assert handled is False
-    assert not client.connected, "a genuine mid-message stall leaves the byte stream unsynced and must disconnect"
+    assert not client.connected, "a mid-message stall leaves the byte stream unsynced and must disconnect"
     stall_warnings = [entry for entry in captured if entry.get("event") == "vnc_message_stalled"]
-    assert stall_warnings, f"a genuine mid-message stall must be logged as vnc_message_stalled; got {captured!r}"
+    assert stall_warnings, f"a mid-message stall must be logged as vnc_message_stalled; got {captured!r}"
     assert stall_warnings[0].get("log_level") == "warning"

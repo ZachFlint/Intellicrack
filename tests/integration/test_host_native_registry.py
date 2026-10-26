@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 #
-"""Falsifiable gates for the host-native test registry and selection wiring.
+"""Tests for the host-native test registry and selection wiring.
 
 These gates protect the mechanism that routes host-only tests (Intel XPU, local
 Ollama, debug symbols, raw disk, loopback, elevation) to the host-native pass:
@@ -68,7 +68,7 @@ def _module_symbols(module_path: str) -> tuple[dict[str, set[str]], set[str]]:
 
 @pytest.mark.parametrize(("module_path", "class_name"), sorted(HOST_NATIVE_CLASSES))
 def test_registry_class_resolves(module_path: str, class_name: str) -> None:
-    """Every whole-class registry entry must name a real test class.
+    """Every whole-class registry entry must name an existing test class.
 
     Args:
         module_path: Registry module path.
@@ -82,7 +82,7 @@ def test_registry_class_resolves(module_path: str, class_name: str) -> None:
 
 @pytest.mark.parametrize(("module_path", "class_name", "func_name"), sorted(HOST_NATIVE_METHODS))
 def test_registry_method_resolves(module_path: str, class_name: str, func_name: str) -> None:
-    """Every per-method registry entry must name a real test method.
+    """Every per-method registry entry must name an existing test method.
 
     Args:
         module_path: Registry module path.
@@ -96,7 +96,7 @@ def test_registry_method_resolves(module_path: str, class_name: str, func_name: 
 
 @pytest.mark.parametrize(("module_path", "func_name"), sorted(HOST_NATIVE_FUNCTIONS))
 def test_registry_function_resolves(module_path: str, func_name: str) -> None:
-    """Every module-level registry entry must name a real test function.
+    """Every module-level registry entry must name an existing test function.
 
     Args:
         module_path: Registry module path.

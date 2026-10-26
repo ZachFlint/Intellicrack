@@ -3,9 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for :class:`AnalysisAggregator` over real binaries.
+"""Tests for :class:`AnalysisAggregator` over on-disk PE files.
 
-The tests drive the production aggregator against genuine compiled binaries:
+The tests drive the production aggregator against compiled System32 binaries:
 
 * The pre-loaded :class:`BinaryInfo` is parsed from a real Windows System32 PE
   (``kernel32.dll``) with ``lief`` and the production ``extract_imports`` /
@@ -53,19 +53,19 @@ if TYPE_CHECKING:
 
 
 def _build_binary_info(path: Path) -> BinaryInfo:
-    """Parse a real binary with lief into a populated :class:`BinaryInfo`.
+    """Parse a compiled binary with lief into a populated :class:`BinaryInfo`.
 
     Args:
-        path: Filesystem path to a real compiled binary.
+        path: Filesystem path to a compiled binary.
 
     Returns:
-        BinaryInfo: Real binary metadata derived entirely from ``path``.
+        BinaryInfo: Binary metadata derived entirely from ``path``.
     """
     raw = path.read_bytes()
     sha256 = hashlib.sha256(raw).hexdigest()
     lief_parse = cast("Callable[[str], object | None]", vars(lief)["parse"])
     binary = lief_parse(str(path))
-    assert binary is not None, f"lief failed to parse real binary {path}"
+    assert binary is not None, f"lief failed to parse binary {path}"
 
     sections: list[SectionInfo] = []
     for sec in getattr(binary, "sections", []):
@@ -97,10 +97,10 @@ def _build_binary_info(path: Path) -> BinaryInfo:
 
 
 class _ReplayGhidraBridge(GhidraBridge):
-    """A real Ghidra bridge that replays a real binary's analysis."""
+    """A Ghidra bridge subclass that replays a parsed binary's analysis."""
 
     def __init__(self, source: BinaryInfo) -> None:
-        """Store the real binary whose analysis this bridge replays.
+        """Store the parsed binary whose analysis this bridge replays.
 
         Args:
             source: Real :class:`BinaryInfo` whose imports/exports are replayed.
@@ -132,7 +132,7 @@ class _ReplayGhidraBridge(GhidraBridge):
         """Return the real import entries parsed from the source binary.
 
         Returns:
-            list[ImportInfo]: Genuine imports recovered by lief.
+            list[ImportInfo]: Imports recovered by lief.
         """
         return list(self._source.imports)
 
@@ -140,7 +140,7 @@ class _ReplayGhidraBridge(GhidraBridge):
         """Return the real export entries parsed from the source binary.
 
         Returns:
-            list[ExportInfo]: Genuine exports recovered by lief.
+            list[ExportInfo]: Exports recovered by lief.
         """
         return list(self._source.exports)
 

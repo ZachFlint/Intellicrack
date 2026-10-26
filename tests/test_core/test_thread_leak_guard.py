@@ -3,15 +3,15 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the session thread-leak detector.
+"""Tests for the session thread-leak detector.
 
 Exercises :func:`tests._helpers.thread_leaks.find_leaked_background_threads`, the
 predicate behind the session-scoped ``no_leaked_background_threads`` guard in
 ``tests/conftest.py``. That guard is what converts the whole-suite exit-124
 shutdown hang -- a non-daemon worker left running by a test or fixture -- into a
 loud, attributable failure. Each test drives the detector against a real,
-controlled ``threading.Thread`` (no mocks) and joins it before returning, so the
-gates themselves never leak a thread.
+controlled ``threading.Thread`` and joins it before returning, so the
+tests themselves never leak a thread.
 """
 
 from __future__ import annotations
@@ -88,7 +88,7 @@ def test_find_leaked_ignores_idle_thread_pool_worker() -> None:
 
     An idle executor worker is non-daemon and started after the baseline, yet it
     is reaped cleanly at interpreter exit and does not hang shutdown, so the
-    detector must exclude it. Falsifiable: dropping the idle-worker exclusion in
+    detector must exclude it. Dropping the idle-worker exclusion in
     ``find_leaked_background_threads`` makes the parked worker be reported, so the
     poll below never clears and this fails.
     """
@@ -109,8 +109,8 @@ def test_find_leaked_ignores_idle_thread_pool_worker() -> None:
 def test_find_leaked_flags_busy_thread_pool_worker() -> None:
     """A ThreadPoolExecutor worker still running a task (blocked in user code) is reported.
 
-    Distinguishes a genuinely stuck worker -- the failure mode behind the exit-124
-    hang -- from a harmless idle one. Falsifiable: if the idle-worker exclusion
+    Distinguishes a stuck worker -- the failure mode behind the exit-124
+    hang -- from a harmless idle one. If the idle-worker exclusion
     also swallowed a worker executing a task, the busy worker below would never be
     reported and this fails.
     """

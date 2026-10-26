@@ -9,11 +9,11 @@ exercised on a real object. The base class is not abstract — it is a concrete
 class whose default methods implement a real, observable contract: an
 unconfigured backend is unavailable and refuses operations with a precise
 :class:`SandboxError`, while ``stop`` on an already-stopped sandbox is a real
-idempotent no-op. These tests instantiate the REAL :class:`SandboxBase` and
-assert that genuine contract, plus drive the operation-validation functions over
-the REAL operation vocabulary every concrete sandbox feeds them.
+idempotent no-op. These tests instantiate :class:`SandboxBase` and
+assert that contract, plus drive the operation-validation functions over
+the operation vocabulary every concrete sandbox feeds them.
 
-No backend is mocked: the behaviour under test IS the base class's own real
+The behavior under test is the base class's own
 implementation. Concrete-backend execution is covered separately by the QEMU
 real-operation tests.
 """
@@ -125,7 +125,7 @@ class TestBaseUnconfiguredContract:
         """``stop`` on an already-stopped base sandbox is a real no-op.
 
         The default ``stop`` raises for a non-stopped base sandbox but returns
-        cleanly when the state is already ``stopped`` — the genuine idempotent
+        cleanly when the state is already ``stopped`` — the idempotent
         teardown contract the manager relies on.
         """
         sandbox = SandboxBase(SandboxConfig())
@@ -520,7 +520,7 @@ class TestBaseUnconfiguredContract:
 
 
 class TestOperationValidationRealVocabulary:
-    """Validators must normalise the REAL operation strings backends emit."""
+    """Validators must normalize the operation strings backends emit."""
 
     @pytest.mark.parametrize(
         ("raw", "expected"),

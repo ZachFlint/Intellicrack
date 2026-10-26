@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Falsifiable gates for the frozen ``Intellicrack.exe`` launcher.
+r"""Tests for the frozen ``Intellicrack.exe`` launcher.
 
 These gates pin the launcher behaviours below:
 
@@ -336,7 +336,7 @@ def test_launch_reports_and_fails_when_the_state_dir_cannot_be_created(tmp_path:
 
     The failure is produced for real rather than simulated: a *file* is placed
     where the directory must go, and the precondition below confirms
-    ``build_child_env`` genuinely raises there before the routing is asserted.
+    ``build_child_env`` raises there before the routing is asserted.
     Removing the ``except OSError`` guard turns this red with the raw
     ``FileExistsError`` propagating out of ``launch``.
 

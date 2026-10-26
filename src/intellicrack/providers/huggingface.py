@@ -297,7 +297,7 @@ class HuggingFaceProvider(LLMProviderBase):
             raise ProviderError(_ERR_CONNECT_FAILED % exc) from exc
 
         self._credentials = credentials
-        self.connected = True
+        self.connected: bool = True
         user_name = identity.get("name")
         self._logger.info(
             "huggingface_connected",

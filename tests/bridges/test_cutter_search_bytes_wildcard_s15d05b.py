@@ -12,9 +12,8 @@ silently collapsed to the ``0`` default even though the hit count was correct.
 The fix mirrors the one applied to ``search_bytes``.
 
 Exactly like ``test_cutter_rop_project_bytes_s15.py``, these tests drive a
-genuine rizin/radare2 backend against a real, on-disk System32 PE binary --
-never a mocked or recorded ``rzpipe``/``r2pipe`` response -- so every assertion
-is anchored to the actual analysis engine's output. ``where.exe`` (~64KB,
+rizin/radare2 backend against an on-disk System32 PE binary, so every assertion
+is anchored to the analysis engine's output. ``where.exe`` (~64KB,
 always present on a Windows system) is resolved directly rather than reusing a
 larger shared fixture so the wildcard scan completes well within the bridge's
 per-command timeout budget.
@@ -107,7 +106,7 @@ class TestSearchBytesWildcardS15D05B:
         method itself uses -- means the check is not merely re-validating
         output produced by the same (potentially still-wrong) parser. Under
         the ``offset``-key defect every returned address collapses to ``0``,
-        so the nonzero assertion and the set-equality both fail loudly.
+        so the nonzero assertion and the set-equality both fail.
 
         Args:
             pe_bridge: Analyzed ``where.exe`` bridge.
@@ -126,12 +125,12 @@ class TestSearchBytesWildcardS15D05B:
         )
 
     async def test_wildcard_hits_point_at_pattern_bytes(self, pe_bridge: CutterBridge) -> None:
-        """Each reported hit address genuinely holds the pattern's fixed bytes.
+        """Each reported hit address holds the pattern's fixed bytes.
 
         Reads the raw bytes at each hit address straight from the binary
         image (rizin's ``p8``, an entirely different code path from the
         ``/xj`` search) and confirms they begin with the pattern's two fixed
-        leading bytes (``48 8b``). This proves each address names a real
+        leading bytes (``48 8b``). This shows each address names a
         match location rather than the ``0`` default the ``offset``-key defect
         produced -- reading two bytes at address ``0`` yields the DOS ``MZ``
         magic (``4d 5a``) or no mapped data at all, never ``48 8b``.

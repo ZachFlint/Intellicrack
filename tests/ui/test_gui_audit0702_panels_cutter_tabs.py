@@ -116,7 +116,7 @@ class TestM19AddFlagStatusLabel:
         """An RPC failure updates ``_add_result_label`` and leaves the resolve label alone.
 
         ``_on_add_flag_error`` must not overwrite whatever is in
-        ``_resolve_result_label`` (e.g. a genuine resolve-address result),
+        ``_resolve_result_label`` (e.g. a previous resolve-address result),
         which is exactly the cross-contamination this test forbids.
 
         Args:

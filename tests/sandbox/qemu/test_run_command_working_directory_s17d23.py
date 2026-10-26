@@ -32,7 +32,7 @@ Both guests are real peers: an in-guest
 :class:`tests.sandbox.qemu.guest_agent_server.IntellicrackAgentServer` listens
 on a loopback port, the production :class:`GuestAgentClient` connects to it,
 and every command line the sandbox composes is parsed and executed by the guest
-model against a real directory tree on disk. Nothing is stubbed.
+model against a directory tree on disk.
 
 The shared-folder fallback composes its own ``cd`` line into a generated
 script, from the same helper; that line is executed here too, in one shell with

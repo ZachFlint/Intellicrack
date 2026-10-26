@@ -11,7 +11,7 @@ a plugin target that is a directory, an event loop whose default executor has sh
 down, and a ``vswhere.exe`` that actually runs. The last one is a real Windows console
 launcher shipped inside the ``distlib`` package, with a zip-archive Python script
 appended exactly as ``distlib`` writes its own script launchers, so the production code
-starts a genuine child process and reads its genuine standard output. The
+starts a child process and reads its standard output. The
 ``pefile``-unavailable guards are reached by flipping the module's availability flag
 for the duration of one call.
 """

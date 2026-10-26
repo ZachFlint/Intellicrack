@@ -5,9 +5,9 @@
 """Gates for the Streamable HTTP transport against a real remote server.
 
 The fixture server is launched as a separate process listening on loopback and
-spoken to over real HTTP. The credential gates drive a server that genuinely
-answers ``401`` without its header, so the client's header plumbing is proved
-against a real rejection rather than a simulated one.
+spoken to over real HTTP. The credential gates drive a server that
+answers ``401`` without its header, so the client's header plumbing is checked
+against a server-side rejection.
 """
 
 from __future__ import annotations

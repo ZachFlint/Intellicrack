@@ -3,14 +3,14 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate for the Frida self-attach subprocess isolation.
+"""Tests for the Frida self-attach subprocess isolation.
 
 The real self-attach Frida tests are run in a child process by
 :mod:`tests._helpers.frida_isolation` so that a native frida-core access
 violation -- which aborts the whole pytest process (exit 255, no junit) and is
 why the ``python-test`` CI job can fail to report -- fails only the offending
-test. This module proves that containment with a real child process that really
-dies abnormally, rather than asserting on a simulated result.
+test. This module checks that containment with a child process that dies
+abnormally.
 
 It also gates coverage of that containment. A module that self-attaches through
 a fixture not named ``self_attached_bridge`` injects the Frida agent into the
@@ -162,10 +162,10 @@ def test_isolation_contains_a_hard_child_crash(pytestconfig: pytest.Config, monk
     """A target whose process dies abnormally is reported failed, not propagated.
 
     Runs the same probe target twice through the real isolation seam: unarmed it
-    must come back ``passed``, then armed -- where the child genuinely calls
+    must come back ``passed``, then armed -- where the child calls
     :func:`os.abort` -- it must come back ``failed`` with the child's exit code.
 
-    Falsifiable three ways. If ``run_target_isolated`` stopped using a child
+    Three regressions fail it. If ``run_target_isolated`` stopped using a child
     process and ran the target in-process, the armed probe would abort *this*
     process and the run would die before reaching the final assertions. If it
     misclassified a crashed child as success, the ``failed`` assertion fails. If
@@ -197,7 +197,7 @@ def test_run_module_isolated_recovers_per_test_outcomes(pytestconfig: pytest.Con
     result file. This runs a real sibling module in a real child and checks the
     outcomes come back per test.
 
-    Falsifiable: if the child stopped writing results, or the parent parsed or
+    If the child stopped writing results, or the parent parsed or
     keyed them wrongly, the recovered mapping would be empty (or miss the known
     test names) and this fails -- which is exactly the regression that would make
     every isolated test report as a spurious failure.
@@ -246,7 +246,7 @@ def _watch_beating_child(tmp_path: Path, *, beats: int, silence_seconds: float, 
 def test_clip_output_keeps_the_start_and_the_end_of_long_output() -> None:
     """Long stderr keeps the line a fatal-exception dump opens with as well as its last lines.
 
-    Falsifiable: a tail-only clip drops the first marker and fails the first assertion,
+    A tail-only clip drops the first marker and fails the first assertion,
     and a clip that never shortens fails the length assertion.
     """
     text = "FIRST-MARKER" + "x" * 5000 + "LAST-MARKER"
@@ -266,7 +266,7 @@ def test_progress_watch_kills_a_child_that_stops_reporting(tmp_path: Path) -> No
     longer than the ceiling, which is what a deadlocked Frida attach looks like
     from outside.
 
-    Falsifiable: without the stall watch the child sleeps until the 60 s
+    Without the stall watch the child sleeps until the 60 s
     ceiling and comes back ``"timeout"``, and a watch that discarded the
     killed child's stderr loses the marker that stands in for the faulthandler
     traceback a real hang leaves.
@@ -287,7 +287,7 @@ def test_progress_watch_lets_a_reporting_child_outlive_the_stall_limit(tmp_path:
     The child runs for roughly ten seconds, longer than the six second stall
     limit, but flushes a result every half second throughout.
 
-    Falsifiable: a watch that measured the stall limit from the child's start
+    A watch that measured the stall limit from the child's start
     instead of from its last flushed result would kill it as ``"stalled"``
     partway through.
 
@@ -309,7 +309,7 @@ def test_progress_watch_lets_a_reporting_child_outlive_the_stall_limit(tmp_path:
 def test_progress_watch_still_enforces_the_hard_ceiling(tmp_path: Path) -> None:
     """A child that reports forever is still stopped at the hard ceiling.
 
-    Falsifiable: a watch that treated any progress as a licence to run on
+    A watch that treated any progress as a license to run on
     would let a test that loops while flushing results hold the module forever.
 
     Args:
@@ -336,7 +336,7 @@ def test_skipped_isolated_tests_are_reported_with_their_reasons(pytestconfig: py
     session must finish cleanly with each skip reason in the terminal summary
     and in the JUnit report.
 
-    Falsifiable: when the parent rebuilt a skipped report without the
+    When the parent rebuilt a skipped report without the
     ``(path, lineno, reason)`` tuple pytest requires, the terminal reporter
     raised an INTERNALERROR and the session ended without its JUnit report.
 
@@ -411,7 +411,7 @@ def _parse(source: str) -> ast.Module:
 def test_classifier_recognises_real_self_attach(source: str, *, expected: bool) -> None:
     """Only a real Frida device aimed at the current process counts as self-attach.
 
-    Falsifiable: dropping the device requirement flags the fake-device module
+    Dropping the device requirement flags the fake-device module
     (which only hands ``os.getpid()`` to a test double), dropping the Frida import
     requirement flags the process-bridge module, and matching only the literal
     ``bridge.attach(os.getpid())`` form misses the registry dispatch that
@@ -440,7 +440,7 @@ def test_classifier_recognises_real_self_attach(source: str, *, expected: bool) 
 def test_isolation_declarations_are_recognised(suffix: str, *, expected: bool) -> None:
     """Exactly the declarations the plugin honours count as isolation.
 
-    Falsifiable: accepting a class-level ``pytestmark`` would pass a module whose
+    Accepting a class-level ``pytestmark`` would pass a module whose
     other tests still self-attach in the parent, and failing to accept the list
     form would reject the declaration ``test_frida_instruction_disassemble_control``
     actually uses.
@@ -458,7 +458,7 @@ def test_isolation_declarations_are_recognised(suffix: str, *, expected: bool) -
 def test_every_frida_self_attach_module_runs_isolated() -> None:
     """No test module may inject the Frida agent into the pytest process itself.
 
-    Falsifiable: removing the ``frida_selfattach`` ``pytestmark`` from any of the
+    Removing the ``frida_selfattach`` ``pytestmark`` from any of the
     three modules that self-attach in-process lists that module here, and a classifier
     that stopped recognising them fails the coverage assertion before the
     isolation assertion could pass vacuously.
@@ -485,7 +485,7 @@ def test_module_level_marker_runs_the_module_in_a_child(pytestconfig: pytest.Con
     requests no ``self_attached_bridge`` fixture. The probe records whether it ran
     in the isolation child and which process started it.
 
-    Falsifiable: if the plugin served only fixture-detected modules and ignored
+    If the plugin served only fixture-detected modules and ignored
     an explicit module-level marker, the probe would run inside the session this
     gate starts, report that it is not an isolation child, and name this gate's
     process as its parent.
@@ -531,7 +531,7 @@ def test_an_ordinary_test_after_an_isolated_module_still_sets_up(pytestconfig: p
     package. Tearing the first one down toward the isolated item leaves the
     package they share on the session's setup stack.
 
-    Falsifiable: when serving an isolated item left that stack alone, the third
+    When serving an isolated item left that stack alone, the third
     module's setup failed with "previous item was not torn down properly",
     which is how one unrelated test errored in each CI run.
 

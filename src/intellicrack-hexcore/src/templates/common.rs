@@ -3,6 +3,8 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Built-in templates for structures shared across formats, such as GUIDs.
+
 use super::{Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry};
 
 /// Registers the built-in common-structure templates (GUID and the like) into

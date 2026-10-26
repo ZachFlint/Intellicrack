@@ -9,13 +9,13 @@ in the manager, so they can be reused headlessly and tested.
 
 These tests drive the real :class:`SandboxManager` against the real
 :class:`~tests.sandbox.conftest.LocalProcessSandbox` backend, which does
-genuine work: ``start`` creates a real temporary work directory and ``stop``
+filesystem work: ``start`` creates a real temporary work directory and ``stop``
 removes it. A restart is therefore observed through real filesystem state - the
 old work directory is really gone and a different real directory exists
 afterwards - rather than through anything the test fabricates.
 
-The recreate-failure case uses a real availability probe that genuinely fails
-(it looks for an executable that is truly absent from the host), so the manager
+The recreate-failure case uses a real availability probe that fails
+(it looks for an executable that is absent from the host), so the manager
 takes its real "type not available" branch.
 """
 
@@ -64,12 +64,12 @@ class _UnavailableLocalSandbox(LocalProcessSandbox):
     """Real local sandbox that probes as unavailable on this host.
 
     The unmodified availability contract runs for real: the probe looks for an
-    executable that genuinely does not exist, which is the same outcome a host
+    executable that does not exist, which is the same outcome a host
     without the backend installed produces.
     """
 
     async def is_available(self) -> bool:
-        """Probe the host for an executable that is genuinely absent.
+        """Probe the host for an executable that is absent.
 
         Returns:
             bool: ``False`` on any host that does not carry the probe tool.
@@ -154,7 +154,7 @@ def test_restart_replaces_the_instance_and_its_real_workdir() -> None:
 
     original, original_dir, replacement, replacement_dir = _run(_go())
 
-    assert replacement.id != original.id, "restart must produce a genuinely new instance"
+    assert replacement.id != original.id, "restart must produce a new instance with a different id"
     assert manager.registered_ids() == {replacement.id}, f"only the replacement may remain registered; got {manager.registered_ids()}"
     assert not original_dir.exists(), "the original sandbox's real work directory must be removed"
     assert replacement_dir.exists(), "the replacement sandbox must have started for real"

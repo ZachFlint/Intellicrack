@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the provider-safe wire-name mapping.
+"""Tests for the provider-safe wire-name mapping.
 
 Intellicrack's canonical tool-function names are dotted (``"frida.spawn"``),
 which OpenAI, Anthropic, Grok, and OpenRouter all reject outright -- their
@@ -165,7 +165,7 @@ class TestRegexContract:
         """Guard: the real registry must still be non-trivially large.
 
         If the bridge surface ever shrank to zero functions, every assertion
-        below would vacuously pass. This test fails loudly in that case
+        below would vacuously pass. This test fails in that case
         instead.
         """
         assert len(_REAL_NAMES) > 100, f"real tool registry shrank to {len(_REAL_NAMES)} functions; suite may be vacuous"
@@ -560,8 +560,8 @@ class TestLocalTransformersRoundTrip:
         assert result[0].tool_name == "ghidra"
 
 
-class TestCollisionDetectionRaisesLoudly:
-    """A genuine hash collision to a different canonical name must raise, not corrupt."""
+class TestCollisionDetectionRaisesValueError:
+    """A hash collision to a different canonical name must raise, not corrupt."""
 
     def test_registering_a_conflicting_canonical_for_the_same_wire_name_raises(self) -> None:
         """Forcing two different canonical names to the same fallback wire name raises ValueError."""

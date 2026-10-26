@@ -300,7 +300,7 @@ class TestMainWindowIntegration:
         Drives the full signal chain: FunctionListPanel double-click ->
         ToolOutputPanel._on_function_selected -> address_clicked ->
         MainWindow._on_address_clicked -> set_current_address -> label text.
-        Uses the real SandboxManager (no mock).
+        Uses the real SandboxManager.
 
         Args:
             real_config: Real Config fixture used to construct MainWindow.

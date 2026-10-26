@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Coverage for the painting, cursor, keyboard-editing and cached-scan paths of the hex editor widget.
 
-Every test drives a real ``HexEditorWidget`` that displays a genuine ``intellicrack_hexcore.HexDocument``. Keyboard behavior is exercised
+Every test drives a real ``HexEditorWidget`` that displays an ``intellicrack_hexcore.HexDocument``. Keyboard behavior is exercised
 with real key events, the minimap with real mouse events, and painting by rendering the viewport into a ``QImage`` and reading pixels. The
 background entropy and content-classification scans run on the real asynchronous worker used by the application. Expected values come
 from byte arithmetic (Shannon entropy of uniform byte sets, struct layouts written out by hand, row and column geometry derived from the
@@ -703,7 +703,7 @@ def test_unusable_scan_result_leaves_an_empty_cache(
     """A scan result that cannot be read as numbers empties the cache instead of raising.
 
     Args:
-        qtbot: pytest-qt fixture used to wait for the first, genuine scan.
+        qtbot: pytest-qt fixture used to wait for the first, actual scan.
         rig_factory: Factory of shown widgets.
         request_name: Name of the method that starts the scan.
         finished_name: Name of the completion handler.

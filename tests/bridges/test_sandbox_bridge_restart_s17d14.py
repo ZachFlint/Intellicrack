@@ -8,7 +8,7 @@
 drive the real :class:`SandboxBridge` against a real :class:`SandboxManager`
 whose backend factory yields the real
 :class:`~tests.sandbox.conftest.LocalProcessSandbox`, so the restart performs
-genuine work: the original sandbox's real work directory is removed and the
+filesystem work: the original sandbox's real work directory is removed and the
 replacement's real work directory exists.
 
 The ``qemu_config`` forwarding assertion guards the bridge layer: a restart that dropped it would rebuild a QEMU sandbox with no

@@ -9,8 +9,8 @@ Frida 17 removed the ``frida.core`` source module (it survives only as a
 accepted on ``Device.attach``, ``Device.spawn``, ``Session.create_script`` and
 ``Compiler.build``. Cancellation is now scoped through the ``Cancellable``
 context manager. These tests exercise the real installed Frida so a future
-upgrade that shifts either contract fails loudly instead of silently breaking
-the bridge at runtime.
+upgrade that shifts either contract makes these tests fail instead of silently
+breaking the bridge at runtime.
 """
 
 from __future__ import annotations

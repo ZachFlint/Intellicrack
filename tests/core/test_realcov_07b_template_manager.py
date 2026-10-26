@@ -7,7 +7,7 @@
 These tests exercise the full public API against real artifacts:
 
 * :meth:`TemplateManager.bootstrap_builtins` runs against a real
-  ``intellicrack_hexcore.HexDocument`` and exports the genuine built-in
+  ``intellicrack_hexcore.HexDocument`` and exports the built-in
   template set to disk.
 * Save / load / delete / list round-trip real JSON template content.
 * :meth:`TemplateManager.list_hexpat_patterns` and the pattern registry are

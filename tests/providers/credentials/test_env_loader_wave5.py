@@ -5,7 +5,7 @@
 """Gates for env_loader.py.
 
 Filesystem patches (read_text / Path.open) are used only where the I/O failure is the behavior under test. The loader's own
-parsing and lookup logic always executes against real inputs.
+parsing and lookup logic always runs unpatched.
 """
 
 from __future__ import annotations

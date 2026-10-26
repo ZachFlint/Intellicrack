@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable tests for the installer ML-split top-level entry projection.
+r"""Tests for the installer ML-split top-level entry projection.
 
 ``packaging/ml_split.py`` decides which top-level ``site-packages`` entries the
 installer stager relocates into ``ml_overlay``. The projection must ignore

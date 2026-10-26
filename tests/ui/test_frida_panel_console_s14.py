@@ -22,8 +22,7 @@ its real message-handling methods under an offscreen ``QApplication`` --
 ``_on_frida_message`` (the console renderer), ``_enqueue_frida_message``
 (the exact callable ``FridaBridge.set_message_handler`` is wired to), and
 ``_drain_frida_message_queue`` (the queue-draining timer callback) -- with
-genuine Frida-shaped message dictionaries. Nothing here is mocked or
-stubbed.
+Frida-shaped message dictionaries.
 """
 
 from __future__ import annotations
@@ -66,7 +65,7 @@ def _auto_dismiss_blocking_dialogs(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestS14D08LogMessageRouting:
-    """Falsifiable gates: Frida ``log`` messages must reach the console."""
+    """Frida ``log`` messages must reach the console."""
 
     @staticmethod
     def test_on_frida_message_renders_log_type() -> None:
@@ -74,8 +73,8 @@ class TestS14D08LogMessageRouting:
 
         Drives ``_on_frida_message`` directly -- the same console-rendering
         method the existing ``send``/``error`` regression tests use -- with
-        the exact message shape Frida emits for ``console.log``. Falsifiable:
-         without a ``log`` branch this message would fall through the generic ``else`` branch
+        the exact message shape Frida emits for ``console.log``.
+        Without a ``log`` branch this message would fall through the generic ``else`` branch
         that renders the raw dict repr rather than the clean ``level``/
         ``payload`` text this asserts on.
         """
@@ -105,7 +104,7 @@ class TestS14D08LogMessageRouting:
 
 
 class TestS14D09Backpressure:
-    """Falsifiable gates: bounded console plus coalesced, bounded message queue."""
+    """Bounded console plus coalesced, bounded message queue."""
 
     @staticmethod
     def test_console_block_count_stays_capped_after_flood() -> None:
@@ -114,7 +113,7 @@ class TestS14D09Backpressure:
         Feeds 20000 real Frida ``send`` messages through the actual
         thread-safe enqueue entry point, then drains the queue exactly as the
         real drain timer would (in bounded per-tick batches) until it is
-        empty. Falsifiable: without ``QPlainTextEdit.setMaximumBlockCount``
+        empty. Without ``QPlainTextEdit.setMaximumBlockCount``
         wired to a real cap, the console would retain a block per message and
         ``blockCount()`` would land near 10000, far above the asserted cap.
         """
@@ -135,7 +134,7 @@ class TestS14D09Backpressure:
         ``_CONSOLE_QUEUE_MAXLEN``, the pending queue must never exceed that
         bound and the exact overflow count must be tracked. Draining must
         then render a "messages dropped" notice carrying that count and reset
-        the counter. Falsifiable: an unbounded queue would retain all 20000
+        the counter. An unbounded queue would retain all 20000
         entries and no drop count would ever be tracked or reported.
         """
         panel = FridaPanel()
@@ -157,8 +156,8 @@ class TestS14D09Backpressure:
 
         Queues three full batches worth of messages (well under the queue
         bound, so nothing is dropped) and asserts exactly one batch's worth is
-        consumed by a single ``_drain_frida_message_queue`` call. Falsifiable:
-        an un-batched drain would empty the whole queue in one tick, which
+        consumed by a single ``_drain_frida_message_queue`` call.
+        An un-batched drain would empty the whole queue in one tick, which
         is precisely the unbounded-per-tick behavior that starves the GUI
         event loop and Detach/Flush responsiveness under a chatty hook.
         """

@@ -76,7 +76,7 @@ class TestEnumerateHeapsDistinctFromGetHeapsL1:
     async def test_enumerate_heaps_returns_real_per_block_data(self, attached_bridge: ProcessBridge) -> None:
         """enumerate_heaps must return the same heap set as get_heaps, plus real per-block address/size/flags.
 
-        Falsifiable: if ``enumerate_heaps`` were a thin alias for
+        If ``enumerate_heaps`` were a thin alias for
         ``get_heaps`` (or its block-walking loop were removed/short-
         circuited), every heap's ``blocks`` list would be empty and this
         test's assertion that at least one heap has a non-empty,
@@ -136,8 +136,8 @@ class TestEnumerateHeapsToolDefRegistrationL2:
     def test_tool_function_registered_with_matching_schema(self, process_bridge: ProcessBridge) -> None:
         """process.enumerate_heaps must appear in the tool definition with a pid-only parameter set.
 
-        Falsifiable: if ``process.enumerate_heaps`` were absent
-        from ``_PROCESS_FUNCTIONS`` entirely, so ``functions_by_name``
+        If ``process.enumerate_heaps`` were absent
+        from ``_PROCESS_FUNCTIONS`` entirely, ``functions_by_name``
         would not contain the key and the membership assertion would fail.
         Broken production line: the missing ``ToolFunction(name="process.enumerate_heaps", ...)``
         entry in ``_PROCESS_FUNCTIONS`` (``process.py``).
@@ -157,7 +157,7 @@ class TestEnumerateHeapsToolDefRegistrationL2:
     def test_description_distinguishes_from_get_heaps(self, process_bridge: ProcessBridge) -> None:
         """The registered description must call out the distinction from get_heaps, not just restate it.
 
-        Falsifiable: a description that merely says "enumerate heaps"
+        A description that merely says "enumerate heaps"
         without mentioning ``get_heaps`` or block-level walking would fail
         either substring assertion.
 
@@ -176,7 +176,7 @@ class TestEnumerateHeapsDispatchL2:
     async def test_execute_tool_call_dispatches_enumerate_heaps(self, tmp_path: Path) -> None:
         """execute_tool_call reaches the real enumerate_heaps implementation for the current process.
 
-        Falsifiable: without a ToolFunction named ``process.enumerate_heaps``, dispatch raises
+        Without a ToolFunction named ``process.enumerate_heaps``, dispatch raises
         ``ToolError`` (unknown function) instead of returning real heap data.
 
         Args:

@@ -5,7 +5,7 @@
 
 """Real-data end-to-end coverage for orchestrator and session orchestration.
 
-These tests drive the orchestrator's core mission against REAL binaries and a
+These tests drive the orchestrator's core mission against on-disk executables and a
 real tool bridge:
 
 * ``process_user_input`` runs the full agent loop -- the scripted provider
@@ -13,7 +13,7 @@ real tool bridge:
   bridge that parses a real System32 PE (or the committed ELF corpus binary)
   with ``lief``, and the real imports / sections flow back into the session and
   are persisted to SQLite.
-* ``add_binary`` and ``start_session(binary_path=...)`` load real binaries and
+* ``add_binary`` and ``start_session(binary_path=...)`` load on-disk executables and
   populate :class:`BinaryInfo` with real sha256 digests, section names, and
   imports parsed by ``lief``.
 * ``Session.add_binary`` / ``Session.add_message`` and ``SessionManager.load``
@@ -22,7 +22,7 @@ real tool bridge:
 The only test double is the LLM network transport: no model endpoint is
 reachable in the offline/Docker harness, so a scripted provider stands in for
 the remote API. Every operation actually under test (the agent loop, tool
-dispatch to the real bridge, real binary parsing, and session persistence) runs
+dispatch to the real bridge, binary parsing, and session persistence) runs
 for real against real data.
 """
 
@@ -75,7 +75,7 @@ if TYPE_CHECKING:
 
 
 def _parse_real_binary(path: Path) -> BinaryInfo:
-    """Parse a real binary with ``lief`` into a typed :class:`BinaryInfo`.
+    """Parse an on-disk binary with ``lief`` into a typed :class:`BinaryInfo`.
 
     Uses the public ``extract_imports`` / ``extract_exports`` helpers from the
     orchestrator module and reads section metadata directly off the parsed
@@ -151,7 +151,7 @@ _FINAL_TEXT: Final[str] = "Analysis complete: the binary imports were collected.
 
 
 class _RealBinaryAnalysisBridge(ToolBridgeBase):
-    """Real bridge whose tool method parses a real binary with ``lief``.
+    """Real bridge whose tool method parses an on-disk binary with ``lief``.
 
     The bridge registers under :data:`ToolName.PROCESS` and exposes a single
     read-only ``inspect_binary`` method. When the orchestrator dispatches a

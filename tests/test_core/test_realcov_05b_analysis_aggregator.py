@@ -5,26 +5,26 @@
 
 """Real-data coverage for :mod:`intellicrack.core.analysis_aggregator`.
 
-These tests drive the genuine aggregation pipeline against REAL binaries:
+These tests drive the aggregation pipeline against compiled on-disk binaries:
 
 * The pre-loaded :class:`BinaryInfo` is produced by parsing a real Windows
   System32 PE (``kernel32.dll``/``ntdll.dll``) or the committed real ELF corpus
   with ``lief`` and the production import/export extractors
   (:func:`intellicrack.core.orchestrator.extract_imports` /
   :func:`~intellicrack.core.orchestrator.extract_exports`), so the aggregator
-  merges genuine sections, imports, and exports parsed from a compiled
+  merges sections, imports, and exports parsed from a compiled
   executable.
 * The static-analysis contributor is a real :class:`GhidraBridge` subclass whose
   collector methods return entries derived from a *second* real PE parsed with
   lief. The external Ghidra server is never required; the data flowing through
-  :meth:`AnalysisAggregator.aggregate` is authentic binary-derived analysis, and
-  the deduplication, source-bridge tracking, and summary assembly under test run
-  fully and unmodified.
+  :meth:`AnalysisAggregator.aggregate` is analysis derived from the parsed
+  binaries, which the deduplication, source-bridge tracking, and summary
+  assembly under test then process.
 
-Nothing here mocks the operation under test: the registry is a real
-:class:`ToolRegistry`, the aggregator is the production class, and every
-assertion checks real, verifiable values (real section names, real import DLL
-names, real export symbol names) rather than injected sentinels.
+The registry is a :class:`ToolRegistry`, the aggregator is
+:class:`AnalysisAggregator`, and every assertion checks values parsed from the
+binaries (section names, import DLL names, export symbol names) rather than
+injected sentinels.
 """
 
 from __future__ import annotations
@@ -57,17 +57,17 @@ if TYPE_CHECKING:
 
 
 class _RealDataGhidraBridge(GhidraBridge):
-    """A real :class:`GhidraBridge` that serves analysis from a real binary.
+    """A :class:`GhidraBridge` subclass that serves analysis from a parsed PE.
 
-    The bridge is a genuine ``GhidraBridge`` instance (so the registry's
+    The bridge is a ``GhidraBridge`` instance (so the registry's
     ``get_ghidra_bridge`` ``isinstance`` gate accepts it), but its four
     static-collector methods return entries extracted from a real PE parsed
     with lief instead of contacting an external Ghidra server. This isolates
-    the aggregation logic under test while keeping the *data* authentic.
+    the aggregation logic under test while the data still comes from a parsed PE.
     """
 
     def __init__(self, source: BinaryInfo) -> None:
-        """Store the real binary whose analysis this bridge replays.
+        """Store the binary whose analysis this bridge replays.
 
         Args:
             source: Real :class:`BinaryInfo` parsed from a compiled binary;
@@ -108,7 +108,7 @@ class _RealDataGhidraBridge(GhidraBridge):
         """Return the real import entries parsed from the source binary.
 
         Returns:
-            list[ImportInfo]: Genuine imports recovered by lief.
+            list[ImportInfo]: Imports recovered by lief.
         """
         return list(self._source.imports)
 
@@ -116,7 +116,7 @@ class _RealDataGhidraBridge(GhidraBridge):
         """Return the real export entries parsed from the source binary.
 
         Returns:
-            list[ExportInfo]: Genuine exports recovered by lief.
+            list[ExportInfo]: Exports recovered by lief.
         """
         return list(self._source.exports)
 
@@ -146,9 +146,9 @@ class _RealDataGhidraBridge(GhidraBridge):
 
 
 def _build_binary_info(path: Path) -> BinaryInfo:
-    """Parse a real binary with lief into a populated :class:`BinaryInfo`.
+    """Parse a compiled binary with lief into a populated :class:`BinaryInfo`.
 
-    Reads the genuine bytes of ``path``, parses them with ``lief``, and
+    Reads the bytes of ``path``, parses them with ``lief``, and
     extracts real sections, imports, and exports using the production
     ``extract_imports`` / ``extract_exports`` helpers. No synthetic data is
     introduced; every field reflects the compiled binary on disk.
@@ -157,13 +157,13 @@ def _build_binary_info(path: Path) -> BinaryInfo:
         path: Filesystem path to a real compiled binary.
 
     Returns:
-        BinaryInfo: Real binary metadata derived entirely from ``path``.
+        BinaryInfo: Binary metadata derived entirely from ``path``.
     """
     raw = path.read_bytes()
     sha256 = hashlib.sha256(raw).hexdigest()
     lief_parse = cast("Callable[[str], object | None]", vars(lief)["parse"])
     binary = lief_parse(str(path))
-    assert binary is not None, f"lief failed to parse real binary {path}"
+    assert binary is not None, f"lief failed to parse binary {path}"
 
     sections: list[SectionInfo] = []
     for sec in getattr(binary, "sections", []):
@@ -204,7 +204,7 @@ def _parse_pe(dll_paths: list[Path], preferred: str) -> BinaryInfo:
         preferred: Filename to prefer; falls back to the first path.
 
     Returns:
-        BinaryInfo: Real binary metadata parsed by lief.
+        BinaryInfo: PE metadata parsed by lief.
     """
     chosen = next((p for p in dll_paths if p.name.lower() == preferred), dll_paths[0])
     return _build_binary_info(chosen)
@@ -214,7 +214,7 @@ def _make_registry_with_ghidra(source: BinaryInfo, tools_dir: Path) -> ToolRegis
     """Build a real ToolRegistry whose Ghidra bridge replays real analysis.
 
     Args:
-        source: Real binary whose analysis the Ghidra bridge replays.
+        source: Parsed binary whose analysis the Ghidra bridge replays.
         tools_dir: Temporary tools directory for the registry.
 
     Returns:
@@ -226,7 +226,7 @@ def _make_registry_with_ghidra(source: BinaryInfo, tools_dir: Path) -> ToolRegis
 
 
 class TestAggregateRealBinaryInfoNoBridges:
-    """Aggregation over a real binary with no analysis bridges connected."""
+    """Aggregation over a parsed binary with no analysis bridges connected."""
 
     @staticmethod
     def test_real_pe_metadata_flows_through(real_pe_dlls: list[Path], tmp_path: Path) -> None:
@@ -297,7 +297,7 @@ class TestAggregateRealBinaryInfoNoBridges:
 
 
 class TestAggregateWithRealGhidraBridge:
-    """Aggregation when a real Ghidra bridge contributes real binary data."""
+    """Aggregation when a Ghidra bridge contributes data parsed from a second PE."""
 
     @staticmethod
     def test_bridge_imports_merge_and_mark_complete(real_pe_dlls: list[Path], tmp_path: Path) -> None:

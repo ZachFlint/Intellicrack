@@ -2,9 +2,9 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for model_loader, gpu_pci_resources, and xpu_utils.
+"""Tests for model_loader, gpu_pci_resources, and xpu_utils.
 
-Every gate is falsified by the named one-line production mutation.
+Each test fails under the named one-line production mutation.
 """
 
 from __future__ import annotations

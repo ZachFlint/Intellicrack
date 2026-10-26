@@ -6,7 +6,7 @@
 
 Every gate drives a real server subprocess. The era gates pin the client to one
 protocol generation at a time so both the modern and the handshake-era paths
-are genuinely exercised rather than whichever one ``auto`` happens to pick.
+are both exercised rather than whichever one ``auto`` happens to pick.
 """
 
 from __future__ import annotations

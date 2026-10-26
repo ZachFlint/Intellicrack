@@ -39,7 +39,7 @@ class TestInspectAtBasic:
 
     All assertions use bytes(range(256)) at offset 0 as input. Oracle values
     are derived independently via struct.unpack on the same byte slice so each
-    gate falsifies a specific decoding mutation in the Rust implementation.
+    gate catches a specific decoding mutation in the Rust implementation.
     """
 
     def test_inspect_at_returns_dict(self, sample_doc_from_bytes: HexDocument) -> None:

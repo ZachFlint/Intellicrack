@@ -11,7 +11,7 @@ real loopback HTTP server, connect a real ``AnthropicProvider`` through the
 real ``anthropic.AsyncAnthropic`` client, and inspect the exact JSON that
 reaches the wire.
 
-Falsifiability - each gate fails if the drop is reverted:
+Each test fails if the drop is reverted:
 
 * Re-adding ``temperature`` as a direct ``messages.create`` kwarg makes the
   SDK raise ``TypeError`` before any HTTP request, so ``chat()`` /
@@ -23,7 +23,7 @@ Falsifiability - each gate fails if the drop is reverted:
   ``chat(..., temperature=...)`` raise ``TypeError`` for an unexpected
   keyword, so the interface stays covered too.
 
-No mocks or SDK substitution: the client makes genuine HTTP calls over the
+The client makes HTTP calls over the
 loopback interface and the assertions read the bytes the SDK actually sent.
 """
 

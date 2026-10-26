@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the Cutter panel info-tab refresh on load.
+"""Tests for the Cutter panel info-tab refresh on load.
 
 The Headers tab (backed by Rizin's ``ihj``), the Sections table (``iSj``), and
 the Imports table (``iij``) all read data the Rizin loader produces when a
@@ -12,7 +12,7 @@ binary load path, not only from ``_on_analysis_complete``. Otherwise a binary lo
 without a completed analysis run leaves the tab empty even though the bridge
 could already answer the query correctly.
 
-This test drives a real :class:`CutterPanel` against a real, genuine
+This test drives a real :class:`CutterPanel` against an installed
 rizin/radare2 backend and a real on-disk PE executable. It defeats the panel's
 "Analyze" auto-chain by neutralising ``_on_analyze`` on the instance before
 loading the binary, so analysis never actually dispatches -- exactly the "Load
@@ -23,7 +23,7 @@ load path, so the tab populates without analysis ever running.
 
 The expected values are never hand-restated: they are read from the same
 ``CutterBridge.get_headers()`` real bridge call, driven independently against
-the same real binary, that the panel's Headers tab itself invokes.
+the same on-disk executable, that the panel's Headers tab itself invokes.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def _resolve_target() -> Path:
     """Resolve a real, on-disk PE executable to load through the panel.
 
     Prefers the committed live target (``ida_9.4.exe``), a
-    real-world executable large enough to make an accidental analysis
+    shipping commercial executable large enough to make an accidental analysis
     dependency in the Headers/Sections/Imports refresh path obvious. Falls
     back to a real System32 executable when the target is not present
     on this machine.
@@ -93,7 +93,7 @@ async def _fetch_reference_headers(target: Path) -> list[HeaderInfo]:
 
     This bridge instance is entirely separate from the one wired into the
     panel under test: it exists only to obtain ground-truth ``ihj`` values
-    from the real backend, against the same real binary, with no analysis
+    from the real backend, against the same executable, with no analysis
     pass run -- mirroring exactly the load-without-analyze scenario the
     panel itself is driven through below.
 

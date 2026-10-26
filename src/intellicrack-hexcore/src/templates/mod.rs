@@ -3,6 +3,11 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Structure templates: named layouts of typed fields that are evaluated
+//! against a document at an offset to produce parsed fields, plus the registry
+//! of built-in templates for PE, ELF, Mach-O, ZIP and common structures and of
+//! templates registered from JSON.
+
 pub mod common;
 pub mod elf;
 pub mod eval;
@@ -16,172 +21,288 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+/// Byte order of a multi-byte field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Endianness {
+    /// Least significant byte first.
     Little,
+    /// Most significant byte first.
     Big,
 }
 
+/// How a [`FieldType::Conditional`] compares an earlier field's value with
+/// its `condition_value`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ConditionOp {
+    /// The value equals the condition value.
     Eq,
+    /// The value differs from the condition value.
     Ne,
+    /// The value is greater than the condition value.
     Gt,
+    /// The value is less than the condition value.
     Lt,
+    /// The value is at least the condition value.
     Ge,
+    /// The value is at most the condition value.
     Le,
+    /// The value has at least one of the condition value's bits set.
     BitAnd,
+    /// The value has none of the condition value's bits set.
     BitAndZero,
 }
 
+/// Checks a parsed field must pass for its `validation_passed` to be true.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FieldValidation {
+    /// The exact value the field must hold.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_value: Option<i64>,
+    /// The smallest value the field may hold.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub min_value: Option<i64>,
+    /// The largest value the field may hold.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_value: Option<i64>,
+    /// Bytes the field's raw bytes must start with.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub magic_bytes: Option<Vec<u8>>,
 }
 
+/// The signature that identifies a structure: `bytes` found at `offset` past
+/// its start; see [`TemplateRegistry::detect`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MagicDetection {
+    /// Where the signature starts, relative to the structure's start.
     pub offset: usize,
+    /// The signature itself.
     pub bytes: Vec<u8>,
 }
 
+/// What a field is and how its bytes are read and shown.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "params")]
 pub enum FieldType {
+    /// Unsigned 8-bit integer.
     UInt8,
+    /// Signed 8-bit integer.
     Int8,
+    /// Unsigned 16-bit integer.
     UInt16,
+    /// Signed 16-bit integer.
     Int16,
+    /// Unsigned 32-bit integer.
     UInt32,
+    /// Signed 32-bit integer.
     Int32,
+    /// Unsigned 64-bit integer.
     UInt64,
+    /// Signed 64-bit integer.
     Int64,
+    /// IEEE 754 single-precision float.
     Float32,
+    /// IEEE 754 double-precision float.
     Float64,
+    /// This many raw bytes, shown as hex.
     Bytes(usize),
+    /// Text of this many bytes, shown up to its first NUL.
     FixedString(usize),
+    /// `count` consecutive elements of one type.
     Array {
+        /// Type of every element.
         element_type: Box<FieldType>,
+        /// How many elements there are.
         count: usize,
     },
+    /// One byte, false when zero.
     Bool,
+    /// One byte shown as a character.
     Char,
+    /// This many bytes skipped over.
     Padding(usize),
+    /// An array whose element count is the value of an earlier field.
     DynamicArray {
+        /// Type of every element.
         element_type: Box<FieldType>,
+        /// Name of the earlier field holding the count.
         count_field: String,
     },
+    /// The low `bit_width` bits of an integer, optionally broken into named
+    /// flags.
     Bitfield {
+        /// How many low bits of the backing integer the field keeps.
         bit_width: u8,
+        /// Integer type the bits are read from.
         backing_type: Box<FieldType>,
+        /// `(name, mask)` pairs, each shown as set or clear.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         flags: Option<Vec<(String, u64)>>,
     },
+    /// Alternative layouts of the same bytes, each evaluated from the same
+    /// start; the field is as long as the longest.
     Union {
+        /// The alternative layouts.
         variants: Vec<FieldDefinition>,
     },
+    /// An integer shown with the name its value has.
     Enum {
+        /// Integer type the value is read from.
         backing_type: Box<FieldType>,
+        /// `(name, value)` pairs.
         values: Vec<(String, i64)>,
     },
+    /// An integer offset, relative to the structure's base, at which another
+    /// template is evaluated.
     Pointer {
+        /// Integer type the offset is read from.
         pointer_type: Box<FieldType>,
+        /// Name of the template evaluated at the offset.
         target_template: String,
     },
+    /// Fields that are present only when an earlier field's value meets a
+    /// condition.
     Conditional {
+        /// Name of the earlier field tested.
         condition_field: String,
+        /// The value it is compared with.
         condition_value: i64,
+        /// How the two are compared.
         condition_op: ConditionOp,
+        /// The fields present when the condition holds.
         fields: Vec<FieldDefinition>,
     },
+    /// Another registered template, evaluated in place as a nested structure.
     StructRef(String),
+    /// A value computed from an expression over earlier fields, taking no
+    /// bytes.
     Computed {
+        /// The expression, which may name earlier fields, `$` and `sizeof()`.
         expression: String,
+        /// The type the value is described as.
         display_type: Box<FieldType>,
     },
+    /// Takes no bytes; sets the byte order of the fields that follow from one
+    /// byte of the structure, as an ELF header's `EI_DATA` does.
     EndiannessSwitch {
+        /// Offset of the byte, relative to the structure's base.
         peek_offset: usize,
+        /// The byte value that means big-endian; any other means little.
         big_value: u8,
     },
 }
 
+/// One named field of a template.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FieldDefinition {
+    /// The field's name, which later fields' expressions can refer to.
     pub name: String,
+    /// What the field is.
     pub field_type: FieldType,
+    /// Byte order for this field, overriding the template's default.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub endianness: Option<Endianness>,
+    /// Human-readable description.
     #[serde(default)]
     pub description: String,
+    /// Display color for the field's bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
+    /// Checks the parsed value must pass.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub validation: Option<FieldValidation>,
+    /// An expression giving the field's position relative to the structure's
+    /// base, instead of directly after the previous field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub at: Option<String>,
 }
 
+/// A named structure layout: an ordered list of fields.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructTemplate {
+    /// The name the template is registered and applied under.
     pub name: String,
+    /// Human-readable description.
     pub description: String,
+    /// The fields, in order.
     pub fields: Vec<FieldDefinition>,
+    /// Byte order of fields that set none of their own.
     pub default_endianness: Endianness,
+    /// Version of the template's definition.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
+    /// Who wrote the template.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
+    /// Grouping shown in template lists, such as `PE` or `ZIP`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub category: Option<String>,
+    /// The signature that identifies the structure, if it has one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub magic_detection: Option<MagicDetection>,
 }
 
+/// One field as parsed from data by a template.
 #[derive(Debug, Clone)]
 pub struct ParsedField {
+    /// The field's name.
     pub name: String,
+    /// Absolute offset of the field's first byte.
     pub offset: usize,
+    /// How many bytes the field covers.
     pub size: usize,
+    /// The field's bytes.
     pub raw_bytes: Vec<u8>,
+    /// The value as shown to the user.
     pub display_value: String,
+    /// Nested fields: array elements, flags, struct members.
     pub children: Vec<ParsedField>,
+    /// Display color for the field's bytes.
     pub color: Option<String>,
+    /// Whether the value passed the field's validation, when it has one.
     pub validation_passed: Option<bool>,
+    /// Human-readable description.
     pub description: String,
 }
 
+/// Errors raised while registering, sizing or applying a template.
 #[derive(Error, Debug)]
 pub enum TemplateError {
+    /// No template is registered under the name.
     #[error("template not found: {0}")]
     NotFound(String),
+    /// The data ends before a field does.
     #[error("insufficient data at offset {offset}: need {needed} bytes, have {available}")]
     InsufficientData {
+        /// Where the field starts.
         offset: usize,
+        /// Bytes the field needs.
         needed: usize,
+        /// Bytes left from `offset`.
         available: usize,
     },
+    /// A JSON template is malformed.
     #[error("JSON parse error: {0}")]
     JsonParse(String),
+    /// A field refers to a field, template or expression that is invalid.
     #[error("invalid field reference: {0}")]
     InvalidFieldReference(String),
+    /// An expression could not be parsed or evaluated.
     #[error("expression error: {0}")]
     ExpressionError(String),
+    /// Templates refer to each other more deeply than evaluation allows.
     #[error("circular reference: {0}")]
     CircularReference(String),
+    /// A value failed its validation.
     #[error("validation failed: {0}")]
     ValidationFailed(String),
+    /// `sizeof()` named something that is not a type or template.
     #[error("unknown type in sizeof(): {0}")]
     UnknownType(String),
+    /// A field type's size depends on the data, where a fixed size is needed.
     #[error("field type has no statically known size: {0}")]
     UnsizedFieldType(String),
+    /// Evaluation exceeded its field-count or output-size budget.
     #[error("resource limit exceeded: {0}")]
     ResourceLimit(String),
 }
@@ -193,6 +314,7 @@ pub struct TemplateRegistry {
 }
 
 impl TemplateRegistry {
+    /// A registry holding every built-in template.
     #[must_use]
     pub fn new() -> Self {
         let mut registry = Self {
@@ -241,11 +363,50 @@ impl TemplateRegistry {
         json_schema::template_to_json(template)
     }
 
+    /// The template registered under `name`, if any.
     #[must_use]
     pub fn get(&self, name: &str) -> Option<&StructTemplate> {
         self.templates.get(name)
     }
 
+    /// Names of the templates whose declared magic matches `data`, read as
+    /// starting where the structure would start, in name order.
+    ///
+    /// A template matches when it declares a non-empty magic and `data` holds
+    /// exactly those bytes at the magic's offset; a template without a magic
+    /// is never reported, and neither is one whose magic runs past `data`.
+    #[must_use]
+    pub fn detect(&self, data: &[u8]) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .templates
+            .values()
+            .filter(|template| {
+                template.magic_detection.as_ref().is_some_and(|magic| {
+                    !magic.bytes.is_empty()
+                        && data.get(magic.offset..magic.offset.saturating_add(magic.bytes.len()))
+                            == Some(magic.bytes.as_slice())
+                })
+            })
+            .map(|template| template.name.clone())
+            .collect();
+        names.sort();
+        names
+    }
+
+    /// How many bytes past a structure's start the farthest-reaching magic of
+    /// any registered template ends, which is all [`TemplateRegistry::detect`]
+    /// needs to see.
+    #[must_use]
+    pub fn magic_extent(&self) -> usize {
+        self.templates
+            .values()
+            .filter_map(|template| template.magic_detection.as_ref())
+            .map(|magic| magic.offset.saturating_add(magic.bytes.len()))
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Every template's `(name, description)`, in name order.
     #[must_use]
     pub fn list(&self) -> Vec<(String, String)> {
         let mut entries: Vec<(String, String)> = self
@@ -257,6 +418,8 @@ impl TemplateRegistry {
         entries
     }
 
+    /// Every template's `(name, description, category, field count)`, in name
+    /// order, with an empty category for a template that declares none.
     #[must_use]
     pub fn list_detailed(&self) -> Vec<(String, String, String, usize)> {
         let mut entries: Vec<(String, String, String, usize)> = self
@@ -304,7 +467,7 @@ impl Default for TemplateRegistry {
 /// Compute the static byte size of a `FieldType`, when one exists.
 ///
 /// Returns `None` for `FieldType` variants whose size can only be known by
-/// evaluating them against real binary data (`DynamicArray`, `Union`,
+/// evaluating them against binary data (`DynamicArray`, `Union`,
 /// `Conditional`, `StructRef`, `Computed`, `EndiannessSwitch`) — these are
 /// dispatched to dedicated handlers in `eval.rs` that compute their own real
 /// sizes and must never be sized via a flat multiplication or added to a
@@ -474,6 +637,8 @@ fn format_composite_value(ft: &FieldType, raw: &[u8]) -> Option<String> {
     })
 }
 
+/// The value of a field's `raw` bytes as its type displays it, or a note of how
+/// many bytes were present when `raw` is shorter than the type needs.
 #[must_use]
 pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> String {
     let formatted = match ft {
@@ -497,6 +662,8 @@ pub fn format_field_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> Str
     })
 }
 
+/// The short lowercase name of a field type, such as `uint32` or
+/// `dynamic_array`.
 #[must_use]
 pub fn field_type_name(ft: &FieldType) -> &'static str {
     match ft {
@@ -645,6 +812,10 @@ fn read_scalar_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> ScalarVa
     }
 }
 
+/// The integer value of a field's `raw` bytes: integers, and the integers
+/// behind bitfields, enums and pointers, exactly; floats truncated toward zero
+/// and saturated; and 0 for a type with no single numeric value or for too few
+/// bytes.
 #[must_use]
 pub fn read_numeric_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> i128 {
     read_scalar_value(ft, raw, endian).to_integer()
@@ -681,6 +852,81 @@ mod tests {
         let reg = TemplateRegistry::new();
         let result = reg.apply("NONEXISTENT", &[0u8; 100], 0);
         assert!(matches!(result, Err(TemplateError::NotFound(n)) if n == "NONEXISTENT"));
+    }
+
+    /// Every built-in that declares a magic declares the genuine format
+    /// signature at offset 0, and these are exactly the built-ins that do:
+    /// MZ, `\x7FELF`, the five Mach-O and fat magics, and the ZIP `PK` records.
+    #[test]
+    fn test_builtin_magic_bytes_are_the_genuine_signatures() {
+        let expected: [(&str, &[u8]); 15] = [
+            ("Elf32_Ehdr", &[0x7F, 0x45, 0x4C, 0x46]),
+            ("Elf64_Ehdr", &[0x7F, 0x45, 0x4C, 0x46]),
+            ("FAT_HEADER", &[0xCA, 0xFE, 0xBA, 0xBE]),
+            ("IMAGE_DOS_HEADER", &[0x4D, 0x5A]),
+            ("MACH_HEADER", &[0xCE, 0xFA, 0xED, 0xFE]),
+            ("MACH_HEADER_64", &[0xCF, 0xFA, 0xED, 0xFE]),
+            ("MACH_HEADER_64_BE", &[0xFE, 0xED, 0xFA, 0xCF]),
+            ("MACH_HEADER_BE", &[0xFE, 0xED, 0xFA, 0xCE]),
+            ("ZIP64_DATA_DESCRIPTOR", &[0x50, 0x4B, 0x07, 0x08]),
+            ("ZIP64_EOCD_LOCATOR", &[0x50, 0x4B, 0x06, 0x07]),
+            ("ZIP64_EOCD_RECORD", &[0x50, 0x4B, 0x06, 0x06]),
+            ("ZIP_CENTRAL_DIRECTORY", &[0x50, 0x4B, 0x01, 0x02]),
+            ("ZIP_DATA_DESCRIPTOR", &[0x50, 0x4B, 0x07, 0x08]),
+            ("ZIP_END_OF_CENTRAL_DIRECTORY", &[0x50, 0x4B, 0x05, 0x06]),
+            ("ZIP_LOCAL_FILE_HEADER", &[0x50, 0x4B, 0x03, 0x04]),
+        ];
+        let reg = TemplateRegistry::new();
+        let mut declared: Vec<(String, usize, Vec<u8>)> = reg
+            .templates
+            .values()
+            .filter_map(|t| {
+                t.magic_detection
+                    .as_ref()
+                    .map(|m| (t.name.clone(), m.offset, m.bytes.clone()))
+            })
+            .collect();
+        declared.sort();
+        let expected: Vec<(String, usize, Vec<u8>)> = expected
+            .iter()
+            .map(|(name, bytes)| ((*name).to_string(), 0, bytes.to_vec()))
+            .collect();
+        assert_eq!(declared, expected);
+        assert_eq!(reg.magic_extent(), 4);
+    }
+
+    /// `detect` names every template whose magic the data starts with, in
+    /// name order, and nothing when the data is shorter than the magic.
+    #[test]
+    fn test_detect_names_the_templates_a_header_matches() {
+        let reg = TemplateRegistry::new();
+        let mut elf = vec![0x7F, b'E', b'L', b'F', 2, 1, 1];
+        elf.resize(64, 0);
+        assert_eq!(reg.detect(b"MZ\x90\x00\x03\x00"), vec!["IMAGE_DOS_HEADER"]);
+        assert_eq!(reg.detect(&elf), vec!["Elf32_Ehdr", "Elf64_Ehdr"]);
+        assert_eq!(
+            reg.detect(b"PK\x07\x08\x00\x00"),
+            vec!["ZIP64_DATA_DESCRIPTOR", "ZIP_DATA_DESCRIPTOR"]
+        );
+        assert_eq!(
+            reg.detect(&[0xCF, 0xFA, 0xED, 0xFE, 7, 0, 0, 1]),
+            vec!["MACH_HEADER_64"]
+        );
+        assert_eq!(reg.detect(b"M"), Vec::<String>::new());
+        assert_eq!(reg.detect(b"PK\x07"), Vec::<String>::new());
+        assert_eq!(reg.detect(b"\x00\x00\x00\x00"), Vec::<String>::new());
+    }
+
+    /// A genuine linker-built DLL's first bytes are recognized as a DOS
+    /// header and as nothing else.
+    #[cfg(windows)]
+    #[test]
+    fn test_detect_recognizes_a_genuine_system_dll() {
+        let dll = std::fs::read(r"C:\Windows\System32\kernel32.dll").unwrap();
+        assert_eq!(
+            TemplateRegistry::new().detect(&dll[..64]),
+            vec!["IMAGE_DOS_HEADER"]
+        );
     }
 
     #[test]
@@ -1196,7 +1442,7 @@ mod tests {
             -1
         );
         // Zero-valued Float32 truncates to 0 (coincidental with the fallback
-        // used by genuinely non-numeric composite types below).
+        // used by non-numeric composite types below).
         assert_eq!(
             read_numeric_value(&FieldType::Float32, &[0; 4], Endianness::Little),
             0

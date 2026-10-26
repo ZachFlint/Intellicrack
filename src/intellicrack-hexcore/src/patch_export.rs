@@ -3,6 +3,9 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Overwrite patch formats: IPS and IPS32 export and import, COD export and a
+//! JSON patch listing, all built from the overwrites in a document's history.
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -65,176 +68,110 @@ struct JsonPatchEntry {
 
 /// Exports patch records in IPS format (24-bit offsets).
 ///
-/// When a record's write offset lands exactly on the reserved terminator
-/// value (`IPS_TERMINATOR_OFFSET`), the record is shifted back by one byte
-/// to avoid emitting a header that a parser would misread as the `EOF`
-/// marker. The true byte value at that preceding position is either taken
-/// from data already queued in the same record, or, when the record starts
-/// exactly at the terminator, obtained from `original_byte_at`.
+/// The records are applied in order, so where two overlap the later one's
+/// bytes win, and they are coalesced into disjoint runs before encoding. A run
+/// written at the reserved terminator value (`IPS_TERMINATOR_OFFSET`) would
+/// emit a header a parser misreads as the `EOF` marker, so that record is
+/// shifted back to start one byte earlier. The byte it then carries comes from
+/// the run itself when the run covers it, and otherwise from
+/// `original_byte_at`, which is consulted only for a byte no record writes.
 ///
 /// # Errors
 ///
 /// Returns `PatchError::PatchTooLarge` if any record writes a byte past
 /// `0x00FF_FFFF`.
-/// Returns `PatchError::UnresolvedTerminatorCollision` if a record starts
-/// exactly at the terminator offset and `original_byte_at` cannot supply the
-/// real byte value that belongs immediately before it.
+/// Returns `PatchError::UnresolvedTerminatorCollision` if a run starts exactly
+/// at the terminator offset and `original_byte_at` cannot supply the byte
+/// immediately before it.
 pub fn export_ips(
     patches: &[PatchRecord],
     original_byte_at: &dyn Fn(usize) -> Option<u8>,
 ) -> Result<Vec<u8>, PatchError> {
-    let mut output = Vec::new();
-    output.extend_from_slice(b"PATCH");
-
-    for patch in patches {
-        if patch.offset > 0x00FF_FFFF || record_last_byte(patch).is_some_and(|b| b > 0x00FF_FFFF) {
-            return Err(PatchError::PatchTooLarge);
-        }
-        let mut remaining = patch.data.as_slice();
-        let mut current_offset = patch.offset;
-
-        while !remaining.is_empty() {
-            if current_offset > 0x00FF_FFFF {
-                return Err(PatchError::PatchTooLarge);
-            }
-            let mut chunk_size = remaining.len().min(0xFFFF);
-
-            if current_offset == IPS_TERMINATOR_OFFSET {
-                let prev_offset = IPS_TERMINATOR_OFFSET - 1;
-                let prev_byte = if current_offset > patch.offset {
-                    patch.data[prev_offset - patch.offset]
-                } else {
-                    original_byte_at(prev_offset).ok_or(
-                        PatchError::UnresolvedTerminatorCollision(IPS_TERMINATOR_OFFSET),
-                    )?
-                };
-                let merged_len = (chunk_size + 1).min(0xFFFF);
-                let offset_bytes = prev_offset.to_be_bytes();
-                let offset_start = offset_bytes.len() - 3;
-                output.extend_from_slice(&offset_bytes[offset_start..]);
-                let size_bytes = merged_len.to_be_bytes();
-                let size_start = size_bytes.len() - 2;
-                output.extend_from_slice(&size_bytes[size_start..]);
-                output.push(prev_byte);
-                let consumed = merged_len - 1;
-                output.extend_from_slice(&remaining[..consumed]);
-                remaining = &remaining[consumed..];
-                current_offset += consumed;
-                continue;
-            }
-
-            if current_offset < IPS_TERMINATOR_OFFSET
-                && current_offset + chunk_size > IPS_TERMINATOR_OFFSET
-            {
-                let span_through = IPS_TERMINATOR_OFFSET + 1 - current_offset;
-                if span_through <= 0xFFFF && span_through <= remaining.len() {
-                    chunk_size = span_through;
-                } else {
-                    chunk_size = IPS_TERMINATOR_OFFSET - current_offset;
-                }
-            }
-
-            let offset_bytes = current_offset.to_be_bytes();
-            let offset_start = offset_bytes.len() - 3;
-            output.extend_from_slice(&offset_bytes[offset_start..]);
-            let size_bytes = chunk_size.to_be_bytes();
-            let size_start = size_bytes.len() - 2;
-            output.extend_from_slice(&size_bytes[size_start..]);
-            output.extend_from_slice(&remaining[..chunk_size]);
-            remaining = &remaining[chunk_size..];
-            current_offset += chunk_size;
-        }
-    }
-
-    output.extend_from_slice(b"EOF");
-    Ok(output)
+    export_records(&IPS_FORMAT, patches, original_byte_at)
 }
 
 /// Exports patch records in IPS32 format (32-bit offsets).
 ///
-/// When a record's write offset lands exactly on the reserved terminator
-/// value (`IPS32_TERMINATOR_OFFSET`), the record is shifted back by one byte
-/// to avoid emitting a header that a parser would misread as the `EEOF`
-/// marker. The true byte value at that preceding position is either taken
-/// from data already queued in the same record, or, when the record starts
-/// exactly at the terminator, obtained from `original_byte_at`.
+/// Records are coalesced and a run at `IPS32_TERMINATOR_OFFSET` is shifted
+/// back one byte, exactly as [`export_ips`] does for its `EOF` marker, so the
+/// `EEOF` marker is never emitted as a header.
 ///
 /// # Errors
 ///
 /// Returns `PatchError::Exceeds32Bit` if any record writes a byte past
 /// `0xFFFF_FFFF`, which the 4-byte offset field would otherwise silently
 /// truncate onto a low address.
-/// Returns `PatchError::UnresolvedTerminatorCollision` if a record starts
-/// exactly at the terminator offset and `original_byte_at` cannot supply the
-/// real byte value that belongs immediately before it.
+/// Returns `PatchError::UnresolvedTerminatorCollision` if a run starts exactly
+/// at the terminator offset and `original_byte_at` cannot supply the byte
+/// immediately before it.
 pub fn export_ips32(
     patches: &[PatchRecord],
     original_byte_at: &dyn Fn(usize) -> Option<u8>,
 ) -> Result<Vec<u8>, PatchError> {
-    let mut output = Vec::new();
-    output.extend_from_slice(b"IPS32");
+    export_records(&IPS32_FORMAT, patches, original_byte_at)
+}
 
-    for patch in patches {
-        if u32::try_from(patch.offset).is_err()
-            || record_last_byte(patch).is_some_and(|b| u32::try_from(b).is_err())
+/// The largest record payload an IPS or IPS32 size field can describe.
+const MAX_IPS_RECORD: usize = 0xFFFF;
+
+/// Encodes `patches` as records of `format`; see [`export_ips`].
+fn export_records(
+    format: &IpsFormat,
+    patches: &[PatchRecord],
+    original_byte_at: &dyn Fn(usize) -> Option<u8>,
+) -> Result<Vec<u8>, PatchError> {
+    let terminator = format.terminator_offset;
+    let mut output = format.header.to_vec();
+
+    for run in &coalesce(patches.iter().map(|p| (p.offset, p.data.as_slice()))) {
+        if run.offset > format.max_offset
+            || record_last_byte(run).is_some_and(|last| last > format.max_offset)
         {
-            return Err(PatchError::Exceeds32Bit("IPS32"));
+            return Err((format.out_of_range)());
         }
-        let mut remaining = patch.data.as_slice();
-        let mut current_offset = patch.offset;
+        let mut remaining = run.data.as_slice();
+        let mut current_offset = run.offset;
 
         while !remaining.is_empty() {
-            let mut chunk_size = remaining.len().min(0xFFFF);
-
-            if current_offset == IPS32_TERMINATOR_OFFSET {
-                let prev_offset = IPS32_TERMINATOR_OFFSET - 1;
-                let prev_byte = if current_offset > patch.offset {
-                    patch.data[prev_offset - patch.offset]
+            if current_offset == terminator {
+                let prev_offset = terminator - 1;
+                let prev_byte = if current_offset > run.offset {
+                    run.data[prev_offset - run.offset]
                 } else {
-                    original_byte_at(prev_offset).ok_or(
-                        PatchError::UnresolvedTerminatorCollision(IPS32_TERMINATOR_OFFSET),
-                    )?
+                    original_byte_at(prev_offset)
+                        .ok_or(PatchError::UnresolvedTerminatorCollision(terminator))?
                 };
-                let merged_len = (chunk_size + 1).min(0xFFFF);
-                let offset_bytes = prev_offset.to_be_bytes();
-                let offset_start = offset_bytes.len() - 4;
-                output.extend_from_slice(&offset_bytes[offset_start..]);
-                let size_bytes = merged_len.to_be_bytes();
-                let size_start = size_bytes.len() - 2;
-                output.extend_from_slice(&size_bytes[size_start..]);
+                let consumed = remaining.len().min(MAX_IPS_RECORD - 1);
+                push_record_header(&mut output, format, prev_offset, consumed + 1);
                 output.push(prev_byte);
-                let consumed = merged_len - 1;
                 output.extend_from_slice(&remaining[..consumed]);
                 remaining = &remaining[consumed..];
                 current_offset += consumed;
                 continue;
             }
 
-            if current_offset < IPS32_TERMINATOR_OFFSET
-                && current_offset + chunk_size > IPS32_TERMINATOR_OFFSET
-            {
-                let span_through = IPS32_TERMINATOR_OFFSET + 1 - current_offset;
-                if span_through <= 0xFFFF && span_through <= remaining.len() {
-                    chunk_size = span_through;
-                } else {
-                    chunk_size = IPS32_TERMINATOR_OFFSET - current_offset;
-                }
+            let mut chunk_size = remaining.len().min(MAX_IPS_RECORD);
+            if current_offset < terminator && current_offset + chunk_size > terminator {
+                chunk_size = terminator + 1 - current_offset;
             }
-
-            let offset_bytes = current_offset.to_be_bytes();
-            let offset_start = offset_bytes.len() - 4;
-            output.extend_from_slice(&offset_bytes[offset_start..]);
-            let size_bytes = chunk_size.to_be_bytes();
-            let size_start = size_bytes.len() - 2;
-            output.extend_from_slice(&size_bytes[size_start..]);
+            push_record_header(&mut output, format, current_offset, chunk_size);
             output.extend_from_slice(&remaining[..chunk_size]);
             remaining = &remaining[chunk_size..];
             current_offset += chunk_size;
         }
     }
 
-    output.extend_from_slice(b"EEOF");
+    output.extend_from_slice(format.terminator);
     Ok(output)
+}
+
+/// Appends a record header: `offset` in the format's offset width, then the
+/// 16-bit `size`, both big-endian.
+fn push_record_header(output: &mut Vec<u8>, format: &IpsFormat, offset: usize, size: usize) {
+    let offset_bytes = offset.to_be_bytes();
+    output.extend_from_slice(&offset_bytes[offset_bytes.len() - format.offset_width..]);
+    let size_bytes = size.to_be_bytes();
+    output.extend_from_slice(&size_bytes[size_bytes.len() - 2..]);
 }
 
 /// Exports patch records in COD format.
@@ -298,6 +235,13 @@ struct IpsFormat {
     header: &'static [u8],
     terminator: &'static [u8],
     offset_width: usize,
+    /// The offset whose big-endian encoding spells `terminator`, so no record
+    /// header may carry it.
+    terminator_offset: usize,
+    /// The last offset a record may write.
+    max_offset: usize,
+    /// The error for a record that writes past `max_offset`.
+    out_of_range: fn() -> PatchError,
     end_of_data: &'static str,
     truncated_header: &'static str,
     truncated_rle: &'static str,
@@ -308,6 +252,9 @@ const IPS_FORMAT: IpsFormat = IpsFormat {
     header: b"PATCH",
     terminator: b"EOF",
     offset_width: 3,
+    terminator_offset: IPS_TERMINATOR_OFFSET,
+    max_offset: 0x00FF_FFFF,
+    out_of_range: || PatchError::PatchTooLarge,
     end_of_data: "unexpected end of data",
     truncated_header: "truncated record header",
     truncated_rle: "truncated RLE record",
@@ -318,6 +265,9 @@ const IPS32_FORMAT: IpsFormat = IpsFormat {
     header: b"IPS32",
     terminator: b"EEOF",
     offset_width: 4,
+    terminator_offset: IPS32_TERMINATOR_OFFSET,
+    max_offset: 0xFFFF_FFFF,
+    out_of_range: || PatchError::Exceeds32Bit("IPS32"),
     end_of_data: "unexpected end of IPS32 data",
     truncated_header: "truncated IPS32 record header",
     truncated_rle: "truncated IPS32 RLE record",
@@ -495,9 +445,19 @@ fn splice_run(runs: &mut Vec<PatchRecord>, start: usize, data: &[u8]) {
 /// final bytes of every written position.
 #[must_use]
 pub fn extract_patches_from_overwrites(operations: &[(usize, Vec<u8>)]) -> Vec<PatchRecord> {
+    coalesce(
+        operations
+            .iter()
+            .map(|(offset, data)| (*offset, data.as_slice())),
+    )
+}
+
+/// Folds `writes`, in the order they apply, into sorted, disjoint,
+/// non-touching runs, the later write winning wherever two overlap.
+fn coalesce<'a>(writes: impl IntoIterator<Item = (usize, &'a [u8])>) -> Vec<PatchRecord> {
     let mut runs: Vec<PatchRecord> = Vec::new();
-    for (offset, data) in operations {
-        splice_run(&mut runs, *offset, data);
+    for (offset, data) in writes {
+        splice_run(&mut runs, offset, data);
     }
     runs
 }
@@ -829,6 +789,91 @@ mod tests {
         assert_eq!(
             written_bytes(&imported, IPS32_TERMINATOR_OFFSET, 4),
             [Some(0xDE), Some(0xAD), Some(0xBE), Some(0xEF)]
+        );
+    }
+
+    /// A record at the terminator whose preceding byte another record writes
+    /// takes that byte from the other record: `original_byte_at` supplies only
+    /// bytes no record covers, so its 0x00 here never reaches the patch. Both
+    /// orders of the two records give the same bytes, in both dialects.
+    #[test]
+    fn test_collision_takes_the_prev_byte_from_another_record() {
+        type Export =
+            fn(&[PatchRecord], &dyn Fn(usize) -> Option<u8>) -> Result<Vec<u8>, PatchError>;
+        for (terminator, export) in [
+            (IPS_TERMINATOR_OFFSET, export_ips as Export),
+            (IPS32_TERMINATOR_OFFSET, export_ips32 as Export),
+        ] {
+            let before = PatchRecord {
+                offset: terminator - 1,
+                data: vec![0xAA],
+            };
+            let at = PatchRecord {
+                offset: terminator,
+                data: vec![0xBB],
+            };
+            let original_at = |offset: usize| (offset == terminator - 1).then_some(0x00);
+            for patches in [vec![before.clone(), at.clone()], vec![at, before]] {
+                let imported = import_ips(&export(&patches, &original_at).unwrap()).unwrap();
+                assert_eq!(
+                    imported,
+                    vec![PatchRecord {
+                        offset: terminator - 1,
+                        data: vec![0xAA, 0xBB],
+                    }],
+                    "terminator {terminator:#x}"
+                );
+            }
+        }
+    }
+
+    /// A run whose first full-size chunk ends just before the terminator
+    /// continues with a chunk that would start on it, so that chunk is shifted
+    /// back one byte and carries the run's own byte there, with no call to
+    /// `original_byte_at`.
+    #[test]
+    fn test_collision_after_a_full_chunk_uses_the_run_s_own_byte() {
+        let mut data = vec![0u8; 0x1_0000];
+        data[0xFFFE] = 0x5A;
+        data[0xFFFF] = 0x6B;
+        let start = IPS_TERMINATOR_OFFSET - 0xFFFF;
+        let exported = export_ips(
+            &[PatchRecord {
+                offset: start,
+                data: data.clone(),
+            }],
+            &no_original,
+        )
+        .unwrap();
+
+        let imported = import_ips(&exported).unwrap();
+        let offsets: Vec<usize> = imported.iter().map(|record| record.offset).collect();
+        assert_eq!(offsets, vec![start, IPS_TERMINATOR_OFFSET - 1]);
+        assert_eq!(imported[1].data, vec![0x5A, 0x6B]);
+        assert_eq!(
+            written_bytes(&imported, start, data.len()),
+            data.iter().copied().map(Some).collect::<Vec<_>>()
+        );
+    }
+
+    /// Overlapping records apply in order, so the export holds one run with
+    /// the later record's byte where they overlap.
+    #[test]
+    fn test_export_coalesces_overlapping_records_later_wins() {
+        let patches = vec![
+            PatchRecord {
+                offset: 10,
+                data: vec![1, 2, 3],
+            },
+            PatchRecord {
+                offset: 11,
+                data: vec![9],
+            },
+        ];
+        let exported = export_ips(&patches, &no_original).unwrap();
+        assert_eq!(
+            exported,
+            b"PATCH\x00\x00\x0a\x00\x03\x01\x09\x03EOF".to_vec()
         );
     }
 

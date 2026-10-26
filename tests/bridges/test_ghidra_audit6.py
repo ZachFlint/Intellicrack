@@ -283,7 +283,7 @@ def test_f0002_indented_script_would_have_failed_without_dedent() -> None:
     """The raw indented script must indeed be unparseable.
 
     Confirms that the indentation pattern produced by inline call sites
-    is genuinely invalid Python at module scope. Without dedent, this string passes straight to ``exec``, which rejects it. Establishing this baseline makes it explicit that the dedent
+    is invalid Python at module scope. Without dedent, this string passes straight to ``exec``, which rejects it. Establishing this baseline makes it explicit that the dedent
     in ``_execute_remote`` is load-bearing rather than cosmetic.
     """
     indented = """
@@ -1208,7 +1208,7 @@ def test_create_bridge_script_oserror_raises_toolerror(
 
     Only ``intellicrack.bridges.ghidra.tempfile.mkdtemp`` is redirected so the
     bridge lands in the prepared directory; the actual write operation executes
-    the genuine ``Path.write_text`` implementation against the real filesystem,
+    the unpatched ``Path.write_text`` implementation against the filesystem,
     which raises ``PermissionError`` from the OS.
 
     The test validates three properties that would each independently regress if
@@ -1217,7 +1217,7 @@ def test_create_bridge_script_oserror_raises_toolerror(
     1. A ``ToolError`` is raised (not the raw ``OSError``).
     2. The message matches the canonical format
        ``"Failed to write ghidra bridge script <path>: <os-error>"``.
-    3. The ``__cause__`` is a genuine ``PermissionError`` (i.e. the exception is
+    3. The ``__cause__`` is a ``PermissionError`` (i.e. the exception is
        properly chained with ``raise ... from exc``).
 
     Args:

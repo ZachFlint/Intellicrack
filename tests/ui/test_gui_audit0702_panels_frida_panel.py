@@ -360,7 +360,7 @@ def test_l9_selecting_long_module_name_sets_full_tooltip() -> None:
     """Populating the combo with a long module name must set it as the current tooltip.
 
     Drives the real population path (``_populate_modules_table``) with a
-    fake bridge ``ModuleInfo``-shaped result, relying on the genuine
+    fake bridge ``ModuleInfo``-shaped result, relying on the
     ``currentTextChanged`` signal Qt emits when the first item added to an
     empty combo becomes current, and asserts the tooltip mirrors the long
     name in full rather than being left unset.

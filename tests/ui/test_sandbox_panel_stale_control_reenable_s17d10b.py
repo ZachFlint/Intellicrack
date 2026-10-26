@@ -17,13 +17,12 @@ returns at its own ``sandbox_id`` guard.
 
 Which of the two in-flight calls finishes first is decided by the order two
 ``QThread`` instances happen to reach the shared event loop, so these tests do
-not race them. They establish the post-destroy state through a genuine
-end-to-end Destroy, take the genuine ``ToolError`` the real bridge raises for
+not race them. They establish the post-destroy state through an
+end-to-end Destroy, take the ``ToolError`` the real bridge raises for
 the destroyed instance, and hand it to the same completion slot
-``run_bridge_coroutine_logged`` invokes as ``on_error``. Nothing about the
-panel state, the error, or the dialog is fabricated.
+``run_bridge_coroutine_logged`` invokes as ``on_error``.
 
-The two end-to-end tests either side of them keep the gate discriminating: a
+The two end-to-end tests either side of them cover the opposite cases: a
 failure on a *live* sandbox must still restore its control, and a failure on a
 Windows instance must not reinstate the QEMU-only ones.
 """
@@ -124,7 +123,7 @@ class _LocalBackendManager(SandboxManager):
 class _ModalDismisser:
     """Dismisses the real error dialogs the driven panel opens.
 
-    ``_report_failure`` opens a genuinely blocking ``QMessageBox``. A repeating
+    ``_report_failure`` opens a blocking ``QMessageBox``. A repeating
     timer closes each one so the production call returns, and records that it
     was there - which is what proves the failure handler under test really ran.
 
@@ -347,7 +346,7 @@ def test_windows_backend_keeps_the_qemu_controls_gated_after_a_shared_failure(
     Memory Dump on Windows Sandbox first enumerates guest processes via
     ``SandboxBridge.list_guest_processes`` so the user can pick a ``target_pid``. The real
     ``LocalProcessSandbox`` test double behind this panel does not override ``list_processes``,
-    so it inherits ``SandboxBase``'s "not implemented" failure. That is a genuine backend error,
+    so it inherits ``SandboxBase``'s "not implemented" failure. That is a backend error,
     surfaced through the same ``Memory Dump Failed`` dialog and console path as a direct
     ``memory_dump`` failure.
 

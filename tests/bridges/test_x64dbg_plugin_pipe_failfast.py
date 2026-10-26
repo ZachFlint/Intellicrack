@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the x64dbg bridge plugin deploy/build path and fail-fast load.
+"""Tests for the x64dbg bridge plugin deploy/build path and fail-fast load.
 
 These tests exercise the real behaviour that keeps x64dbg control from silently going inert when the bridge plugin never comes up:
 
-* the arch-to-filename-to-``plugins`` directory mapping that deploys the first-party bridge plugin, driven against a real on-disk x64dbg tree with real file copies (no mocks);
+* the arch-to-filename-to-``plugins`` directory mapping that deploys the first-party bridge plugin, driven against an on-disk x64dbg tree with actual file copies;
 * the resolution of the installed x64dbg plugin SDK directory that the source rebuild must target;
 * the CMake configure invocation passing the SDK path through the variable the plugin's ``CMakeLists.txt`` actually reads (``X64DBG_SDK_PATH``);
 * the named-pipe client being pointed at the fixed pipe the C++ plugin serves;
@@ -47,8 +47,7 @@ def _make_plugin_source_tree(source_root: Path) -> dict[str, bytes]:
     """Create a realistic ``x64dbg-plugin/bin`` tree with distinct binaries.
 
     Writes a unique byte payload for every arch registered in
-    :data:`PLUGIN_ARCHS` so a later copy can be verified byte-for-byte
-    (a genuine file copy, not a mock).
+    :data:`PLUGIN_ARCHS` so a later copy can be verified byte-for-byte.
 
     Args:
         source_root: Root directory that will contain the
@@ -77,7 +76,7 @@ class TestDeployArchMapping:
 
         Uses a real source tree and a real x64dbg installation directory
         outside Program Files (so no elevation gate trips) and asserts the
-        deployed bytes exactly match the source, proving a genuine copy.
+        deployed bytes exactly match the source.
 
         Args:
             tmp_path: Per-test temp directory provided by pytest.

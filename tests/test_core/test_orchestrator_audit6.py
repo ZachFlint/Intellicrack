@@ -813,7 +813,7 @@ def test_extract_exports_pe_walks_export_directory(tmp_path: Path) -> None:
     ``lief.PE.Binary``. lief types ``get_export()`` as ``Export | None``,
     so the production helper binds the result and guards against ``None``
     before iterating (a real concern for the packed and truncated binaries
-    Intellicrack ingests). This test drives a genuine PE32+ fixture with a
+    Intellicrack ingests). This test drives a PE32+ fixture with a
     single valid export through that path and asserts the entry's name,
     ordinal, and address are extracted verbatim.
 
@@ -906,8 +906,8 @@ def test_bridge_destructive_methods_cover_all_registered_bridges() -> None:
 
     Newly added bridges that are not catalogued here would be classified
     as ``"unknown"``. We assert every registered :class:`ToolName` has
-    an entry so the safe-default branch only ever fires for genuinely
-    unrecognised tools (e.g. user typos).
+    an entry so the safe-default branch only ever fires for
+    unrecognized tools (e.g. user typos).
     """
     expected = {
         ToolName.FRIDA,

@@ -8,12 +8,12 @@ Covers ``EntropyGraphWidget`` rendering and click navigation,
 ``ByteDistributionWidget`` histogram accuracy and log-scale toggle, and the
 digram matrix heatmap.
 
-These tests feed the widgets REAL byte-distribution, per-block entropy, and
-digram data computed from a REAL Windows PE (``kernel32.dll``), force a real
-``paintEvent`` against an offscreen ``QPixmap`` painter, and assert on
-verifiable real properties: the block-click signal maps to the correct byte
-offset, the histogram retains the real counts, and the digram heatmap color map
-follows the documented HSV interpolation for real cell counts.
+These tests feed the widgets byte-distribution, per-block entropy, and
+digram data computed from a Windows PE (``kernel32.dll``), force a
+``paintEvent`` against an offscreen ``QPixmap`` painter, and assert that
+the block-click signal maps to the correct byte offset, the histogram retains
+the computed counts, and the digram heatmap color map follows the documented
+HSV interpolation for the computed cell counts.
 """
 
 from __future__ import annotations
@@ -56,10 +56,10 @@ def qapp() -> Generator[QApplication]:
 
 
 def _open_document(path: Path) -> intellicrack_hexcore.HexDocument:
-    """Open a real binary as a hexcore document.
+    """Open an on-disk binary as a hexcore document.
 
     Args:
-        path: Path to a real binary on disk.
+        path: Path to a binary on disk.
 
     Returns:
         intellicrack_hexcore.HexDocument: The opened hexcore document.

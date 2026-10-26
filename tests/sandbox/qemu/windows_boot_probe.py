@@ -123,7 +123,7 @@ class LauncherSandbox(QEMUSandbox):
     """Sandbox exposing the real command builder for inspection.
 
     The production builder and accelerator detection are private; this subclass
-    adds public entry points so the gates drive the genuine code rather than a
+    adds public entry points so the gates drive the production code rather than a
     copy of it.
     """
 
@@ -551,7 +551,7 @@ def empty_qcow2(destination: Path) -> Path:
     """Write a minimal but structurally valid qcow2 v3 header file.
 
     ``_build_qemu_command`` only requires the configured image to exist; it
-    never parses it. A real header is written anyway so the fixture is a genuine
+    never parses it. A real header is written anyway so the fixture is a valid
     qcow2 rather than arbitrary bytes.
 
     Args:

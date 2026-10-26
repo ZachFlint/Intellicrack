@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the FridaBridge kernel, socket, file, and SQLite families.
+"""Tests for the FridaBridge kernel, socket, file, and SQLite families.
 
 These tests drive the real bridge against a minimal offline fake that
 records every JS source the bridge emits and returns scripted payloads.

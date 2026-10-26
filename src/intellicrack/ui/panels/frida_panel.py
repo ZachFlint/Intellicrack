@@ -229,7 +229,7 @@ class FridaPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self.run_btn = self._add_tool_button(toolbar, "Run Script", self._on_run_script)
+        self.run_btn: QPushButton = self._add_tool_button(toolbar, "Run Script", self._on_run_script)
         self.run_btn.setToolTip(_RUN_SCRIPT_IDLE_TOOLTIP)
         self._stop_btn = self._add_tool_button(toolbar, "Stop", self._on_stop_script, enabled=False)
         self._stop_btn.setToolTip("Stop the active persistent script")
@@ -246,7 +246,7 @@ class FridaPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self.status_label = self._add_toolbar_label(toolbar, "Not attached")
+        self.status_label: QLabel | None = self._add_toolbar_label(toolbar, "Not attached")
 
     @override
     def _create_content(self) -> QWidget:

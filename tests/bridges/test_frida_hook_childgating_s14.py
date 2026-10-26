@@ -15,7 +15,7 @@
   to ``ToolError.details['reason']``, so the UI (and this test) can show the actual cause instead of the generic
   ``ToolError("child gating operation failed")``.
 
-Both tests drive a REAL Frida runtime attached to the current test process
+Both tests drive a Frida runtime attached to the current test process
 (no external process is spawned, so no ``spawns_process`` marker is needed --
 matching the ``self_attached_bridge`` idiom also used in
 ``tests/bridges/test_frida_scan_unload_s14.py`` and
@@ -119,7 +119,7 @@ def test_add_hook_default_callback_fires_on_invocation(self_attached_bridge: Fri
     (``kernel32.dll!GetCurrentProcessId``) in the current (self-attached) process with no callbacks, drives real
     invocations of that export via ctypes, and asserts that ``hook_fire`` ``send()`` messages for both the ``enter``
     and ``leave`` phases arrive through the bridge's message handler, including a ``leave`` message whose ``retval``
-    matches the real PID returned by the hooked call. Falsifiable: if the agent installs an empty callback, no
+    matches the real PID returned by the hooked call. If the agent installs an empty callback, no
     ``hook_fire`` message is emitted and the wait times out and the assertions fail.
 
     Args:
@@ -202,12 +202,12 @@ def test_enable_child_gating_surfaces_real_platform_reason(self_attached_bridge:
     ``ToolError("child gating operation failed")`` (which carries no reason)
     or the raw, fragile third-party ``str(e)`` text. This test calls the
     real bridge method and asserts the raised ``ToolError`` carries that
-    stable platform-limitation reason in ``details['reason']``. Falsifiable:
-    if the bridge funnelled the ``NotSupportedError`` through the generic
+    stable platform-limitation reason in ``details['reason']``. If the
+    bridge funneled the ``NotSupportedError`` through the generic
     ``except Exception`` fallback, ``details`` would be empty (or lacks
     'reason') and the assertions fail; if Frida ever silently starts
     supporting spawn gating on this build, no exception is raised at all and
-    the ``pytest.raises`` block fails loudly instead of masking a behavior
+    the ``pytest.raises`` block fails instead of masking a behavior
     change.
 
     Args:

@@ -5,7 +5,7 @@
 """Real-data coverage for :class:`PreferencesDialog`.
 
 These tests construct the
-real dialog over a real :class:`Config`, mutate real input widgets through
+real dialog over a real :class:`Config`, mutate the dialog's input widgets through
 the live Qt widget tree, and assert that:
 
 * The ``settings_changed`` signal fires on Accept carrying a real
@@ -13,8 +13,7 @@ the live Qt widget tree, and assert that:
 * When a config path is set, Accept persists the new config to disk and the
   reloaded config round-trips the edited values.
 
-No part of the dialog under test is stubbed; only the modal blocking call is
-avoided by invoking the dialog's own ``_on_accept`` slot, which is exactly
+The modal blocking call is avoided by invoking the dialog's own ``_on_accept`` slot, which is exactly
 what the Qt button box would trigger.
 """
 

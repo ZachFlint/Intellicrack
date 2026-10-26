@@ -207,11 +207,11 @@ def _assert_open_read_write_round_trip(
 def test_bridge_fixture_yields_usable_connected_bridge(bridge: HexEditorBridge, pe_binary: Path) -> None:
     """The ``bridge`` fixture yields a real, connected, usable ``HexEditorBridge``.
 
-    This gate checks that the fixture
-    returns a real bridge instance (vs. ``None``/an unusable object). The test
-    proves the yielded object is a fully wired ``HexEditorBridge`` connected to the
-    native ``intellicrack_hexcore`` backend by driving a genuine open/read/write/read
-    round-trip on a real PE file built by the fixture helper.
+    This test checks that the fixture
+    returns a bridge instance (vs. ``None``/an unusable object). The test
+    checks the yielded object is a fully wired ``HexEditorBridge`` connected to the
+    native ``intellicrack_hexcore`` backend by driving an open/read/write/read
+    round-trip on a PE file built by the fixture helper.
 
     The PE's first two bytes are the DOS ``MZ`` magic (``0x4D 0x5A``). The test reads
     them back as a hex string (independently-known expected value ``"4D 5A"``),

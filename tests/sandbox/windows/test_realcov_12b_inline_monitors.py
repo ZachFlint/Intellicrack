@@ -351,7 +351,7 @@ async def test_file_monitor_source_captures_real_filesystem_event(tmp_path: Path
 
     The inline source registers ``FileSystemWatcher`` subscriptions on fixed
     system roots (``C:\Windows\Temp``, ``C:\ProgramData`` and others). This
-    test runs the real monitor source, writes a genuine marker file under a
+    test runs the real monitor source, writes a marker file under a
     watched root mid-run, and parses the resulting ``file_monitor.log`` with
     the real :func:`parse_file_log`. It asserts the monitor captured real OS
     filesystem activity: every record carries a real absolute Windows path

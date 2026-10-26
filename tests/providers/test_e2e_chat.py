@@ -91,7 +91,7 @@ _HTTP_OK = 200
 _MAX_TOKENS_SHORT = 32
 _MAX_TOKENS_WORD_CAP = 45
 
-# A genuine notepad.exe path on Windows. Tool-calling tests assert the model
+# The notepad.exe path on Windows. Tool-calling tests assert the model
 # echoes this exact target back through the bridge's argument parser.
 _NOTEPAD_PATH = "C:\\Windows\\notepad.exe"
 
@@ -382,7 +382,7 @@ def _assert_api_rejection(exc: ProviderError, provider_name: str) -> None:
 
     A faithful bridge surfaces an invalid-model request as a typed
     :class:`ProviderError` whose chain carries a 4xx HTTP status. This
-    distinguishes a genuine API rejection (bad model / bad request / quota)
+    distinguishes a server-side API rejection (bad model / bad request / quota)
     from a swallowed error or a bare network failure with no status.
 
     Args:

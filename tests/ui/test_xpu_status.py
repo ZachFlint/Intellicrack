@@ -955,7 +955,7 @@ class TestProviderConfigXPUButtons:
         """Clicking 'Clear Cache' invokes ``_on_clear_cache`` and calls ``show_info``.
 
         ``_on_clear_cache`` unconditionally calls ``show_info`` at the end of its body.
-        Monkeypatching ``show_info`` to record calls creates a clear falsifiable gate:
+        Monkeypatching ``show_info`` to record calls makes the wiring observable:
         if ``clear_cache_btn.clicked.connect(self._on_clear_cache)`` is removed from
         production code, the slot never runs and ``show_info`` is never called.
         The assertion goes red regardless of memory bar values or range checks.
@@ -1257,8 +1257,8 @@ class TestProviderListInclusion:
 
         ``provider_id == 'local_transformers'`` must trigger ``_setup_xpu_settings``
         which creates the ``_prefer_xpu_cb``, ``_device_combo``, ``_dtype_combo``,
-        ``_xpu_mem_bar``, and ``_cache_spin`` widgets.  Verifying their presence as
-        typed attributes on the widget is a real gate: if ``_setup_provider_specific_ui``
+        ``_xpu_mem_bar``, and ``_cache_spin`` widgets.  The test verifies their presence as
+        typed attributes on the widget: if ``_setup_provider_specific_ui``
         routing is broken and ``_setup_xpu_settings`` is never called, all five
         attributes will be absent and the test will go red.
 

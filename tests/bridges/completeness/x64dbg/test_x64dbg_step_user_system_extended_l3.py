@@ -80,7 +80,7 @@ class TestStepUserButtonDrivesStepUserRpc:
     ) -> None:
         """Clicking "Step User" must send exactly ``StepUser`` and report the new IP.
 
-        Falsifiable: if ``_on_step_into_user_code`` called a different
+        If ``_on_step_into_user_code`` called a different
         bridge method, or ``X64DbgBridge.step_into_user_code`` routed the
         command through the dedicated ``step_into`` pipe RPC instead of a
         raw ``exec`` console command, the recorded ``exec`` command list
@@ -135,7 +135,7 @@ class TestStepSystemButtonDrivesStepSystemRpc:
     ) -> None:
         """Clicking "Step System" must send exactly ``StepSystem`` and report the new IP.
 
-        Falsifiable: if ``_on_step_into_system_code`` called a different
+        If ``_on_step_into_system_code`` called a different
         bridge method, or the bridge sent a different console command,
         the recorded ``exec`` command list would not contain
         ``StepSystem`` exactly.
@@ -189,7 +189,7 @@ class TestStepExtButtonDrivesStepExtendedRpc:
     ) -> None:
         """Selecting Over/Swallow Exception and clicking "Step Ext" must send exactly ``seStepOver 1``.
 
-        Falsifiable: if the handler read the wrong combo, forwarded the
+        If the handler read the wrong combo, forwarded the
         wrong step_type/exception_mode, or ``step_extended`` built the
         command from a different lookup, the recorded ``exec`` command
         list would not contain ``seStepOver 1`` exactly.
@@ -245,7 +245,7 @@ class TestStepExtendedRejectsUndocumentedSeStepOut:
     async def test_step_extended_out_swallow_raises_tool_error() -> None:
         """x64dbg has no ``seStepOut`` command, so this combination must raise ``ToolError``.
 
-        Falsifiable: if the ``cmd is None`` guard in ``step_extended``
+        If the ``cmd is None`` guard in ``step_extended``
         were removed (or the lookup table fell back to a substitute
         command instead of omitting the ``("out", "swallow")`` entry),
         this call would either send a fabricated, non-existent console

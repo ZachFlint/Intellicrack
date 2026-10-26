@@ -3,6 +3,10 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Built-in templates for ZIP archives: local and central-directory headers,
+//! the end-of-central-directory records including ZIP64, data descriptors and
+//! the ZIP64 extra field.
+
 use super::{
     ConditionOp, Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry,
 };

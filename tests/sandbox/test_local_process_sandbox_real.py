@@ -7,7 +7,7 @@
 Audit shard 11 flagged the sandbox suite for validating only against the
 in-memory mock (:class:`InMemorySandbox`), which returns fabricated execution
 reports and therefore cannot catch a regression in real process execution or
-artefact capture. These tests drive a genuine binary -- the running Python
+artifact capture. These tests drive an executable -- the running Python
 interpreter executing a deterministic script -- through the real
 :class:`~tests.sandbox.conftest.LocalProcessSandbox`, and assert on values
 that are independently known (the exact bytes the script writes, the exact
@@ -76,7 +76,7 @@ def _write_script(workdir: Path, *, filename: str, payload: bytes, message: str,
 
 
 class TestLocalProcessSandboxRealExecution:
-    """Validate that the real sandbox executes and captures genuine behaviour."""
+    """Validate that the real sandbox executes processes and captures their output and artifacts."""
 
     def test_run_binary_captures_real_output_and_artifact(
         self,
@@ -167,7 +167,7 @@ class TestLocalProcessSandboxRealExecution:
         self,
         local_process_sandbox: LocalProcessSandbox,
     ) -> None:
-        """A real shell command returns its genuine exit code and stdout.
+        """A real shell command returns its own exit code and stdout.
 
         Args:
             local_process_sandbox: Started real sandbox fixture.

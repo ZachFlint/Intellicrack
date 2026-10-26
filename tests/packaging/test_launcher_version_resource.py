@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Falsifiable gates for the Win32 version resource on the frozen launchers.
+r"""Tests for the Win32 version resource on the frozen launchers.
 
 ``Intellicrack.exe`` and ``Hexbench.exe`` shipped with entirely empty file
 properties: PyInstaller stamps a ``VS_VERSIONINFO`` resource only when ``EXE()``
@@ -245,7 +245,7 @@ def _literal(node: ast.expr) -> object:
 
 
 def test_launcher_and_installer_numeric_transforms_agree() -> None:
-    """Real gate: the executable's numeric version is the installer's, case for case.
+    """The executable's numeric version is the installer's, case for case.
 
     ``version_resource.derive_file_version`` and
     ``test_version_consistency.derive_numeric_version`` are two implementations of
@@ -283,7 +283,7 @@ def test_out_of_range_and_non_numeric_versions_fail_the_build() -> None:
 
 
 def test_version_resource_is_single_sourced_from_the_metadata_module(tmp_path: Path) -> None:
-    """Real gate: the resource carries whatever ``_metadata.py`` says, not a literal.
+    """The resource carries whatever ``_metadata.py`` says, not a literal.
 
     Drives the production generator against a synthetic metadata module whose
     version, publisher, copyright and summary appear nowhere in this repository.
@@ -398,7 +398,7 @@ def test_rendered_resource_declares_a_us_english_translation() -> None:
 
 @pytest.mark.parametrize(("executable", "spec_name"), _SPECS)
 def test_spec_passes_the_generated_version_resource_to_exe(executable: str, spec_name: str) -> None:
-    """Real gate: each spec builds a resource and hands it to ``EXE(version=...)``.
+    """Each spec builds a resource and hands it to ``EXE(version=...)``.
 
     Without the ``version=`` keyword PyInstaller stamps no ``VS_VERSIONINFO`` at
     all - that defect - and no other part of the build would notice.

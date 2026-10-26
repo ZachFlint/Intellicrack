@@ -51,7 +51,7 @@ def _is_network_offline_error(exc: BaseException) -> bool:
     Walks the ``__cause__`` / ``__context__`` chain of a provider failure and
     tests each stringified exception against :data:`_NETWORK_OFFLINE_SIGNALS`.
     This distinguishes transient connectivity absences (sandbox ``network=none``,
-    no internet) from genuine Intellicrack defects.
+    no internet) from Intellicrack defects.
 
     Args:
         exc: The exception raised by a provider connection attempt.

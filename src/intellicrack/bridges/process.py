@@ -4520,7 +4520,7 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
         ``ctypes.get_last_error()`` only reflects whichever *other*
         ``use_last_error=True`` call last ran on this thread (for example the
         ``SeDebugPrivilege`` bootstrap in :meth:`_elevate_debug_privilege_impl`)
-        rather than the outcome of this call. Reading the genuine OS
+        rather than the outcome of this call. Reading the OS
         last-error via ``kernel32.GetLastError`` after resetting it with
         ``SetLastError(0)`` avoids that stale-value defect: ``ERROR_SUCCESS``
         (0) means every requested privilege was assigned, while

@@ -7,7 +7,7 @@
 The architecture and privilege status labels are checked against a real
 :class:`ProcessBridge` attached to the running interpreter, not against a
 scripted ``_RecordingBridge`` that returns fake results. The status bar updates
-from genuine ``detect_architecture`` and ``get_token_privileges`` Win32 queries.
+from live ``detect_architecture`` and ``get_token_privileges`` Win32 queries.
 Assertions check real, verifiable values: the architecture label must reflect the
 real architecture of this process and the privilege label must reflect the real
 debug-privilege state of this process's access token.
@@ -168,7 +168,7 @@ def test_privilege_label_reflects_real_token(
 ) -> None:
     """The privilege label must match the real debug-privilege state.
 
-    Reads the genuine token privileges and computes whether
+    Reads the process token privileges and computes whether
     ``SeDebugPrivilege`` is present and enabled, then drives the panel and
     asserts the rendered label matches the real token state exactly.
 

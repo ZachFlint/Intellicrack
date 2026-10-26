@@ -7,7 +7,7 @@
 
 The sandbox panel report view is exercised against real captured monitor data.
 
-These tests write genuine pipe-delimited monitor logs in the exact wire schema
+These tests write pipe-delimited monitor logs in the exact wire schema
 that the in-guest agents under ``sandbox/scripts/`` emit, parse them with the
 **production** :mod:`intellicrack.sandbox.log_parsers` async helpers, assemble a
 real :class:`~intellicrack.sandbox.base.ExecutionReport`, and drive it through

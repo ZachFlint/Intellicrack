@@ -15,11 +15,11 @@ to ``org.qemu.guest_agent.0``, which QEMU exposes one port above the configured
 Two *real* asyncio TCP servers back these tests, shared with the other QEMU
 guest-agent gates through :mod:`tests.sandbox.qemu.guest_agent_server`:
 
-* :class:`QmpProtocolServer` speaks genuine QMP - greeting banner,
+* :class:`QmpProtocolServer` speaks QMP - greeting banner,
   ``qmp_capabilities`` negotiation, ``query-status`` - and rejects every
   ``guest-*`` command exactly the way QEMU does. Routing guest-agent traffic
   back to the QMP client therefore turns these tests red.
-* :class:`GuestAgentProtocolServer` speaks genuine QGA - no banner, no
+* :class:`GuestAgentProtocolServer` speaks QGA - no banner, no
   capability negotiation, no asynchronous events, a ``guest-sync-delimited``
   reply carrying the leading ``0xFF`` sentinel that ``qga/main.c`` prepends,
   the leftovers of a previous client ahead of that sentinel, and
@@ -31,8 +31,8 @@ away: a port that is bound but not yet listening because the guest has not
 booted, and an agent that answers a command only after the client has given up
 waiting for it.
 
-Every assertion drives the real :class:`QEMUSandbox` methods and the real
-:class:`QemuGuestAgentClient`; nothing here is mocked or stubbed.
+Every assertion drives the :class:`QEMUSandbox` methods and the
+:class:`QemuGuestAgentClient`.
 """
 
 from __future__ import annotations
@@ -366,9 +366,8 @@ class TestGuestAgentTrafficUsesTheAgentChannel:
     ) -> None:
         """Both capture-output values travel to the agent as sent.
 
-        Driving the same helper twice with opposite values is what makes this
-        falsifiable: a hardcoded ``capture-output`` passes one call and fails
-        the other.
+        The same helper is driven twice with opposite values, so a hardcoded
+        ``capture-output`` passes one call and fails the other.
 
         Args:
             qmp_server: Real QMP-shaped server.
@@ -854,7 +853,7 @@ class TestGuestRunWaitsForTheProcessToFinish:
 
 
 class TestMonitorChannelUnaffected:
-    """The QMP client keeps serving genuine monitor operations."""
+    """The QMP client keeps serving monitor operations."""
 
     @pytest.mark.asyncio
     async def test_query_status_still_goes_to_the_monitor(
@@ -1001,7 +1000,7 @@ class _NarrowLimitGuestAgentClient(QemuGuestAgentClient):
     """Real client whose channel line limit is far below one agent reply.
 
     Nothing else changes: every byte still crosses a real socket and comes
-    from the real agent server, so the overrun is produced by a genuine reply
+    from the real agent server, so the overrun is produced by a reply
     that does not fit rather than by an injected error.
     """
 
@@ -1012,7 +1011,7 @@ class _NarrowLimitAgentClient(GuestAgentClient):
     """Real in-guest agent client whose line limit is below one reply.
 
     Nothing else changes: the reply still crosses a real socket and is still
-    produced by the real agent server, so the overrun comes from a genuine
+    produced by the real agent server, so the overrun comes from a
     message that does not fit rather than from an injected error.
     """
 

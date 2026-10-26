@@ -43,7 +43,7 @@ Tests run inside a Docker sandbox container for isolation (``just test``):
 Writing Tests
 ~~~~~~~~~~~~~
 
-* Tests must use REAL data, no mocks
+* Tests exercise the code under test against actual data
 * Place tests in ``tests/`` directory
 * Use pytest fixtures for setup
 

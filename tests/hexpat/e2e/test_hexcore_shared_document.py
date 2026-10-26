@@ -25,7 +25,6 @@ import os
 import struct
 import threading
 import time
-from concurrent.futures import Future, ThreadPoolExecutor
 from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
@@ -35,7 +34,7 @@ import pytest
 
 if TYPE_CHECKING:
     import types
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     from intellicrack_hexcore import HexDocument
 
@@ -56,6 +55,14 @@ _OPERATIONS_PER_THREAD: Final = 40
 
 _JOIN_TIMEOUT: Final = 120.0
 """Seconds to wait for a thread. Exceeding it means the run deadlocked."""
+
+_WORKER_FAILURES: Final = (AssertionError, AttributeError, LookupError, OSError, RuntimeError, TypeError, ValueError)
+"""What a worker can raise that :func:`_run_workers` carries back to the test.
+
+A borrow conflict surfaces as ``RuntimeError``, an engine missing an accessor as
+``AttributeError``, an engine-side rejection as ``ValueError`` or
+``IndexError``, and a sampler's own check as ``AssertionError``.
+"""
 
 _PARALLEL_THREADS: Final = 4
 """Threads that show that reads overlap."""
@@ -113,9 +120,6 @@ changes the byte. A write that leaves the byte as it was does not advance the
 generation, and would shift every later generation off the writer's count.
 """
 
-_ONE_WRITER: Final = 1
-"""Threads flipping the byte."""
-
 _ONE_BYTE: Final = 1
 """Bytes each sample reads. Only the first byte is being watched."""
 
@@ -171,13 +175,66 @@ def engine_binary(hexcore: types.ModuleType) -> str:
     return str(located)
 
 
+def _run_workers[T](workers: Sequence[Callable[[], T]], *, name: str) -> list[T]:
+    """Run each worker on its own daemon thread and return their results in order.
+
+    A deadlock must fail the test, not hang it. Every thread shares one deadline
+    of :data:`_JOIN_TIMEOUT`, and any thread still alive after it fails the test
+    by name. The threads are daemons, so a stuck one cannot block interpreter
+    exit either; a ``ThreadPoolExecutor`` context would instead join its stuck
+    workers on exit and never return. A worker's failure is raised again here so
+    it becomes the test's failure rather than a silently dead thread; anything
+    outside :data:`_WORKER_FAILURES`, such as a Rust panic, still kills the
+    worker, and the missing result then fails the test by name.
+
+    Args:
+        workers: Callables to run concurrently, one thread each.
+        name: Prefix for the thread names, used in the failure message.
+
+    Returns:
+        list[T]: Each worker's return value, in the order given.
+
+    Raises:
+        AssertionError: When a worker raised, chained to the first such failure
+            in worker order.
+    """
+    results: dict[int, T] = {}
+    errors: dict[int, Exception] = {}
+
+    def run(index: int, worker: Callable[[], T]) -> None:
+        """Record one worker's result, or the failure it raised, under its index."""
+        try:
+            results[index] = worker()
+        except _WORKER_FAILURES as exc:
+            errors[index] = exc
+
+    threads = [
+        threading.Thread(target=run, args=(index, worker), name=f"{name}-{index}", daemon=True) for index, worker in enumerate(workers)
+    ]
+    for thread in threads:
+        thread.start()
+    deadline = time.monotonic() + _JOIN_TIMEOUT
+    for thread in threads:
+        thread.join(timeout=max(deadline - time.monotonic(), 0.0))
+    stuck = [thread.name for thread in threads if thread.is_alive()]
+    assert not stuck, f"{stuck} were still running after {_JOIN_TIMEOUT}s, so the workers deadlocked"
+    failed = [(threads[index].name, errors[index]) for index in range(len(threads)) if index in errors]
+    if failed:
+        thread_name, first = failed[0]
+        message = f"{thread_name} raised {type(first).__name__}: {first}"
+        raise AssertionError(message) from first
+    unfinished = [threads[index].name for index in range(len(threads)) if index not in results]
+    assert not unfinished, f"{unfinished} ended without returning a result"
+    return [results[index] for index in range(len(threads))]
+
+
 def _drive_readers(doc: HexDocument) -> int:
     """Run read-only operations against the shared document.
 
-    Nothing is caught here on purpose. The caller collects the result through a
-    future, so anything raised -- a borrow conflict, or an attribute error from
-    an engine that predates these accessors -- surfaces in the test rather than
-    quietly killing the worker and leaving the assertions with nothing to see.
+    Nothing is caught here on purpose. :func:`_run_workers` re-raises whatever a
+    worker raises, so anything thrown -- a borrow conflict, or an attribute error
+    from an engine that predates these accessors -- surfaces in the test rather
+    than quietly killing the worker and leaving the assertions with nothing to see.
 
     Args:
         doc: The shared document.
@@ -223,10 +280,9 @@ def test_concurrent_readers_and_writers_share_one_document(
     """
     doc = hexcore.HexDocument.open(engine_binary)
 
-    with ThreadPoolExecutor(max_workers=_WORKERS) as pool:
-        pending: list[Future[int]] = [pool.submit(_drive_readers, doc) for _ in range(_READER_THREADS)]
-        pending += [pool.submit(_drive_writers, doc) for _ in range(_WRITER_THREADS)]
-        completed = [future.result(timeout=_JOIN_TIMEOUT) for future in pending]
+    workers: list[Callable[[], int]] = [lambda: _drive_readers(doc)] * _READER_THREADS
+    workers += [lambda: _drive_writers(doc)] * _WRITER_THREADS
+    completed = _run_workers(workers, name="shared-document")
 
     assert completed == [_OPERATIONS_PER_THREAD] * _WORKERS, (
         f"only {sum(completed)} of {_OPERATIONS_PER_THREAD * _WORKERS} operations ran to completion"
@@ -290,15 +346,9 @@ def test_reads_of_one_document_overlap(
         for _ in range(scans):
             doc.byte_statistics()
 
-    threads = [threading.Thread(target=scan, name=f"scan-{index}") for index in range(_PARALLEL_THREADS)]
     started = time.perf_counter()
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join(timeout=_JOIN_TIMEOUT)
+    _run_workers([scan] * _PARALLEL_THREADS, name="scan")
     concurrent = time.perf_counter() - started
-
-    assert not [thread for thread in threads if thread.is_alive()], "the concurrent scans deadlocked"
 
     serialised = baseline * _PARALLEL_THREADS
     assert concurrent < serialised * _PARALLEL_MARGIN, (
@@ -448,6 +498,34 @@ def test_generation_advances_only_when_the_bytes_change(
     before_undo = doc.generation()
     assert doc.undo() is True
     assert doc.generation() > before_undo, "undo changed the bytes without advancing the generation"
+
+
+def test_repair_pe_checksum_advances_generation_only_when_it_writes(
+    hexcore: types.ModuleType,
+    pe_binary_full: Path,
+) -> None:
+    """Repairing a wrong PE checksum is one content edit, and repairing a valid one is none.
+
+    The fixture stores a zero checksum, so the first repair writes four bytes and the second
+    finds nothing to change.
+
+    Args:
+        hexcore: The imported native module.
+        pe_binary_full: A PE32 image whose stored checksum is zero.
+    """
+    doc = hexcore.HexDocument.open_bytes(pe_binary_full.read_bytes())
+    assert doc.verify_pe_checksum()["valid"] is False
+    before = doc.generation()
+
+    doc.repair_pe_checksum()
+    assert doc.generation() == before + 1, "repairing a wrong checksum did not advance the generation once"
+    assert doc.verify_pe_checksum()["valid"] is True
+
+    doc.repair_pe_checksum()
+    assert doc.generation() == before + 1, "repairing a valid checksum advanced the generation"
+    assert doc.can_undo() is True
+    assert doc.undo() is True
+    assert doc.verify_pe_checksum()["valid"] is False
 
 
 def test_read_window_reports_the_generation_of_the_bytes_it_returns(
@@ -628,14 +706,32 @@ def _sample_under_a_writer(
     """
     stop = threading.Event()
     sampling = threading.Event()
-    with ThreadPoolExecutor(max_workers=_ONE_WRITER) as pool:
-        writing = pool.submit(_flip_until, doc, stop, sampling)
+
+    def sample() -> list[tuple[int, int]]:
+        """Take the samples, releasing the writer even if the sampler raises.
+
+        Returns:
+            list[tuple[int, int]]: Whatever the sampler observed.
+        """
         try:
-            samples = sampler(doc, stop, sampling)
+            return sampler(doc, stop, sampling)
         finally:
             sampling.set()
             stop.set()
-        assert writing.result(timeout=_JOIN_TIMEOUT) > 0, "the writer never ran, so nothing could skew"
+
+    flips: list[int] = []
+
+    def write() -> list[tuple[int, int]]:
+        """Flip the watched byte until sampling stops, recording how many flips ran.
+
+        Returns:
+            list[tuple[int, int]]: Nothing; the writer contributes no samples.
+        """
+        flips.append(_flip_until(doc, stop, sampling))
+        return []
+
+    samples, _ = _run_workers([sample, write], name="skew")
+    assert flips[0] > 0, "the writer never ran, so nothing could skew"
     return samples
 
 

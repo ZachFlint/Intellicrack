@@ -302,7 +302,7 @@ class TestDetectC2PatternsThresholds:
     values where its behaviour changes, not just well above or below.
 
     All remote IPs here are from IANA-assigned public blocks (not TEST-NET),
-    and all traffic volumes use realistic byte counts observed in real-world
+    and all traffic volumes use byte counts typical of in-the-wild
     C2 traffic (small beacons, large exfil payloads).
     """
 
@@ -668,7 +668,7 @@ class TestExtractIOCs:
     def test_public_ipv4_from_network(self) -> None:
         """Real routable public IPv4 from network_activity is extracted as an IOC.
 
-        185.220.101.45 is a real Tor exit node - genuinely public, not filtered
+        185.220.101.45 is a Tor exit node - publicly routable, not filtered
         by the private-IP check, and representative of real C2 traffic.
         """
         report = make_sample_report(
@@ -1797,7 +1797,7 @@ def _build_emotet_like_report() -> ExecutionReport:
 
 
 class TestRealWorldSandboxReport:
-    """Gate that validates detection functions against a real-world-structured report.
+    """Validates detection functions against an Emotet-structured sandbox report.
 
     The fixture :func:`_build_emotet_like_report` is built from public Emotet
     epoch-4 sandbox reports and uses real documented IOCs.  Tests here verify
@@ -1897,7 +1897,7 @@ class TestRealWorldSandboxReport:
 
     @staticmethod
     def test_emotet_multiple_pattern_types_detected() -> None:
-        """A single real-world Emotet report triggers at least three distinct C2 pattern types.
+        """A single Emotet-like report triggers at least three distinct C2 pattern types.
 
         The fixture contains beaconing (uniform intervals), exfiltration (>1 MiB outbound
         with >10x ratio), and a known C2 port (4444), so the detection suite must return
@@ -1906,7 +1906,7 @@ class TestRealWorldSandboxReport:
         report = _build_emotet_like_report()
         patterns = detect_c2_patterns(report.network_activity)
         pattern_types = {p["pattern_type"] for p in patterns}
-        assert len(pattern_types) >= 3, f"Real-world Emotet execution must trigger >= 3 distinct C2 pattern types; got {pattern_types}"
+        assert len(pattern_types) >= 3, f"The Emotet-like execution must trigger >= 3 distinct C2 pattern types; got {pattern_types}"
         assert "beaconing" in pattern_types
         assert "data_exfiltration" in pattern_types
         assert "known_c2_port" in pattern_types

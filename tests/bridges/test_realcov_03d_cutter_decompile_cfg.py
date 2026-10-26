@@ -16,7 +16,7 @@ They pin the behaviour of a real rizin 0.9.1 backend:
   JSON) plus a ``pdj`` call per block for the block's disassembled instructions,
   because ``agj @ addr`` returns empty output against rizin 0.9.1.
 
-Every assertion here is anchored to output computed by a genuine rizin
+Every assertion here is anchored to output computed by a rizin
 process against a real, on-disk PE (``kernel32.dll``), never a canned or
 mocked ``rzpipe``/``r2pipe`` response. Tests carry the ``spawns_process``
 marker (each fixture spawns an external rizin subprocess) and skip outright
@@ -87,7 +87,7 @@ async def _first_sized_function(bridge: CutterBridge, *, min_blocks: int = 1) ->
     Scans the real analyzed function list (largest functions first, since
     ``kernel32.dll``'s earliest-discovered functions are sometimes tiny
     thunks) so both single-block and multi-block callers reliably find a
-    genuine candidate instead of depending on incidental function order.
+    suitable candidate instead of depending on incidental function order.
 
     Args:
         bridge: Analyzed bridge to query.
@@ -111,9 +111,9 @@ class TestRealDecompileGhidra:
     """rz-ghidra ``pdg``-based decompilation produces real C-like output."""
 
     async def test_decompile_produces_c_like_tokens(self, pe_bridge: CutterBridge) -> None:
-        """Decompiling a real, non-thunk function yields genuine C-like pseudocode.
+        """Decompiling a real, non-thunk function yields C-like pseudocode.
 
-        Falsifiable: a failure here either raises ``ToolError``
+        A failure here either raises ``ToolError``
         (the "No sleigh specification" ``pdg`` failure, or the dead ``pdc``
         path) or, if the not-available check missed a failure-text variant,
         returned non-C content. A correct implementation returns pseudocode containing
@@ -162,7 +162,7 @@ class TestRealCfgBasicBlocks:
     async def test_get_function_graph_returns_multiple_real_blocks_with_edges(self, pe_bridge: CutterBridge) -> None:
         """A multi-block function's CFG has at least two blocks joined by a real jump/fail edge.
 
-        Falsifiable: ``get_function_graph`` must not issue ``agj @ addr``, which returns empty output against this
+        ``get_function_graph`` must not issue ``agj @ addr``, which returns empty output against this
         rizin 0.9.1 backend; ``blocks`` would then be ``[]`` and every assertion below would fail.
         The implementation returns real per-block
                         addresses and at least one edge whose target lands on another real block in

@@ -225,15 +225,15 @@ class SandboxPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self.create_btn = self._add_tool_button(toolbar, "Create", self._on_create)
-        self.destroy_btn = self._add_danger_button(toolbar, "Destroy", self._on_destroy, enabled=False)
-        self.restart_btn = self._add_tool_button(toolbar, "Restart", self._on_restart, enabled=False)
+        self.create_btn: QPushButton = self._add_tool_button(toolbar, "Create", self._on_create)
+        self.destroy_btn: QPushButton = self._add_danger_button(toolbar, "Destroy", self._on_destroy, enabled=False)
+        self.restart_btn: QPushButton = self._add_tool_button(toolbar, "Restart", self._on_restart, enabled=False)
 
         toolbar.addSeparator()
 
         self._add_toolbar_label(toolbar, "Type:")
 
-        self.sandbox_type_combo = QComboBox()
+        self.sandbox_type_combo: QComboBox = QComboBox()
         self.sandbox_type_combo.addItems(["Windows Sandbox", "QEMU"])
         self.sandbox_type_combo.setMinimumWidth(120)
         toolbar.addWidget(self.sandbox_type_combo)
@@ -249,9 +249,9 @@ class SandboxPanel(AnalysisPanelBase):
                 ToolMenuEntry("Delete Snapshot", self._on_delete_snapshot, enabled=False),
             ],
         )
-        self.snapshot_btn = snapshot_actions["Take Snapshot"]
-        self.restore_btn = snapshot_actions["Restore Snapshot"]
-        self.delete_snap_btn = snapshot_actions["Delete Snapshot"]
+        self.snapshot_btn: QAction = snapshot_actions["Take Snapshot"]
+        self.restore_btn: QAction = snapshot_actions["Restore Snapshot"]
+        self.delete_snap_btn: QAction = snapshot_actions["Delete Snapshot"]
 
         capture_actions = self._add_tool_menu(
             toolbar,
@@ -263,10 +263,10 @@ class SandboxPanel(AnalysisPanelBase):
                 ToolMenuEntry("Extract Files", self._on_extract_files, enabled=False),
             ],
         )
-        self.screenshot_btn = capture_actions["Screenshot"]
-        self.pcap_btn = capture_actions["PCAP Start"]
-        self.memdump_btn = capture_actions["Memory Dump"]
-        self.extract_files_btn = capture_actions["Extract Files"]
+        self.screenshot_btn: QAction = capture_actions["Screenshot"]
+        self.pcap_btn: QAction = capture_actions["PCAP Start"]
+        self.memdump_btn: QAction = capture_actions["Memory Dump"]
+        self.extract_files_btn: QAction = capture_actions["Extract Files"]
 
         analysis_actions = self._add_tool_menu(
             toolbar,
@@ -278,10 +278,10 @@ class SandboxPanel(AnalysisPanelBase):
                 ToolMenuEntry("Behaviors", self._on_detect_behaviors, enabled=False),
             ],
         )
-        self.yara_btn = analysis_actions["YARA Scan"]
-        self.iocs_btn = analysis_actions["Extract IOCs"]
-        self.timeline_btn = analysis_actions["Timeline"]
-        self.behaviors_btn = analysis_actions["Behaviors"]
+        self.yara_btn: QAction = analysis_actions["YARA Scan"]
+        self.iocs_btn: QAction = analysis_actions["Extract IOCs"]
+        self.timeline_btn: QAction = analysis_actions["Timeline"]
+        self.behaviors_btn: QAction = analysis_actions["Behaviors"]
 
         transfer_actions = self._add_tool_menu(
             toolbar,
@@ -291,8 +291,8 @@ class SandboxPanel(AnalysisPanelBase):
                 ToolMenuEntry("Copy Out", self._on_copy_out, enabled=False),
             ],
         )
-        self.copy_in_btn = transfer_actions["Copy In"]
-        self.copy_out_btn = transfer_actions["Copy Out"]
+        self.copy_in_btn: QAction = transfer_actions["Copy In"]
+        self.copy_out_btn: QAction = transfer_actions["Copy Out"]
 
         vm_actions = self._add_tool_menu(
             toolbar,
@@ -302,8 +302,8 @@ class SandboxPanel(AnalysisPanelBase):
                 ToolMenuEntry("Pause VM", self._on_pause_vm, enabled=False),
             ],
         )
-        self.continue_btn = vm_actions["Continue VM"]
-        self.pause_btn = vm_actions["Pause VM"]
+        self.continue_btn: QAction = vm_actions["Continue VM"]
+        self.pause_btn: QAction = vm_actions["Pause VM"]
 
     def _build_config_row(self, exec_layout: QVBoxLayout, fm: FontManager) -> None:
         """Build the sandbox VM/environment configuration row.

@@ -3,6 +3,9 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Templates as JSON: parsing a user template from JSON with its field
+//! references and expressions checked, and writing a template back out.
+
 use super::{eval, field_size, FieldDefinition, FieldType, StructTemplate, TemplateError};
 
 /// Parse a JSON string into a `StructTemplate`.

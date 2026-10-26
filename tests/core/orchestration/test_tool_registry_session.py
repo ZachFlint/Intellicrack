@@ -195,7 +195,7 @@ def test_set_session_none_detaches_all_bridges(tmp_path: Path) -> None:
     to the state published during ``initialize()``, even after the bridge
     mutates its internal ``BridgeState``.
 
-    Falsifiability proof: if ``set_session(None)`` were deleted (so
+    If ``set_session(None)`` were deleted (so
     ``_orchestrator_session`` remained pointing at the session), the
     subsequent ``publish_state()`` call would push ``connected=False`` and
     ``last_error="changed_after_detach"`` into ``session.tool_states``.

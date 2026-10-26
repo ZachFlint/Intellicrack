@@ -26,7 +26,7 @@ closed or rejected mid-test) go through this shared helper.
 This test cannot launch a real Windows Sandbox (it is unavailable in CI), so it drives the real
 ``SandboxTestWorker`` termination logic against a real, controllable stand-in subprocess, the same
 pattern as the ``TestM15SandboxTestWorkerLifecycle`` gates in
-``tests/ui/test_gui_audit0702_sandbox_config.py``. The falsifiable assertion is that the
+``tests/ui/test_gui_audit0702_sandbox_config.py``. The key assertion is that the
 graceful-close boundary (``sandbox_config.find_window_by_pid``) is consulted before any hard kill
 happens. Going back to a bare ``ProcessManager.terminate_tree`` call means that boundary is never
 touched, which this test catches.

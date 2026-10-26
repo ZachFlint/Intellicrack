@@ -13,8 +13,8 @@ run continue for hours after the host timeout fired.
 
 These tests drive the real ``_run_streamed`` function against a **stub** Docker
 CLI placed first on ``PATH``. The stub is a real executable that records every
-invocation to a log file, so the tests observe genuine subprocess behaviour --
-not a mocked return value. A ``docker run`` that never returns forces the
+invocation to a log file, so the tests observe the subprocess calls the
+driver makes. A ``docker run`` that never returns forces the
 timeout path; the gate then asserts the driver issued ``docker kill <name>``
 (and, when the kill itself fails, the ``docker rm -f`` fallback). If the
 force-stop is removed the log never records the ``kill`` and the assertion

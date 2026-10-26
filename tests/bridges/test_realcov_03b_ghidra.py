@@ -9,10 +9,10 @@ A live Ghidra headless
 JVM plus its ``ghidra_bridge`` RPC server is not available in the test
 container, so the RPC-dependent analysis methods are correctly gated behind
 connection state. However, a substantial part of the bridge's real behaviour
-is deterministic, dependency-free logic that operates on genuine inputs:
+is deterministic, dependency-free logic that runs without a Ghidra JVM:
 
 * binary-format and CPU-architecture detection driven by the magic bytes and
-  machine fields of REAL PE / ELF / Mach-O binaries,
+  machine fields of PE / ELF / Mach-O binaries,
 * the wildcarded hex-pattern parser that feeds Ghidra's ``findBytes`` masked
   search and sign-folds bytes into the JVM ``jarray('b')`` range,
 * the Jython script preparer that rewrites a trailing expression into a
@@ -23,8 +23,8 @@ is deterministic, dependency-free logic that operates on genuine inputs:
   filesystem paths,
 * the headless-launch helpers (executable resolution, environment scrubbing).
 
-Each test asserts on the real, verifiable result of the operation against a
-real input, not that a call happened and not on a value the test injected.
+Each test asserts on the result of the operation for a fixture binary,
+path, or pattern, not that a call happened and not on a value the test injected.
 
 Protected bridge methods are exercised through :class:`_GhidraProbe`, a thin
 subclass that re-exposes them with public names (a subclass may legitimately
@@ -73,7 +73,7 @@ class _GhidraProbe(GhidraBridge):
         """Detect the binary format of ``data``.
 
         Args:
-            data: Leading bytes of a real binary.
+            data: Leading bytes of a binary file.
 
         Returns:
             str: Detected format label.
@@ -84,7 +84,7 @@ class _GhidraProbe(GhidraBridge):
         """Detect the CPU architecture of ``data``.
 
         Args:
-            data: Leading bytes of a real binary.
+            data: Leading bytes of a binary file.
 
         Returns:
             tuple[str, bool]: Tuple of (architecture, is_64bit).
@@ -139,16 +139,16 @@ def probe() -> _GhidraProbe:
 
     Returns:
         _GhidraProbe: A disconnected bridge whose pure-logic helpers are
-        exercised against real inputs.
+        exercised against fixture files.
     """
     return _GhidraProbe()
 
 
 def _read_header(path: Path) -> bytes:
-    """Read the leading header bytes of a real binary fixture.
+    """Read the leading header bytes of a binary fixture.
 
     Args:
-        path: Path to a real binary on disk.
+        path: Path to a binary on disk.
 
     Returns:
         bytes: The first :data:`_HEADER_BYTES` bytes of the file, which is
@@ -203,7 +203,7 @@ class TestRealFormatDetection:
         real_elf_binary: Path,
         real_macho_binary: Path,
     ) -> None:
-        """Verify the detector distinguishes the three real binary families.
+        """Verify the detector distinguishes the PE, ELF, and Mach-O fixtures.
 
         Args:
             probe: GhidraBridge probe fixture.
@@ -363,8 +363,8 @@ class TestRealJythonScriptPreparation:
     def test_json_dumps_payload_survives_round_trip(self) -> None:
         """Verify an injection-laden string embedded via json.dumps stays inert.
 
-        This proves the bridge's real defence: a hostile label/comment value
-        is serialised with ``json.dumps`` and embedded as a Jython string
+        This checks the bridge's defense: a hostile label/comment value
+        is serialized with ``json.dumps`` and embedded as a Jython string
         literal. After the script preparer's AST round-trip the malicious
         payload must remain a single string constant, never executable code.
         """
@@ -482,11 +482,11 @@ class TestRealDebugInfoPathResolution:
             _resolve_debug_info_path("   ")
 
     def test_traversal_sequence_resolved_against_real_root(self, real_pe_dll: Path) -> None:
-        """Verify a traversal sequence canonicalises onto the real target file.
+        """Verify a traversal sequence canonicalizes onto the target file.
 
         Constructs ``<System32>/drivers/../kernel32.dll`` from a real DLL and
-        confirms the resolver collapses the ``..`` segment to the genuine
-        file rather than leaving the dot-dot in place.
+        confirms the resolver collapses the ``..`` segment to
+        ``<System32>/kernel32.dll`` rather than leaving the dot-dot in place.
 
         Args:
             real_pe_dll: Path to a real PE DLL inside System32.
@@ -534,7 +534,7 @@ class TestRealHeadlessLaunchHelpers:
 
         Builds a real on-disk Ghidra-shaped layout (a ``support`` directory
         holding the platform launcher) and confirms the resolver returns the
-        genuine file path.
+        launcher's file path.
 
         Args:
             probe: GhidraBridge probe fixture.
@@ -572,7 +572,7 @@ class TestRealAvailability:
         package the RPC bridge needs at runtime - ``ghidra_bridge`` (the RPC
         client), ``jpype`` (JVM bridge used by PyGhidra), and ``pyghidra``
         (the headless launcher) - is importable in this interpreter; the test
-        asserts the result agrees with the genuine import-spec lookup for all
+        asserts the result agrees with ``importlib.util.find_spec`` for all
         three, matching ``GhidraBridge.is_available``'s conjunction exactly.
 
         Args:

@@ -20,9 +20,9 @@ in ``main.py``). A tracked subprocess whose owning bridge did not tear itself do
 (a timed-out or silently failed bridge ``shutdown()``/``stop()``, or an abandoned
 prior bridge instance) would otherwise keep running: a process leak.
 
-Each test below spawns a real, long-lived Python subprocess (never a mock)
-and asserts via ``psutil.pid_exists`` that it is genuinely dead afterward.
-Removing either behaviour makes the corresponding test fail.
+Each test below spawns a long-lived Python subprocess and asserts via
+``psutil.pid_exists`` that it is dead afterward.
+Removing either behavior makes the corresponding test fail.
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ def process_manager() -> Generator[ProcessManager]:
 
 
 def _spawn_sleeper() -> Popen[bytes]:
-    """Spawn a genuine long-lived subprocess to use as an orphan-leak oracle.
+    """Spawn a long-lived Python subprocess to use as an orphan-leak oracle.
 
     Returns:
         Popen[bytes]: The spawned subprocess handle.
@@ -75,7 +75,7 @@ def _spawn_sleeper() -> Popen[bytes]:
 def _spawn_sleeper_with_child() -> tuple[Popen[bytes], int]:
     """Spawn a subprocess that itself spawns a grandchild subprocess.
 
-    Mirrors the real-world shape of the Ghidra headless bridge process, whose
+    Mirrors the shape of the Ghidra headless bridge process, whose
     descendants must also be reaped when the root is terminated.
 
     Returns:
@@ -159,7 +159,7 @@ class TestCleanupAllAsyncIgnoresShutdownFlag:
 
 
 class TestRequestShutdownActuallyCleansUp:
-    """request_shutdown() must genuinely terminate tracked processes, not just flip a flag."""
+    """request_shutdown() must terminate tracked processes, not just flip a flag."""
 
     @staticmethod
     def test_request_shutdown_kills_tracked_process(
@@ -196,7 +196,7 @@ class TestRequestShutdownActuallyCleansUp:
 
         The orphan-leak case involves a bridge (Ghidra headless) whose root process
         is tracked by ProcessManager. This test spawns a
-        genuine parent/child process pair and verifies request_shutdown()'s
+        parent/child process pair and verifies request_shutdown()'s
         synchronous sweep kills both, not just the tracked root PID.
 
         Args:

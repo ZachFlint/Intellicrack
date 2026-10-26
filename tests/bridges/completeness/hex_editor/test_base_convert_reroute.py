@@ -18,7 +18,7 @@ a real ``HexEditorPanel``; the only test double is a recording
 ``HexEditorBridge`` subclass (``RecordingHexEditorBridge`` in
 ``conftest.py``) that delegates to the real ``base_convert`` classmethod
 after appending to its call ledger, so the rendered results remain a
-genuine end-to-end check rather than a canned response.
+end-to-end check rather than a canned response.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ class TestBaseConvertRoutesThroughBridge:
     def test_convert_with_bridge_dispatches_base_convert_and_renders_result(qapp: QApplication) -> None:
         """Triggering convert with a bridge attached must call ``bridge.base_convert`` and render its result.
 
-        Falsifiable: if ``_on_convert`` were reverted to call
+        If ``_on_convert`` were reverted to call
         ``self._convert_local(...)`` unconditionally (a regression to the local path), ``base_convert_calls`` would stay
         empty even though a bridge was attached. Broken production
         line: ``run_bridge_coroutine_logged(bridge.base_convert(text,

@@ -19,7 +19,7 @@ It self-deletes via ``worker.finished.connect(worker.deleteLater)``, and ``stop(
 blocking ``wait()``: it performs a non-blocking detach that disconnects the reader's slots from the
 worker's signals instead of waiting for the worker.
 
-Each test below drives real ``QThread`` objects (no mocks) and uses a
+Each test below drives real ``QThread`` objects and uses a
 deterministic ``time.sleep`` inside a real ``InitialLoadWorker`` subclass to
 win the race against ``stop()`` instead of depending on disk-I/O timing.
 """

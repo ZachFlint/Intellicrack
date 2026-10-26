@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates: a hand-rolled worker thread must outlive the widget that started it.
+"""A hand-rolled worker thread must outlive the widget that started it.
 
 The workers that do not go through the async-bridge dispatch helpers each belong to one widget: the tool installer and status check, the
 sandbox test, the XPU requirements probe, the tracked-process refresh, the log-tail load, and the provider model refresh and connection
@@ -436,9 +436,9 @@ def test_a_worker_outliving_its_owner_keeps_running_and_drops_its_result(qtbot: 
     """A retained, widget-owned worker must survive its owner's deletion and drop its late result.
 
     The crash gate for the hand-rolled workers' shared machinery, driven against a real HTTP request the server holds open so the thread
-    is genuinely blocked when the widget is deleted. With the worker parented again, the ``deleteLater`` below destroys a running
+    is still blocked when the widget is deleted. With the worker parented again, the ``deleteLater`` below destroys a running
     ``QThread`` and the interpreter dies on a native access violation. The delivery is a three-argument signal, the shape the tool and
-    provider workers emit, so this also holds the guard honest about forwarding everything a signal carries.
+    provider workers emit, so this also checks that the guard forwards everything a signal carries.
 
     Args:
         qtbot: pytest-qt bot, which fails the test on an exception raised inside the Qt event loop.

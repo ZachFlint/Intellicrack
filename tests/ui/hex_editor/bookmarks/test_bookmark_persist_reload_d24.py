@@ -53,14 +53,14 @@ _BOOKMARK_COLOR: Final[str] = "#FFAA00"
 
 
 def _copy_to_writable(source: Path, dest_dir: Path) -> Path:
-    """Copy a real binary fixture into a writable temp directory.
+    """Copy a System32 binary fixture into a writable temp directory.
 
     A bookmark sidecar is written next to the target file, and the
     original System32 fixtures are read-only, so every persistence test
     operates on a private writable copy rather than the shared fixture.
 
     Args:
-        source: Real binary fixture to copy.
+        source: Binary fixture to copy.
         dest_dir: Writable destination directory (a pytest ``tmp_path``).
 
     Returns:

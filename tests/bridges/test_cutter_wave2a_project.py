@@ -11,9 +11,9 @@ Covers the following operations:
 - Write transforms: write_xor, write_add, write_sub, write_from_file,
   write_to_file, write_value, write_string
 
-Every test drives the REAL bridge method through the _CommandRecorder fake
+Every test drives the bridge method through the _CommandRecorder fake
 transport: a known response string is pre-configured for a known command
-prefix, the real method is invoked, and the test asserts BOTH the exact
+prefix, the method is invoked, and the test asserts BOTH the exact
 command string the bridge emitted AND the exact parsed return value derived
 from the known response.  Each gate documents the concrete one-line production
 mutation it would catch.

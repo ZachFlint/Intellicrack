@@ -70,7 +70,7 @@ class TestTheWindowsScanReportsWhatItReallyScanned:
 
     @pytest.mark.asyncio
     async def test_a_file_scan_with_no_collected_artifacts_is_raised_not_returned(self, tmp_path: Path) -> None:
-        """With an empty output directory the scan must fail loudly.
+        """With an empty output directory the scan must raise ``SandboxError``.
 
         Args:
             tmp_path: Pytest temporary directory.
@@ -82,7 +82,7 @@ class TestTheWindowsScanReportsWhatItReallyScanned:
 
     @pytest.mark.asyncio
     async def test_a_memory_scan_with_no_dump_is_raised_not_returned(self, tmp_path: Path) -> None:
-        """Scanning memory that was never dumped must fail loudly.
+        """Scanning memory that was never dumped must raise ``SandboxError``.
 
         Args:
             tmp_path: Pytest temporary directory.

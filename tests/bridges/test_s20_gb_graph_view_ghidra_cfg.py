@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for Ghidra CFG rendering.
+"""Tests for Ghidra CFG rendering.
 
 ``ui/panels/graph_view.py`` understands the Cutter/Rizin
 ``agj``/``afbj`` block shape (blocks keyed by ``offset``, edges from ``jump``/

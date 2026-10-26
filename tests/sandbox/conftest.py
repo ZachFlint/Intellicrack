@@ -13,7 +13,7 @@ Provides two distinct sandbox backends with clearly separated responsibilities:
   binary; the data it returns is fixed and is never asserted on as if it were
   observed behaviour.
 * :class:`LocalProcessSandbox` -- a real :class:`SandboxBase` subclass that
-  genuinely executes binaries as OS subprocesses inside a real temporary work
+  executes binaries as OS subprocesses inside a real temporary work
   directory, captures their real exit code/stdout/stderr, and reports the
   **actually observed** file-system changes by diffing the work directory
   before and after execution. Integration tests use this backend so a
@@ -546,7 +546,7 @@ def _diff_trees(
 class LocalProcessSandbox(SandboxBase):
     """A real sandbox that executes binaries as OS subprocesses.
 
-    Unlike :class:`InMemorySandbox`, this backend performs genuine work: it
+    Unlike :class:`InMemorySandbox`, this backend executes its workload: it
     owns a real temporary directory, launches real processes via
     :func:`asyncio.create_subprocess_exec`, captures their real exit code and
     output streams, and reports the file-system changes it actually observed by
@@ -648,7 +648,7 @@ class LocalProcessSandbox(SandboxBase):
         *,
         monitor: bool = True,
     ) -> ExecutionReport:
-        """Execute a real binary and report its genuinely observed behaviour.
+        """Execute a binary and report its observed behaviour.
 
         The work directory is snapshotted before and after execution so the
         returned ``file_changes`` reflect artefacts the process actually wrote,
@@ -1101,7 +1101,7 @@ def local_process_sandbox() -> Iterator[LocalProcessSandbox]:
     """Provide a started real local-process sandbox with teardown.
 
     The sandbox owns a real temporary work directory and executes binaries as
-    genuine OS subprocesses. The directory is removed on teardown.
+    OS subprocesses. The directory is removed on teardown.
 
     Yields:
         LocalProcessSandbox: A started real sandbox.
@@ -1646,9 +1646,9 @@ def bridge_no_reports() -> SandboxBridge:
 @pytest.mark.integration
 @pytest.mark.spawns_process
 def test_local_process_sandbox_reports_real_execution(local_process_sandbox: LocalProcessSandbox) -> None:
-    """The real sandbox captures genuinely observed exit code, output, and file changes.
+    """The real sandbox captures the observed exit code, output, and file changes.
 
-    The *real* :class:`LocalProcessSandbox` launches the current Python interpreter as a genuine OS subprocess. The program
+    The *real* :class:`LocalProcessSandbox` launches the current Python interpreter as an OS subprocess. The program
     prints a deterministic marker to stdout and stderr and creates one real file in
     the sandbox work directory. The returned :class:`ExecutionReport` is then asserted
     field-by-field against the independently-known behaviour of that program:
@@ -1694,7 +1694,7 @@ def test_local_process_sandbox_reports_real_execution(local_process_sandbox: Loc
 @pytest.mark.integration
 @pytest.mark.spawns_process
 def test_local_process_sandbox_run_binary_times_out(local_process_sandbox: LocalProcessSandbox) -> None:
-    """A genuinely long-running subprocess is killed and surfaced as ``SandboxError``.
+    """A long-running subprocess is killed and surfaced as ``SandboxError``.
 
     The real interpreter is told to sleep far longer than the ``time_limit``. The
     sandbox must enforce the real timeout, kill the live process, and raise the

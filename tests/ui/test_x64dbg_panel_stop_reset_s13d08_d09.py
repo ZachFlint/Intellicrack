@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the x64dbg panel's stop reset and scrollable layout.
+"""Tests for the x64dbg panel's stop reset and scrollable layout.
 
 Stopping a debug session must clear the disassembly view and registers table, so the panel never
 shows the previous debuggee's stale data or implies a process is still attached.

@@ -88,8 +88,8 @@ async def _query_provider_count(
 
     Skips (rather than fails) when the provider endpoint cannot be reached due
     to an absent network capability (e.g. sandbox with ``network='none'``).
-    When the network is live the assertion is a real gate: an empty model list
-    from a connected provider is a genuine bridge defect.
+    When the network is live, an empty model list from a connected provider
+    fails the assertion as a bridge defect.
 
     Args:
         provider: Fresh unconnected provider instance.

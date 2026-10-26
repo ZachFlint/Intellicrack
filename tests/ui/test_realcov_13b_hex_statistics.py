@@ -6,7 +6,7 @@
 
 ``statistics.py`` has no dedicated test coverage: entropy correctness, byte-distribution
 accuracy, and byte-type classification. These tests run the real
-:func:`compute_statistics` pure function over genuine compiled binaries
+:func:`compute_statistics` pure function over compiled binaries
 (a real Windows PE plus the committed ELF and Mach-O corpus fixtures), each
 loaded into the real ``intellicrack_hexcore.HexDocument`` backend, and assert
 the computed entropy/distribution/type counts against independent reference
@@ -43,7 +43,7 @@ _PRINTABLE_MAX: int = 0x7E
 
 
 def _open_document(path: Path) -> object:
-    """Open a real binary file as a hexcore document.
+    """Open a binary file as a hexcore document.
 
     Args:
         path: Path to a real compiled binary on disk.

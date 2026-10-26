@@ -342,7 +342,7 @@ class OpenAIProvider(LLMProviderBase):
             raise ProviderError(_ERR_CONNECT_FAILED % detail) from e
         else:
             self._credentials = credentials
-            self.connected = True
+            self.connected: bool = True
             self._logger.info(
                 "openai_connected",
                 has_custom_base=credentials.api_base is not None,

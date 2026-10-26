@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the session-persistence behaviour of ``MainWindow``.
+"""Gates for the session-persistence behaviour of ``MainWindow``.
 
 Two user-facing behaviours are covered:
 

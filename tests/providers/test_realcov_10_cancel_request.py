@@ -10,7 +10,7 @@ tests start a real streaming request against the live provider API, consume at
 least one chunk, invoke ``cancel_request`` mid-stream, and assert that
 iteration terminates cleanly and the provider records the cancellation. They
 are gated on real credentials and skip when keys are absent; no responses are
-fabricated. When an account is genuinely unable to service requests (billing or
+fabricated. When an account is unable to service requests (billing or
 spend-cap exhaustion), the test skips with a precise reason rather than failing.
 """
 
@@ -50,7 +50,7 @@ def _skip_if_account_unavailable(exc: Exception) -> None:
     """Skip the test when an error reflects account unavailability.
 
     Permanent billing/quota exhaustion and endpoint-eligibility errors are
-    genuine environmental conditions, not provider defects, so they map to a
+    environmental conditions, not provider defects, so they map to a
     skip with the originating message preserved. The full exception cause chain
     is inspected because SDKs surface the billing detail on the originating
     exception rather than the translated provider error.

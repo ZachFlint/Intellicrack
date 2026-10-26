@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for Ghidra headless bridge teardown.
+"""Gates for Ghidra headless bridge teardown.
 
 ``GhidraBridge.start_headless`` spawns a ``python.exe``
 process that embeds the Ghidra JVM in-process via PyGhidra/jpype with no
@@ -27,8 +27,7 @@ Two independent mechanisms provide the teardown:
 
 These tests exercise both mechanisms against real Win32 primitives: a real
 spawned child process placed in a real job object, and a real exclusive
-``CreateFileW`` handle standing in for a live Ghidra project lock holder. No
-part of either mechanism is mocked or stubbed.
+``CreateFileW`` handle standing in for a live Ghidra project lock holder.
 """
 
 from __future__ import annotations
@@ -184,7 +183,7 @@ class TestKillOnCloseJobObject:
     def test_closing_job_handle_terminates_assigned_process(self) -> None:
         """Closing the job handle kills a real assigned child process.
 
-        Spawns a genuine long-sleeping Python child, assigns it to a job
+        Spawns a long-sleeping Python child, assigns it to a job
         object created by :func:`_create_kill_on_close_job_object`, and
         proves the OS itself terminates the child the moment
         :func:`_close_job_object_handle` releases the last handle to that

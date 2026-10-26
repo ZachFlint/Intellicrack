@@ -21,7 +21,7 @@ powers off, so the process itself is the completion signal.
 Everything here runs against real peers, not doubles of the code under test:
 
 * :class:`QmpProtocolServer` and :class:`GuestAgentProtocolServer` are the
-  genuine asyncio servers shared by every QEMU channel gate. The client under
+  asyncio servers shared by every QEMU channel gate. The client under
   test opens real sockets and writes real protocol frames to them. The agent
   server answers ``guest-shutdown`` with silence, which is what a live agent
   does - it is already powering the guest off when the reply would have been

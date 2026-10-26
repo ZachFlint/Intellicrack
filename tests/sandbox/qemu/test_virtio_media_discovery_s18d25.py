@@ -155,7 +155,7 @@ def test_the_staged_medium_wins_over_a_shallower_one(staged_layout: tuple[Path, 
     assert found == staged, f"discovery preferred {found}; the staged medium must be chosen over anything else on the host"
 
 
-def test_provisioning_refuses_only_when_the_medium_is_genuinely_absent(staged_layout: tuple[Path, Path, Path]) -> None:
+def test_provisioning_refuses_only_when_the_medium_is_absent(staged_layout: tuple[Path, Path, Path]) -> None:
     """The hard-prerequisite error must not fire for a correctly staged medium.
 
     Args:

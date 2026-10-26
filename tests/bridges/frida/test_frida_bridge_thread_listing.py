@@ -53,7 +53,7 @@ def _private(bridge: FridaBridge, name: str) -> object:
 def test_repeated_thread_listings_share_one_helper_and_unload_nothing(notepad_bridge: FridaBridge) -> None:
     """Five listings on one session use the same helper script, which is neither unloaded nor a user script.
 
-    Falsifiable: a bridge that created a script for each listing and unloaded it afterwards has no
+    A bridge that created a script for each listing and unloaded it afterwards has no
     helper at all (``_thread_helper`` stays ``None``), which is also what made following a thread found
     by a listing wedge the agent.
 
@@ -80,7 +80,7 @@ def test_repeated_thread_listings_share_one_helper_and_unload_nothing(notepad_br
 def test_thread_listing_replaces_a_destroyed_helper_and_leaves_none_after_detach(notepad_bridge: FridaBridge) -> None:
     """Stopping every user script leaves the helper alone, a destroyed helper is replaced, and a detach forgets it.
 
-    Falsifiable: registering the helper among the user scripts would let "Stop All Scripts" unload it
+    Registering the helper among the user scripts would let "Stop All Scripts" unload it
     while the bridge still held it, and keeping the reference after a detach would hand the next
     session a helper that belongs to the old one.
 

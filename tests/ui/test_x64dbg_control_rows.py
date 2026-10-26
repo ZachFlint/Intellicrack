@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate: x64dbg dense control rows must stay readable when the panel is narrow.
+"""Gate: x64dbg dense control rows must stay readable when the panel is narrow.
 
 The x64dbg bottom tabs (Breakpoints, Memory, Watchpoints, ...) each pack a
 label/input/button row into a plain ``QHBoxLayout``. When the panel is squeezed
@@ -67,7 +67,7 @@ def test_breakpoint_buttons_stay_readable_when_panel_is_narrow(qapp: QApplicatio
 
         hbar = scroll.horizontalScrollBar()
         assert hbar is not None
-        assert hbar.maximum() > 0, "the row must genuinely overflow at 560px wide, otherwise this gate proves nothing"
+        assert hbar.maximum() > 0, "the row must overflow at 560px wide for the per-button checks below to apply"
 
         for btn in buttons:
             required = btn.sizeHint().width()

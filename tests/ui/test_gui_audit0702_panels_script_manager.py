@@ -16,8 +16,8 @@ Each test targets one defect and fails against the defective behaviour:
   so a long user-entered script name that Qt visually elides in the
   narrow (140-250px) left panel can still be read by hovering the item.
 
-All tests drive real :class:`ScriptListWidget` / :class:`ScriptManagerPanel`
-instances under an offscreen ``QApplication``; nothing is mocked.
+All tests drive :class:`ScriptListWidget` / :class:`ScriptManagerPanel`
+instances under an offscreen ``QApplication``.
 """
 
 from __future__ import annotations
@@ -142,7 +142,7 @@ def test_l14_long_script_name_gets_full_tooltip(qapp: QApplication) -> None:
 
 
 def test_l14_display_text_is_actually_elided_at_narrow_width(qapp: QApplication) -> None:
-    """The narrow panel genuinely elides the long name, motivating the tooltip.
+    """The narrow panel elides the long name, motivating the tooltip.
 
     Confirms the failure scenario is real: at the 140px minimum splitter
     width, Qt's font metrics report the full label wider than the visible

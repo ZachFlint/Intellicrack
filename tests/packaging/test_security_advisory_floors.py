@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable gates for the dependency security floors that clear Dependabot.
+r"""Tests for the dependency security floors that clear Dependabot.
 
 Several PyPI distributions carried Dependabot advisories:
 

@@ -82,11 +82,11 @@ class SandboxInstance:
             sandbox_type: Type of sandbox being managed.
             binary_path: Path to the binary being analyzed in this sandbox.
         """
-        self.id = str(uuid4())
+        self.id: str = str(uuid4())
         self.sandbox_type: SandboxType = sandbox_type
         self.sandbox = sandbox
-        self.created_at = datetime.now(UTC)
-        self.last_used = datetime.now(UTC)
+        self.created_at: datetime = datetime.now(UTC)
+        self.last_used: datetime = datetime.now(UTC)
         self.binary_path = binary_path
         self.last_report: ExecutionReport | None = None
         self.is_busy: bool = False
@@ -188,7 +188,7 @@ class SandboxManager:
         it in instead. This is deliberately not a truthiness check: an
         explicitly-set falsy value that differs from the class default (for
         example ``block_telemetry=False``, whose class default is ``True``)
-        is a genuine override and always wins, exactly like any other
+        is an explicit override and always wins, exactly like any other
         explicitly-set value.
 
         Args:

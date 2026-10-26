@@ -28,8 +28,8 @@ the splitter width is known, so the content-covering floor still applies
 when the window is wide enough, but a window narrower than the content needs
 keeps the handle movable (with scroll relief) instead of freezing it.
 
-Tests drive the real ``ToolOutputPanel`` with real embedded tool panels
-(Frida/Cutter/Ghidra) -- no mocked geometry.
+Tests drive ``ToolOutputPanel`` with embedded tool panels
+(Frida/Cutter/Ghidra).
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ class TestLeftPanelMinWidthTracksActiveTab:
     def test_floor_drops_back_down_for_a_lighter_tab() -> None:
         """Switching from a wide tab (Frida) to a narrower one (Ghidra) lowers the floor accordingly.
 
-        Confirms the floor is genuinely driven by the *currently active*
+        Confirms the floor is driven by the *currently active*
         tab's content rather than latching onto the widest tab ever seen.
         """
         panel = ToolOutputPanel()
@@ -138,7 +138,7 @@ class TestLeftPanelMinWidthTracksActiveTab:
         splitter and every handle can still move. Pinning the floor to the
         raw content minimum would force the left
         section to Frida's full width, overflow the splitter, and freeze the
-        handle -- this test falsifies that regression.
+        handle -- this test fails on that regression.
         """
         panel = ToolOutputPanel()
         panel.add_frida_tab()
@@ -160,7 +160,7 @@ class TestLeftPanelMinWidthTracksActiveTab:
         assert sizes[0] < required_width
         assert sum(sizes) <= panel.main_splitter.width()
 
-        # The handle genuinely moves: a requested split is honored rather than
+        # The handle moves: a requested split is honored rather than
         # being clamped back to a frozen content-driven minimum.
         target_left = panel.left_panel.minimumWidth() + 40
         panel.main_splitter.setSizes([target_left, panel.main_splitter.width() - target_left])
@@ -177,8 +177,8 @@ class TestRightPanelMinWidthCoversContent:
         """right_panel's minimum width covers both the function list and xref panel's natural minimums.
 
         A hardcoded constant drifts out of sync as ``FunctionListPanel``/
-        ``XRefPanel`` gain columns; measuring the real widgets' own
-        ``minimumSizeHint`` keeps the floor honest.
+        ``XRefPanel`` gain columns; measuring the widgets' own
+        ``minimumSizeHint`` keeps the floor in sync with them.
         """
         panel = ToolOutputPanel()
 

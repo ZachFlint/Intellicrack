@@ -462,7 +462,7 @@ async def test_no_os_name_nt_predicate_in_module(
       proceeds to the fake ``_open_handle``, obtains the canned handle, and
       returns successfully WITHOUT raising - so ``pytest.raises`` fails.
 
-    Falsifiability mutation (static proof — do not apply):
+    Detected mutation (static proof — do not apply):
         Change ``src/intellicrack/bridges/named_pipe_client.py`` line 194 from
         ``if sys.platform != "win32":`` to ``if os.name != "nt":``. With
         ``os.name`` monkeypatched to ``"nt"`` the guard is bypassed; the bound
@@ -1320,7 +1320,7 @@ async def test_fail_pending_drains_abandoned_future_exception() -> None:
     ``.result()``/``await`` - so a clean run here proves the drain
     done-callback actually retrieved it.
 
-    Falsifiability: removing the
+    Removing the
     ``fut.add_done_callback(self._drain_future_exception)`` line from
     ``NamedPipeClient._fail_pending`` (in
     ``src/intellicrack/bridges/named_pipe_client.py``) leaves the future's

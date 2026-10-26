@@ -8,7 +8,7 @@ The thread table is checked against the real ``ProcessBridge.get_threads`` enume
 rather than hand-built ``ThreadInfo`` lists. These tests attach a real
 :class:`ProcessBridge` to the running interpreter process and drive
 ``ThreadsTab._refresh_threads`` so the thread table and per-tab thread combos
-are populated from genuine Win32 thread enumeration. Every assertion checks
+are populated from Win32 thread enumeration. Every assertion checks
 real, verifiable thread state (the live interpreter always has at least its
 main thread, every TID is a positive integer, and the count label matches the
 real enumeration).
@@ -173,7 +173,7 @@ def test_thread_table_populated_from_real_enumeration(qapp: QApplication, tab: _
 
     The running interpreter always owns at least one live OS thread, so the
     real enumeration must yield a non-empty table whose first column holds the
-    genuine, positive thread IDs reported by Windows.
+    positive thread IDs reported by Windows.
 
     Args:
         qapp: Qt application driving the event loop.
@@ -209,7 +209,7 @@ def test_thread_combos_populated_with_real_tids(qapp: QApplication, tab: _Thread
     """Per-feature thread combos must list every real TID from enumeration.
 
     The register, stack, SEH, fiber, and TLS sub-tabs share the thread list;
-    after a real refresh each combo must hold the same genuine TIDs that the
+    after a real refresh each combo must hold the same TIDs that the
     bridge reported, proving thread selection can target real threads.
 
     Args:
@@ -228,7 +228,7 @@ def test_thread_combos_populated_with_real_tids(qapp: QApplication, tab: _Thread
 def test_refresh_discovers_real_main_thread(qapp: QApplication, tab: _ThreadsTabProbe) -> None:
     """The current OS thread must appear among the enumerated real threads.
 
-    The thread running pytest is a genuine OS thread of this process; its
+    The thread running pytest is an OS thread of this process; its
     real TID must be present in the table the bridge populated.
 
     Args:

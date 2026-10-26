@@ -10,8 +10,8 @@ The Python-only transform nodes
 ``preview`` orchestration, the restricted-AST ``_eval_ast_node`` evaluator,
 and ``RustTransformNode`` parameter coercion are covered here by real data.
 
-These tests drive every node against REAL binary bytes taken from real
-System32 PE binaries and the committed ELF fixture, and validate the
+These tests drive every node against bytes taken from
+System32 PE files and the committed ELF fixture, and validate the
 COMPUTED result rather than that a call happened:
 
 * ``CustomExpressionNode`` results are checked against an independent Python
@@ -88,7 +88,7 @@ def real_pe_bytes(real_pe_dll: Path) -> bytes:
 
 
 class TestCustomExpressionNode:
-    """Per-byte expression evaluation against real binary bytes."""
+    """Per-byte expression evaluation against System32 PE bytes."""
 
     def test_xor_constant_over_real_pe_bytes(self, real_pe_bytes: bytes) -> None:
         """``b ^ 0x55`` applied to real PE bytes matches an independent XOR.
@@ -216,7 +216,7 @@ class TestEvalAstNode:
 
 
 class TestRegexReplaceNode:
-    """Regex substitution over real binary content."""
+    """Regex substitution over System32 PE content."""
 
     def test_replace_real_dos_magic(self, real_pe_bytes: bytes) -> None:
         """Replacing the real ``MZ`` magic rewrites the leading bytes.
@@ -471,7 +471,7 @@ class TestNodeRegistry:
         """``RustTransformNode`` raises ``HexcoreUnavailableError`` when absent.
 
         When hexcore IS available this asserts the success path produces output
-        instead; when it is genuinely absent the error path is asserted. Either
+        instead; when it is absent the error path is asserted. Either
         way the unavailability contract is verified against the real module
         state rather than a fabricated import failure.
         """

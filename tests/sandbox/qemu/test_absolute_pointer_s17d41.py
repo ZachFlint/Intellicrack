@@ -97,7 +97,7 @@ def _without_tablet(argv: list[str]) -> list[str]:
     This rebuilds the machine with every other device
     identical, only the tablet gone. An argv this rewrite cannot change fails the
     calling test, which covers the one way the launcher can regress - dropping
-    the tablet - so the discriminator can never quietly compare broken to broken.
+    the tablet - so the comparison can never quietly compare broken to broken.
 
     Args:
         argv: Launcher argv to rewrite.
@@ -118,7 +118,7 @@ def _without_tablet(argv: list[str]) -> list[str]:
 
     assert stripped != argv, (
         f"the launcher argv names no {_TABLET_DEVICE_PREFIX} device, so the guest has no absolute "
-        f"pointer to take away and the S17-D41 discriminator cannot be built: {argv}"
+        f"pointer to take away and the S17-D41 tablet-free comparison cannot be built: {argv}"
     )
     return stripped
 
@@ -204,7 +204,7 @@ class TestTheGuestGetsAnAbsolutePointingDevice:
     ) -> None:
         """The identical machine without the tablet has no absolute pointer.
 
-        This is the live discriminator behind the companion test: it re-proves on
+        Companion check: verifies on
         every run that the absolute device comes from the tablet the launcher
         adds, rather than from something q35 would have supplied anyway.
 

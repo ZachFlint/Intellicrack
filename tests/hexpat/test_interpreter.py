@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 
-"""Integration tests for the HexPat interpreter against real binary data."""
+"""Integration tests for the HexPat interpreter against binary format data."""
 
 from __future__ import annotations
 
@@ -488,7 +488,7 @@ class TestOutputFormat:
 
 
 class TestRealBinaryFormats:
-    """Tests for parsing real-world binary format headers."""
+    """Tests for parsing standard binary format headers (PE, ELF, BMP, ZIP)."""
 
     def test_pe_dos_header(self, interp: HexPatInterpreter, pe_header_bytes: bytes) -> None:
         """Verify parsing a PE DOS header with magic and e_lfanew fields.

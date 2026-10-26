@@ -141,10 +141,10 @@ class _ConfigRecordingManager(StubManager):
     ``self.create()`` -- so ``restart()`` isolation-extras coverage has its
     own direct recording point rather than depending on that delegation. Real VM
     provisioning (``WindowsSandbox``/``QEMUSandbox`` availability probing and startup) is
-    the genuine external boundary this test cannot cross inside the sandbox environment,
+    the external boundary this test cannot cross inside the sandbox environment,
     so this fake manager stands in for the manager layer only; ``SandboxBridge.create``/
     ``restart``'s own parameter-to-``SandboxConfig`` construction executes for real and is
-    what this test falsifies.
+    what this test checks.
     """
 
     def __init__(self, instances: dict[str, StubInstance] | None = None) -> None:
@@ -231,7 +231,7 @@ class _RecordingSandboxBridge:
 class TestSandboxIsolationExtrasCreateRestartL1:
     """L1: create()/restart() thread all 7 isolation-extras fields into a real SandboxConfig.
 
-    Falsified by: deleting any one of the 7 isolation-extras keyword arguments from
+    Deleting any one of the 7 isolation-extras keyword arguments from
     create()'s or restart()'s ``SandboxConfig(...)`` construction (or from the method
     signature itself) turns the corresponding assertion -- or the call itself -- red.
     """
@@ -325,7 +325,7 @@ class TestSandboxIsolationExtrasCreateRestartL1:
 class TestSandboxIsolationExtrasToolDefL2:
     """L2: sandbox.create/sandbox.restart declare all 7 isolation-extras ToolParameters.
 
-    Falsified by: deleting any one of the 7 isolation-extras ``ToolParameter`` blocks from
+    Deleting any one of the 7 isolation-extras ``ToolParameter`` blocks from
     either function's ``parameters=[...]`` turns ``test_declares_all_isolation_extras_params``
     red for that function, and also turns the pre-existing
     ``test_sandbox_create_restart_run_binary_params_l2.py::test_declared_params_exactly_match_method_signature``
@@ -384,7 +384,7 @@ class TestSandboxIsolationExtrasToolDefL2:
 class TestSandboxIsolationExtrasPanelL3:
     """L3: the panel's isolation-extras widgets flow into the real SandboxBridge.create call.
 
-    Falsified by: commenting out any one of the 8 new-key assignments inside
+    Commenting out any one of the 8 new-key assignments inside
     ``_sandbox_create_config()`` turns the corresponding ``kwargs[...]`` assertion -- or
     the lookup itself -- red.
     """

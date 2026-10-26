@@ -307,6 +307,48 @@ class TestPatchExportContract:
         doc.write_bytes(8, b"\x22" * 4)
         assert doc.export_patches_ips() == b"PATCH\x00\x00\x08\x00\x06" + b"\x22" * 4 + b"\x11" * 2 + b"EOF"
 
+    @staticmethod
+    def test_equal_length_replace_exports_one_record_per_match() -> None:
+        """A same-length ``replace_bytes`` records each match, so the patch list holds only the changed spans."""
+        doc = HexDocument.open_bytes(b"ABCDABCD")
+        assert doc.replace_bytes(b"AB", b"XY") == 2
+        assert doc.get_patches() == [(0, b"XY"), (4, b"XY")]
+        assert doc.export_patches_ips() == b"PATCH\x00\x00\x00\x00\x02XY\x00\x00\x04\x00\x02XYEOF"
+        assert doc.undo() is True
+        assert doc.read(0, 8) == b"ABCDABCD"
+
+    @staticmethod
+    def test_dense_equal_length_replace_records_the_whole_document() -> None:
+        """Matches too dense to list as offsets are recorded as one whole-document write."""
+        doc = HexDocument.open_bytes(b"A" * 16)
+        assert doc.replace_bytes(b"A", b"B") == 16
+        assert doc.get_patches() == [(0, b"B" * 16)]
+        assert doc.undo() is True
+        assert doc.read(0, 16) == b"A" * 16
+
+
+class TestTemplateDetection:
+    """``detect_templates`` names the built-in templates whose magic sits at an offset."""
+
+    @staticmethod
+    def test_detects_the_header_a_file_starts_with(pe_bytes: bytes) -> None:
+        """A PE image is a DOS header at offset 0 and matches no template one byte in.
+
+        Args:
+            pe_bytes: A minimal PE image.
+        """
+        doc = HexDocument.open_bytes(pe_bytes)
+        assert doc.detect_templates(0) == ["IMAGE_DOS_HEADER"]
+        assert doc.detect_templates(1) == []
+
+    @staticmethod
+    def test_detects_a_record_inside_the_document() -> None:
+        """A ZIP central-directory record is found where it sits, and an offset past the end is refused."""
+        doc = HexDocument.open_bytes(b"\x00" * 6 + b"PK\x01\x02" + b"\x14\x00")
+        assert doc.detect_templates(6) == ["ZIP_CENTRAL_DIRECTORY"]
+        with pytest.raises(ValueError, match="beyond document size"):
+            doc.detect_templates(13)
+
 
 class TestStringsAndInspector:
     """Wide-string extraction and inspection follow the dedicated-editor rules."""

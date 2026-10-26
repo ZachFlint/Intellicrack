@@ -16,7 +16,7 @@ bottom of the tab. The tab content is built in an inner widget and wrapped with
 :func:`intellicrack.ui.panels.base_panel.make_scrollable`, returning a ``QScrollArea`` (vertical
 policy ``ScrollBarAsNeeded``, never ``ScrollBarAlwaysOff``) as the "Pipes" tab widget.
 
-Both tests drive the real :class:`SystemTab` widget end to end (real Qt widgets, no mocks) and
+Both tests drive the real :class:`SystemTab` widget end to end (real Qt widgets) and
 fail if either behaviour is removed.
 """
 

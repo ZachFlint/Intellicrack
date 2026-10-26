@@ -3,12 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-world coverage tests for FridaBridge module and function operations.
+"""Coverage tests for FridaBridge module and function operations.
 
 These tests cover ``enumerate_modules``, ``enumerate_exports``,
-``replace_function`` and ``resume_child``. Every test drives the REAL Frida
-runtime attached to a freshly spawned ``notepad.exe`` and asserts on real,
-verifiable results from live Windows system DLLs (kernel32.dll, ntdll.dll).
+``replace_function`` and ``resume_child``. Every test drives the Frida
+runtime attached to a freshly spawned ``notepad.exe`` and asserts on
+results read from live Windows system DLLs (kernel32.dll, ntdll.dll).
 
 Requires frida-python and a Windows host. Tests spawn ``notepad.exe`` and are
 marked ``spawns_process`` so the harness only runs them inside the Docker

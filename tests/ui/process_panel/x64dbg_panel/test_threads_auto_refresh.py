@@ -18,9 +18,8 @@ by ``ProcessTab``. The tests confirm that:
 
 All tests use a ``_CountingThreadsTab`` subclass that overrides
 ``_refresh_threads`` to record invocations and push synthetic
-``ThreadInfo`` batches into the UI. No mock library functions are used:
-the override is a proper subclass method, not a replacement for the
-bridge dispatcher.
+``ThreadInfo`` batches into the UI. The override is a subclass method,
+not a replacement for the bridge dispatcher.
 """
 
 from __future__ import annotations
@@ -85,7 +84,7 @@ class _CountingThreadsTab(ThreadsTab):
     sequence of ``ThreadInfo`` batches into ``update_thread_list`` so that
     combo-population tests can assert exact TID membership.
 
-    This is a proper subclass override, not a mock. The timer wiring
+    This is a subclass override. The timer wiring
     (``QTimer.timeout -> _refresh_threads``) is established by the base class
     constructor and remains intact; only the body of ``_refresh_threads`` is
     replaced to avoid real async bridge calls in a unit-test context where no

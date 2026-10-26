@@ -45,6 +45,6 @@ gate rather than by taste:
 binaries copied out of the running installation, and an in-process
 :class:`~hexbench.api.Application` that answers requests without a socket.
 :mod:`hexbench.tests._recipes` holds one invocation recipe per catalogued
-operation, which is what lets a coverage test fail loudly when the Rust crate
+operation, which is what lets a coverage test fail when the Rust crate
 grows a method nothing exercises.
 """

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates that the project version is single-sourced everywhere.
+"""Tests that the project version is single-sourced everywhere.
 
 The version string is repeated across the repository -- ``pyproject.toml`` (the
 package version and the pixi workspace version), ``src/intellicrack/_metadata.py``,
@@ -23,7 +23,7 @@ Two independent gates close that gap:
   and run in the host-native pass. They anchor every location on the canonical
   ``[project] version`` in ``pyproject.toml``.
 
-The numeric-derivation function is pure and its falsifiability proof runs
+The numeric-derivation function is pure and its tests run
 everywhere, so the sandbox verifies the core transform even where the root files
 are absent.
 """
@@ -113,7 +113,7 @@ def test_numeric_derivation_strips_prerelease_and_pads() -> None:
 
 
 def test_generated_iss_appversion_matches_metadata() -> None:
-    """Real gate: ``version.generated.iss`` AppVersion equals ``_metadata.__version__``.
+    """``version.generated.iss`` AppVersion equals ``_metadata.__version__``.
 
     This is the coupling the installer ships: the wizard's displayed version and
     the package version must be one and the same. Bumping ``_metadata`` without
@@ -129,7 +129,7 @@ def test_generated_iss_appversion_matches_metadata() -> None:
 
 
 def test_generated_iss_numeric_is_derived_from_metadata() -> None:
-    """Real gate: ``version.generated.iss`` AppVerNumeric is the derived 4-part numeric.
+    """``version.generated.iss`` AppVerNumeric is the derived 4-part numeric.
 
     ``VersionInfoVersion`` requires a 4-part numeric; the generated file must hold
     exactly ``derive_numeric_version(_metadata.__version__)``. A hand-edited or
@@ -149,7 +149,7 @@ def test_generated_iss_numeric_is_derived_from_metadata() -> None:
 
 
 def test_pyproject_package_and_workspace_versions_agree() -> None:
-    """Real gate: both ``pyproject.toml`` versions agree (canonical anchor).
+    """Both ``pyproject.toml`` versions agree (canonical anchor).
 
     The ``[project] version`` is the single source of truth; the pixi
     ``workspace.version`` must match it. Reads repo-root ``pyproject.toml`` and so
@@ -169,7 +169,7 @@ def test_pyproject_package_and_workspace_versions_agree() -> None:
 
 
 def test_all_metadata_locations_agree_with_pyproject() -> None:
-    """Real gate: metadata, package.json, docs, and the installer all match pyproject.
+    """Metadata, package.json, docs, and the installer all match pyproject.
 
     Anchors every version location on the canonical ``[project] version`` in
     ``pyproject.toml``: the Python metadata module, ``package.json``, the Sphinx

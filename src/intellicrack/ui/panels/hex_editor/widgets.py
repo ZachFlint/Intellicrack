@@ -471,7 +471,7 @@ class CustomCrcDialog(QDialog):
     calls otherwise; in both cases the UI thread never holds more than one chunk of the document body.
     """
 
-    crc_computed = pyqtSignal("PyQt_PyObject")
+    crc_computed: pyqtSignal = pyqtSignal("PyQt_PyObject")
 
     def __init__(
         self,

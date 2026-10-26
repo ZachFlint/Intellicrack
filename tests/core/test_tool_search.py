@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for :class:`ToolSearchIndex` ranking correctness.
+"""Tests for :class:`ToolSearchIndex` ranking correctness.
 
 Every test in this module builds the index from real bridge
 :class:`ToolDefinition` objects (the same live-registry snapshot

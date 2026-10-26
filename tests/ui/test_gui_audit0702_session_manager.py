@@ -30,8 +30,7 @@ would make the same call site wait for the full delay before returning.
 
 All tests drive real ``SessionManagerDialog``, ``SessionManager``, and
 ``SessionStore`` (backed by a real temporary SQLite database) instances
-under an offscreen ``QApplication``. No mocks stand in for the behaviour
-under test.
+under an offscreen ``QApplication``.
 """
 
 from __future__ import annotations

@@ -1507,7 +1507,7 @@ class SandboxMonitorWidget(QFrame):
         header_layout.addStretch()
 
         icon_manager = IconManager.get_instance()
-        self.status_indicator = QLabel()
+        self.status_indicator: QLabel = QLabel()
         self.status_indicator.setPixmap(icon_manager.get_pixmap("status_idle", 16))
         self.status_indicator.setFixedSize(20, 20)
         header_layout.addWidget(self.status_indicator)

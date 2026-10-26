@@ -1291,7 +1291,7 @@ async def test_unanswered_resync_keeps_the_only_socket_open() -> None:
 
 @pytest.mark.asyncio
 async def test_resync_on_a_broken_socket_closes_it_and_reports_failure() -> None:
-    """A socket that has genuinely broken is closed so a fresh one can be opened."""
+    """A socket that has broken is closed so a fresh one can be opened."""
     async with _serving(GuestAgentProtocolServer()) as server:
         client = _ExposedQga(port=server.port)
         try:

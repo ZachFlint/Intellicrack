@@ -458,7 +458,7 @@ def guard_modal_dialogs(request: pytest.FixtureRequest, monkeypatch: pytest.Monk
     static method on the same class object.
 
     A handful of tests and package conftests under ``tests/ui`` (named in
-    :data:`_REAL_MODAL_FIXTURE_NAMES`) instead let the genuine ``QMessageBox``
+    :data:`_REAL_MODAL_FIXTURE_NAMES`) instead let the actual ``QMessageBox``
     modal appear and dismiss it themselves with a polling ``QTimer`` against
     ``QApplication.activeModalWidget()``, then assert on the dialog's real
     ``windowTitle()``/``text()`` -- this is how they prove the production

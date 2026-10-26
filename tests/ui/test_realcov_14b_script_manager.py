@@ -10,12 +10,12 @@ The panel's save / load / validate / execute workflow runs through a real backen
 These tests wire :class:`ScriptManagerPanel` to a **real**
 :class:`~intellicrack.core.script_gen.ScriptManager` and
 :class:`~intellicrack.core.script_gen.ScriptValidator` and a real executor that
-runs genuine Python over a real Windows System32 PE on disk. The assertions
+runs Python over a Windows System32 PE on disk. The assertions
 verify the round trip end-to-end: the panel persists a real script into the
 backend, reloads its real content, the real validator distinguishes valid from
 syntactically-broken Python, and the real executor's computed result (a real
-SHA-256 digest / real byte size of the real binary) is rendered in the result
-pane. Nothing about validation or persistence is mocked.
+SHA-256 digest / byte size of that PE) is rendered in the result
+pane.
 """
 
 from __future__ import annotations

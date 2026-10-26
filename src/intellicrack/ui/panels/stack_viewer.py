@@ -9,7 +9,7 @@ Provides a Qt-based stack frame viewer that reads from both X64DbgBridge and Fri
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, cast, override, runtime_checkable
 
@@ -551,8 +551,8 @@ class StackFrameTable(QTableWidget):
         frame_double_clicked: Qt signal for frame double clicked.
     """
 
-    frame_clicked = pyqtSignal(int)
-    frame_double_clicked = pyqtSignal(int)
+    frame_clicked: pyqtSignal = pyqtSignal(int)
+    frame_double_clicked: pyqtSignal = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the StackFrameTable widget.
@@ -700,7 +700,7 @@ class StackViewerPanel(QWidget):
             so a return address on an image-based x64 stack is not truncated.
     """
 
-    address_navigate = pyqtSignal("qint64")
+    address_navigate: pyqtSignal = pyqtSignal("qint64")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the StackViewerPanel widget.
@@ -735,7 +735,7 @@ class StackViewerPanel(QWidget):
         self._source_combo.currentTextChanged.connect(self._on_source_changed)
         toolbar_layout.addWidget(self._source_combo)
 
-        self.status_label = QLabel(self.tr("Not connected"))
+        self.status_label: QLabel = QLabel(self.tr("Not connected"))
         self.status_label.setProperty("status", "idle")
         toolbar_layout.addWidget(self.status_label)
 
@@ -921,7 +921,7 @@ class StackViewerPanel(QWidget):
 
         self._frame_count_label.setText(f"{len(frames)} frames")
 
-        now = datetime.datetime.now(tz=datetime.UTC)
+        now = dt.datetime.now(tz=dt.UTC)
         self._last_update_label.setText(f"Updated: {now.strftime('%H:%M:%S')}")
 
     def set_x64dbg_bridge(self, bridge: X64DbgBridge) -> None:

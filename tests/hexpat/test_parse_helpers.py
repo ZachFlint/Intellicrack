@@ -47,7 +47,7 @@ class TestHexpatSafeIntFromStr:
 
         Uses :func:`structlog.testing.capture_logs` to observe the real logging
         pipeline rather than patching the module's private logger, so the test
-        exercises the genuine structured-event emission contract.
+        exercises the structured-event emission contract.
         """
         with capture_logs() as records:
             result = safe_int_from_str("not-a-number", context="unit_log")

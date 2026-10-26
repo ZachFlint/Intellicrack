@@ -227,11 +227,14 @@ ENV PATH="C:\\Users\\ContainerAdministrator\\.pixi\\bin;${PATH}"
 
 WORKDIR C:\\app
 
-# Stage the inputs pixi needs to resolve and install the env so that
-# edits to other files (docker/entrypoint.ps1, scripts, docs, tests)
-# do not invalidate this expensive layer.
+# Stage only the inputs pixi needs to resolve and install the env, so that
+# edits anywhere else -- including the Python sources under src/intellicrack
+# -- do not invalidate this expensive layer. The editable install of the
+# project resolves its metadata from pyproject.toml and needs the package
+# directory to exist, which the package __init__.py provides; the rest of
+# src/ arrives with the final COPY below.
 COPY pyproject.toml pixi.lock README.md LICENSE ./
-COPY src/ ./src/
+COPY src/intellicrack/__init__.py ./src/intellicrack/
 
 RUN pixi install --frozen
 
@@ -251,7 +254,9 @@ RUN $ErrorActionPreference = 'Stop'; \
 # Build the Rust native module intellicrack_hexcore into the pixi env so
 # tests/test_bridges/conftest.py can import it. Uses portable defaults
 # (no meteorlake-targeted RUSTFLAGS) so the image runs on any x86_64
-# Windows host. Source is already staged via COPY src/.
+# Windows host. Only the crate is staged, so this layer is rebuilt when the
+# Rust sources change and not when the Python sources do.
+COPY src/intellicrack-hexcore/ ./src/intellicrack-hexcore/
 RUN $ErrorActionPreference = 'Stop'; \
     Set-Location 'C:\app\src\intellicrack-hexcore'; \
     & 'C:\app\.pixi\envs\default\Scripts\maturin.exe' build --release --interpreter 'C:\app\.pixi\envs\default\python.exe'; \
@@ -270,13 +275,13 @@ RUN $ErrorActionPreference = 'Stop'; \
 # baked into the image and TIKTOKEN_CACHE_DIR points runtime lookups at it.
 ENV TIKTOKEN_CACHE_DIR="C:\\app\\.tiktoken_cache"
 
-# Bring in the rest of the project (docs, scripts, docker/, tests, configs).
-# Changes here do not invalidate the pixi-install / hexcore-build layers above.
-COPY . ./
+# The two cache-warming scripts are self-contained, so they are staged on their
+# own and run before the project COPY; a source edit then reuses both baked
+# caches instead of downloading them again.
+COPY docker/warm_tiktoken.py docker/warm_model.py ./docker/
 
 # Warm the tiktoken cache via a script file (an inline Python one-liner gets
-# mangled by the Windows PowerShell RUN shell). Runs after COPY so the script
-# is present in the image.
+# mangled by the Windows PowerShell RUN shell).
 RUN $ErrorActionPreference = 'Stop'; \
     & 'C:\app\.pixi\envs\default\python.exe' 'C:\app\docker\warm_tiktoken.py'; \
     if ($LASTEXITCODE -ne 0) { throw 'tiktoken encoding cache warm failed' }
@@ -288,6 +293,10 @@ ENV HF_HOME="C:\\app\\.hf_cache"
 RUN $ErrorActionPreference = 'Stop'; \
     & 'C:\app\.pixi\envs\default\python.exe' 'C:\app\docker\warm_model.py'; \
     if ($LASTEXITCODE -ne 0) { throw 'local inference model cache warm failed' }
+
+# Bring in the rest of the project (src/, docs, scripts, docker/, configs).
+# Changes here do not invalidate any of the expensive layers above.
+COPY . ./
 
 # Stage 4 -- final image
 FROM pixi-env AS final

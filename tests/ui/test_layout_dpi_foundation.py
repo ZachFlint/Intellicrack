@@ -50,7 +50,7 @@ _REALISTIC_WIDTH = 900
 _REALISTIC_HEIGHT = 700
 _SPLASH_WIDTH = 600
 _SPLASH_HEIGHT = 400
-# Sampled every few rows rather than every row: cheap, and a genuinely
+# Sampled every few rows rather than every row: cheap, and a
 # pillarboxed edge column is uniform background across every sampled row too.
 _SPLASH_ROW_STRIDE = 5
 

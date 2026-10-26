@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable tests for the installed Hexbench shortcut path.
+r"""Tests for the installed Hexbench shortcut path.
 
 The installer ships the Hexbench editor as package *source* under
 ``{app}\hexbench`` and runs it on the bundled ``{app}\runtime`` rather than
@@ -133,7 +133,7 @@ def _captured_command(monkeypatch: pytest.MonkeyPatch, install: Path, argv: list
 
     The real :class:`subprocess.Popen` is replaced for the duration of the call,
     so nothing is spawned, but the command line and keyword arguments captured
-    are the ones the launcher genuinely constructed.
+    are the ones the launcher constructed.
 
     Args:
         monkeypatch: Fixture used to redirect install-dir resolution and Popen.
@@ -162,7 +162,7 @@ def _captured_command(monkeypatch: pytest.MonkeyPatch, install: Path, argv: list
 
 @_WINDOWS_CREATION_FLAGS
 def test_launcher_spawns_the_console_interpreter_not_pythonw(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Real gate: the child is ``python.exe`` running ``-m hexbench``.
+    """The child is ``python.exe`` running ``-m hexbench``.
 
     ``pythonw.exe`` leaves the child with no standard handles, and
     ``hexbench.__main__`` writes to ``sys.stderr`` unconditionally, so switching
@@ -186,7 +186,7 @@ def test_launcher_spawns_the_console_interpreter_not_pythonw(tmp_path: Path, mon
 
 @_WINDOWS_CREATION_FLAGS
 def test_launcher_uses_create_no_window_and_never_detaches(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Real gate: the spawn flag is exactly ``CREATE_NO_WINDOW``.
+    """The spawn flag is exactly ``CREATE_NO_WINDOW``.
 
     ``CREATE_NO_WINDOW`` allocates a console the user never sees, which is what
     keeps the child's standard handles valid while showing no window.
@@ -234,7 +234,7 @@ def test_package_root_falls_back_to_src_in_a_checkout(tmp_path: Path) -> None:
 
 
 def test_module_actually_imports_from_the_computed_root() -> None:
-    """Real gate: ``-m hexbench`` runs when only the computed root is on the path.
+    """``-m hexbench`` runs when only the computed root is on the path.
 
     Drives the real repository checkout through the launcher's own
     :func:`package_root` and starts the real editor module with nothing but that
@@ -369,7 +369,7 @@ def test_launch_reports_and_fails_when_the_package_is_absent(tmp_path: Path, mon
 
 
 def test_iss_shortcut_target_is_a_file_the_build_produces() -> None:
-    r"""Real gate: the Hexbench shortcut points at the staged launcher exe.
+    r"""The Hexbench shortcut points at the staged launcher exe.
 
     The shortcut must not point at
     ``{app}\hexbench\hexbench.exe``, which no build step produces. The target
@@ -402,7 +402,7 @@ def test_iss_defines_the_hexbench_exe_name() -> None:
 
 
 def test_stage_builds_and_stages_the_hexbench_launcher() -> None:
-    """Real gate: the stager builds the hexbench launcher and stages the exe.
+    """The stager builds the hexbench launcher and stages the exe.
 
     Without this step the ``.iss`` would reference a ``Hexbench.exe`` that never
     reaches ``build/stage``, and the installer compile would fail.

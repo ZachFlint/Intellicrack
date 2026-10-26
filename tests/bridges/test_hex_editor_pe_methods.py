@@ -19,7 +19,7 @@ import asyncio
 import inspect
 import struct
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import pytest
 
@@ -41,6 +41,8 @@ from intellicrack.core.types import ToolError, ToolName
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
+
+    from intellicrack_hexcore import HexDocument
 
 
 _NEW_METHOD_NAMES: Final[tuple[str, ...]] = (
@@ -167,8 +169,8 @@ class TestMethodDispatchSurface:
     """Verify the zero-argument contract and live return values of each PE method.
 
     Combines the signature-shape contract (no parameters beyond ``self``)
-    with a real invocation against an in-memory PE32 document so that the
-    assertions are falsifiable: a required-parameter addition causes a
+    with a real invocation against an in-memory PE32 document: a
+    required-parameter addition causes a
     ``TypeError`` on the zero-arg call, and a method that returns wrong data
     fails the length check.
     """
@@ -205,7 +207,7 @@ class TestMethodDispatchSurface:
         sig = inspect.signature(method)
         assert not list(sig.parameters), f"{method_name} must accept no arguments beyond self"
 
-        bridge.document = _InMemoryDocument(_build_pe_buffer(is_pe64=False))
+        bridge.document = cast("HexDocument", _InMemoryDocument(_build_pe_buffer(is_pe64=False)))
         result: list[dict[str, Any]] = _run(method())
 
         expected_len: int = int(_ZERO_ARG_EXPECTED[method_name])
@@ -398,7 +400,7 @@ class TestSectionWalkAgainstInMemoryDocument:
         Args:
             bridge: HexEditorBridge fixture.
         """
-        bridge.document = _InMemoryDocument(_build_pe_buffer(is_pe64=False))
+        bridge.document = cast("HexDocument", _InMemoryDocument(_build_pe_buffer(is_pe64=False)))
         sections: Any = _run(bridge.get_pe_sections())
         assert len(sections) == 2
         assert sections[0]["name"] == ".text"
@@ -413,7 +415,7 @@ class TestSectionWalkAgainstInMemoryDocument:
         Args:
             bridge: HexEditorBridge fixture.
         """
-        bridge.document = _InMemoryDocument(_build_pe_buffer(is_pe64=True))
+        bridge.document = cast("HexDocument", _InMemoryDocument(_build_pe_buffer(is_pe64=True)))
         sections: Any = _run(bridge.get_pe_sections())
         assert len(sections) == 2
         assert sections[0]["virtual_size"] == _TEXT_VSIZE
@@ -425,7 +427,7 @@ class TestSectionWalkAgainstInMemoryDocument:
         Args:
             bridge: HexEditorBridge fixture.
         """
-        bridge.document = _InMemoryDocument(b"\x7fELF" + b"\x00" * 256)
+        bridge.document = cast("HexDocument", _InMemoryDocument(b"\x7fELF" + b"\x00" * 256))
         sections: Any = _run(bridge.get_pe_sections())
         assert sections == []
 
@@ -435,7 +437,7 @@ class TestSectionWalkAgainstInMemoryDocument:
         Args:
             bridge: HexEditorBridge fixture.
         """
-        bridge.document = _InMemoryDocument(b"MZ")
+        bridge.document = cast("HexDocument", _InMemoryDocument(b"MZ"))
         sections: Any = _run(bridge.get_pe_sections())
         assert sections == []
 
@@ -445,7 +447,7 @@ class TestSectionWalkAgainstInMemoryDocument:
         Args:
             bridge: HexEditorBridge fixture.
         """
-        bridge.document = _InMemoryDocument(_build_pe_buffer(is_pe64=False))
+        bridge.document = cast("HexDocument", _InMemoryDocument(_build_pe_buffer(is_pe64=False)))
         imports: Any = _run(bridge.get_pe_imports())
         assert imports == []
 
@@ -455,7 +457,7 @@ class TestSectionWalkAgainstInMemoryDocument:
         Args:
             bridge: HexEditorBridge fixture.
         """
-        bridge.document = _InMemoryDocument(_build_pe_buffer(is_pe64=True))
+        bridge.document = cast("HexDocument", _InMemoryDocument(_build_pe_buffer(is_pe64=True)))
         exports: Any = _run(bridge.get_pe_exports())
         assert exports == []
 
@@ -465,7 +467,7 @@ class TestSectionWalkAgainstInMemoryDocument:
         Args:
             bridge: HexEditorBridge fixture.
         """
-        bridge.document = _InMemoryDocument(b"\x7fELF" + b"\x00" * 256)
+        bridge.document = cast("HexDocument", _InMemoryDocument(b"\x7fELF" + b"\x00" * 256))
         imports: Any = _run(bridge.get_pe_imports())
         assert imports == []
 
@@ -475,6 +477,6 @@ class TestSectionWalkAgainstInMemoryDocument:
         Args:
             bridge: HexEditorBridge fixture.
         """
-        bridge.document = _InMemoryDocument(b"\x7fELF" + b"\x00" * 256)
+        bridge.document = cast("HexDocument", _InMemoryDocument(b"\x7fELF" + b"\x00" * 256))
         exports: Any = _run(bridge.get_pe_exports())
         assert exports == []

@@ -214,7 +214,7 @@ class TestVaMappingGuiTabExistsAndIsWiredL3:
     def test_tab_widgets_exist(qapp: QApplication) -> None:
         """The panel must expose the VA-mapping tree, add/remove/goto fields, and status label.
 
-        Falsifiable: if the VA Mapping tab were removed from
+        If the VA Mapping tab were removed from
         ``_build_side_tabs`` (``panel.py:465``), these attributes would
         remain ``None`` (never populated by ``_create_va_mapping_tab``).
 
@@ -241,7 +241,7 @@ class TestVaMappingGuiDispatchesRealBridgeL3:
     def test_add_mapping_dispatches_set_va_base_and_refreshes_tree(qapp: QApplication) -> None:
         """The Add Mapping button must call the real ``bridge.set_va_base`` and populate the tree from ``list_va_mappings``.
 
-        Falsifiable: if ``_on_add_va_mapping`` called anything other than
+        If ``_on_add_va_mapping`` called anything other than
         ``bridge.set_va_base`` (or skipped the refresh), the tree would
         never show the real hex-formatted offset/VA/length this test
         submitted. Broken production line:
@@ -378,7 +378,7 @@ class TestPerformanceSettingsEntryPointDispatchesRealBridgeL3:
         128 KiB / 8 MiB -- proving the handler applied them via
         ``set_chunk_size``/``set_memory_budget``.
 
-        Falsifiable: if ``_on_open_performance_settings`` skipped the
+        If ``_on_open_performance_settings`` skipped the
         ``get_memory_usage`` read, ``opened_with`` would not equal
         ``[(64, 4)]``; if it skipped the ``set_chunk_size``/
         ``set_memory_budget`` apply, the readback would still show the

@@ -413,13 +413,13 @@ class TestDrainBridgeWorkers:
         """drain_bridge_workers must wait for a still-running worker to finish.
 
         Starts a real ``BridgeCallWorker`` whose coroutine occupies its worker
-        thread on the persistent bridge loop, so the OS thread is genuinely
+        thread on the persistent bridge loop, so the OS thread is still
         mid-flight when the drain begins. ``drain_bridge_workers`` must block
         until that thread has finished; that finished state is the precondition
         which prevents ``QThread: Destroyed while thread is still running`` at
         application shutdown. Were the drain to return without waiting, the
         worker would still report ``isRunning()`` immediately afterwards, so
-        this assertion is falsified by removing the wait.
+        removing the wait fails this assertion.
 
         Args:
             qapp: Qt application fixture used to pump queued signals.
@@ -485,7 +485,7 @@ class TestBridgeLoopShutdownRobustness:
     def test_worker_abandons_a_stopped_loop_instead_of_zombieing() -> None:
         """A worker still running when the loop is shut down must exit promptly.
 
-        Starts a genuinely long-running coroutine on a real ``BridgeCallWorker``
+        Starts a long-running coroutine on a real ``BridgeCallWorker``
         and waits until that coroutine is running on the shared loop, so the
         worker's future belongs to the loop ``shutdown_bridge_loop`` then stops.
         A worker thread that has merely started may not have reached the loop
@@ -497,7 +497,7 @@ class TestBridgeLoopShutdownRobustness:
         detect the dead loop, cancel the future, and finish - so ``wait`` returns
         ``True`` quickly. Removing the dead-loop detection in
         :meth:`BridgeCallWorker._await_future` leaves the thread running and
-        falsifies the final assertion.
+        fails the final assertion.
         """
         worker_join_budget_ms = 3000
         on_the_loop = threading.Event()

@@ -24,7 +24,7 @@ it never watched, the caller saw that pid still alive and force-killed it. And
 the vmwp worker was force-killed immediately afterwards, during the very Host
 Compute Service teardown that releases the VM.
 
-These gates use real processes only. The discriminator for "was it killed or
+These tests use OS processes only. The signal for "was it killed or
 did it exit on its own" is the exit code: the probe exits ``42`` under its own
 control, and Windows stamps ``1`` on a process it terminates, so the two
 outcomes can never be confused.

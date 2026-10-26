@@ -204,7 +204,7 @@ def test_symbol_info_bridge_parses_find_functions_named(self_attached_bridge: Fr
     ntdll.dll on every supported Windows version and its address is in the high-DLL
     range (>= 0x70000000).
 
-    Falsifiable: if the bridge silently drops the address field (returning 0), the
+    If the bridge silently drops the address field (returning 0), the
     >= _NTDLL_BASE_MIN assertion fails. If module_name parsing is broken (returning
     the raw JS object), isinstance(str) and 'ntdll' containment both fail. If name
     parsing strips the function name, the 'NtCreateFile' containment check fails.
@@ -228,7 +228,7 @@ def test_symbol_info_address_hex_decimal_parsing(self_attached_bridge: FridaBrid
     hex-vs-decimal address parsing branch is exercised correctly for whatever format
     Frida's DebugSymbol API returns on the current system.
 
-    Falsifiable: if the hex parsing branch is broken (e.g. always returns 0 for hex
+    If the hex parsing branch is broken (e.g. always returns 0 for hex
     addresses), the >= _NTDLL_BASE_MIN assertion fails. If decimal parsing is broken
     for functions that Frida reports without 0x prefix, the assertion also fails.
 
@@ -340,7 +340,7 @@ class _TestableFridaBridge(FridaBridge):
     """
 
     def __init__(self) -> None:
-        """Initialize the testable bridge with no mock child-gating device installed."""
+        """Initialize the testable bridge with no child-gating device double installed."""
         super().__init__()
         self._mock_child_gating_device: _MockFridaDevice | None = None
 
@@ -437,7 +437,7 @@ def test_crash_info_bridge_internal_accumulation() -> None:
     record.  The expected values are derived independently from the raw input by the same
     attribute-name mapping the bridge spec documents -- not from re-running the function.
 
-    Falsifiable: if the bridge's closure reads the wrong attribute name for ``pid``
+    If the bridge's closure reads the wrong attribute name for ``pid``
     (e.g. ``process_id`` instead of ``pid``), the ``== _PID`` assertion fails.  If the
     closure fails to cast ``process_name`` through ``str()``, returning the raw object
     instead of ``"target.exe"``, the equality assertion fails.  If ``parameters`` is
@@ -482,7 +482,7 @@ def test_child_process_info_bridge_accumulation_full_fields() -> None:
     object.  Expected values are derived independently from the raw input's
     attributes -- not from re-running the production function.
 
-    Falsifiable: if the bridge stops hard-coding ``parent_pid`` to 0 and
+    If the bridge stops hard-coding ``parent_pid`` to 0 and
     instead reads a nonexistent attribute, the ``== 0`` assertion fails.  If
     ``origin`` is derived from the raw object instead of fixed to
     ``"spawn"``, the equality fails.  If ``path`` or ``argv`` are populated
@@ -528,7 +528,7 @@ def test_child_process_info_bridge_accumulation_none_fields() -> None:
     synthesize the fixed parent_pid=0/origin="spawn"/path=None/argv=[]
     values for both entries.
 
-    Falsifiable: if the bridge coerces ``identifier=None`` to ``""`` via
+    If the bridge coerces ``identifier=None`` to ``""`` via
     ``str(getattr(spawn, "identifier", None))`` instead of the raw
     ``getattr`` result, the ``is None`` assertion fails.  If the two pending
     spawns are not both retained (e.g. the second overwrites the first
@@ -574,7 +574,7 @@ def test_parse_stalker_batch_call_event() -> None:
     type -> event_type, from (hex str) -> from_address (int), to (hex str) -> to_address
     (int), depth -> depth. Uses known hex address strings and verifies the int result.
 
-    Falsifiable: if the bridge strips the leading '0x' when parsing from_address (returning
+    If the bridge strips the leading '0x' when parsing from_address (returning
     a partial decimal), the != _ADDR assertion catches it. If to_address parsing fails and
     returns None for a non-None input, the ``is not None`` check fails. If depth parsing
     crashes on float input and defaults to 0, the depth == 1 check fails.
@@ -610,7 +610,7 @@ def test_parse_stalker_batch_exec_event_no_destination() -> None:
     The bridge must set to_address=None (not 0, not the from_address) in that case.
     Also verifies a float depth value is correctly converted to int.
 
-    Falsifiable: if the bridge substitutes 0 for a missing 'to' field, the ``is None``
+    If the bridge substitutes 0 for a missing 'to' field, the ``is None``
     assertion fails. If float-depth conversion is broken and depth stays a float,
     isinstance(int) or exact == 0 fails (float 0.0 != int 0 in strict equality).
     """
@@ -651,7 +651,7 @@ def test_stalker_unfollow_assembles_trace_with_correct_structure(
     non-negative float, and every StalkerEvent in the trace must have the expected field
     types (event_type str, from_address positive int, to_address int|None, depth int).
 
-    Falsifiable: if stalker_unfollow stores event_count separately from len(events) and
+    If stalker_unfollow stores event_count separately from len(events) and
     they diverge, the equality assertion fails. If thread_id defaults to 0 instead of the
     followed tid, the assertion fails. If any event has a non-int from_address (e.g. a
     Frida pointer object), the isinstance assertion fails.
@@ -700,7 +700,7 @@ def test_stalker_unfollow_never_followed_thread_returns_empty_trace(frida_bridge
     must return an empty StalkerTrace with event_count == 0, events == [], and
     duration_ms as a non-negative float -- not raise ToolError or return None.
 
-    Falsifiable: if the bridge raises ToolError for an unknown TID, the test fails before
+    If the bridge raises ToolError for an unknown TID, the test fails before
     reaching the assertions. If event_count defaults to a non-zero sentinel, the == 0 check
     fails. If events is returned as None instead of [], the == [] check fails.
 
@@ -730,7 +730,7 @@ def test_enumerate_devices_returns_frida_device_info_with_correct_fields(
     the known valid string values. The local device (always present) must have
     device_type == 'local' exactly, not 'LOCAL' or an enum value.
 
-    Falsifiable: if the bridge forgets to call str() on device.type and returns a Frida
+    If the bridge forgets to call str() on device.type and returns a Frida
     enum instead, isinstance(str) fails. If device_type uses a different casing or value
     convention, the membership check fails. If id is empty, the truthiness check fails.
 
@@ -763,7 +763,7 @@ def test_resolve_api_returns_api_resolver_match_with_int_address(frida_bridge: F
     the name field is a plain str containing both module and function name separated
     by '!'. The address must be in the system DLL range (>= 0x70000000).
 
-    Falsifiable: if the bridge fails to call int() on the address string and returns a
+    If the bridge fails to call int() on the address string and returns a
     str, isinstance(int) fails. If address parsing uses base 10 instead of base 16 for
     '0x'-prefixed strings, the result would be a garbage low address that fails >=
     _NTDLL_BASE_MIN. If the '!' separator is stripped from the name, the 'in' check fails.
@@ -790,7 +790,7 @@ def test_resolve_api_returns_api_resolver_match_with_int_address(frida_bridge: F
 def test_tool_definition_returns_frida_tool() -> None:
     """Verify tool_definition has ToolName.FRIDA and a non-empty description.
 
-    Falsifiable: changing tool_name to GHIDRA or similar would fail the enum
+    Changing tool_name to GHIDRA or similar would fail the enum
     comparison; removing description would fail the truthiness check.
     """
     bridge = FridaBridge()
@@ -804,7 +804,7 @@ def test_tool_definition_returns_frida_tool() -> None:
 def test_all_function_names_have_methods() -> None:
     """Every function in tool_definition maps to a callable async method with correct signature.
 
-    Falsifiable: deleting a bridge method breaks the hasattr check; replacing an
+    Deleting a bridge method breaks the hasattr check; replacing an
     async method with a sync stub breaks the inspect.iscoroutinefunction check;
     removing a parameter from the function definition would show up via signature
     parameter count.
@@ -843,7 +843,7 @@ def test_all_function_names_have_methods() -> None:
 def test_function_count_exact() -> None:
     """Verify exact function count is 134.
 
-    Falsifiable: adding or removing any function from _FRIDA_FUNCTIONS changes
+    Adding or removing any function from _FRIDA_FUNCTIONS changes
     the count and fails this test. Using >= would mask deletions.
     """
     bridge = FridaBridge()
@@ -858,7 +858,7 @@ def test_function_count_exact() -> None:
 def test_no_duplicate_function_names() -> None:
     """Verify no duplicate names and all names follow the 'frida.' prefix convention.
 
-    Falsifiable: adding a duplicate entry or a name without the 'frida.' prefix
+    Adding a duplicate entry or a name without the 'frida.' prefix
     fails the set-size or startswith assertion respectively.
     """
     bridge = FridaBridge()
@@ -873,7 +873,7 @@ def test_no_duplicate_function_names() -> None:
 def test_new_functions_present() -> None:
     """Verify the 18 expected functions are registered and callable.
 
-    Falsifiable: removing any of the 18 expected function names from the tool
+    Removing any of the 18 expected function names from the tool
     definition, or making its corresponding method non-callable, fails this test.
     """
     bridge = FridaBridge()
@@ -891,7 +891,7 @@ def test_new_functions_present() -> None:
 def test_fixed_functions_present() -> None:
     """Verify enumerate_imports, allocate_memory and get_memory_regions are registered and get_memory_ranges is absent.
 
-    Falsifiable: renaming enumerate_imports, allocate_memory, or get_memory_regions
+    Renaming enumerate_imports, allocate_memory, or get_memory_regions
     breaks the 'in names' assertion; restoring get_memory_ranges breaks the 'not in' assert.
     """
     bridge = FridaBridge()
@@ -1045,7 +1045,7 @@ def unattached_bridge() -> Generator[FridaBridge]:
 def test_enumerate_processes(unattached_bridge: FridaBridge) -> None:
     """Verify enumerate_processes returns real running processes with valid pid and name.
 
-    Falsifiable: if enumerate_processes returns an empty list, the len > 0
+    If enumerate_processes returns an empty list, the len > 0
     assertion fails. If any entry has pid <= 0, the assertion per-entry fails.
     If the method throws ToolError, no exception guard conceals it.
 
@@ -1067,7 +1067,7 @@ def test_enumerate_processes(unattached_bridge: FridaBridge) -> None:
 def test_enumerate_devices(unattached_bridge: FridaBridge) -> None:
     """Verify enumerate_devices returns at least the local device with correct type.
 
-    Falsifiable: if enumerate_devices returns an empty list, len >= 1 fails;
+    If enumerate_devices returns an empty list, len >= 1 fails;
     if no device has device_type == 'local', the local_found assertion fails;
     if any device has an empty id or name, the per-device assertions fail.
 
@@ -1090,7 +1090,7 @@ def test_enumerate_devices(unattached_bridge: FridaBridge) -> None:
 def test_connect_device_local(unattached_bridge: FridaBridge) -> None:
     """Verify connecting to local device returns a FridaDeviceInfo with device_type 'local'.
 
-    Falsifiable: if connect_device returns a non-FridaDeviceInfo object, isinstance fails;
+    If connect_device returns a non-FridaDeviceInfo object, isinstance fails;
     if device_type is not 'local', the equality assertion fails; if id is empty, the
     truthiness assertion fails.
 
@@ -1108,7 +1108,7 @@ def test_connect_device_local(unattached_bridge: FridaBridge) -> None:
 def test_enumerate_threads(frida_bridge: FridaBridge) -> None:
     """Verify enumerate_threads returns multiple real threads from notepad.
 
-    Falsifiable: if enumerate_threads returns < 2 entries, the count assertion fails;
+    If enumerate_threads returns < 2 entries, the count assertion fails;
     if any TID <= 0, the per-entry assertion fails; if state values are wrong, the
     set membership assertion fails.
 
@@ -1131,7 +1131,7 @@ def test_enumerate_threads(frida_bridge: FridaBridge) -> None:
 def test_enumerate_imports_kernel32(frida_bridge: FridaBridge) -> None:
     """Verify enumerate_imports returns real kernel32 imports with valid structure.
 
-    Falsifiable: if enumerate_imports returns fewer than _KERNEL32_MIN_IMPORTS entries,
+    If enumerate_imports returns fewer than _KERNEL32_MIN_IMPORTS entries,
     the count assertion fails; if any entry has an empty function name, the per-entry
     assertion fails; if none of the expected NT functions are present, the sentinel check fails.
 
@@ -1157,7 +1157,7 @@ def test_enumerate_imports_kernel32(frida_bridge: FridaBridge) -> None:
 def test_find_base_address_ntdll(frida_bridge: FridaBridge) -> None:
     """Verify find_base_address returns ntdll.dll base in high address range, 64KB-aligned.
 
-    Falsifiable: if the method returns 0 or a low address, the >= assertion fails;
+    If the method returns 0 or a low address, the >= assertion fails;
     if the result is not 64KB-aligned (Windows PE requirement), the modulo check fails;
     if the result is non-deterministic, the two-call equality assertion fails.
 
@@ -1176,7 +1176,7 @@ def test_find_base_address_ntdll(frida_bridge: FridaBridge) -> None:
 def test_find_base_address_kernel32(frida_bridge: FridaBridge) -> None:
     """Verify find_base_address returns kernel32.dll base, distinct from ntdll, 64KB-aligned.
 
-    Falsifiable: if kernel32 and ntdll resolve to the same address the != assertion fails;
+    If kernel32 and ntdll resolve to the same address the != assertion fails;
     if kernel32 base is not 64KB-aligned the modulo check fails; if the method returns
     a value below _NTDLL_BASE_MIN the range check fails.
 
@@ -1195,7 +1195,7 @@ def test_find_base_address_kernel32(frida_bridge: FridaBridge) -> None:
 def test_get_memory_regions(frida_bridge: FridaBridge) -> None:
     """Verify get_memory_regions returns real memory layout with executable and readable regions.
 
-    Falsifiable: if the count is below threshold, len assertion fails; if any region
+    If the count is below threshold, len assertion fails; if any region
     has zero size the size assertion fails; if no executable region exists the
     has_executable assertion fails; if protection field format is wrong the 'in' check fails.
 
@@ -1221,7 +1221,7 @@ def test_get_memory_regions(frida_bridge: FridaBridge) -> None:
 def test_resolve_api_createfile(frida_bridge: FridaBridge) -> None:
     """Verify resolve_api finds CreateFileW in kernel32 with a non-zero address.
 
-    Falsifiable: if no match contains CreateFileW the found assertion fails;
+    If no match contains CreateFileW the found assertion fails;
     if address is 0 the > 0 assertion fails; if the result list is empty the
     len >= 1 assertion fails.
 
@@ -1243,7 +1243,7 @@ def test_resolve_api_createfile(frida_bridge: FridaBridge) -> None:
 def test_resolve_symbol(frida_bridge: FridaBridge) -> None:
     """Verify resolve_symbol resolves a known NtCreateFile address to its exact symbol.
 
-    Falsifiable: if the resolved address doesn't match the query, the == assertion fails;
+    If the resolved address doesn't match the query, the == assertion fails;
     if name is empty the truthiness assertion fails; if NtCreateFile is not in the name
     the 'in' assertion fails; if module_name is None the is not None assertion fails.
 
@@ -1265,7 +1265,7 @@ def test_resolve_symbol(frida_bridge: FridaBridge) -> None:
 def test_find_functions_named(frida_bridge: FridaBridge) -> None:
     """Verify find_functions_named locates NtCreateFile in the system DLL range.
 
-    Falsifiable: if no NtCreateFile is found the len >= 1 assertion fails;
+    If no NtCreateFile is found the len >= 1 assertion fails;
     if address is below system DLL range the >= assertion fails; if name is empty
     the truthiness assertion fails.
 
@@ -1284,7 +1284,7 @@ def test_find_functions_named(frida_bridge: FridaBridge) -> None:
 def test_allocate_memory(frida_bridge: FridaBridge) -> None:
     """Verify allocate_memory returns writable memory; write+read roundtrip proves usability.
 
-    Falsifiable: if address is <= 0x10000 (invalid range) the assertion fails;
+    If address is <= 0x10000 (invalid range) the assertion fails;
     if write_memory or read_memory silently fail, readback != probe fails;
     an allocation that returns a sentinel value (like 0) would fail both assertions.
 
@@ -1303,7 +1303,7 @@ def test_allocate_memory(frida_bridge: FridaBridge) -> None:
 def test_protect_memory(frida_bridge: FridaBridge) -> None:
     """Verify protect_memory succeeds on allocated memory and subsequent read/write works.
 
-    Falsifiable: if protect_memory returns False the result assertion fails;
+    If protect_memory returns False the result assertion fails;
     if write or read after protect fail, the roundtrip assertion fails.
 
     Args:
@@ -1322,7 +1322,7 @@ def test_protect_memory(frida_bridge: FridaBridge) -> None:
 def test_read_write_memory_roundtrip(frida_bridge: FridaBridge) -> None:
     """Verify memory write then read returns the exact same bytes, byte-by-byte.
 
-    Falsifiable: if any byte is corrupted the per-byte assertion fails; if the
+    If any byte is corrupted the per-byte assertion fails; if the
     buffer is not actually written the all-zeros read would differ from the pattern.
 
     Args:
@@ -1342,7 +1342,7 @@ def test_read_write_memory_roundtrip(frida_bridge: FridaBridge) -> None:
 def test_hook_and_remove(frida_bridge: FridaBridge) -> None:
     """Verify hook_function creates an active hook and remove_hook deactivates it.
 
-    Falsifiable: if hook_function returns a HookInfo with active=False the assertion fails;
+    If hook_function returns a HookInfo with active=False the assertion fails;
     if hook.id is empty the truthiness assertion fails; if remove_hook returns False
     the removed assertion fails.
 
@@ -1365,7 +1365,7 @@ def test_stalker_follow_and_unfollow(
 ) -> None:
     """Verify stalker_follow collects real call events from a busy worker thread.
 
-    Falsifiable: if trace has 0 events the event_count > 0 assertion fails;
+    If trace has 0 events the event_count > 0 assertion fails;
     if events list length != event_count the equality fails; if any event has
     type != 'call' the event_type assertion fails.
 
@@ -1397,7 +1397,7 @@ def test_stalker_follow_and_unfollow(
 def test_child_gating_not_supported_on_windows(frida_bridge: FridaBridge) -> None:
     """Verify child gating raises ToolError on Windows (not supported by Frida).
 
-    Falsifiable: if Frida adds Windows child-gating support, enable_child_gating
+    If Frida adds Windows child-gating support, enable_child_gating
     would not raise ToolError and this test would fail, alerting us to update behavior.
 
     Args:
@@ -1426,7 +1426,7 @@ def test_get_pending_children_empty() -> None:
     empty-state assertion meaningful: if ``get_pending_children`` always
     returned ``[]``, the positive arm would fail.
 
-    Falsifiable: if ``get_pending_children`` always returns ``[]``, the
+    If ``get_pending_children`` always returns ``[]``, the
     positive-arm ``len == 1`` assertion fails. If a bridge with no gated
     children accumulates a spurious child entry, the ``len(children) == 0``
     assertion fails.
@@ -1482,7 +1482,7 @@ def test_get_pending_children_not_supported_raises_tool_error() -> None:
     third-party exception escape through a bridge API documented to only
     raise ``ToolError``.
 
-    Falsifiable: if the ``except frida.NotSupportedError`` branch is removed
+    If the ``except frida.NotSupportedError`` branch is removed
     from ``get_pending_children``, the raw ``frida.NotSupportedError``
     propagates uncaught instead of ``ToolError``, so
     ``pytest.raises(ToolError)`` fails on that unhandled exception. If the
@@ -1517,7 +1517,7 @@ def test_crash_reporting_lifecycle(frida_bridge: FridaBridge) -> None:
     assertion meaningful: if ``get_crashes`` always returned ``[]``, the positive
     arm would fail.
 
-    Falsifiable: if ``get_crashes`` always returns ``[]``, the positive-arm
+    If ``get_crashes`` always returns ``[]``, the positive-arm
     ``len == 1`` assertion fails.  If ``enable_crash_reporting`` raises on the
     first or second (idempotent) call, the test fails before reaching the
     empty-state assertion.  If a crash is spuriously reported on healthy notepad,
@@ -1553,7 +1553,7 @@ def test_enumerate_processes_contains_notepad(
 ) -> None:
     """Verify our spawned notepad shows up in the process list with the correct PID.
 
-    Falsifiable: if enumerate_processes does not return the spawned notepad PID,
+    If enumerate_processes does not return the spawned notepad PID,
     the 'in pids' assertion fails.
 
     Args:

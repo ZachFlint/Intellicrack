@@ -126,7 +126,7 @@ def test_rust_extra_flags_use_passthrough_form() -> None:
 
 
 def test_extra_flags_without_target_are_rejected() -> None:
-    """Extra flags with the default (both) target set fail loudly."""
+    """Extra flags with the default (both) target set exit with code 2 and an error."""
     result = _run("--memory", "16g")
     assert result.returncode == 2
     assert "exactly one target" in result.stderr

@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the x64dbg embed tab showing a real window on a hidden desktop.
+"""Gates for the x64dbg embed tab showing a real window on a hidden desktop.
 
 x64dbg is launched on a dedicated, never-visible Win32 desktop (see
 ``intellicrack.core.win32_desktop_process.spawn_on_hidden_desktop``). The panel locates that
@@ -20,10 +20,10 @@ window lives on a registered hidden desktop, it does not try to reparent the rea
 It starts a live mirror instead: ``_start_mirror_capture``/``_refresh_mirror_frame``
 periodically render the window's content via
 ``intellicrack.ui.win32_embed.capture_window_image`` (``PrintWindow``, which is not
-desktop-scoped) into a ``QLabel`` hosted in the same embed tab. This module spawns a real,
-titled, visible top-level window on a real hidden desktop (the same technique as
+desktop-scoped) into a ``QLabel`` hosted in the same embed tab. This module spawns a
+titled, visible top-level window on a hidden desktop (the same technique as
 test_x64dbg_embed_finds_window_s13d04.py, reproduced here so this module does not depend on
-that test module) and drives the panel's real, un-mocked poll and mirror-refresh methods
+that test module) and drives the panel's poll and mirror-refresh methods
 against it.
 
 Reverting ``_poll_embed_tick`` to unconditionally call ``embed_window`` (dropping the

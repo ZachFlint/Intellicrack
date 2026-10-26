@@ -3,19 +3,25 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
-use std::collections::HashMap;
+//! Interprets the bytes at an offset every way a hex editor's data inspector
+//! shows them: signed and unsigned integers from 8 to 128 bits in both byte
+//! orders, floats, LEB128, timestamps, colors, GUIDs, IP addresses and short
+//! strings. An interpretation is offered only when enough bytes remain for it.
+
+use std::collections::BTreeMap;
 
 /// Every interpretation of the bytes at one offset that fits the window.
 pub struct DataInspection {
     /// Interpretation name (e.g. `"uint32_le"`) to its rendered value. A key is
     /// absent when the window is too short or the bytes are not a valid value.
-    pub values: HashMap<String, String>,
+    pub values: BTreeMap<String, String>,
 }
 
 impl DataInspection {
     /// Returns the interpretation map.
     #[must_use]
-    pub fn to_map(&self) -> &HashMap<String, String> {
+    /// The interpretations keyed by name, in key order.
+    pub fn to_map(&self) -> &BTreeMap<String, String> {
         &self.values
     }
 }
@@ -134,7 +140,7 @@ fn is_leap_year(year: i64) -> bool {
 }
 
 fn inspect_8bit(
-    values: &mut HashMap<String, String>,
+    values: &mut BTreeMap<String, String>,
     data: &[u8],
     offset: usize,
     remaining: usize,
@@ -170,7 +176,7 @@ fn inspect_8bit(
     }
 }
 
-fn inspect_16bit(values: &mut HashMap<String, String>, data: &[u8], offset: usize) {
+fn inspect_16bit(values: &mut BTreeMap<String, String>, data: &[u8], offset: usize) {
     let b = [data[offset], data[offset + 1]];
     let le_val = u16::from_le_bytes(b);
     let be_val = u16::from_be_bytes(b);
@@ -227,7 +233,7 @@ fn inspect_16bit(values: &mut HashMap<String, String>, data: &[u8], offset: usiz
     }
 }
 
-fn inspect_24bit(values: &mut HashMap<String, String>, data: &[u8], offset: usize) {
+fn inspect_24bit(values: &mut BTreeMap<String, String>, data: &[u8], offset: usize) {
     let le_val = read_u24_le(data, offset);
     let be_val = read_u24_be(data, offset);
     values.insert("uint24_le".to_string(), format!("{le_val}"));
@@ -242,7 +248,7 @@ fn inspect_24bit(values: &mut HashMap<String, String>, data: &[u8], offset: usiz
     );
 }
 
-fn inspect_32bit(values: &mut HashMap<String, String>, data: &[u8], offset: usize) {
+fn inspect_32bit(values: &mut BTreeMap<String, String>, data: &[u8], offset: usize) {
     let b = [
         data[offset],
         data[offset + 1],
@@ -278,7 +284,7 @@ fn inspect_32bit(values: &mut HashMap<String, String>, data: &[u8], offset: usiz
     inspect_unix_timestamp(values, le_val);
 }
 
-fn inspect_unix_timestamp(values: &mut HashMap<String, String>, raw: u32) {
+fn inspect_unix_timestamp(values: &mut BTreeMap<String, String>, raw: u32) {
     let timestamp = i64::from(raw);
     if timestamp > 0 && timestamp < 4_102_444_800 {
         let secs = timestamp;
@@ -323,7 +329,7 @@ fn inspect_unix_timestamp(values: &mut HashMap<String, String>, raw: u32) {
     }
 }
 
-fn inspect_48bit(values: &mut HashMap<String, String>, data: &[u8], offset: usize) {
+fn inspect_48bit(values: &mut BTreeMap<String, String>, data: &[u8], offset: usize) {
     let le_val = read_u48_le(data, offset);
     let be_val = read_u48_be(data, offset);
     values.insert("uint48_le".to_string(), format!("{le_val}"));
@@ -338,7 +344,7 @@ fn inspect_48bit(values: &mut HashMap<String, String>, data: &[u8], offset: usiz
     );
 }
 
-fn inspect_64bit(values: &mut HashMap<String, String>, data: &[u8], offset: usize) {
+fn inspect_64bit(values: &mut BTreeMap<String, String>, data: &[u8], offset: usize) {
     let b = [
         data[offset],
         data[offset + 1],
@@ -368,7 +374,7 @@ fn inspect_64bit(values: &mut HashMap<String, String>, data: &[u8], offset: usiz
     inspect_filetime(values, le_val);
 }
 
-fn inspect_filetime(values: &mut HashMap<String, String>, filetime: u64) {
+fn inspect_filetime(values: &mut BTreeMap<String, String>, filetime: u64) {
     if filetime > 116_444_736_000_000_000 && filetime < 200_000_000_000_000_000 {
         let unix_100ns = filetime - 116_444_736_000_000_000;
         let unix_secs = (unix_100ns / 10_000_000).cast_signed();
@@ -413,7 +419,7 @@ fn inspect_filetime(values: &mut HashMap<String, String>, filetime: u64) {
     }
 }
 
-fn inspect_128bit(values: &mut HashMap<String, String>, data: &[u8], offset: usize) {
+fn inspect_128bit(values: &mut BTreeMap<String, String>, data: &[u8], offset: usize) {
     let d = &data[offset..offset + 16];
     values.insert(
         "guid".to_string(),
@@ -476,7 +482,7 @@ fn format_ipv6(segments: &[u16; 8]) -> String {
 }
 
 fn inspect_wide_string(
-    values: &mut HashMap<String, String>,
+    values: &mut BTreeMap<String, String>,
     data: &[u8],
     offset: usize,
     remaining: usize,
@@ -520,7 +526,7 @@ fn inspect_wide_string(
 /// up to 64 bytes (32 UTF-16 code units).
 #[must_use]
 pub fn inspect_at(data: &[u8], offset: usize) -> DataInspection {
-    let mut values = HashMap::new();
+    let mut values = BTreeMap::new();
     let remaining = if offset < data.len() {
         data.len() - offset
     } else {
@@ -615,9 +621,49 @@ mod tests {
         let mut data = [0u8; 8];
         data[..4].copy_from_slice(&bytes);
         let result = inspect_at(&data, 0);
-        let f_str = result.values.get("float32_le").unwrap();
-        let parsed: f32 = f_str.parse().unwrap();
-        assert!((parsed - 3.125).abs() < 0.001);
+        assert_eq!(
+            result.values.get("float32_le").map(String::as_str),
+            Some("3.125")
+        );
+    }
+
+    /// Each interpretation appears exactly when the bytes left reach its
+    /// width: fifteen bytes give the 64-bit values but no GUID or IPv6, and
+    /// sixteen give both.
+    #[test]
+    fn test_inspect_width_thresholds_at_end_of_buffer() {
+        let fifteen = inspect_at(&[0x11u8; 15], 0);
+        assert!(!fifteen.values.contains_key("guid"));
+        assert!(!fifteen.values.contains_key("ipv6"));
+        assert_eq!(
+            fifteen.values.get("uint64_le").map(String::as_str),
+            Some("1229782938247303441")
+        );
+        let sixteen = inspect_at(&[0x11u8; 16], 0);
+        assert_eq!(
+            sixteen.values.get("guid").map(String::as_str),
+            Some("11111111-1111-1111-1111-111111111111")
+        );
+        assert_eq!(
+            sixteen.values.get("ipv6").map(String::as_str),
+            Some("1111:1111:1111:1111:1111:1111:1111:1111")
+        );
+    }
+
+    /// The interpretations come out in key order, the same on every run, so
+    /// the Python dict and the UI rows built from them do not shuffle between
+    /// processes.
+    #[test]
+    fn test_inspect_at_keys_are_in_sorted_order() {
+        let inspection = inspect_at(&[0x11u8; 16], 0);
+        let keys: Vec<&str> = inspection.to_map().keys().map(String::as_str).collect();
+        let mut sorted = keys.clone();
+        sorted.sort_unstable();
+        assert_eq!(keys, sorted);
+        assert!(
+            keys.len() > 1,
+            "need several keys for ordering to mean anything"
+        );
     }
 
     #[test]

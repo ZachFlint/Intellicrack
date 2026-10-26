@@ -275,7 +275,7 @@ class TestPatchInstructionRace:
         assert str(result["patched_bytes"]).lower().startswith("b801000000")
 
     async def test_patch_still_raises_when_memory_never_changes(self, bridge: X64DbgBridge) -> None:
-        """A genuinely failed assemble (bytes never change) still raises.
+        """A failed assemble (bytes never change) still raises.
 
         Args:
             bridge: Fixture bridge instance.

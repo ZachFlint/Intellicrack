@@ -5,7 +5,7 @@
 
 """Patch, anti-debug and import gate tests for ``intellicrack.bridges.x64dbg``.
 
-Covers the following operations with falsifiable assertions against independent oracles:
+Covers the following operations with assertions against independent oracles:
 
 - ``patch_instruction``: exact ``assemble`` framing, ``verified=True`` when memory changes, ``ToolError`` when bytes are unchanged.
 - ``nop_range``: exact ``fill`` command framing, ``verified=True`` when all bytes are NOP, ``ToolError`` on non-NOP residual.
@@ -197,7 +197,7 @@ def bridge() -> X64DbgBridge:
 class TestPatchInstructionFraming:
     """Gate: ``patch_instruction`` emits ``assemble`` with exact address and instruction.
 
-    Falsifiable mutation caught: if ``patch_instruction`` sent ``"patch"`` instead
+    Mutation caught: if ``patch_instruction`` sent ``"patch"`` instead
     of ``"assemble"``, or omitted the ``instruction`` key from params, the framing
     assertion would fail while the not-attached gate would still pass.
     """
@@ -244,7 +244,7 @@ class TestPatchInstructionFraming:
 
         The oracle: ``patched_bytes`` must equal the hex of the second
         ``read_memory`` return value.  Mutating the result field to return
-        the first read's bytes would change ``patched_bytes`` and falsify
+        the first read's bytes would change ``patched_bytes`` and fail
         this assertion.
 
         Args:
@@ -322,7 +322,7 @@ class TestPatchInstructionFraming:
 class TestNopRangeFraming:
     """Gate: ``nop_range`` emits ``fill <address>, <size>, 90`` via exec.
 
-    Falsifiable mutation caught: if ``nop_range`` used ``"fill"`` as a
+    Mutation caught: if ``nop_range`` used ``"fill"`` as a
     direct RPC name instead of routing through ``_send_command``/``exec``,
     or if it used ``00`` instead of ``90``, the framing assertion fails.
     """
@@ -439,7 +439,7 @@ class TestNopRangeFraming:
 class TestGetPatches:
     """Gate: ``get_patches`` issues ``patch_list`` and parses each record.
 
-    Falsifiable mutation caught: if ``get_patches`` read from a wrong RPC
+    Mutation caught: if ``get_patches`` read from a wrong RPC
     name (``"patches"`` vs ``"patch_list"``), the fake pipe would raise
     ``AssertionError`` for the unexpected command, catching the regression.
     If the parsing dropped the ``address`` key, the field assertion fails.
@@ -507,7 +507,7 @@ class TestGetPatches:
     ) -> None:
         """A non-list ``patch_list`` result is normalised to an empty list.
 
-        Falsifiable: if ``get_patches`` returned the raw dict instead of
+        If ``get_patches`` returned the raw dict instead of
         converting a non-list to ``[]``, ``patches == []`` would fail.
 
         Args:
@@ -531,7 +531,7 @@ class TestGetPatches:
 class TestRestorePatch:
     """``restore_patch`` issues ``patch_restore`` with the correct address.
 
-    Falsifiable mutation caught: if ``restore_patch`` passed ``address`` as a decimal string instead of ``hex(address)``, the params assertion fails.
+    Mutation caught: if ``restore_patch`` passed ``address`` as a decimal string instead of ``hex(address)``, the params assertion fails.
     """
 
     async def test_sends_patch_restore_with_hex_address(
@@ -598,7 +598,7 @@ class TestExportPatches:
     then polls the output file until it is freshly written at the
     expected size.
 
-    Falsifiable mutations caught: emitting a bare ``savedata "<path>"``
+    Mutations caught: emitting a bare ``savedata "<path>"``
     (which x64dbg rejects for missing arguments),
     swapping the address and size arguments, deriving the span from the
     wrong bound, or reporting success without the file ever appearing.
@@ -659,7 +659,7 @@ class TestExportPatches:
     ) -> None:
         """A ``savedata`` that writes nothing must fail verification.
 
-        Falsifiable: if ``export_patches`` reported success from the RPC
+        If ``export_patches`` reported success from the RPC
         reply alone - a check that trusts the reply without verifying the file on disk - no ``ToolError`` would be raised even though nothing was
         ever written.
 
@@ -693,7 +693,7 @@ class TestExportPatches:
     ) -> None:
         """An empty patch set has no span to dump and must raise.
 
-        Falsifiable: without the empty-set guard, ``min()`` over no
+        Without the empty-set guard, ``min()`` over no
         addresses would raise ``ValueError`` instead of the documented
         ``ToolError``, and no ``savedata`` may be issued at all.
 
@@ -721,7 +721,7 @@ class TestExportPatches:
 class TestReadPebRoundTrip:
     """``read_peb`` issues ``peb_read`` and returns the result dict verbatim.
 
-    Falsifiable mutations caught: returning an empty dict instead of the parsed result, or reading from the wrong RPC name.
+    Mutations caught: returning an empty dict instead of the parsed result, or reading from the wrong RPC name.
     """
 
     async def test_peb_read_rpc_sent_and_fields_returned(
@@ -809,7 +809,7 @@ class TestReadPebRoundTrip:
 class TestDetectAntiDebug:
     """``detect_anti_debug`` parses PEB fields into per-check boolean flags.
 
-    Falsifiable mutations caught: reading ``"being_debugged"`` instead of ``"beingDebugged"``, applying the wrong mask (``0xFF`` vs ``0x70``), or inverting the bool conversion.
+    Mutations caught: reading ``"being_debugged"`` instead of ``"beingDebugged"``, applying the wrong mask (``0xFF`` vs ``0x70``), or inverting the bool conversion.
     """
 
     async def test_being_debugged_flag_set(
@@ -938,7 +938,7 @@ class TestDetectAntiDebug:
 class TestGetRegisters:
     """``get_registers`` issues ``reg_all`` and parses into ``RegisterState``.
 
-    Falsifiable mutations caught: reading from the wrong response key (e.g. ``"RAX"`` vs ``"rax"``), not falling back to 32-bit aliases, or collapsing all fields to ``0`` silently.
+    Mutations caught: reading from the wrong response key (e.g. ``"RAX"`` vs ``"rax"``), not falling back to 32-bit aliases, or collapsing all fields to ``0`` silently.
     """
 
     async def test_reg_all_parsed_into_register_state(
@@ -1003,7 +1003,7 @@ class TestGetRegisters:
     ) -> None:
         """When ``"rax"`` is absent, the bridge falls back to ``"eax"``.
 
-        Falsifiable: removing the fallback logic in ``get_reg`` would
+        Removing the fallback logic in ``get_reg`` would
         make ``state.rax`` return ``0`` instead of ``_REG_RAX``.
 
         Args:
@@ -1048,7 +1048,7 @@ class TestGetRegisters:
     ) -> None:
         """A non-dict ``reg_all`` response raises ``ToolError``.
 
-        Falsifiable: if ``get_registers`` silently returned a zeroed
+        If ``get_registers`` silently returned a zeroed
         ``RegisterState`` instead of raising, this gate would fail.
 
         Args:
@@ -1071,7 +1071,7 @@ class TestGetRegisters:
 class TestSetRegister:
     """``set_register`` issues ``reg_set`` with exact params.
 
-    Falsifiable mutations caught: sending the register name under the wrong key (``"name"`` vs ``"register"``), or omitting the ``value`` field.
+    Mutations caught: sending the register name under the wrong key (``"name"`` vs ``"register"``), or omitting the ``value`` field.
     """
 
     async def test_reg_set_framing_and_returns_true(
@@ -1128,7 +1128,7 @@ class TestSetRegister:
 class TestReconstructImports:
     """``reconstruct_imports`` issues ``scylla_reconstruct`` with OEP and path.
 
-    Falsifiable mutations caught: using a decimal OEP string instead of ``hex(oep)``, omitting ``output_path`` from the RPC params, or never falling back to script commands when the RPC is unavailable.
+    Mutations caught: using a decimal OEP string instead of ``hex(oep)``, omitting ``output_path`` from the RPC params, or never falling back to script commands when the RPC is unavailable.
     """
 
     async def test_scylla_reconstruct_rpc_framing(
@@ -1138,7 +1138,7 @@ class TestReconstructImports:
         """``scylla_reconstruct`` is sent with ``oep`` (hex) and ``output_path``.
 
         The oracle: ``hex(_OEP)`` is the expected OEP string.  A decimal
-        string would falsify this assertion.
+        string would fail this assertion.
 
         Args:
             bridge: Unattached bridge fixture.
@@ -1190,7 +1190,7 @@ class TestReconstructImports:
     ) -> None:
         """Unknown-RPC triggers the three stepwise ``scylla.*`` script commands.
 
-        Falsifiable: removing one of the three fallback ``_send_command``
+        Removing one of the three fallback ``_send_command``
         calls means the corresponding ``exec`` entry is absent from ``sent``,
         failing the in-list assertion.
 
@@ -1225,7 +1225,7 @@ class TestReconstructImports:
 class TestGetModuleImports:
     """``get_module_imports`` issues ``mod_imports`` with the module name.
 
-    Falsifiable mutations caught: using a different param key (``"module"`` vs ``"name"``), or not parsing each import entry into a dict from the list.
+    Mutations caught: using a different param key (``"module"`` vs ``"name"``), or not parsing each import entry into a dict from the list.
     """
 
     async def test_sends_mod_imports_with_name_and_parses_result(
@@ -1289,7 +1289,7 @@ class TestGetModuleImports:
 class TestFindIntermodularCalls:
     """``find_intermodular_calls`` issues ``ref_search`` with ``type=intermodular``.
 
-    Falsifiable mutations caught: using ``"type": "cross_module"`` instead of ``"intermodular"``, or using the wrong param key for the module name.
+    Mutations caught: using ``"type": "cross_module"`` instead of ``"intermodular"``, or using the wrong param key for the module name.
     """
 
     async def test_ref_search_framing_and_references_returned(

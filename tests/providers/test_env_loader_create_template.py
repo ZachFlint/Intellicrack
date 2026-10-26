@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate: ``create_env_template`` must never destroy a real `.env`.
+"""Gate: ``create_env_template`` must never destroy a real `.env`.
 
 The Providers dialog's "Create .env" action calls ``create_env_template``,
 which must not use an unconditional ``path.open("w")``: that would silently
@@ -11,10 +11,10 @@ truncate an existing `.env` and replace it with a placeholder template.
 Because the keyring can be empty, the `.env` file is sometimes the only
 on-disk copy of a user's real API keys, so truncating it is data loss.
 
-These tests exercise real file I/O against a ``tmp_path`` directory (no
-filesystem mocks) and assert that a populated `.env` survives a
-``create_env_template`` call byte-for-byte, that a backup is produced, and
-that only genuinely missing template variables get appended.
+These tests exercise file I/O against a ``tmp_path`` directory and assert
+that a populated `.env` survives a ``create_env_template`` call
+byte-for-byte, that a backup is produced, and that only missing template
+variables get appended.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ _REAL_ENV_CONTENT = (
 def test_create_env_template_preserves_existing_real_keys(tmp_path: Path) -> None:
     """A populated `.env` must retain its real key values after templating.
 
-    This is the core falsifiable gate: it fails
+    This is the core check: it fails
     immediately if the implementation reverts to an unconditional
     ``path.open("w")`` truncate, because the original key/value lines
     would no longer be present in the file.

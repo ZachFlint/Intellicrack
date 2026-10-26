@@ -75,7 +75,7 @@ class McpRootsView(QWidget):
     Emits ``changed()`` whenever the operator changes anything.
     """
 
-    changed = pyqtSignal()
+    changed: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Build an empty view.

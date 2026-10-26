@@ -3,7 +3,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the knowledge-graph node-identity filter.
+"""Gate for the knowledge-graph node-identity filter.
 
 The interactive HTML keeps only nodes whose id starts with ``intellicrack.``.
 Module, class, and function nodes must therefore be named by their importable
@@ -11,8 +11,8 @@ dotted path (``intellicrack.sample.Sample``) and not by a filesystem-rooted
 path (``src.intellicrack.sample.Sample``); otherwise every richly-typed node is
 silently dropped and the visualization renders only typeless import targets.
 
-These tests exercise the real generator against real Python source files and
-fail loudly if the naming regresses so the filter discards typed nodes again.
+These tests exercise the real generator against on-disk Python source files and
+fail if the naming regresses so the filter discards typed nodes again.
 """
 
 from __future__ import annotations

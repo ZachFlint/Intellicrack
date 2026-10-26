@@ -412,7 +412,7 @@ async def test_a_saved_instance_with_a_non_ascii_header_is_logged_and_still_regi
     ``ValueError``, while the connect builds its client. The startup records the failure
     and carries on; the instance is registered anyway so Provider Settings can fix it.
 
-    Falsifiable: removing ``ValueError`` from the ``except`` tuple on main.py line 999
+    Removing ``ValueError`` from the ``except`` tuple on main.py line 999
     lets the encoding error escape ``_initialize_saved_instances``.
     """
     _write_instance("gw-hdr", headers={"X-Probe": "é"})
@@ -447,7 +447,7 @@ async def test_a_saved_instance_with_a_malformed_base_url_does_not_abort_startup
     the application's startup. The correct behavior is the same as for any other bad
     saved instance: log the failure, register the instance, finish initializing.
 
-    Falsifiable: this test is red while main.py line 999 omits the ``httpx`` error;
+    This test is red while main.py line 999 omits the ``httpx`` error;
     catching it there turns it green.
 
     Args:
@@ -473,7 +473,7 @@ def test_an_early_splash_joins_a_process_that_already_has_a_qt_application(tmp_p
     the first application; in this container the call is always refused, so a run that
     reaches it logs ``per_monitor_dpi_awareness_rejected`` and one that skips it logs nothing.
 
-    Falsifiable: deleting the ``if QApplication.instance() is None:`` guard on main.py line
+    Deleting the ``if QApplication.instance() is None:`` guard on main.py line
     525 makes the construction call the DPI function again, which the empty event list rejects.
 
     Args:
@@ -501,7 +501,7 @@ def test_the_template_manager_is_returned_without_templates_when_the_hex_backend
     events from ``TemplateManager``), then the skip is logged as a warning; no template file
     is written and no bootstrap failure is recorded.
 
-    Falsifiable: deleting the ``except ImportError`` clause on main.py line 1212 lets the
+    Deleting the ``except ImportError`` clause on main.py line 1212 lets the
     import error escape the initializer.
 
     Args:
@@ -529,7 +529,7 @@ def test_a_main_window_is_built_without_a_template_manager_when_none_was_bootstr
     The child builds a real main window against a redirected settings store and calls the
     real wiring function with ``template_manager=None``.
 
-    Falsifiable: deleting the ``if template_manager is not None:`` guard on main.py line 1376
+    Deleting the ``if template_manager is not None:`` guard on main.py line 1376
     makes the wiring call ``set_template_manager`` anyway, which logs ``template_manager_set``.
 
     Args:
@@ -554,7 +554,7 @@ def test_a_synchronous_cleanup_survives_a_process_the_system_refuses_to_end(tmp_
     carry on; the synchronous one is expected to do the same and must not leave the manager
     flagged as cleaning up, because the exit and signal handlers return early while it is.
 
-    Falsifiable: this test is red while ``_sync_cleanup`` (process_manager.py line 563 to 568)
+    This test is red while ``_sync_cleanup`` (process_manager.py line 563 to 568)
     catches only ``psutil.NoSuchProcess``; catching ``psutil.AccessDenied`` there turns it green.
 
     Args:

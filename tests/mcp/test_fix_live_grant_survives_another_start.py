@@ -49,7 +49,7 @@ _POLL_S: Final[float] = 0.05
 def test_a_grant_held_by_a_running_process_outlives_another_processes_sweep(tmp_path: Path) -> None:
     """A stale sweep leaves a running process's grant in force and reverts it once that process is gone.
 
-    Falsifiable: a sweep that reverts everything this process does not hold
+    A sweep that reverts everything this process does not hold
     takes the Low label off the directory while the process that granted it
     is still running.
 

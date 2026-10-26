@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real falsifiable test gates for the CutterBridge debug subsystem.
+"""Tests for the CutterBridge debug subsystem.
 
 Covers the 15 debug operations:
 attach, detach, set_breakpoint (software / hardware / memory / conditional /
@@ -175,7 +175,7 @@ class TestAttach:
     def test_attach_issues_dp_command(self) -> None:
         """Attach issues the exact 'dp 1337' rizin command.
 
-        Falsifiable: if attach() sends 'dpa 1337' or a different command
+        If attach() sends 'dpa 1337' or a different command
         variant, the 'dp 1337' assertion fails.
         """
         recorder = _CommandRecorder()
@@ -187,7 +187,7 @@ class TestAttach:
     def test_attach_sets_process_attached_true(self) -> None:
         """Attach sets state.process_attached to True.
 
-        Falsifiable: if attach() forgets to set process_attached, the flag
+        If attach() forgets to set process_attached, the flag
         remains False and the assertion fails.
         """
         recorder = _CommandRecorder()
@@ -199,7 +199,7 @@ class TestAttach:
     def test_attach_records_target_pid_in_state(self) -> None:
         """Attach stores the pid in state.target_pid.
 
-        Falsifiable: if attach() stores the wrong value or omits the
+        If attach() stores the wrong value or omits the
         target_pid update, the equality check fails.
         """
         recorder = _CommandRecorder()
@@ -211,7 +211,7 @@ class TestAttach:
     def test_attach_records_internal_attached_pid(self) -> None:
         """Attach stores the pid in the internal _attached_pid slot.
 
-        Falsifiable: if attach() omits the _attached_pid assignment, subsequent
+        If attach() omits the _attached_pid assignment, subsequent
         _require_attached checks would still fail even with process_attached True.
         """
         recorder = _CommandRecorder()
@@ -223,7 +223,7 @@ class TestAttach:
     def test_attach_without_r2_raises(self) -> None:
         """Attach raises ToolError when no r2 session is open.
 
-        Falsifiable: if the no-binary guard is removed from attach(), no
+        If the no-binary guard is removed from attach(), no
         exception is raised and this gate fails.
         """
         bridge = CutterBridge()
@@ -237,7 +237,7 @@ class TestDetach:
     def test_detach_issues_dp_minus_command(self) -> None:
         """Detach issues exactly 'dp-'.
 
-        Falsifiable: if detach() sends 'dp 0' or 'dpu' instead of 'dp-',
+        If detach() sends 'dp 0' or 'dpu' instead of 'dp-',
         the 'dp-' assertion fails.
         """
         recorder = _CommandRecorder()
@@ -248,7 +248,7 @@ class TestDetach:
     def test_detach_sets_process_attached_false(self) -> None:
         """Detach sets state.process_attached to False.
 
-        Falsifiable: if detach() forgets to clear process_attached, the
+        If detach() forgets to clear process_attached, the
         bridge still reports True after detach and this assertion fails.
         """
         recorder = _CommandRecorder()
@@ -259,7 +259,7 @@ class TestDetach:
     def test_detach_clears_target_pid(self) -> None:
         """Detach sets state.target_pid to None.
 
-        Falsifiable: if detach() leaves target_pid at the old value, the
+        If detach() leaves target_pid at the old value, the
         None assertion fails.
         """
         recorder = _CommandRecorder()
@@ -273,7 +273,7 @@ class TestDetach:
         Seeds a software breakpoint at 0x1000 via set_breakpoint, then calls
         detach and asserts the cache is empty.
 
-        Falsifiable: if detach() skips _breakpoints.clear(), the dict still
+        If detach() skips _breakpoints.clear(), the dict still
         contains the 0x1000 entry and the empty-dict assertion fails.
         """
         recorder = _CommandRecorder()
@@ -286,7 +286,7 @@ class TestDetach:
     def test_detach_without_attach_raises(self) -> None:
         """Detach raises ToolError when not attached to any process.
 
-        Falsifiable: if the _require_attached guard is removed, no exception
+        If the _require_attached guard is removed, no exception
         is raised and this gate fails.
         """
         recorder = _CommandRecorder()
@@ -302,7 +302,7 @@ class TestSetBreakpointSoftware:
     def test_software_breakpoint_command(self) -> None:
         """set_breakpoint('software') issues 'db 4096' for address=0x1000.
 
-        Falsifiable: if the software branch uses 'dbH' instead of 'db', the
+        If the software branch uses 'dbH' instead of 'db', the
         'db 4096' assertion fails.
         """
         recorder = _CommandRecorder()
@@ -313,7 +313,7 @@ class TestSetBreakpointSoftware:
     def test_software_breakpoint_returns_address(self) -> None:
         """set_breakpoint returns the breakpoint address as its identifier.
 
-        Falsifiable: if the return value is always 0 or a different constant,
+        If the return value is always 0 or a different constant,
         the equality assertion fails.
         """
         recorder = _CommandRecorder()
@@ -324,7 +324,7 @@ class TestSetBreakpointSoftware:
     def test_software_breakpoint_cached_with_correct_type(self) -> None:
         """set_breakpoint stores the entry in _breakpoints with bp_type='software'.
 
-        Falsifiable: if the cached type is 'hardware' or the address is missing
+        If the cached type is 'hardware' or the address is missing
         from the cache, the bp_type comparison or key lookup fails.
         """
         recorder = _CommandRecorder()
@@ -341,7 +341,7 @@ class TestSetBreakpointHardware:
     def test_hardware_breakpoint_command(self) -> None:
         """set_breakpoint('hardware') issues 'dbH 4096' for address=0x1000.
 
-        Falsifiable: if the hardware branch falls through to 'db' (software)
+        If the hardware branch falls through to 'db' (software)
         instead of 'dbH', the 'dbH 4096' assertion fails.
         """
         recorder = _CommandRecorder()
@@ -352,7 +352,7 @@ class TestSetBreakpointHardware:
     def test_hardware_breakpoint_cached_type(self) -> None:
         """set_breakpoint stores bp_type='hardware' in the cache.
 
-        Falsifiable: if the type literal is set to 'software' for the hardware
+        If the type literal is set to 'software' for the hardware
         branch, the bp_type comparison fails.
         """
         recorder = _CommandRecorder()
@@ -368,7 +368,7 @@ class TestSetBreakpointMemory:
     def test_memory_breakpoint_command(self) -> None:
         """set_breakpoint('memory') issues 'dbm 4096' for address=0x1000.
 
-        Falsifiable: if the memory branch uses 'db' instead of 'dbm', the
+        If the memory branch uses 'db' instead of 'dbm', the
         'dbm 4096' assertion fails.
         """
         recorder = _CommandRecorder()
@@ -379,7 +379,7 @@ class TestSetBreakpointMemory:
     def test_memory_breakpoint_cached_type(self) -> None:
         """set_breakpoint stores bp_type='memory' for the memory branch.
 
-        Falsifiable: if the type literal falls to the 'software' else branch,
+        If the type literal falls to the 'software' else branch,
         the bp_type comparison fails.
         """
         recorder = _CommandRecorder()
@@ -395,7 +395,7 @@ class TestSetBreakpointConditional:
     def test_conditional_issues_db_then_dbc(self) -> None:
         """set_breakpoint with condition issues both 'db 4096' and 'dbC 4096 rax==1'.
 
-        Falsifiable: if the conditional dbC branch is omitted, 'dbC 4096 rax==1'
+        If the conditional dbC branch is omitted, 'dbC 4096 rax==1'
         is absent from recorded commands.
         """
         recorder = _CommandRecorder()
@@ -407,7 +407,7 @@ class TestSetBreakpointConditional:
     def test_db_issued_before_dbc(self) -> None:
         """'db {addr}' appears before 'dbC {addr} {cond}' in the command sequence.
 
-        Falsifiable: if the condition is applied before the breakpoint is created
+        If the condition is applied before the breakpoint is created
         (reversed order), the index comparison fails.
         """
         recorder = _CommandRecorder()
@@ -420,7 +420,7 @@ class TestSetBreakpointConditional:
     def test_condition_stored_in_cache(self) -> None:
         """The condition string is preserved in the cached BreakpointInfo.
 
-        Falsifiable: if set_breakpoint stores None as the condition instead of
+        If set_breakpoint stores None as the condition instead of
         the supplied expression, the equality assertion fails.
         """
         recorder = _CommandRecorder()
@@ -436,7 +436,7 @@ class TestSetBreakpointInjection:
     def test_semicolon_in_condition_raises(self) -> None:
         """A ';' in the condition raises ToolError before any command is issued.
 
-        Falsifiable: if the validate_r2_argument call on condition is removed,
+        If the validate_r2_argument call on condition is removed,
         no exception is raised and ';dc' would be injected into rizin.
         """
         recorder = _CommandRecorder()
@@ -447,7 +447,7 @@ class TestSetBreakpointInjection:
     def test_invalid_bp_type_raises(self) -> None:
         """An unrecognised bp_type raises ToolError before any command is issued.
 
-        Falsifiable: if the bp_type validation set is removed, an unknown type
+        If the bp_type validation set is removed, an unknown type
         might fall through to 'db' without error.
         """
         recorder = _CommandRecorder()
@@ -462,7 +462,7 @@ class TestRemoveBreakpoint:
     def test_remove_issues_db_minus_command(self) -> None:
         """remove_breakpoint issues 'db- 4096' for address=0x1000.
 
-        Falsifiable: if remove_breakpoint sends 'db 4096' (set) instead of
+        If remove_breakpoint sends 'db 4096' (set) instead of
         'db- 4096' (remove), the command assertion fails.
         """
         recorder = _CommandRecorder()
@@ -475,7 +475,7 @@ class TestRemoveBreakpoint:
     def test_remove_clears_cache_entry(self) -> None:
         """remove_breakpoint removes the address key from _breakpoints.
 
-        Falsifiable: if remove_breakpoint skips the cache pop, the key is
+        If remove_breakpoint skips the cache pop, the key is
         still present after the call and the not-in assertion fails.
         """
         recorder = _CommandRecorder()
@@ -487,7 +487,7 @@ class TestRemoveBreakpoint:
     def test_remove_returns_true(self) -> None:
         """remove_breakpoint returns True on success.
 
-        Falsifiable: if the return value is accidentally None or False, the
+        If the return value is accidentally None or False, the
         identity assertion fails.
         """
         recorder = _CommandRecorder()
@@ -503,7 +503,7 @@ class TestGetBreakpoints:
     def test_issues_dbj_command(self) -> None:
         """get_breakpoints issues the 'dbj' rizin command.
 
-        Falsifiable: if get_breakpoints queries 'db' (text) instead of 'dbj'
+        If get_breakpoints queries 'db' (text) instead of 'dbj'
         (JSON), the 'dbj' assertion fails.
         """
         recorder = _CommandRecorder({"dbj": "[]"})
@@ -514,7 +514,7 @@ class TestGetBreakpoints:
     def test_local_breakpoint_preserved_in_result(self) -> None:
         """Local cache entries appear in the returned list even when dbj returns [].
 
-        Falsifiable: if get_breakpoints drops the local cache and returns only
+        If get_breakpoints drops the local cache and returns only
         rizin-side entries, the locally-set breakpoint is absent and the
         address check fails.
         """
@@ -534,7 +534,7 @@ class TestGetBreakpoints:
         the 'type' field for hardware breakpoints, but the bridge must normalise
         it to the BreakpointInfo.bp_type literal 'hardware'.
 
-        Falsifiable: if the ``raw_type in {"hardware", "hw"}`` branch is
+        If the ``raw_type in {"hardware", "hw"}`` branch is
         dropped and 'hw' falls to the else (software) branch, bp.bp_type
         would be 'software' and the equality assertion fails.
         """
@@ -551,7 +551,7 @@ class TestGetBreakpoints:
     def test_external_bp_hit_count_parsed(self) -> None:
         """Hit count from the dbj JSON payload is stored in hit_count.
 
-        Falsifiable: if get_breakpoints ignores the 'hits' field and always
+        If get_breakpoints ignores the 'hits' field and always
         stores hit_count=0, the assertion on 3 fails.
         """
         external_bp_json = json.dumps([
@@ -569,7 +569,7 @@ class TestGetBreakpoints:
         The local entry carries a condition string set by set_breakpoint; the
         rizin entry has no condition.  The merge must preserve the local entry.
 
-        Falsifiable: if the merge strategy is inverted (external overwrites
+        If the merge strategy is inverted (external overwrites
         local), the condition is lost and the assertion fails.
         """
         external_bp_json = json.dumps([
@@ -591,7 +591,7 @@ class TestStepInto:
     def test_step_into_issues_ds(self) -> None:
         """step_into issues the 'ds' (source-step) command.
 
-        Falsifiable: if step_into sends 'dso' (step-over) instead of 'ds',
+        If step_into sends 'dso' (step-over) instead of 'ds',
         the 'ds' assertion fails.
         """
         recorder = _CommandRecorder({"dr?PC": "0x401001\n"})
@@ -602,7 +602,7 @@ class TestStepInto:
     def test_step_into_reads_pc_via_drpc(self) -> None:
         """step_into issues 'dr?PC' to read the post-step instruction pointer.
 
-        Falsifiable: if the PC read is omitted, 'dr?PC' is absent from the
+        If the PC read is omitted, 'dr?PC' is absent from the
         command log and this assertion fails.
         """
         recorder = _CommandRecorder({"dr?PC": "0x401001\n"})
@@ -613,7 +613,7 @@ class TestStepInto:
     def test_step_into_ds_before_drpc(self) -> None:
         """'ds' precedes 'dr?PC' in the command sequence.
 
-        Falsifiable: if the order is reversed (PC read before step), the index
+        If the order is reversed (PC read before step), the index
         comparison fails.
         """
         recorder = _CommandRecorder({"dr?PC": "0x401001\n"})
@@ -626,7 +626,7 @@ class TestStepInto:
     def test_step_into_returns_parsed_int_pc(self) -> None:
         """step_into returns the hex PC response parsed to an integer.
 
-        The oracle is 0x401001 = 4198401.  Falsifiable: if the hex string is
+        The oracle is 0x401001 = 4198401.  If the hex string is
         returned unparsed as a str, the int comparison fails.
         """
         recorder = _CommandRecorder({"dr?PC": "0x401001\n"})
@@ -641,7 +641,7 @@ class TestStepOver:
     def test_step_over_issues_dso(self) -> None:
         """step_over issues 'dso' (step-over), not 'ds' (step-into).
 
-        Falsifiable: if step_over shares the step_into command path and sends
+        If step_over shares the step_into command path and sends
         'ds', the 'dso' assertion fails.
         """
         recorder = _CommandRecorder({"dr?PC": "0x401002\n"})
@@ -652,7 +652,7 @@ class TestStepOver:
     def test_step_over_returns_parsed_pc(self) -> None:
         """step_over returns the PC as an integer (0x401002).
 
-        Falsifiable: if step_over returns the same canned value as step_into
+        If step_over returns the same canned value as step_into
         would (e.g. 0x401001), the specific 0x401002 assertion fails.
         """
         recorder = _CommandRecorder({"dr?PC": "0x401002\n"})
@@ -667,7 +667,7 @@ class TestRun:
     def test_run_issues_dc(self) -> None:
         """run() issues 'dc' to continue debuggee execution.
 
-        Falsifiable: if run() sends 'ds' (single-step) or 'dso' instead of
+        If run() sends 'ds' (single-step) or 'dso' instead of
         'dc', the 'dc' assertion fails.
         """
         recorder = _CommandRecorder()
@@ -678,7 +678,7 @@ class TestRun:
     def test_run_without_attach_raises(self) -> None:
         """run() raises ToolError when not attached.
 
-        Falsifiable: if the _require_attached guard is removed from run(), no
+        If the _require_attached guard is removed from run(), no
         exception is raised and this gate fails.
         """
         recorder = _CommandRecorder()
@@ -721,7 +721,7 @@ class TestGetRegisters:
     def test_issues_drj_command(self) -> None:
         """get_registers issues 'drj' (JSON register dump).
 
-        Falsifiable: if get_registers queries 'dr' (text) instead of 'drj',
+        If get_registers queries 'dr' (text) instead of 'drj',
         the 'drj' assertion fails.
         """
         recorder = _CommandRecorder({"drj": self._REG_JSON})
@@ -733,7 +733,7 @@ class TestGetRegisters:
         """get_registers parses the JSON payload into the exact RegisterState.
 
         Each field in the oracle JSON maps to the matching RegisterState attribute.
-        Falsifiable: if any key lookup maps to the wrong register (e.g. 'rax'
+        If any key lookup maps to the wrong register (e.g. 'rax'
         stored into rbx), one of the field comparisons fails.
         """
         recorder = _CommandRecorder({"drj": self._REG_JSON})
@@ -750,7 +750,7 @@ class TestGetRegisters:
     def test_32bit_alt_name_fallback_eax_to_rax(self) -> None:
         """When 'rax' is absent, get_registers falls back to 'eax'.
 
-        This exercises the 32-bit target alt-name path.  Falsifiable: if the
+        This exercises the 32-bit target alt-name path.  If the
         fallback branch is removed and rax defaults to 0 instead of 42, the
         assertion fails.
         """
@@ -781,7 +781,7 @@ class TestGetRegisters:
     def test_non_dict_drj_response_raises(self) -> None:
         """A JSON array response from drj raises ToolError.
 
-        Falsifiable: if get_registers silently returns a zeroed RegisterState
+        If get_registers silently returns a zeroed RegisterState
         for a malformed list response, this gate fails.
         """
         recorder = _CommandRecorder({"drj": "[1,2,3]"})
@@ -797,7 +797,7 @@ class TestSetRegister:
         """set_register issues 'dr rax=3735928559' for register='rax', value=0xDEADBEEF.
 
         The oracle is the decimal string representation in the f'dr {register}={value}'
-        template.  Falsifiable: if the command uses hex notation 'dr rax=0xdeadbeef' or
+        template.  If the command uses hex notation 'dr rax=0xdeadbeef' or
         swaps the operands, the exact string assertion fails.
         """
         recorder = _CommandRecorder()
@@ -808,7 +808,7 @@ class TestSetRegister:
     def test_set_register_returns_true(self) -> None:
         """set_register returns True on success.
 
-        Falsifiable: if the return value is accidentally None or 0, the
+        If the return value is accidentally None or 0, the
         identity assertion fails.
         """
         recorder = _CommandRecorder()
@@ -819,7 +819,7 @@ class TestSetRegister:
     def test_set_register_injection_guard_semicolon(self) -> None:
         """set_register rejects a register name containing ';'.
 
-        Falsifiable: if the validate_r2_argument call on 'register' is removed,
+        If the validate_r2_argument call on 'register' is removed,
         no exception is raised and 'dr ;rm=0' would be forwarded to rizin.
         """
         recorder = _CommandRecorder()
@@ -835,7 +835,7 @@ class TestReadMemory:
         """read_memory issues 'p8 4 @ 4096' and returns bytes.fromhex('deadbeef').
 
         The oracle: recorder returns 'deadbeef' for the exact 'p8 4 @ 4096'
-        command.  Falsifiable: if read_memory constructs 'p8 4 @ 0x1000' or
+        command.  If read_memory constructs 'p8 4 @ 0x1000' or
         returns the hex string unparsed, either the command or bytes assertion fails.
         """
         recorder = _CommandRecorder({"dmj": _MAP_OF_ADDR_1000, "p8 4 @ 4096": "deadbeef"})
@@ -848,7 +848,7 @@ class TestReadMemory:
         """read_memory raises ToolError for a range the debugger's memory map does not cover, without issuing 'p8'.
 
         The oracle: the map lists one readable region, 0x1000 to 0x2000, and the read asks for 4 bytes at 0x2000.
-        radare2 prints 'ffffffff' for such a read, which the recorder also returns.  Falsifiable: if the map check
+        radare2 prints 'ffffffff' for such a read, which the recorder also returns.  If the map check
         is skipped for a radare2 session, those four filler bytes are returned and no error is raised.
         """
         recorder = _CommandRecorder({"dmj": _MAP_OF_ADDR_1000, "p8": "ffffffff"})
@@ -860,7 +860,7 @@ class TestReadMemory:
     def test_size_zero_returns_empty_bytes_no_command(self) -> None:
         """read_memory with size=0 returns b'' without issuing a 'p8' command.
 
-        Falsifiable: if the size==0 early-return is removed, a 'p8 0 @ ...'
+        If the size==0 early-return is removed, a 'p8 0 @ ...'
         command is issued; the no-p8-command check verifies the guard path.
         """
         recorder = _CommandRecorder()
@@ -872,7 +872,7 @@ class TestReadMemory:
     def test_negative_size_raises_before_any_command(self) -> None:
         """read_memory with size=-1 raises ToolError before issuing any command.
 
-        Falsifiable: if the negative-size guard is removed, rizin receives
+        If the negative-size guard is removed, rizin receives
         'p8 -1 @ ...' and may return garbage without raising.
         """
         recorder = _CommandRecorder()
@@ -883,7 +883,7 @@ class TestReadMemory:
     def test_non_hex_response_raises(self) -> None:
         """A non-hex response from rizin raises ToolError with 'invalid hex response'.
 
-        Falsifiable: if the bytes.fromhex exception is swallowed and an empty
+        If the bytes.fromhex exception is swallowed and an empty
         b'' is returned instead, this gate fails.
         """
         recorder = _CommandRecorder({"dmj": _MAP_OF_ADDR_1000, "p8": "NOTHEX!!"})
@@ -899,7 +899,7 @@ class TestWriteMemory:
         r"""Write_memory issues 'wx 9090 @ 8192' and returns 2 for data=b'\x90\x90'.
 
         The oracle: data=b'\x90\x90' encodes to hex '9090' and address
-        0x2000=8192.  Falsifiable: if the command uses 'wh' or formats the
+        0x2000=8192.  If the command uses 'wh' or formats the
         address as '0x2000', the string assertion fails; if len(data) is not
         the return value, the count assertion fails.
         """
@@ -912,7 +912,7 @@ class TestWriteMemory:
     def test_empty_data_returns_zero_without_issuing_wx(self) -> None:
         """write_memory with empty data returns 0 without issuing any 'wx' command.
 
-        Falsifiable: if the empty-data guard is removed, 'wx  @ ...' is sent
+        If the empty-data guard is removed, 'wx  @ ...' is sent
         to rizin; the no-wx check confirms the guard path is taken.
         """
         recorder = _CommandRecorder()
@@ -928,7 +928,7 @@ class TestGetMemoryRegions:
     def test_issues_dmj_command(self) -> None:
         """get_memory_regions issues 'dmj'.
 
-        Falsifiable: if get_memory_regions queries 'dm' (text output) instead
+        If get_memory_regions queries 'dm' (text output) instead
         of 'dmj' (JSON), the 'dmj' assertion fails.
         """
         recorder = _CommandRecorder({"dmj": "[]"})
@@ -939,7 +939,7 @@ class TestGetMemoryRegions:
     def test_explicit_size_field_used_when_positive(self) -> None:
         """When 'size' is present and positive, it is used directly as MemoryRegion.size.
 
-        The oracle: size=8192 in the JSON.  Falsifiable: if the explicit 'size'
+        The oracle: size=8192 in the JSON.  If the explicit 'size'
         field is ignored and end-base is computed instead, the size comparison
         fails.
         """
@@ -969,7 +969,7 @@ class TestGetMemoryRegions:
         """When 'size' is 0, MemoryRegion.size is computed as addr_end - addr.
 
         The oracle: addr=4096, addr_end=8192 → computed size = 4096.
-        Falsifiable: if the fallback is removed and size stays 0, the
+        If the fallback is removed and size stays 0, the
         4096 assertion fails.
         """
         region_json = json.dumps([
@@ -991,7 +991,7 @@ class TestGetMemoryRegions:
     def test_perm_field_maps_to_protection(self) -> None:
         """get_memory_regions reads the 'perm' key as the protection string.
 
-        Falsifiable: if the key lookup uses 'permissions' as the primary name
+        If the key lookup uses 'permissions' as the primary name
         and the JSON only has 'perm', the protection defaults to '----'.
         """
         region_json = json.dumps([
@@ -1015,7 +1015,7 @@ class TestGetThreads:
     def test_issues_dptj_command(self) -> None:
         """get_threads issues 'dptj'.
 
-        Falsifiable: if get_threads queries 'dpt' (text) instead of 'dptj'
+        If get_threads queries 'dpt' (text) instead of 'dptj'
         (JSON), the 'dptj' assertion fails.
         """
         recorder = _CommandRecorder({"dptj": "[]"})
@@ -1027,7 +1027,7 @@ class TestGetThreads:
         """The rizin 'pid' JSON field maps to ThreadInfo.tid.
 
         The independent oracle: rizin's dptj uses 'pid' (not 'tid') for
-        thread IDs.  Falsifiable: if the primary key changes from 'pid' to
+        thread IDs.  If the primary key changes from 'pid' to
         something else and 'pid' is dropped, tid would be 0 and the
         equality assertion fails.
         """
@@ -1053,7 +1053,7 @@ class TestGetThreads:
     def test_threads_cache_updated_after_query(self) -> None:
         """get_threads updates the internal _threads cache keyed by tid.
 
-        Falsifiable: if the cache update is removed, _threads remains empty
+        If the cache update is removed, _threads remains empty
         after the call and the key lookup fails.
         """
         thread_json = json.dumps([
@@ -1078,7 +1078,7 @@ class TestGetModules:
     def test_issues_dmmj_command(self) -> None:
         """Get_modules issues 'dmmj', the module listing of radare2 and of rizin.
 
-        Falsifiable: if get_modules queries only 'dmj' (memory regions) instead of
+        If get_modules queries only 'dmj' (memory regions) instead of
         'dmmj' (module list), the 'dmmj' assertion fails.
         """
         recorder = _CommandRecorder({"dmmj": "[]"})
@@ -1090,7 +1090,7 @@ class TestGetModules:
         """When 'name' is absent, ModuleInfo.name is the stem of the 'file' path.
 
         The oracle: 'file'='C:/Windows/System32/ntdll.dll' → name='ntdll.dll'
-        (Path('...').name).  Falsifiable: if the name-derivation fallback is
+        (Path('...').name).  If the name-derivation fallback is
         removed and name stays empty, the equality assertion fails.
         """
         module_json = json.dumps([
@@ -1116,7 +1116,7 @@ class TestGetModules:
         """When 'size' is 0, ModuleInfo.size is computed as addr_end - addr.
 
         The oracle: addr=4096, addr_end=65536, size=0 → computed size 61440.
-        Falsifiable: if the fallback is removed and size stays 0, the 61440
+        If the fallback is removed and size stays 0, the 61440
         assertion fails.
         """
         module_json = json.dumps([
@@ -1136,7 +1136,7 @@ class TestGetModules:
     def test_explicit_name_takes_priority_over_file_stem(self) -> None:
         """When both 'name' and 'file' are present, 'name' is used as ModuleInfo.name.
 
-        Falsifiable: if the raw_name priority check is removed and the file
+        If the raw_name priority check is removed and the file
         stem is always used, the explicit 'custom_name' is ignored and the
         assertion fails.
         """

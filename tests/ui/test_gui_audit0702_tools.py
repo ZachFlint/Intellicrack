@@ -64,7 +64,7 @@ class _RecordingBridge(ToolBridgeBase):
     ``shutdown_started`` is set the instant the coroutine begins running and
     ``shutdown_completed`` is set only after an optional artificial delay,
     letting tests distinguish "dispatched but not finished yet" from
-    "actually completed" without any mocking of the bridge itself.
+    "completed".
     """
 
     def __init__(self, tool_name: ToolName, *, delay_s: float = 0.0) -> None:
@@ -262,7 +262,7 @@ class TestH31CloseEmbeddedToolsShutsDownBridges:
         invoked, so ``ProcessBridge``'s tracked Win32 handles (attached
         process, mapped sections, pipes/devices) leaked on every app exit.
         ``_cleanup_bridge_blocking`` must be called first and block
-        (bounded by a timeout) until teardown genuinely completes, so
+        (bounded by a timeout) until teardown completes, so
         ``shutdown_completed`` must already be set by the time this method
         returns.
         """

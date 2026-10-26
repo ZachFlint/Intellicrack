@@ -50,10 +50,10 @@ does not, and the real ``pnputil`` statuses a Windows guest returns.
 
 Whether an input really is trusted is decided by an oracle the installer does
 not share - ``X509Chain.Build`` returning true - so a precondition assertion
-fails loudly rather than letting either direction pass vacuously.
+fails with an assertion error rather than letting either direction pass vacuously.
 
 On top of that, :meth:`TestTheWholeCertificateChainIsTrusted.test_an_untrusted_catalog_is_rooted_when_the_whole_script_runs`
-runs the entire installer against a medium carrying a genuinely signed catalog,
+runs the entire installer against a medium carrying a signed catalog,
 which is what proves the decision function is wired into the script rather than
 merely present in it.
 """
@@ -418,7 +418,7 @@ class TestTheWholeCertificateChainIsTrusted:
     ) -> None:
         """A self-signed signer has its own root trusted rather than failing 0x800B0109.
 
-        This is the live discriminator: the certificate is real and freshly
+        The certificate is real and freshly
         minted, its chain terminates in itself, and nothing on this machine
         trusts it - exactly the shape of virtio-win's ``smbus.cat``.
 
@@ -459,7 +459,7 @@ class TestTheWholeCertificateChainIsTrusted:
 
         The two gates above prove the policy decides correctly; this one proves
         the script actually consults it, by running the entire installer against
-        a medium carrying a genuinely signed catalog and reading back the log it
+        a medium carrying a signed catalog and reading back the log it
         wrote.
 
         Args:

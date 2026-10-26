@@ -8,7 +8,7 @@ The privilege table is checked against real Win32 token queries rather than synt
 OS/registry dicts.
 These tests attach a real :class:`ProcessBridge` to the running interpreter
 and drive ``SystemTab._refresh_privileges`` so the privilege table renders the
-process token's genuine privileges. Assertions check real, verifiable values:
+process token's privileges. Assertions check real, verifiable values:
 the rendered privilege names must be valid ``Se*Privilege`` identifiers, must
 include the always-present ``SeChangeNotifyPrivilege`` granted to every user
 token, and the enabled/LUID columns must match the real bridge enumeration.

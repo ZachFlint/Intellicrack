@@ -12,7 +12,7 @@ wrap an unexpected failure of the remote exchange or of a readback.
 
 Three kinds of real object drive it:
 
-* a genuine ``ghidra_bridge.GhidraBridge`` RPC client pointed at a closed
+* a ``ghidra_bridge.GhidraBridge`` RPC client pointed at a closed
   loopback port, attached to every bridge so the bridge counts as connected;
 * ``_ScriptedBridge``, a subclass of the real ``GhidraBridge`` that replaces only
   the two transport primitives with a queue of outcomes, so the accessor code

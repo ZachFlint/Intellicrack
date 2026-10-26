@@ -6,13 +6,13 @@
 
 Cross-tool navigation maps a section's virtual address to a raw file offset so
 the hex editor can scroll there. That requires ``SectionInfo`` to record the raw
-file offset (PE ``PointerToRawData`` / ELF ``sh_offset``). This test parses a
-real binary -- the running Python interpreter, a PE on Windows and an ELF on
+file offset (PE ``PointerToRawData`` / ELF ``sh_offset``). This test parses an
+on-disk executable -- the running Python interpreter, a PE on Windows and an ELF on
 Linux -- and asserts the orchestrator's section extractor copies each section's
 file offset into ``SectionInfo.raw_offset``.
 
-Falsified by reverting the ``raw_offset=...`` population (every section would
-default to 0, and the ``.text`` file offset is non-zero in a real PE).
+Reverting the ``raw_offset=...`` population fails this test (every section would
+default to 0, and the ``.text`` file offset is non-zero in a compiled PE).
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ def test_section_raw_offset_matches_pe_file_offset() -> None:
 
     extract_sections = cast("_ExtractSectionsFn", vars(orchestrator_mod)["_extract_sections"])
     sections = extract_sections(parsed)
-    assert sections, "no sections extracted from the real binary"
+    assert sections, "no sections extracted from the interpreter binary"
 
     lief_offset_by_name = {str(sec.name): int(sec.offset) for sec in parsed.sections}
     for section in sections:
@@ -60,5 +60,5 @@ def test_section_raw_offset_matches_pe_file_offset() -> None:
         assert section.raw_offset == lief_offset_by_name[section.name], f"raw_offset for {section.name!r} does not match the file offset"
 
     text_section = next((s for s in sections if s.name.startswith(".text")), None)
-    assert text_section is not None, "real binary unexpectedly has no .text section"
+    assert text_section is not None, "interpreter binary unexpectedly has no .text section"
     assert text_section.raw_offset > 0, "raw_offset was left at the default 0 (F1 regression)"

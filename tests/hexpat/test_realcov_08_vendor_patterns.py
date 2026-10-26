@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for the HexPat front-end against vendor pattern files.
 
-These tests drive the genuine preprocessor -> lexer -> parser pipeline over
+These tests drive the preprocessor -> lexer -> parser pipeline over
 the real ``.hexpat`` corpus shipped in ``vendor/ImHex-Patterns`` instead of
 hand-crafted toy snippets. They prove the front-end copes with production DSL
 complexity: multi-level ``import`` chains resolving through

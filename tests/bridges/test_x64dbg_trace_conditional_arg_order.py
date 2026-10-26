@@ -9,7 +9,7 @@ x64dbg's documented ``TraceIntoConditional``/``ticnd`` and ``TraceOverConditiona
 
 ``X64DbgBridge.trace_into`` and ``trace_over`` must place the step count in the ``arg2`` position. A lone integer in ``arg1`` is parsed as the break condition, and any nonzero value stops the trace after the first instruction. Every call site in this codebase omits ``condition``, so the command x64dbg receives must carry the always-false sentinel ``0`` as the condition. These tests inspect the exact ``exec`` command text the bridge sends, because asserting only on the parsed return value cannot detect this framing.
 
-These tests script an in-process fake pipe client that records every ``(command, params)`` pair the bridge emits and assert on the exact ``exec`` command string, so any reversion to the swapped argument order, or any framing that lets ``max_steps`` land in the condition slot, fails loudly instead of passing silently.
+These tests script an in-process fake pipe client that records every ``(command, params)`` pair the bridge emits and assert on the exact ``exec`` command string, so any reversion to the swapped argument order, or any framing that lets ``max_steps`` land in the condition slot, fails the exact-command assertion.
 
 The same fake-pipe machinery gates ``X64DbgBridge.step_count``, which runs a fixed number of steps by issuing a bounded conditional trace with the always-false break condition ``0``. The command name must be the full ``TraceIntoConditional`` or ``TraceOverConditional`` (or ``ticnd``/``tocnd``); ``tic`` and ``toc`` are not registered in x64dbg. :class:`TestStepCountCommandName` pins the exact documented command name alongside the ``0``-then-count argument order.
 """

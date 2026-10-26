@@ -4,13 +4,13 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Shared fixtures for SystemTab tests.
 
-Exposes a real GUI harness that lets the user-visible warning paths run the genuine
+Exposes a real GUI harness that lets the user-visible warning paths run the
 ``QMessageBox.warning`` modal dialog while still keeping the suite non-blocking.
 
 Rather than replacing ``QMessageBox.warning`` with a fake (which would mask
 whether the production warning mechanism actually fires and with what content),
 the harness installs a repeating ``QTimer`` that detects the real modal
-``QMessageBox`` Qt creates, records its genuine ``windowTitle()``/``text()``, and
+``QMessageBox`` Qt creates, records its ``windowTitle()``/``text()``, and
 dismisses it via the real ``done()`` call so the blocking static method returns
 normally. Tests can therefore assert on the real dialog content that production
 code displayed.
@@ -84,7 +84,7 @@ class WarningRecorder:
 def warning_recorder() -> Iterator[WarningRecorder]:
     """Capture real ``QMessageBox.warning`` dialogs without faking them.
 
-    A live ``QApplication`` is ensured so Qt can create the genuine modal, and a
+    A live ``QApplication`` is ensured so Qt can create the modal, and a
     repeating timer dismisses each real warning dialog after recording its title
     and text. Because the production ``QMessageBox.warning`` call executes in
     full, tests can assert that warnings fired and what they said.
@@ -109,7 +109,7 @@ def warning_recorder() -> Iterator[WarningRecorder]:
 
 
 def test_warning_recorder_captures_real_qmessagebox_warning(warning_recorder: WarningRecorder) -> None:
-    """The recorder captures the genuine ``QMessageBox.warning`` modal, not a fake.
+    """The recorder captures the ``QMessageBox.warning`` modal Qt creates.
 
     This gate forbids replacing ``QMessageBox.warning`` with a fake. Here the *real*
     blocking static method
@@ -139,7 +139,7 @@ def test_warning_recorder_captures_real_qmessagebox_warning(warning_recorder: Wa
 def test_warning_recorder_records_multiple_dialogs_in_display_order(warning_recorder: WarningRecorder) -> None:
     """Sequential real warnings are captured in the exact order they were shown.
 
-    Each call drives a separate genuine modal through its own nested event loop, so
+    Each call drives a separate modal through its own nested event loop, so
     a recorder that lost ordering, dropped an entry, or replayed stale state would
     fail this exact-list assertion.
 

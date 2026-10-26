@@ -23,7 +23,7 @@ handle-release race without one actually pending on the clock), asserting on
 the real, unmodified filesystem state left behind. The second calls the real
 ``MoveFileExW`` against a real file this process owns and reads the result
 back out of the real ``PendingFileRenameOperations`` registry value, so it
-proves the OS actually accepted the deferred-delete request rather than
+checks that the OS recorded the deferred-delete request rather than
 trusting a boolean the binding happened to return.
 """
 
@@ -107,8 +107,8 @@ async def test_remove_temp_tree_retries_the_configured_number_of_times_before_gi
     every real call it makes and every real backoff sleep it awaits are
     counted directly, against the module's own configured attempt count. The
     directory and its file are real and never touched by the stub, so the
-    "nothing was removed" assertion is genuine end state, not a mocked return
-    value.
+    "nothing was removed" assertion checks the on-disk end state, not a
+    returned value.
 
     Args:
         tmp_path: Scratch directory standing in for the instance's temp tree.
@@ -151,9 +151,9 @@ async def test_remove_temp_tree_retries_the_configured_number_of_times_before_gi
 def test_schedule_delete_on_reboot_registers_a_real_file_with_windows(tmp_path: Path) -> None:
     """The last-resort fallback must make Windows itself accept the deferred delete.
 
-    Calls the real, unmocked ``ctypes``/``MoveFileExW`` binding against a real
+    Calls the ``ctypes``/``MoveFileExW`` binding against a
     file this test owns, then reads the operating system's own
-    ``PendingFileRenameOperations`` list back to confirm Windows genuinely
+    ``PendingFileRenameOperations`` list back to confirm Windows
     recorded it - not merely that the Python binding returned ``True``.
 
     Args:

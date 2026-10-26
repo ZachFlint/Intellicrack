@@ -315,7 +315,7 @@ def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> Popen[s
     window, then released and disposed.  Holding them concurrently for one
     bounded window - rather than sequentially - gives the 100 ms monitor many
     full sweep cycles in which every handle is continuously present, so a
-    genuinely fast monitor reliably enumerates them without timing flakiness.
+    fast monitor reliably enumerates them without timing flakiness.
     The total window (2 000 ms) is shorter than a 3 s cadence: a 3 s monitor
     whose next sweep after object creation fires 3 s later sees all three handles
     already gone and records nothing, so the test fails under that regression.

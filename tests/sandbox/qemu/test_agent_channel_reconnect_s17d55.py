@@ -15,7 +15,7 @@ for the rest of that session failed on a channel that was never coming back.
 Two properties are gated here, and they pull in opposite directions - which is
 the whole difficulty of the defect:
 
-* **The session survives a drop.** A command, a genuine socket close by the
+* **The session survives a drop.** A command, a socket close by the
   agent, and then another command that has to run. Proven from the server's own
   records: it must have accepted a second connection, answered a second
   readiness handshake, and received both commands.
@@ -142,7 +142,7 @@ class TestADroppedChannelIsReopenedForTheNextCommand:
 
     @pytest.mark.asyncio
     async def test_command_after_a_real_peer_close_still_reaches_the_guest(self) -> None:
-        """The command after a genuine socket close must run in the guest.
+        """The command after a peer socket close must run in the guest.
 
         The first command proves the channel was live, so the state that
         follows is produced by the agent's close and nothing else. The second

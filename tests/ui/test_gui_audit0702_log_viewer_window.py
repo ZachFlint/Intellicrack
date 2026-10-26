@@ -21,8 +21,7 @@ with no restore affordance. The splitter calls ``splitter.setChildrenCollapsible
 
 Each test below drives real Qt objects (:class:`LogViewerWindow`,
 ``_LogTableView``, ``QSplitter``, and a real background
-``GenericCallableWorker`` thread) -- no mocks stand in for the behavior under
-test.
+``GenericCallableWorker`` thread).
 """
 
 from __future__ import annotations

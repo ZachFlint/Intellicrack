@@ -40,8 +40,6 @@ from intellicrack.core.types import ToolError, ToolName
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping, Sequence
 
-    from intellicrack.core.types import HexDocumentFull
-
 
 type _Event = tuple[HexDocumentEvent, dict[str, Any]]
 
@@ -1147,7 +1145,7 @@ async def test_adopt_document_replaces_the_active_document_and_resets_cursor_and
     adopted = intellicrack_hexcore.HexDocument.open_bytes(b"adopted")
     path = tmp_path / "adopted.bin"
 
-    bridge.adopt_document(cast("HexDocumentFull", adopted), path)
+    bridge.adopt_document(adopted, path)
 
     assert bridge.document is adopted
     assert bridge.state.binary_loaded is True

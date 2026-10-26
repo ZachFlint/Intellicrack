@@ -159,9 +159,9 @@ class TestRegistryMonitorSource:
         """Get-ValueSnapshot must invoke Get-RegValueType per value and store the result.
 
         Presence of the function name and the variable ``$vtype`` anywhere in the
-        source does not prove the function is actually called per value: it could
+        source does not show the function is called per value: it could
         be defined but never invoked.  The assignment ``$vtype = Get-RegValueType``
-        with the argument ``-RegPath`` is the concrete artifact that proves the
+        with the argument ``-RegPath`` is the concrete artifact that shows the
         per-value call exists; the snapshot record's ``Type`` member confirms the
         result flows into the snapshot rather than being discarded.
         """

@@ -8,7 +8,7 @@
 Tool-call arguments arrive as plain JSON-decoded values, so a bridge method
 parameter annotated with a dataclass type is supplied by an AI/orchestrator
 caller as a plain mapping rather than a real instance. Bridge methods perform
-genuine attribute access on such parameters, so passing the mapping straight
+attribute access on such parameters, so passing the mapping straight
 through fails deep inside the call (an ``AttributeError`` on a ``dict``)
 instead of at the dispatch boundary. These tests exercise the
 ``ToolRegistry.execute_tool_call`` dispatcher that
@@ -21,7 +21,7 @@ import shape.
 
 Tests validate:
 - A mapping supplied for a dataclass-annotated parameter reaches the bound
-  method as a genuine dataclass instance, including recursive hydration of
+  method as a dataclass instance, including recursive hydration of
   a nested dataclass field.
 - A plain (non-dataclass-typed) parameter, and a parameter already holding a
   real dataclass instance, pass through dispatch completely unchanged.
@@ -176,10 +176,10 @@ async def test_dataclass_mapping_argument_is_hydrated_into_real_instance(
     """A mapping for a dataclass-typed parameter reaches the method as a real instance.
 
     Also proves recursive hydration: the nested ``inner`` mapping must become
-    a genuine ``_InnerSettings`` instance, not merely leave the outer
+    an ``_InnerSettings`` instance, not merely leave the outer
     ``_OuterSettings`` wrapper around a leftover dict.
 
-    Falsifiability: with the ``_hydrate_dataclass_arguments`` call removed
+    With the ``_hydrate_dataclass_arguments`` call removed
     from ``ToolRegistry.execute_tool_call``,
     ``bridge.received_settings`` is the raw ``dict`` instead of
     ``_OuterSettings``, failing the ``isinstance`` assertions below.
@@ -216,7 +216,7 @@ async def test_non_dataclass_argument_passes_through_unchanged(
     method's own default (``None``) must be used rather than hydration
     inventing a value where the caller supplied none.
 
-    Falsifiability: a hydration implementation that (incorrectly) tries to
+    A hydration implementation that (incorrectly) tries to
     coerce every mapping-shaped or missing argument would either raise here
     or replace the missing ``settings`` with something other than ``None``;
     both would fail the assertions below.
@@ -243,7 +243,7 @@ async def test_existing_dataclass_instance_argument_passes_through_unchanged(
     supplying a mapping; dispatch must not attempt to re-hydrate (or
     reject) a value that is already an instance of the target dataclass.
 
-    Falsifiability: an implementation that unconditionally rebuilds the
+    An implementation that unconditionally rebuilds the
     dataclass from ``dataclasses.asdict`` (instead of checking
     ``isinstance(value, Mapping)`` first) would still pass the equality
     check but fail the stronger ``is`` identity assertion below, revealing
@@ -267,7 +267,7 @@ async def test_unknown_field_in_mapping_raises_tool_error(
 ) -> None:
     """A mapping naming a field the target dataclass does not have raises ToolError.
 
-    Falsifiability: reverting the ``_hydrate_dataclass_arguments`` wiring
+    Reverting the ``_hydrate_dataclass_arguments`` wiring
     makes this call succeed instead of raising (the unrecognised dict
     reaches ``configure`` unchecked and ``bridge.received_settings`` becomes
     the raw dict), failing the ``pytest.raises`` context below.
@@ -298,7 +298,7 @@ async def test_mapping_missing_required_field_raises_tool_error(
     dispatch must convert into a ``ToolError`` rather than letting it
     propagate raw or silently passing the incomplete dict through.
 
-    Falsifiability: an implementation that catches ``TypeError`` and
+    An implementation that catches ``TypeError`` and
     silently falls back to leaving the mapping un-hydrated (instead of
     re-raising as ``ToolError``) would let this call succeed with
     ``bridge.received_settings`` holding a raw dict, failing the

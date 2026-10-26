@@ -431,7 +431,7 @@ class TestFridaPanelAttachDispatchesRealBridge:
     ) -> None:
         """Clicking Attach with a numeric PID must invoke the real ``bridge.attach`` coroutine.
 
-        Falsifiable: if ``_on_attach`` (frida_panel.py) stopped calling
+        If ``_on_attach`` (frida_panel.py) stopped calling
         ``self._bridge.attach(pid)`` on the numeric branch -- e.g. reverted
         to always calling ``attach_by_name`` regardless of input shape -- the
         real self-attach would never happen and
@@ -462,7 +462,7 @@ class TestFridaPanelAttachDispatchesRealBridge:
     ) -> None:
         """Clicking Attach with a non-numeric target must invoke ``bridge.attach_by_name``.
 
-        Falsifiable: if ``_on_attach``'s ``except ValueError`` branch
+        If ``_on_attach``'s ``except ValueError`` branch
         (frida_panel.py) were removed or miswired to call ``attach`` instead
         of ``attach_by_name``, the target would never be resolved by name
         and ``process_attached`` would remain ``False``.
@@ -470,9 +470,9 @@ class TestFridaPanelAttachDispatchesRealBridge:
         The target is a dedicated, freshly-spawned ``notepad.exe`` rather
         than the ambient test process (whose name -- ``python.exe``/
         ``pytest.exe`` -- commonly collides with other concurrently-running
-        interpreters), so the asserted PID is the real, unambiguous PID of
-        the process this test actually spawned -- a real gate that fails if
-        ``attach_by_name`` resolves to the wrong process.
+        interpreters), so the asserted PID is the unambiguous PID of the
+        process this test spawned, and the test fails if ``attach_by_name``
+        resolves to the wrong process.
 
         Args:
             synchronous_dispatch: Captures and drains dispatched coroutines.
@@ -506,7 +506,7 @@ class TestFridaPanelStopAllScripts:
     ) -> None:
         """Clicking "Stop All Scripts" must really unload every tracked script.
 
-        Falsifiable: if ``_on_stop_all_scripts`` (frida_panel.py) stopped
+        If ``_on_stop_all_scripts`` (frida_panel.py) stopped
         calling ``self._bridge.unload_all_scripts()``, the two persistent
         scripts loaded below would remain tracked by the bridge after the
         click.
@@ -542,7 +542,7 @@ class TestInterceptorLifecycleControlsWiring:
     ) -> None:
         """Clicking Flush must invoke the real ``flush_interceptor`` bridge coroutine.
 
-        Falsifiable: if ``_on_flush_interceptor`` (frida_instrumentation_tab.py)
+        If ``_on_flush_interceptor`` (frida_instrumentation_tab.py)
         were rewired to a local no-op instead of
         ``self._bridge.flush_interceptor()``, no coroutine would be captured
         and the status label would never read "Interceptor flushed".
@@ -572,7 +572,7 @@ class TestInterceptorLifecycleControlsWiring:
         must report success, and the status label must echo the *exact*
         target string the user typed.
 
-        Falsifiable: if the click handler stopped forwarding the line
+        If the click handler stopped forwarding the line
         edit's text to ``self._bridge.revert_hook(target)`` -- e.g.
         hardcoding a different string or silently dropping the call -- the
         status label would either omit "0x1" entirely or show a different
@@ -604,7 +604,7 @@ class TestStalkerCallProbeControlsWiring:
     ) -> None:
         """Clicking "Add Probe" must invoke ``stalker_add_call_probe`` and render its real probe ID.
 
-        Falsifiable: if ``_on_add_call_probe`` (frida_instrumentation_tab.py)
+        If ``_on_add_call_probe`` (frida_instrumentation_tab.py)
         stopped calling the bridge and instead fabricated a row locally, the
         table's Probe-ID cell would not equal a real ID the bridge can later
         resolve through ``stalker_remove_call_probe`` -- a subsequent removal
@@ -635,7 +635,7 @@ class TestStalkerCallProbeControlsWiring:
     ) -> None:
         """Clicking "Remove Selected" must invoke ``stalker_remove_call_probe`` for real.
 
-        Falsifiable: if ``_on_remove_call_probe`` stopped calling
+        If ``_on_remove_call_probe`` stopped calling
         ``self._bridge.stalker_remove_call_probe(probe_id)``, the probe added
         in the setup step would still be removable through the bridge after
         the click (this test proves it is not, by observing a second,
@@ -673,7 +673,7 @@ class TestMemoryPatchStringControlsWiring:
     ) -> None:
         """Clicking "Patch Code" must invoke ``patch_code`` and really write the typed bytes.
 
-        Falsifiable: if ``_on_patch_code`` stopped forwarding to
+        If ``_on_patch_code`` stopped forwarding to
         ``self._bridge.patch_code(addr, hex_data)`` -- e.g. only updating a
         local label without touching process memory -- the freshly allocated
         block would not contain the exact ``AA BB CC`` byte sequence when
@@ -704,7 +704,7 @@ class TestMemoryPatchStringControlsWiring:
     ) -> None:
         """Clicking "Allocate" must invoke ``allocate_string`` and return a real, readable address.
 
-        Falsifiable: if ``_on_allocate_string`` were rewired away from
+        If ``_on_allocate_string`` were rewired away from
         ``self._bridge.allocate_string(value, encoding=encoding)``, the
         result label would not contain a hex address whose target memory
         (read back via the bridge's real ``read_memory``) decodes to the
@@ -741,7 +741,7 @@ class TestSymbolLookupControlsWiring:
     ) -> None:
         """Clicking "Enumerate Symbols" must invoke ``enumerate_symbols`` for a real system module.
 
-        Falsifiable: if ``_on_enumerate_symbols`` stopped calling
+        If ``_on_enumerate_symbols`` stopped calling
         ``self._bridge.enumerate_symbols(module_name)``, the symbols table
         would remain empty instead of being populated with real exported
         names from ``kernel32.dll`` (every Windows process has this module
@@ -771,7 +771,7 @@ class TestSymbolLookupControlsWiring:
     ) -> None:
         """Clicking "Find Module by Address" must invoke ``find_module_by_address`` for a real base address.
 
-        Falsifiable: if the click handler stopped calling
+        If the click handler stopped calling
         ``self._bridge.find_module_by_address(addr)``, the result label
         would not contain "kernel32.dll" when queried with kernel32's own
         real, independently-resolved base address.
@@ -797,7 +797,7 @@ class TestSymbolLookupControlsWiring:
     ) -> None:
         """Clicking "Find Functions Matching" must invoke ``find_functions_matching`` with the typed glob.
 
-        Falsifiable: if the handler stopped calling
+        If the handler stopped calling
         ``self._bridge.find_functions_matching(pattern)``, the symbols table
         would not be populated with a real match for ``*CreateFileW*``,
         which every Windows process resolves to at least one function in
@@ -842,7 +842,7 @@ class TestSystemFunctionCallControlsWiring:
         independently-known Win32 constant, not derived from the
         implementation under test.
 
-        Falsifiable: if ``_on_call_system_function`` stopped calling
+        If ``_on_call_system_function`` stopped calling
         ``self._bridge.call_system_function(...)`` -- e.g. falling back to
         the plain ``call_function`` path which does not capture
         ``GetLastError`` -- the GetLastError label would never be populated

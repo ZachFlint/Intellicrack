@@ -11,7 +11,7 @@ the pipe and is otherwise ended by the code under test. Nothing here registers,
 signals or terminates the pytest process, one of its ancestors, or any process
 this module did not start.
 
-Paths that cannot be driven honestly are left out: the POSIX branches, the
+Paths this module cannot exercise safely on this host are left out: the POSIX branches, the
 branches that need the pytest process or an ancestor in the registry, and the
 ones that need the operating system to refuse access to a process.
 """
@@ -282,7 +282,7 @@ def test_a_failed_exit_code_query_counts_the_process_as_alive() -> None:
     A NULL handle is never valid, so ``GetExitCodeProcess`` fails on it, and the
     function documents that a failed query must not be read as a dead process.
 
-    Falsifiable: changing ``== 0`` to ``!= 0`` on process_manager.py line 118
+    Changing ``== 0`` to ``!= 0`` on process_manager.py line 118
     makes the failed query fall through to the exit-code comparison, which
     reports False for the untouched exit code.
     """
@@ -294,7 +294,7 @@ def test_a_failed_exit_code_query_counts_the_process_as_alive() -> None:
 def test_check_running_reports_a_popen_until_it_exits() -> None:
     """``check_running`` tracks a ``Popen`` from running to exited.
 
-    Falsifiable: changing ``is None`` to ``is not None`` on process_manager.py
+    Changing ``is None`` to ``is not None`` on process_manager.py
     line 294 inverts both assertions.
     """
     child = _spawn_blocking_child()
@@ -315,7 +315,7 @@ def test_check_running_reports_a_popen_until_it_exits() -> None:
 async def test_check_running_reports_an_asyncio_process_until_it_exits() -> None:
     """``check_running`` tracks an asyncio subprocess from running to exited.
 
-    Falsifiable: changing ``is None`` to ``is not None`` on process_manager.py
+    Changing ``is None`` to ``is not None`` on process_manager.py
     line 295 inverts both assertions.
     """
     child = await _spawn_async_blocking_child()
@@ -339,7 +339,7 @@ def test_a_constructor_that_lost_the_race_returns_the_winning_instance(process_m
     The worker is held on the class lock after it saw no instance; the test then
     installs the existing manager as the instance and releases the lock.
 
-    Falsifiable: deleting the second ``if cls._instance is None`` check on
+    Deleting the second ``if cls._instance is None`` check on
     process_manager.py line 347 makes the worker build and return a new object.
 
     Args:
@@ -382,7 +382,7 @@ def test_a_constructor_that_lost_the_race_returns_the_winning_instance(process_m
 def test_install_handlers_off_the_main_thread_logs_the_refusal_and_keeps_the_atexit_hook(process_manager: ProcessManager) -> None:
     """The operating system refuses signal handlers off the main thread; the manager logs that and carries on.
 
-    Falsifiable: removing the ``try``/``except`` around the handler installation
+    Removing the ``try``/``except`` around the handler installation
     on process_manager.py lines 424-434 lets the ``ValueError`` escape the call.
 
     Args:
@@ -404,7 +404,7 @@ def test_install_handlers_off_the_main_thread_logs_the_refusal_and_keeps_the_ate
 def test_uninstall_handlers_off_the_main_thread_logs_the_refusal_and_still_clears_the_flag(process_manager: ProcessManager) -> None:
     """Restoring the interrupt handler off the main thread is refused; the manager logs it and still finishes.
 
-    Falsifiable: removing the ``try``/``except`` around the restore on
+    Removing the ``try``/``except`` around the restore on
     process_manager.py lines 446-449 lets the ``ValueError`` escape the call.
 
     Args:
@@ -432,7 +432,7 @@ def test_the_signal_handler_hands_an_interrupt_to_the_original_handler_and_nothi
     A terminate signal must not be forwarded: only the interrupt goes to the
     original handler.
 
-    Falsifiable: deleting process_manager.py line 511 means the original
+    Deleting process_manager.py line 511 means the original
     handler never receives the interrupt.
 
     Args:
@@ -469,7 +469,7 @@ def test_the_signal_handler_hands_an_interrupt_to_the_original_handler_and_nothi
 def test_the_atexit_hook_without_a_singleton_does_nothing() -> None:
     """The global exit hook leaves a process that has no manager alone and creates none.
 
-    Falsifiable: replacing the ``return`` on process_manager.py line 465 with
+    Replacing the ``return`` on process_manager.py line 465 with
     ``pass`` makes the hook call a method on ``None``.
     """
     ProcessManager.reset_instance()
@@ -483,7 +483,7 @@ def test_the_atexit_hook_without_a_singleton_does_nothing() -> None:
 def test_the_atexit_hook_sweeps_the_registered_child_and_discards_the_singleton(process_manager: ProcessManager) -> None:
     """The global exit hook runs the manager's exit cleanup, ending a registered child.
 
-    Falsifiable: deleting process_manager.py line 466 leaves the child running,
+    Deleting process_manager.py line 466 leaves the child running,
     so the wait for its exit times out.
 
     Args:
@@ -506,7 +506,7 @@ def test_the_atexit_hook_sweeps_the_registered_child_and_discards_the_singleton(
 def test_the_exit_cleanup_does_nothing_while_another_cleanup_runs(process_manager: ProcessManager) -> None:
     """An exit cleanup that arrives during a running cleanup leaves the child and the singleton alone.
 
-    Falsifiable: deleting the ``return`` on process_manager.py line 521 makes the
+    Deleting the ``return`` on process_manager.py line 521 makes the
     call sweep the child and reset the singleton.
 
     Args:
@@ -530,7 +530,7 @@ def test_the_exit_cleanup_does_nothing_while_another_cleanup_runs(process_manage
 def test_the_sync_cleanup_does_nothing_while_another_cleanup_runs(process_manager: ProcessManager) -> None:
     """A synchronous cleanup that arrives during a running cleanup leaves the child alone.
 
-    Falsifiable: deleting the ``return`` on process_manager.py line 530 makes the
+    Deleting the ``return`` on process_manager.py line 530 makes the
     call terminate the child and empty the registry.
 
     Args:
@@ -554,7 +554,7 @@ def test_the_sync_cleanup_does_nothing_while_another_cleanup_runs(process_manage
 async def test_the_async_cleanup_does_nothing_while_another_cleanup_runs(process_manager: ProcessManager) -> None:
     """An async cleanup that arrives during a running cleanup leaves a tracked child alone.
 
-    Falsifiable: deleting the ``return`` on process_manager.py line 970 makes the
+    Deleting the ``return`` on process_manager.py line 970 makes the
     call terminate the tracked child.
 
     Args:
@@ -577,7 +577,7 @@ async def test_the_async_cleanup_does_nothing_while_another_cleanup_runs(process
 def test_the_sync_cleanup_logs_an_external_process_that_ended_before_the_sweep(process_manager: ProcessManager) -> None:
     """A registered external process that no longer exists is logged and does not stop the sweep.
 
-    Falsifiable: removing the ``except psutil.NoSuchProcess`` clause on
+    Removing the ``except psutil.NoSuchProcess`` clause on
     process_manager.py line 553 lets the lookup error escape the cleanup.
 
     Args:
@@ -603,7 +603,7 @@ def test_the_sync_cleanup_logs_an_external_process_that_ended_before_the_sweep(p
 def test_the_sync_cleanup_signals_a_process_registered_twice_once(process_manager: ProcessManager) -> None:
     """A process tracked both as a subprocess and as an external PID is terminated once.
 
-    Falsifiable: deleting the ``if p.pid not in seen_pids`` guard on
+    Deleting the ``if p.pid not in seen_pids`` guard on
     process_manager.py line 559 appends the process twice, so it is signalled twice.
 
     Args:
@@ -636,7 +636,7 @@ def test_the_sync_cleanup_leaves_no_survivor_when_the_grace_period_is_zero(proce
     escalates to the forced kill for processes that may already be ending. The
     instance's grace period is set to zero for this.
 
-    Falsifiable: deleting ``psutil.wait_procs(alive, ...)`` on process_manager.py
+    Deleting ``psutil.wait_procs(alive, ...)`` on process_manager.py
     line 579 lets the call return while the child is still ending.
 
     Args:
@@ -659,7 +659,7 @@ def test_the_sync_cleanup_leaves_no_survivor_when_the_grace_period_is_zero(proce
 def test_terminate_tree_with_no_grace_period_ends_the_process_before_returning() -> None:
     """A tree termination with a zero grace period still returns only once the child is gone.
 
-    Falsifiable: deleting ``psutil.wait_procs(alive, ...)`` on process_manager.py
+    Deleting ``psutil.wait_procs(alive, ...)`` on process_manager.py
     line 699 lets the call return while the child is still ending.
     """
     child = _spawn_blocking_child()
@@ -674,7 +674,7 @@ def test_terminate_tree_with_no_grace_period_ends_the_process_before_returning()
 def test_force_kill_ends_the_process_and_logs_the_signal() -> None:
     """The forced kill ends a live process and logs which process it signalled.
 
-    Falsifiable: replacing ``p.kill()`` on process_manager.py line 602 with
+    Replacing ``p.kill()`` on process_manager.py line 602 with
     ``pass`` leaves the child running, so the wait for its exit times out.
     """
     child = _spawn_blocking_child()
@@ -694,7 +694,7 @@ def test_force_kill_ends_the_process_and_logs_the_signal() -> None:
 def test_terminate_process_sync_ends_the_process_tree_of_a_popen() -> None:
     """The synchronous terminate helper ends the child behind a ``Popen`` handle.
 
-    Falsifiable: deleting the ``_terminate_tree_with_psutil`` call on
+    Deleting the ``_terminate_tree_with_psutil`` call on
     process_manager.py line 617 leaves the child running, so the wait for its
     exit times out.
     """
@@ -716,7 +716,7 @@ async def test_terminate_process_stops_after_a_cleanup_callback_that_ended_the_p
     The child exits with status 0 on its own, which a termination would not
     produce, and the tree-termination log record never appears.
 
-    Falsifiable: inverting ``if not tracked.check_running()`` on
+    Inverting ``if not tracked.check_running()`` on
     process_manager.py line 870 sends the already-ended process through the
     tree termination, which logs ``process_terminated_tree``.
 
@@ -749,7 +749,7 @@ async def test_terminate_process_stops_after_a_cleanup_callback_that_ended_the_p
 async def test_terminate_process_ends_a_process_the_cleanup_callback_left_running(process_manager: ProcessManager) -> None:
     """A cleanup callback that leaves the process running is followed by the tree termination.
 
-    Falsifiable: inverting ``if not tracked.check_running()`` on
+    Inverting ``if not tracked.check_running()`` on
     process_manager.py line 870 returns right after the callback, leaving the
     child running, so the wait for its exit times out.
 
@@ -781,7 +781,7 @@ async def test_terminate_process_logs_a_failing_cleanup_callback_and_still_ends_
 ) -> None:
     """An ``OSError`` or ``RuntimeError`` from the cleanup callback is logged and the termination proceeds.
 
-    Falsifiable: removing the ``except (OSError, RuntimeError)`` clause on
+    Removing the ``except (OSError, RuntimeError)`` clause on
     process_manager.py line 873 lets the callback's error escape the call.
 
     Args:
@@ -819,7 +819,7 @@ async def test_terminate_process_logs_a_failing_cleanup_callback_and_still_ends_
 async def test_the_async_cleanup_logs_a_process_that_cannot_be_terminated_and_continues(process_manager: ProcessManager) -> None:
     """A tracked process whose cleanup callback raises a psutil error is logged and the next one is still ended.
 
-    Falsifiable: removing the ``except`` clause on process_manager.py line 986
+    Removing the ``except`` clause on process_manager.py line 986
     lets the callback's error escape ``cleanup_all_async``.
 
     Args:
@@ -865,7 +865,7 @@ async def test_terminate_subprocess_waits_for_a_process_the_tree_walk_did_not_re
     fallback has been logged, and it must have exited by the time the call
     returns.
 
-    Falsifiable: deleting ``await asyncio.to_thread(process.wait)`` on
+    Deleting ``await asyncio.to_thread(process.wait)`` on
     process_manager.py line 918 returns while the child is still running.
     """
     terminate_subprocess = cast(
@@ -907,7 +907,7 @@ async def test_terminate_async_subprocess_waits_for_a_process_the_tree_walk_did_
     after the fallback has been logged, and it must have exited by the time the
     call returns.
 
-    Falsifiable: deleting ``await process.wait()`` on process_manager.py line
+    Deleting ``await process.wait()`` on process_manager.py line
     952 returns while the child is still running.
     """
     terminate_async_subprocess = cast(

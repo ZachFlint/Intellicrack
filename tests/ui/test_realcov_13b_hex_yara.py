@@ -4,13 +4,13 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for the hex editor YARA result rendering path.
 
-The YARA UI mixin (``yara.py``) is exercised at the panel level. These tests run a REAL YARA scan (via
-:class:`intellicrack.core.yara_scanner.YaraScanner`) against a genuine Windows
-PE binary, convert the real :class:`YaraMatch` objects into the exact dict
+The YARA UI mixin (``yara.py``) is exercised at the panel level. These tests run a YARA scan (via
+:class:`intellicrack.core.yara_scanner.YaraScanner`) against a Windows
+PE binary, convert the :class:`YaraMatch` objects into the exact dict
 shape the bridge emits (hex-encoded match ``data``), and drive the mixin's
 result-rendering method :meth:`YaraMixin._append_yara_match_strings`. The tests
 assert that the rendered tree rows and the returned highlight offsets exactly
-reflect the real, verifiable match positions in the file, not fabricated data.
+reflect the match positions in the file.
 """
 
 from __future__ import annotations

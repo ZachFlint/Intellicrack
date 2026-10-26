@@ -302,7 +302,7 @@ class OllamaProvider(LLMProviderBase):
             raise ProviderError(_ERR_CONNECT_BOTH_FAILED, provider_name="ollama")
 
         self._credentials = credentials
-        self.connected = True
+        self.connected: bool = True
 
     async def _connect_local(self) -> None:
         """Probe the local Ollama ``/api/tags`` endpoint and record availability.

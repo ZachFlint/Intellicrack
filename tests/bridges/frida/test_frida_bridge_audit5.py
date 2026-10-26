@@ -498,7 +498,7 @@ def test_f0012_compile_typescript_reuses_compiler_instance(
 ) -> None:
     """``frida.Compiler`` must be reused, not instantiated per call.
 
-    The instance-count assertion is the genuine gate for compiler reuse:
+    The instance-count assertion checks compiler reuse:
     two successive ``compile_typescript`` calls must share one compiler
     instance.  The build log asserts that each call drove the compiler
     with a distinct entrypoint path (different temporary files for
@@ -558,7 +558,7 @@ def test_f0012_compile_typescript_reuses_compiler_instance(
 def test_f0012_compile_typescript_real_output_is_js() -> None:
     """compile_typescript drives the real frida.Compiler and returns valid JS.
 
-    Uses the genuine ``frida.Compiler`` (no monkeypatching) to compile a
+    Uses the installed ``frida.Compiler`` (no monkeypatching) to compile a
     trivial TypeScript snippet and asserts the output is non-empty JavaScript
     containing the ``console.log`` call present in the source.  This gates
     that the bridge still performs real compilation, not just instance reuse
@@ -717,7 +717,7 @@ def _f0014_assert_error_triggers(
 def test_f0014_message_waiter_does_not_capture_loop_at_construction() -> None:
     """_set_event_threadsafe must route through the loop the event is bound to.
 
-    Falsifiable property: the waiter is constructed while loop A is explicitly
+    Setup: the waiter is constructed while loop A is explicitly
     running (giving any eager construction-time capture a live reference to
     loop A).  Loop A is then closed immediately, making any such captured
     reference stale.  The event is awaited on loop B.  A foreign thread

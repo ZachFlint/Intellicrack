@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Coverage for the hex editor panels, the session manager and the tool configuration dialog.
 
-Every test drives production code with real objects: real mixin hosts built on real Qt widgets, a genuine ``HexDocument``, a real
+Every test drives production code with real objects: real mixin hosts built on real Qt widgets, a ``HexDocument``, a real
 ``HexEditorBridge``, signature databases written under ``tmp_path`` and loopback HTTP servers from ``tests/_helpers``. Expected values are
 derived from byte arithmetic, the file layout of the repository, or the documented message contracts, not from the code under test.
 """

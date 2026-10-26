@@ -282,7 +282,7 @@ class TestHitCountsRequireAnArmedPage:
     ) -> None:
         """An unarmed page counts nothing however often the debuggee runs it.
 
-        Without ``set_trace_record`` there is no counter to read, so an unarmed page can only ever report zero. The reply must also carry the page's ``type``, so that zero is diagnosable rather than indistinguishable from an address that genuinely never ran.
+        Without ``set_trace_record`` there is no counter to read, so an unarmed page can only ever report zero. The reply must also carry the page's ``type``, so that zero is diagnosable rather than indistinguishable from an address that never ran.
 
         Args:
             bridge: Fixture bridge instance.

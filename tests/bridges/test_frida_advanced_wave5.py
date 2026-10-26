@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for FridaBridge advanced instrumentation.
+"""Gates for FridaBridge advanced instrumentation.
 
 Every test drives the real production code path. Frida transport is replaced
-by in-file fake doubles. No unittest.mock is used. Every assertion is on an
-exact, independently-computed value.
+by in-file fake doubles. Every assertion is on an exact, independently-computed
+value.
 """
 
 from __future__ import annotations
@@ -548,7 +548,7 @@ def test_is_available_returns_true_when_device_accessible() -> None:
     Patches ``frida.get_local_device`` to return a dummy device so the test
     is deterministic even in environments without a running frida-server.
 
-    Falsifiable: if the bridge returns False on a successful device lookup the
+    If the bridge returns False on a successful device lookup the
     ``is True`` assertion fails.
     """
     original = getattr(frida, "get_local_device")
@@ -568,7 +568,7 @@ def test_is_available_returns_true_when_device_accessible() -> None:
 def test_is_available_returns_false_when_device_raises_oserror() -> None:
     """``is_available()`` returns False when ``frida.get_local_device`` raises OSError.
 
-    Falsifiable: if the except clause is removed the function propagates the
+    If the except clause is removed the function propagates the
     OSError instead of returning False.
     """
     original = getattr(frida, "get_local_device")
@@ -589,7 +589,7 @@ def test_is_available_returns_false_when_device_raises_oserror() -> None:
 def test_detach_calls_session_detach_exactly_once_and_clears_session() -> None:
     """``detach()`` calls session.detach() once and sets ``bridge._session`` to None.
 
-    Falsifiable: if detach() returns early without calling session.detach() the
+    If detach() returns early without calling session.detach() the
     detach_calls==1 assertion fails; if _perform_detach omits the
     ``self._session = None`` assignment the second assertion fails.
     """
@@ -603,7 +603,7 @@ def test_detach_calls_session_detach_exactly_once_and_clears_session() -> None:
 def test_get_hooks_returns_hook_with_correct_id_and_target() -> None:
     """``get_hooks()`` returns the HookInfo stored in the internal hooks registry.
 
-    Falsifiable: if get_hooks() returns a copy that drops entries, or returns
+    If get_hooks() returns a copy that drops entries, or returns
     values from a different container, the assertion on id/target fails.
     """
     bridge, _ = _build_attached_bridge()
@@ -620,7 +620,7 @@ def test_execute_script_returns_str_of_canned_result() -> None:
     """``execute_script()`` converts the ``_execute_script_and_wait`` result to str.
 
     Oracle: ``str(_EXEC_RESULT)`` computed independently from the known dict.
-    Falsifiable: if execute_script() returns the dict itself instead of its str
+    If execute_script() returns the dict itself instead of its str
     representation the equality assertion fails.
     """
     bridge, _ = _build_attached_bridge()
@@ -632,7 +632,7 @@ def test_execute_script_returns_str_of_canned_result() -> None:
 def test_execute_script_raises_on_error_payload() -> None:
     """``execute_script()`` raises ToolError when the result contains an ``error`` key.
 
-    Falsifiable: if the ``if "error" in result`` check is removed the error
+    If the ``if "error" in result`` check is removed the error
     payload is silently stringified instead of raising.
     """
     bridge, _ = _build_attached_bridge()
@@ -644,7 +644,7 @@ def test_execute_script_raises_on_error_payload() -> None:
 def test_unload_all_scripts_clears_scripts_dict_and_calls_unload_on_each() -> None:
     """``unload_all_scripts()`` empties ``_scripts`` and calls unload() on every script.
 
-    Falsifiable: if unload_all_scripts() only clears the dict but skips
+    If unload_all_scripts() only clears the dict but skips
     calling unload() on each script, the ``unload_calls`` assertions fail;
     if the loop omits one script the len==0 check would still pass but the
     individual unload count assertions catch it.
@@ -666,7 +666,7 @@ def test_dispatch_message_calls_registered_handler_with_exact_dict() -> None:
 
     Drives the full path: set_message_handler → internal lock → _dispatch_message.
 
-    Falsifiable: if the lock-protected read drops the handler reference the
+    If the lock-protected read drops the handler reference the
     received list stays empty; if a copy is dispatched instead of the original
     dict the equality check fails.
     """
@@ -694,7 +694,7 @@ def test_resume_child_raises_toolerror_matching_child_gating_failed() -> None:
 
     Pins the exact message with match= so a different ToolError does not satisfy the assertion.
 
-    Falsifiable: if the except block raises ToolError('not attached') instead
+    If the except block raises ToolError('not attached') instead
     of ToolError('child gating operation failed') the match= pattern rejects it.
     """
     dev = _FakeDeviceW5(resume_raises=RuntimeError("frida error"))
@@ -707,7 +707,7 @@ def test_post_message_posts_parsed_json_to_script() -> None:
     """``post_message()`` deserialises the JSON string and passes the dict to script.post.
 
     Oracle: ``fake_script.posts == [expected_payload]``.
-    Falsifiable: if the bridge passes the raw JSON string instead of the parsed
+    If the bridge passes the raw JSON string instead of the parsed
     dict, or passes a different payload, the equality assertion fails.
     """
     bridge, _ = _build_attached_bridge()
@@ -722,7 +722,7 @@ def test_post_message_posts_parsed_json_to_script() -> None:
 def test_post_message_unknown_script_id_raises_toolerror() -> None:
     """``post_message()`` raises ToolError when the script_id is not registered.
 
-    Falsifiable: if the guard ``if script_id not in self._scripts`` is removed,
+    If the guard ``if script_id not in self._scripts`` is removed,
     the call proceeds to json.loads and may raise a different exception or
     succeed silently.
     """
@@ -734,7 +734,7 @@ def test_post_message_unknown_script_id_raises_toolerror() -> None:
 def test_eternalize_script_calls_eternalize_and_removes_from_registry() -> None:
     """``eternalize_script()`` calls ``script.eternalize()`` once and removes from ``_scripts``.
 
-    Falsifiable: if the bridge skips calling ``script.eternalize()`` the
+    If the bridge skips calling ``script.eternalize()`` the
     eternalize_calls==1 assertion fails; if it forgets to delete the id from
     _scripts the id-not-in check fails.
     """
@@ -753,7 +753,7 @@ def test_create_cancellable_registers_token_in_cancellables() -> None:
     """``create_cancellable()`` stores a real ``frida.Cancellable`` under the returned id.
 
     Oracle: the returned id is a non-empty str and is a key in ``_cancellables``.
-    Falsifiable: if create_cancellable() returns an id not stored in
+    If create_cancellable() returns an id not stored in
     _cancellables the ``in`` assertion fails; if an empty string is returned
     the ``len > 0`` assertion fails.
     """
@@ -768,7 +768,7 @@ def test_create_cancellable_registers_token_in_cancellables() -> None:
 def test_cancel_known_id_returns_true_and_removes_token() -> None:
     """``cancel()`` returns True and removes the token when the id is known.
 
-    Falsifiable: if cancel() returns False instead of True the first assertion
+    If cancel() returns False instead of True the first assertion
     fails; if the token is not removed from _cancellables the second fails.
     """
     bridge = FridaBridge()
@@ -785,7 +785,7 @@ def test_cancel_unknown_id_returns_false() -> None:
     The production code does ``self._cancellables.pop(id, None)`` and returns
     False when None is obtained — it does NOT raise ToolError.
 
-    Falsifiable: if the bridge raises ToolError for unknown ids the
+    If the bridge raises ToolError for unknown ids the
     pytest.raises-free assertion on the return value is unreachable.
     """
     bridge = FridaBridge()
@@ -803,7 +803,7 @@ def test_enumerate_symbols_embeds_module_name_and_parses_canned_symbols() -> Non
     Oracle: symbol name == 'CreateFileW', address == 0x7FFE_1234 (decimal from
     hex string "0x7ffe1234" via int(x, 16)).
 
-    Falsifiable: if the bridge reads the wrong field from the payload the
+    If the bridge reads the wrong field from the payload the
     address mismatch catches it; if module_name is omitted from the JS the
     framing assertion fails.
     """
@@ -828,7 +828,7 @@ def test_load_module_embeds_module_load_in_js_and_parses_result() -> None:
     Oracle: path embedded in JS must equal the original path; result.name must
     equal 'ntdll.dll'; result.base_address must equal _MODULE_BASE.
 
-    Falsifiable: if Module.load is replaced with a wrong call the framing check
+    If Module.load is replaced with a wrong call the framing check
     fails; if the base address is parsed as decimal instead of hex the value
     mismatch is caught.
     """
@@ -854,7 +854,7 @@ def test_find_module_by_address_embeds_address_and_parses_module_info() -> None:
     Oracle: result.name == 'ntdll.dll'; result.base_address == _MODULE_BASE;
     str(_MODULE_BASE) must appear in the generated JS.
 
-    Falsifiable: if the address decimal is replaced with a hex literal the
+    If the address decimal is replaced with a hex literal the
     str(address) check fails; if the bridge reads the wrong field the name
     assertion fails.
     """
@@ -876,7 +876,7 @@ def test_find_module_by_address_embeds_address_and_parses_module_info() -> None:
 def test_find_module_by_address_returns_none_when_not_found() -> None:
     """``find_module_by_address()`` returns None when the canned result has null name.
 
-    Falsifiable: if the null-name guard is removed the bridge attempts to build
+    If the null-name guard is removed the bridge attempts to build
     a ModuleInfo from None and raises AttributeError instead of returning None.
     """
     bridge, _ = _build_attached_bridge()
@@ -894,7 +894,7 @@ def test_find_functions_matching_embeds_pattern_and_parses_addresses() -> None:
 
     Oracle: result[0].name == 'CreateFileW', result[0].address == _FUNC_ADDR.
 
-    Falsifiable: if the address is parsed as decimal rather than hex the value
+    If the address is parsed as decimal rather than hex the value
     differs; if the pattern is omitted from the JS the framing check fails.
     """
     bridge, _ = _build_attached_bridge()
@@ -927,7 +927,7 @@ def test_disassemble_instruction_parses_mnemonic_and_operands() -> None:
 
     Oracle: mnemonic=='mov', op_str=='eax, ecx', address==_INSN_ADDRESS.
 
-    Falsifiable: if the bridge reads opStr instead of mnemonic (or vice versa)
+    If the bridge reads opStr instead of mnemonic (or vice versa)
     the mismatch is caught; if the address decimal is wrong the assertion fails.
     """
     bridge, _ = _build_attached_bridge()
@@ -956,7 +956,7 @@ def test_get_backtrace_embeds_backtracer_type_and_parses_frames() -> None:
 
     Oracle: result[0].address == _BT_FRAME_ADDR (int parsed from hex string).
 
-    Falsifiable: if the bridge emits 'Backtracer.ACCURATE' instead of 'FUZZY'
+    If the bridge emits 'Backtracer.ACCURATE' instead of 'FUZZY'
     the JS framing assertion fails; if the address parsing reads the wrong field
     the address mismatch is caught.
     """
@@ -987,7 +987,7 @@ def test_set_exception_handler_embeds_process_set_exception_handler_and_register
     2. The returned script_id equals bridge._exception_handler_script.
     3. The script_id is stored in bridge._scripts.
 
-    Falsifiable: any of the three invariants catches a distinct mutation:
+    Each of the three invariants catches a distinct mutation:
     (1) wrong API name, (2) wrong id stored in _exception_handler_script,
     (3) script not registered in _scripts.
     """
@@ -1005,7 +1005,7 @@ def test_set_exception_handler_embeds_process_set_exception_handler_and_register
 def test_revert_hook_embeds_interceptor_revert_in_js() -> None:
     """``revert_hook()`` emits 'Interceptor.revert' in JS and returns True.
 
-    Falsifiable: if 'Interceptor.revert' is replaced with 'Interceptor.detach'
+    If 'Interceptor.revert' is replaced with 'Interceptor.detach'
     the framing assertion fails; if the bridge returns False on success the
     value assertion fails.
     """
@@ -1019,7 +1019,7 @@ def test_revert_hook_embeds_interceptor_revert_in_js() -> None:
 def test_flush_interceptor_embeds_interceptor_flush_in_js() -> None:
     """``flush_interceptor()`` emits 'Interceptor.flush()' in JS and returns True.
 
-    Falsifiable: if 'Interceptor.flush()' is replaced with a no-op the
+    If 'Interceptor.flush()' is replaced with a no-op the
     framing assertion fails; if the bridge returns False on success the
     value assertion fails.
     """
@@ -1041,7 +1041,7 @@ def test_call_system_function_embeds_system_function_and_parses_syscall_result()
     Oracle: value==12345 (from string "12345" with valueIsString=True),
     errno==5, last_error==7.
 
-    Falsifiable: (1) if 'NativeFunction' is used instead of 'SystemFunction' the
+    Detects: (1) if 'NativeFunction' is used instead of 'SystemFunction' the
     framing assertion catches it; (2) if the address decimal is wrong the str()
     check fails; (3) if value is parsed without valueIsString handling the int
     mismatch is caught; (4) errno or last_error read from wrong field is caught.
@@ -1073,7 +1073,7 @@ def test_stalker_add_call_probe_embeds_add_call_probe_and_registers_probe() -> N
     2. The address decimal appears in the JS.
     3. The returned probe_id is registered in bridge._call_probes.
 
-    Falsifiable: (1) wrong JS API name; (2) address not embedded; (3) probe not
+    Detects: (1) wrong JS API name; (2) address not embedded; (3) probe not
     registered.
     """
     bridge, sess = _build_attached_bridge()
@@ -1089,7 +1089,7 @@ def test_stalker_add_call_probe_embeds_add_call_probe_and_registers_probe() -> N
 def test_stalker_remove_call_probe_removes_probe_and_script_from_registries() -> None:
     """``stalker_remove_call_probe()`` returns True and clears both registries.
 
-    Falsifiable: if the probe is not popped from _call_probes or the script
+    If the probe is not popped from _call_probes or the script
     is not unloaded from _scripts the respective ``not in`` checks fail.
     """
     bridge, _ = _build_attached_bridge()
@@ -1109,7 +1109,7 @@ def test_stalker_remove_call_probe_removes_probe_and_script_from_registries() ->
 def test_stalker_remove_call_probe_unknown_id_returns_false() -> None:
     """``stalker_remove_call_probe()`` returns False for an unknown probe_id.
 
-    Falsifiable: if the bridge raises ToolError for unknown probes the
+    If the bridge raises ToolError for unknown probes the
     assertion on the return value is unreachable.
     """
     bridge, _ = _build_attached_bridge()
@@ -1127,7 +1127,7 @@ def test_enumerate_applications_parses_identifier_name_and_pid() -> None:
 
     Oracle: result[0].identifier=='com.example.testapp', result[0].name=='TestApp'.
 
-    Falsifiable: if the bridge reads 'id' instead of 'identifier' from the app
+    If the bridge reads 'id' instead of 'identifier' from the app
     object the identifier assertion fails; similarly for name/pid.
     """
     apps = [_FakeApp(_APP_IDENTIFIER, _APP_NAME, _APP_PID)]
@@ -1145,7 +1145,7 @@ def test_inject_library_file_passes_correct_args_to_device_and_returns_id() -> N
 
     Oracle: inject_id == _INJECT_RESULT; device recorded exactly (pid, path, ep, data).
 
-    Falsifiable: if any arg is transposed or the device method is not called
+    If any arg is transposed or the device method is not called
     the tuple comparison fails; if the wrong return value is forwarded the ID
     assertion fails.
     """
@@ -1164,7 +1164,7 @@ def test_inject_library_blob_passes_decoded_bytes_to_device() -> None:
 
     Oracle: blob_bytes == _LIB_BLOB_BYTES == bytes.fromhex('deadbeef').
 
-    Falsifiable: if the bridge passes the raw hex string instead of decoded bytes
+    If the bridge passes the raw hex string instead of decoded bytes
     the bytes equality check fails; if the wrong inject_id is returned the ID
     assertion fails.
     """
@@ -1188,7 +1188,7 @@ def test_create_cmodule_embeds_new_cmodule_in_js_and_returns_registered_script_i
     Uses the async driver / task pattern so the cmodule_loaded ack can be
     delivered after the script loads but before the timeout fires.
 
-    Falsifiable: (1) 'new CModule' missing from JS; (2) symbol name/address not
+    Detects: (1) 'new CModule' missing from JS; (2) symbol name/address not
     embedded; (3) script_id not registered in _scripts.
     """
     bridge, sess = _build_attached_bridge()
@@ -1227,7 +1227,7 @@ def test_cloak_add_thread_embeds_cloak_add_thread_with_tid_decimal() -> None:
 
     Oracle: ``f'Cloak.addThread({_CLOAK_THREAD_ID})'`` appears in the JS source.
 
-    Falsifiable: if the code uses 'Stalker.addToIncludeList' instead of
+    If the code uses 'Stalker.addToIncludeList' instead of
     'Cloak.addThread' the assertion fails; if thread_id is embedded as hex
     rather than decimal the f-string check catches it.
     """
@@ -1245,7 +1245,7 @@ def test_cloak_remove_thread_embeds_cloak_remove_thread_with_tid_decimal() -> No
 
     Oracle: ``f'Cloak.removeThread({_CLOAK_THREAD_ID})'`` appears in the JS source.
 
-    Falsifiable: if the code uses 'Stalker.removeFromIncludeList' instead of
+    If the code uses 'Stalker.removeFromIncludeList' instead of
     'Cloak.removeThread' the assertion fails.
     """
     bridge, _ = _build_attached_bridge()
@@ -1262,7 +1262,7 @@ def test_cloak_add_range_embeds_cloak_add_range_with_address_and_size() -> None:
 
     Oracle: 'Cloak.addRange' in JS, str(_CLOAK_ADDRESS) in JS, str(_CLOAK_SIZE) in JS.
 
-    Falsifiable: if 'Cloak.addRange' is replaced with a wrong API the first
+    If 'Cloak.addRange' is replaced with a wrong API the first
     assertion fails; if the address or size is wrong the decimal checks catch it.
     """
     bridge, _ = _build_attached_bridge()
@@ -1277,7 +1277,7 @@ def test_cloak_add_range_embeds_cloak_add_range_with_address_and_size() -> None:
 def test_cloak_remove_range_embeds_cloak_remove_range_with_address_and_size() -> None:
     """``cloak_remove_range()`` emits 'Cloak.removeRange' with address and size as decimals.
 
-    Falsifiable: if 'Cloak.removeRange' is replaced with a wrong call the
+    If 'Cloak.removeRange' is replaced with a wrong call the
     framing assertion fails; if the address is wrong the decimal check catches it.
     """
     bridge, _ = _build_attached_bridge()
@@ -1295,7 +1295,7 @@ def test_monitor_path_registers_monitor_id_and_enables_monitoring() -> None:
     Uses a monkey-patched ``frida.FileMonitor`` (the transport boundary) so
     no real file system monitoring is required.
 
-    Falsifiable: if monitor_id is not stored in _file_monitors the ``in``
+    If monitor_id is not stored in _file_monitors the ``in``
     assertion fails; if enable() is not called the enable_calls==1 check fails.
     """
     original_fm = getattr(frida, "FileMonitor")
@@ -1335,7 +1335,7 @@ def test_stop_monitor_calls_disable_and_removes_monitor_from_registry() -> None:
     Injects a fake monitor directly into ``_file_monitors`` so no actual
     monitoring is started.
 
-    Falsifiable: if the id is not removed from _file_monitors the ``not in``
+    If the id is not removed from _file_monitors the ``not in``
     assertion fails; if disable() is not called the disable_calls==1 check fails.
     """
     bridge, _ = _build_attached_bridge()
@@ -1351,7 +1351,7 @@ def test_stop_monitor_calls_disable_and_removes_monitor_from_registry() -> None:
 def test_stop_monitor_unknown_id_returns_false() -> None:
     """``stop_monitor()`` returns False for an unregistered monitor_id.
 
-    Falsifiable: if the bridge raises ToolError instead of returning False
+    If the bridge raises ToolError instead of returning False
     the boolean assertion is unreachable.
     """
     bridge, _ = _build_attached_bridge()
@@ -1364,7 +1364,7 @@ def test_enumerate_exports_module_not_found_raises_toolerror_matching_not_found(
 
     Pins the exact message constant ``_ERR_MODULE_NOT_FOUND`` with match=, so a different ToolError does not satisfy the assertion.
 
-    Falsifiable: if the branch raises ToolError('export not found') instead of
+    If the branch raises ToolError('export not found') instead of
     ToolError('module not found') the match= pattern rejects it.
     """
     bridge, _ = _build_attached_bridge()
@@ -1387,7 +1387,7 @@ def test_stalker_follow_unfollow_collects_events_deterministically() -> None:
     - ``trace.events[0].from_address == 0x7fff1000`` (parsed from hex string)
     - ``trace.events[0].to_address == 0x7fff2000``
 
-    Falsifiable: (1) wrong thread_id stored; (2) event_count diverges from
+    Detects: (1) wrong thread_id stored; (2) event_count diverges from
     len(events); (3) event_type wrong; (4) addresses parsed incorrectly.
     """
     batch = [_STALKER_CALL_EVENT]

@@ -93,7 +93,7 @@ def registry(tmp_path: Path) -> ToolRegistry:
 class TestRestartBridgeMethodL1:
     """L1: ``restart()`` performs the real re-init and verifies via ``status`` polling.
 
-    Falsifiable: deleting ``X64DbgBridge.restart`` (or reverting it to a stub
+    Deleting ``X64DbgBridge.restart`` (or reverting it to a stub
     that returns ``{"success": True}`` without sending ``InitDebug`` or
     polling ``status``) makes every assertion below fail or raise
     ``AttributeError``.
@@ -104,7 +104,7 @@ class TestRestartBridgeMethodL1:
     async def test_restart_without_prior_load_raises_tool_error(bridge: X64DbgBridge) -> None:
         """Calling ``restart()`` before any ``load()`` must raise ``ToolError``.
 
-        Falsifiable: if the ``self._binary_path is None`` guard at the top of
+        If the ``self._binary_path is None`` guard at the top of
         ``restart()`` were removed, this call would instead try to build an
         ``InitDebug`` command with a ``None`` path and raise a different,
         uncontrolled exception (or silently no-op), not the documented
@@ -125,7 +125,7 @@ class TestRestartBridgeMethodL1:
 
         Independent oracle: the literal path and args strings this test
         supplies directly to the private state before calling ``restart()``.
-        Falsifiable: if ``restart()`` built its ``InitDebug`` command from
+        If ``restart()`` built its ``InitDebug`` command from
         anything other than ``self._binary_path``/``self._launch_args`` (e.g.
         a hardcoded string, or omitted the args clause), the exact-string
         assertion on the recorded ``exec`` command fails. Broken production
@@ -167,7 +167,7 @@ class TestRestartBridgeMethodL1:
     async def test_restart_without_launch_args_omits_args_clause(bridge: X64DbgBridge) -> None:
         """When no launch args were stored, ``InitDebug`` must be sent with only the path.
 
-        Falsifiable: if the ``if self._launch_args:`` guard were removed and
+        If the ``if self._launch_args:`` guard were removed and
         an empty/`None` args clause were always appended, the exact-string
         command assertion (with no trailing comma-quoted segment) fails.
         Broken production line: the conditional args-append in
@@ -205,7 +205,7 @@ class TestRestartBridgeMethodL1:
     async def test_restart_raises_tool_error_when_never_paused(bridge: X64DbgBridge) -> None:
         """``restart()`` must raise ``ToolError`` if ``status`` never reports paused.
 
-        Falsifiable: if the verification poll (``_wait_for_running_state``)
+        If the verification poll (``_wait_for_running_state``)
         were removed and ``restart()`` unconditionally returned success after
         sending ``InitDebug``, this call would return normally instead of
         raising. Broken production line: the
@@ -238,7 +238,7 @@ class TestRestartBridgeMethodL1:
 class TestRestartToolDefL2:
     """L2: ``x64dbg.restart`` is a registered, dispatchable ``ToolFunction``.
 
-    Falsifiable: removing the ``ToolFunction(name="x64dbg.restart", ...)``
+    Removing the ``ToolFunction(name="x64dbg.restart", ...)``
     entry from the tool-def property makes the containment assertion fail;
     if the tool-def were re-added under a name not matching the real method
     (repeating the ``disassemble``/``disassemble_at`` mismatch),
@@ -261,7 +261,7 @@ class TestRestartToolDefL2:
     async def test_restart_dispatchable_via_tool_registry(bridge: X64DbgBridge, registry: ToolRegistry) -> None:
         """``x64dbg.restart`` must dispatch through ``ToolRegistry.execute_tool_call`` and run for real.
 
-        Falsifiable: if the tool-def name did not match the ``restart``
+        If the tool-def name did not match the ``restart``
         attribute, ``execute_tool_call``'s ``getattr(bridge, attr_name)``
         lookup would return ``None`` and this call would raise
         ``ToolError`` for an unknown function instead of returning a result
@@ -301,7 +301,7 @@ class TestRestartToolDefL2:
 class TestRestartGuiL3:
     """L3: the toolbar Restart button calls ``X64DbgBridge.restart`` for real.
 
-    Falsifiable: if ``_on_restart`` were rewired to call ``load()`` again (or
+    If ``_on_restart`` were rewired to call ``load()`` again (or
     any method other than ``restart``), the fake pipe's ``exec`` command
     list would never contain the ``InitDebug`` re-issue this test asserts,
     and the console/status-label text this test checks would differ.
@@ -374,7 +374,7 @@ class TestRestartGuiL3:
 class TestDisassembleAtDispatchRegression:
     """L1+L2 regression: ``x64dbg.disassemble_at`` dispatches and disassembles real code.
 
-    Falsifiable: if the tool-def name were reverted to ``x64dbg.disassemble``
+    If the tool-def name were reverted to ``x64dbg.disassemble``
     (not matching the real ``disassemble_at`` method), or if
     ``supports_static_analysis`` were reverted to unset, the
     ``ToolRegistry.execute_tool_call`` call below would raise ``ToolError``
@@ -398,7 +398,7 @@ class TestDisassembleAtDispatchRegression:
     def test_bridge_declares_static_analysis_capability(bridge: X64DbgBridge) -> None:
         """``X64DbgBridge`` must declare ``supports_static_analysis=True`` so the capability gate passes.
 
-        Falsifiable: if ``supports_static_analysis`` were reverted to its
+        If ``supports_static_analysis`` were reverted to its
         default (``False``), this assertion fails directly, and the dispatch
         test below would raise ``ToolError`` for a missing capability.
 
@@ -420,7 +420,7 @@ class TestDisassembleAtDispatchRegression:
         fallback path (exercised because no plugin pipe is deployed). The
         independent oracle is that Capstone -- a real, trusted disassembler
         -- must successfully decode at least one instruction from
-        genuinely-executable process memory, and that every returned
+        executable process memory, and that every returned
         address lies within the requested range.
 
         Args:

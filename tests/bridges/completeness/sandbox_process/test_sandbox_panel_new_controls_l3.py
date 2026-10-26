@@ -21,9 +21,8 @@ bridge) with a recording shim. The shim introspects the real coroutine it
 receives -- code object, bound ``self`` and bound arguments -- and closes it
 before any bridge body runs, so each gate asserts the handler created its
 coroutine from the exact ``SandboxBridge`` method, on the wired bridge, with
-the expected arguments -- a genuine gate on the handler's wiring logic. The
-bridge bodies have their own dedicated bridge-completeness gates driving the
-real backend.
+the expected arguments. The bridge bodies have their own dedicated
+bridge-completeness tests driving the backend.
 """
 
 from __future__ import annotations
@@ -209,7 +208,7 @@ class TestSandboxPanelRefreshInstancesWiringL3:
     ) -> None:
         """_on_refresh_instances dispatches the coroutine from bridge.list() with no arguments.
 
-        Falsified by: removing/rewiring the ``self._bridge.list()`` call in
+        Removing/rewiring the ``self._bridge.list()`` call in
         ``_on_refresh_instances`` turns this red, since the captured coroutine
         would no longer come from ``SandboxBridge.list`` or would no longer be
         bound with no args.
@@ -235,7 +234,7 @@ class TestSandboxPanelRefreshInstancesWiringL3:
     ) -> None:
         """_on_refresh_instances skips dispatch when no bridge is configured.
 
-        Falsified by: removing the ``self._bridge is None`` guard would let a
+        Removing the ``self._bridge is None`` guard would let a
         dispatch occur, turning this red.
 
         Args:
@@ -257,7 +256,7 @@ class TestSandboxPanelRefreshInstancesWiringL3:
     ) -> None:
         """The success callback renders each instance dict as a tree row keyed by instance_id.
 
-        Falsified by: breaking ``_populate_instances_tree``'s column mapping
+        Breaking ``_populate_instances_tree``'s column mapping
         (or the ``on_success`` wiring) would change the rendered rows,
         turning this red.
 
@@ -331,7 +330,7 @@ class TestSandboxPanelRefreshSnapshotsWiringL3:
     ) -> None:
         """_on_refresh_snapshots dispatches bridge.snapshot_list with the active instance id.
 
-        Falsified by: rewiring ``_on_refresh_snapshots`` away from
+        Rewiring ``_on_refresh_snapshots`` away from
         ``self._bridge.snapshot_list(self.sandbox_id)`` turns this red.
 
         Args:
@@ -356,7 +355,7 @@ class TestSandboxPanelRefreshSnapshotsWiringL3:
     ) -> None:
         """_on_refresh_snapshots skips dispatch when there is no active instance.
 
-        Falsified by: removing the ``self.sandbox_id is None`` guard would let
+        Removing the ``self.sandbox_id is None`` guard would let
         a dispatch occur with a ``None`` instance id, turning this red.
 
         Args:
@@ -383,7 +382,7 @@ class TestSandboxPanelPendingMessagesWiringL3:
     ) -> None:
         """_on_pending_messages dispatches bridge.get_pending_messages with the active instance id.
 
-        Falsified by: rewiring ``_on_pending_messages`` away from
+        Rewiring ``_on_pending_messages`` away from
         ``self._bridge.get_pending_messages(self.sandbox_id)`` turns this red.
 
         Args:
@@ -408,7 +407,7 @@ class TestSandboxPanelPendingMessagesWiringL3:
     ) -> None:
         """_on_pending_messages skips dispatch when there is no active instance.
 
-        Falsified by: removing the ``self.sandbox_id is None`` guard would let
+        Removing the ``self.sandbox_id is None`` guard would let
         a dispatch occur, turning this red.
 
         Args:
@@ -435,7 +434,7 @@ class TestSandboxPanelAntiEvasionWiringL3:
     ) -> None:
         """_on_anti_evasion dispatches bridge.anti_evasion with the instance id and entered profile.
 
-        Falsified by: rewiring ``_on_anti_evasion`` away from
+        Rewiring ``_on_anti_evasion`` away from
         ``self._bridge.anti_evasion(self.sandbox_id, profile=profile)`` or
         reading the profile from the wrong widget turns this red.
 
@@ -464,7 +463,7 @@ class TestSandboxPanelAntiEvasionWiringL3:
     ) -> None:
         """_on_anti_evasion falls back to the "default" profile when the input is blank.
 
-        Falsified by: removing the ``or "default"`` fallback would pass an
+        Removing the ``or "default"`` fallback would pass an
         empty profile string, turning this red.
 
         Args:
@@ -492,7 +491,7 @@ class TestSandboxPanelAntiEvasionWiringL3:
     ) -> None:
         """_on_anti_evasion skips dispatch when there is no active instance.
 
-        Falsified by: removing the ``self.sandbox_id is None`` guard would let
+        Removing the ``self.sandbox_id is None`` guard would let
         a dispatch occur, turning this red.
 
         Args:
@@ -519,7 +518,7 @@ class TestSandboxPanelDetectC2WiringL3:
     ) -> None:
         """_on_detect_c2 dispatches bridge.detect_c2 with the active instance id.
 
-        Falsified by: rewiring ``_on_detect_c2`` away from
+        Rewiring ``_on_detect_c2`` away from
         ``self._bridge.detect_c2(self.sandbox_id)`` turns this red.
 
         Args:
@@ -544,7 +543,7 @@ class TestSandboxPanelDetectC2WiringL3:
     ) -> None:
         """_on_detect_c2 skips dispatch when there is no active instance.
 
-        Falsified by: removing the ``self.sandbox_id is None`` guard would let
+        Removing the ``self.sandbox_id is None`` guard would let
         a dispatch occur, turning this red.
 
         Args:
@@ -571,7 +570,7 @@ class TestSandboxPanelDiffWiringL3:
     ) -> None:
         """_on_diff dispatches bridge.diff with the two instance ids parsed from the inputs.
 
-        Falsified by: rewiring ``_on_diff`` away from
+        Rewiring ``_on_diff`` away from
         ``self._bridge.diff(instance_a, instance_b)`` or reading the ids from
         the wrong widgets turns this red.
 
@@ -601,7 +600,7 @@ class TestSandboxPanelDiffWiringL3:
     ) -> None:
         """_on_diff skips dispatch when the second instance id is blank.
 
-        Falsified by: removing the ``not instance_a or not instance_b`` guard
+        Removing the ``not instance_a or not instance_b`` guard
         would let a dispatch occur with an empty second id, turning this red.
 
         Args:

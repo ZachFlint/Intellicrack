@@ -3,7 +3,7 @@
 
 """Tests for the top-half HexEditorBridge behavior.
 
-Each test exercises the real ``HexEditorBridge`` against the native ``intellicrack_hexcore`` document; no mocks of the bridge or document are used.
+Each test exercises the real ``HexEditorBridge`` against the native ``intellicrack_hexcore`` document.
 """
 
 from __future__ import annotations
@@ -29,6 +29,8 @@ from intellicrack.core.types import ToolError, ToolName
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
+
+    from intellicrack_hexcore import HexDocument
 
     from intellicrack.core.tools import ToolRegistry
 
@@ -229,7 +231,7 @@ def _force_python_ips_builder(
             replaced with the stub for the duration of the call.
         patches: Patch list to inject via the stub ``get_patches``.
     """
-    bridge.document = _PatchesOnlyDoc(patches)
+    bridge.document = cast("HexDocument", _PatchesOnlyDoc(patches))
 
 
 class TestF0007IpsBuilderOverflow:
@@ -723,7 +725,7 @@ class TestF0019EntropyFallback:
         f = tmp_path / "entropy.bin"
         f.write_bytes(b"\x00" * 100 + b"\xff" * 100)
         _run(bridge.open_file(str(f)))
-        bridge.document = _NoEntropyDoc(bridge.document)
+        bridge.document = cast("HexDocument", _NoEntropyDoc(bridge.document))
         result = _run(bridge.get_entropy())
         assert 0.9 < result < 1.1
 
@@ -741,7 +743,7 @@ class TestF0019EntropyFallback:
         f = tmp_path / "dist.bin"
         f.write_bytes(b"ABBA")
         _run(bridge.open_file(str(f)))
-        bridge.document = _NoEntropyDoc(bridge.document)
+        bridge.document = cast("HexDocument", _NoEntropyDoc(bridge.document))
         dist = _run(bridge.get_byte_distribution())
         assert dist[ord("A")] == 2
         assert dist[ord("B")] == 2
@@ -761,7 +763,7 @@ class TestF0019EntropyFallback:
         f = tmp_path / "types.bin"
         f.write_bytes(b"\x00\x01ABC\xff")
         _run(bridge.open_file(str(f)))
-        bridge.document = _NoEntropyDoc(bridge.document)
+        bridge.document = cast("HexDocument", _NoEntropyDoc(bridge.document))
         result = _run(bridge.get_byte_type_distribution())
         assert result == {
             "null_count": 1,
@@ -1126,7 +1128,7 @@ class TestF0035ExportIps32FallbackIsLogged:
         target.write_bytes(b"\x00" * 16)
         _run(bridge.open_file(str(target)))
         _run(bridge.write_bytes(0, "DEADBEEF"))
-        bridge.document = _NoIps32Doc(bridge.document)
+        bridge.document = cast("HexDocument", _NoIps32Doc(bridge.document))
 
         with structlog.testing.capture_logs() as captured:
             blob_b64 = _run(bridge.export_patches("ips32"))
@@ -1188,7 +1190,7 @@ class TestF0041SearchTextRaisesOnMissingEncodedSearch:
             pe_binary: Path to the PE binary fixture.
         """
         _run(bridge.open_file(str(pe_binary)))
-        bridge.document = _NoEncodedSearchDoc(bridge.document)
+        bridge.document = cast("HexDocument", _NoEncodedSearchDoc(bridge.document))
         with pytest.raises(RuntimeError, match="search_text_encoded"):
             _run(bridge.search_text("MZ", "utf-8", 10))
 

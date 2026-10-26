@@ -4498,7 +4498,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         Frida raises ``InvalidOperationError``/``TransportError`` with
         messages such as ``"script has been destroyed"`` when a lifecycle
         call targets a script that is already destroyed or whose session has
-        already detached. That state is not a genuine failure -- it means
+        already detached. That state is not a failure -- it means
         the desired end state (no running script) is already reached -- so
         callers can treat it as a successful no-op instead of a warning.
 

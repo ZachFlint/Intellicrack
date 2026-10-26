@@ -3,6 +3,14 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Binary diff of two byte sequences into ordered `Match`, `Modified`,
+//! `InsertedA` and `InsertedB` regions that partition both inputs.
+//!
+//! Small inputs are diffed byte by byte with Myers under a time budget; large
+//! ones are first split at content-defined anchors both sides share and each
+//! segment between anchors is diffed the same way, so no single Myers run
+//! exceeds its working-set limit or its deadline.
+
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
@@ -896,13 +904,14 @@ mod tests {
         let result = diff_default(&a, &b);
         assert!(!result.files_identical);
         assert_eq!(result.total_differences, 1);
-
-        let match_regions: Vec<_> = result
-            .regions
-            .iter()
-            .filter(|r| r.diff_type == DiffType::Match)
-            .collect();
-        assert_ne!(match_regions.len(), 0);
+        assert_eq!(
+            shape(&result),
+            vec![
+                (DiffType::Match, 0, 0, 32, 32),
+                (DiffType::Modified, 32, 32, 1, 1),
+                (DiffType::Match, 33, 33, 31, 31),
+            ]
+        );
     }
 
     #[test]

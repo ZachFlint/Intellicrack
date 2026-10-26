@@ -232,7 +232,7 @@ def test_f0001_b580_device_ids_constant_drives_detection() -> None:
     upper/lower). Independently justified from Intel's PCI ID assignment for
     the Battlemage G21 (B580) part, not copied from the implementation.
 
-    Falsifiability anchor (boundary): the adjacent Intel Battlemage SKU
+    Boundary case: the adjacent Intel Battlemage SKU
     ``0xE20C`` differs from B580 by a single hex digit. A regression that
     broadened the set, ignored the constant, or matched on a prefix would
     classify ``0xE20C`` as a B580; this test forbids that. NVIDIA's

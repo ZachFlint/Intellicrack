@@ -138,7 +138,7 @@ class _RaisingState(HexDocumentState):
         *,
         source: str = "",
     ) -> None:
-        """Fail loudly: this state holder must never receive a dispatch.
+        """Raise immediately: this state holder must never receive a dispatch.
 
         Args:
             offset: Start offset of the modification.

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable regression gates for the app-shell wiring in ``intellicrack.ui.app``.
+"""Regression gates for the app-shell wiring in ``intellicrack.ui.app``.
 
 Each test fails when the named behaviour regresses:
 
@@ -51,7 +51,7 @@ _ANALYSIS_STRING_ADDRESS: int = 0x140002100
 _ANALYSIS_STRING_VALUE: str = "h1-display-slot-marker"
 
 # A level that is neither the auto-approve override (NONE) nor DESTRUCTIVE, so the
-# off-case assertion falsifies a regression back to a hardcoded DESTRUCTIVE.
+# off-case assertion catches a regression back to a hardcoded DESTRUCTIVE.
 _CONFIGURED_LEVEL: ConfirmationLevel = ConfirmationLevel.ALL
 
 

@@ -19,10 +19,9 @@ success and the tag appeared in ``qemu-img snapshot -l`` on the file.
 
 These gates drive the real :meth:`QEMUSandbox.take_snapshot` against a **real
 WHPX QEMU** and judge the disk with ``qemu-img``, an oracle that never touches
-the QMP connection the production code uses. The control proves the environment
-is genuinely one where the machine-state path fails, so the passing test is not
-a tautology: a naive full ``snapshot-save`` on the very same machine is
-confirmed blocked. WHPX exists only on Windows and must actually initialise, so
+the QMP connection the production code uses. The control confirms the environment
+is one where the machine-state path fails: a naive full ``snapshot-save`` on the
+very same machine is confirmed blocked. WHPX exists only on Windows and must actually initialise, so
 these run in the host-native pass and skip where it cannot.
 """
 
@@ -94,7 +93,7 @@ class _WhpxSnapshotSandbox(QEMUSandbox):
 
         This is the control's instrument: it runs the real job-based
         ``snapshot-save`` that :meth:`take_snapshot` no longer uses under WHPX,
-        so the test can prove that path is genuinely blocked here. The
+        so the test can confirm that path is blocked here. The
         :class:`SandboxError` that :meth:`QEMUSandbox._run_snapshot_job` raises
         when WHPX blocks the save propagates to the caller.
 
@@ -153,7 +152,7 @@ class TestASnapshotCanBeTakenUnderWhpx:
             await sandbox.detach()
 
     @pytest.mark.asyncio
-    async def test_a_machine_state_save_is_genuinely_blocked_here(self, whpx_qemu: LiveQemu) -> None:
+    async def test_a_machine_state_save_is_blocked_on_this_host(self, whpx_qemu: LiveQemu) -> None:
         """The control: the naive full save really is blocked on this machine.
 
         Without this, the test above would pass anywhere a snapshot can be

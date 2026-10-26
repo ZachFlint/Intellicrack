@@ -25,8 +25,8 @@ The fix:
   with a ``target_pid`` argument that is required for Windows Sandbox
   instances and ignored for QEMU.
 
-The tests below drive the real production code without mocking the thing
-under test.  The only substitution is :class:`_RecordingSandbox`, which
+The tests below drive the production code under test unpatched.
+The only substitution is :class:`_RecordingSandbox`, which
 replaces :meth:`WindowsSandbox.run_command` with a recording layer so that
 tests can inspect the fully-generated PowerShell script and materialise the
 dump file without launching a live sandbox VM.
@@ -495,7 +495,7 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
     1. The script contains ``OpenProcess`` (the fix is present in the script).
     2. The dump file's ProcessId field at offset 0x20 equals the known target_pid.
 
-    This is a genuine gate: if the production code generated a script that
+    If the production code generated a script that
     called ``GetCurrentProcess()`` instead of ``OpenProcess($targetPid)``,
     the script-content assertion would fail.  If somehow a different PID were
     embedded in the script, the handler would still write the test-chosen PID
@@ -543,8 +543,8 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
 
         The primary gate is the script content emitted by the real production
         code: the dispatched PowerShell must contain ``$targetPid = <N>;`` and
-        ``OpenProcess`` and must NOT contain ``GetCurrentProcess()``.  These
-        assertions are falsifiable --- reverting the fix in production
+        ``OpenProcess`` and must NOT contain ``GetCurrentProcess()``.
+        Reverting the fix in production
         (i.e. replacing ``OpenProcess($targetPid)`` with ``GetCurrentProcess()``)
         would make ``assert "GetCurrentProcess()" not in dispatched`` fail
         immediately.
@@ -764,7 +764,7 @@ class TestF0021BridgeRequiresTargetPidForWindows:
     :class:`SandboxBridge` via
     :meth:`~SandboxBridge.register_existing_sandbox` so the bridge's
     validation logic, instance lookup, and return-value construction are all
-    exercised without mocking the bridge itself.
+    exercised with the bridge itself unpatched.
     """
 
     def test_bridge_rejects_windows_call_without_target_pid(self, tmp_path: Path) -> None:

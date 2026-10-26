@@ -5,7 +5,7 @@
 """Coverage for the input-validation, error and result-rendering paths of the Frida instrumentation widgets.
 
 Every test drives a real widget from ``intellicrack.ui.panels.frida_instrumentation_tab``. Button handlers that reach the bridge are run
-through the real asynchronous dispatch against a genuine, unattached ``FridaBridge``: the bridge itself refuses the request with its own
+through the real asynchronous dispatch against an unattached ``FridaBridge``: the bridge itself refuses the request with its own
 ``ToolError`` ("not attached to a process"), which travels through the real worker thread and comes back to the widget's error handler.
 Success handlers are fed the payload shapes that ``FridaBridge`` returns (``bool``, ``int``, ``str``, ``list[str]``, ``None``). No test
 attaches to a process.

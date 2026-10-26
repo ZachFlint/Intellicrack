@@ -5,7 +5,7 @@
 """The Google provider over the real ``google-genai`` SDK and a loopback endpoint.
 
 The provider is connected with ``api_base`` pointing at a loopback server
-that answers the Gemini REST API with genuine JSON bodies, so every request
+that answers the Gemini REST API with JSON bodies, so every request
 travels through the SDK's own HTTP stack. The tests cover model listing
 (``supported_actions`` in google-genai 2.x, and entries that omit
 ``inputTokenLimit``), honouring ``api_base`` at all, and per-model capability

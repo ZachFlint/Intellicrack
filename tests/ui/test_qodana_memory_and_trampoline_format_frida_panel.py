@@ -20,7 +20,7 @@ Covers three address-handling cases in ``FridaPanel``:
   "original_trampoline", None)`` on a bare ``object`` yields ``Any | None``
   with no guarantee the attribute is actually an ``int``. The handler
   uses ``isinstance(trampoline, int)`` instead of an ``is not None`` check,
-  which is a genuine runtime guard against a malformed or wrong-shaped
+  which is a runtime guard against a malformed or wrong-shaped
   result, not just a type-checker satisfaction.
 
 All tests drive real ``FridaPanel`` methods end-to-end and assert on the
@@ -28,7 +28,7 @@ exact console text and the exact arguments forwarded to the bridge, so a
 regression that captures a stale/wrong value, swaps ``src``/``dst``, or
 reverts the ``isinstance`` guard back to a bare ``is not None`` (which would
 let a non-int ``original_trampoline`` reach the ``:X`` format spec and raise
-``TypeError``) fails loudly.
+``TypeError``) fails an assertion.
 """
 
 from __future__ import annotations

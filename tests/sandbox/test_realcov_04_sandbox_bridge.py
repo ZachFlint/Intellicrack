@@ -14,7 +14,7 @@ These tests strengthen the existing sandbox-bridge suite:
 * The real ``SandboxManager`` is driven through ``initialize`` and
   ``create``; on a host without Windows Sandbox the bridge must raise a
   correctly-typed ``ToolError`` carrying the manager's reason, and the
-  test skips cleanly only when the genuine capability is absent
+  test skips cleanly only when the host capability is absent
   (finding 04-F004).
 * The ``SandboxError`` to ``ToolError`` translation layer is verified
   against the real ``SandboxManager.create`` raising the real
@@ -300,7 +300,7 @@ class TestRealManagerErrorTranslation:
     ) -> None:
         """A real SandboxManager.create raising SandboxError surfaces ToolError.
 
-        The bridge is backed by a genuine ``SandboxManager``; only the
+        The bridge is backed by a ``SandboxManager`` instance; only the
         manager's ``create`` coroutine is replaced with one that raises
         the real ``SandboxError`` exception shape, so the bridge's
         error-translation layer (the capability under test) runs for real.
@@ -340,7 +340,7 @@ class TestRealManagerIntegration:
         """Gate the real create-success path; skip only when capability is absent.
 
         Probes the real ``SandboxManager`` for Windows Sandbox availability
-        before attempting creation.  If the host genuinely lacks the
+        before attempting creation.  If the host lacks the
         ``Containers-DisposableClientVM`` Windows feature or Hyper-V, the
         test skips cleanly.  When the capability is present the create call
         MUST succeed and return a non-empty instance id with the expected

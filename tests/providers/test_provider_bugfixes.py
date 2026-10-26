@@ -63,7 +63,7 @@ class _ResponseCarrierError(Exception):
     HuggingFace's ``HfHubHTTPError`` exposes the originating HTTP response via a
     ``response`` attribute.  This lightweight carrier reproduces that contract so
     the provider's real ``_extract_503_message`` decoder can be driven against a
-    genuine ``httpx.Response`` body without depending on SDK constructor
+    constructed ``httpx.Response`` body without depending on SDK constructor
     internals.
     """
 

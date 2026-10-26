@@ -20,12 +20,12 @@ pre-existing "Send to AI" button (``_on_send_to_ai``), so the richer bundle
 reaches the identical, already-functional sink instead of a newly invented
 (and potentially dead-end) one.
 
-Every test here drives the REAL, unmodified ``HexEditorPanel`` /
+Every test here drives the ``HexEditorPanel`` /
 ``HexEditorBridge`` against a real ``intellicrack_hexcore.HexDocument``
 opened on a real temp file; the only test double is a recording
 ``HexEditorBridge`` subclass (mirroring ``RecordingHexEditorBridge`` in
 ``conftest.py``) that delegates to the real ``get_context_for_ai`` after
-appending to its call ledger, so the delivered payload is a genuine
+appending to its call ledger, so the delivered payload is the
 end-to-end bundle rather than a canned response.
 """
 
@@ -65,8 +65,8 @@ class _ContextRecordingBridge(HexEditorBridge):
     dispatched to THIS bridge method rather than discarding the request
     or building some other ad hoc payload. The override still performs
     the real, unmodified context-bundling logic via ``super()`` -- only
-    the call ledger is added -- so the delivered payload remains a
-    genuine end-to-end result.
+    the call ledger is added -- so the delivered payload remains the
+    end-to-end result.
     """
 
     def __init__(self) -> None:
@@ -97,9 +97,9 @@ class TestFullAiContextActionDispatchesRealBridgeMethod:
 
     @staticmethod
     def test_action_pushes_the_real_get_context_for_ai_bundle_to_the_ai_chat_signal(qapp: QApplication) -> None:
-        """Triggering the action must call ``bridge.get_context_for_ai`` and emit the genuine result.
+        """Triggering the action must call ``bridge.get_context_for_ai`` and emit its result.
 
-        Falsifiable: if no GUI control called
+        Covers the case where no GUI control calls
         ``HexEditorBridge.get_context_for_ai`` at all. If
         ``_on_get_ai_context`` were removed, never wired to a toolbar
         control, or rewritten to build its own ad hoc payload instead of
@@ -153,7 +153,7 @@ class TestFullAiContextActionDispatchesRealBridgeMethod:
     def test_action_result_is_the_richer_bundle_not_the_ad_hoc_send_to_ai_payload(qapp: QApplication) -> None:
         """The delivered context must carry bookmark data ``_on_send_to_ai``'s ad hoc payload never includes.
 
-        Falsifiable: ``_on_send_to_ai``'s hand-built context dict never
+        ``_on_send_to_ai``'s hand-built context dict never
         sets ``bookmarks`` / ``bookmark_count_total`` / ``bookmark_truncated``
         keys under any circumstance. If ``_on_get_ai_context`` were
         rewired to reuse that ad hoc builder instead of the real bridge

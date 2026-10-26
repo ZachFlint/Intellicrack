@@ -3,12 +3,12 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate for the Cutter/rizin bridge analysis-timeout defect.
+"""Regression test for the Cutter/rizin bridge analysis-timeout defect.
 
 :meth:`CutterBridge.analyze` used to dispatch ``aa``/``aaa``/``aaaa`` through
 ``_r2_cmd`` with no explicit ``command_timeout``, so the call inherited the
 module-wide :data:`intellicrack.bridges.cutter.R2_COMMAND_TIMEOUT` of 5.0
-seconds. Full analysis on any real-world binary routinely takes far longer
+seconds. Full analysis on any non-trivial binary routinely takes far longer
 than 5 seconds, so ``analyze()`` always timed out and raised ``ToolError``
 before rizin finished building the function list -- static analysis was
 effectively unusable through the bridge.
@@ -68,11 +68,11 @@ def _resolve_analysis_target() -> Path:
     """Resolve a real, sizeable PE executable to drive full analysis against.
 
     Prefers the committed live-audit target (``ida_9.4.exe``), a large
-    real-world executable whose ``aaa`` analysis pass reliably exceeds the
-    old 5-second default. Falls back to a real System32 executable when the
-    audit target is not present on this machine, so the gate is never
-    unconditionally skipped over a missing fixture file -- only over a
-    genuinely absent rizin/radare2 backend.
+    executable whose ``aaa`` analysis pass reliably exceeds the
+    old 5-second default. Falls back to a System32 executable when the
+    audit target is not present on this machine, so the test is never
+    unconditionally skipped over a missing fixture file -- only over an
+    absent rizin/radare2 backend.
 
     Returns:
         Path: Absolute path to a real, on-disk PE executable.
@@ -92,7 +92,7 @@ async def analysis_bridge() -> AsyncIterator[CutterBridge]:
 
     Yields:
         CutterBridge: A bridge whose :meth:`CutterBridge.initialize` has
-        already run against the genuine rizin/radare2 backend on ``PATH``.
+        already run against the rizin/radare2 backend on ``PATH``.
     """
     bridge = await _make_bridge_or_skip()
     await bridge.initialize()
@@ -112,7 +112,7 @@ class TestAnalyzeTimeout:
         """A ``"normal"`` (``aaa``) analysis pass must finish without raising.
 
         Drives the real ``load_binary`` -> ``analyze`` -> ``get_functions``
-        pipeline against a real PE target through the genuine rizin/radare2
+        pipeline against an on-disk PE executable through the rizin/radare2
         backend. With the bare 5 s ``command_timeout``, ``analyze``
         would raise ``ToolError`` on any target this large well before rizin
         finished; with the level-scaled timeout in place, analysis completes

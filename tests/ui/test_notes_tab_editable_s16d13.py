@@ -11,8 +11,8 @@ and must survive a panel refresh. These tests drive the real
 offscreen ``QApplication``, type real keystrokes into the notes editor with
 :class:`~PyQt6.QtTest.QTest`, and prove the typed text survives a panel
 refresh/reload -- both against the same analysis object and against a freshly
-constructed one for the same binary, simulating a genuine re-analysis round
-trip. No mocks or stubs stand in for the panel or the analysis model.
+constructed one for the same binary, simulating a re-analysis round
+trip.
 """
 
 from __future__ import annotations

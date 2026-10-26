@@ -11,7 +11,7 @@ tests spy on the real ``Popen`` call the production method makes -- the
 spy records the exact argv/kwargs it was invoked with, then delegates to
 the real ``Popen`` against a harmless short-lived placeholder command
 instead of the captured (unrunnable-in-CI) ``pyghidra.ghidra_launch``
-command. This keeps every test a genuine subprocess launch (a real OS
+command. This keeps every test a subprocess launch (a real OS
 process is spawned, waited on, and reaped) while still asserting on the
 exact argv the production method constructs.
 """
@@ -71,7 +71,7 @@ class TestRunHeadlessBatch:
     def test_command_includes_import_targets_and_prescripts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """The built analyzeHeadless command line must include every target and script.
 
-        Falsifiable: dropping the ``*targets`` unpack, or the per-script
+        Dropping the ``*targets`` unpack, or the per-script
         ``-preScript``/``-postScript`` loop, removes the corresponding
         tokens from the captured argv, failing the containment
         assertions.
@@ -137,8 +137,8 @@ class TestRunHeadlessBatch:
     def test_nonzero_exit_raises_tool_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """A real subprocess that exits non-zero must surface as ToolError, not a silent success.
 
-        Falsifiable: if the ``return_code != 0`` check were removed (or
-        inverted), this genuinely-failing real subprocess would not
+        If the ``return_code != 0`` check were removed (or
+        inverted), this failing subprocess would not
         raise ``ToolError`` and this test would fail.
         """
         _make_stub_headless(tmp_path)

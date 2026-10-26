@@ -28,7 +28,7 @@ The wizard is configured for a modern, native Windows presentation:
   automatically - dark on a dark machine, light on a light one - with no user
   choice required.
 - **Custom wizard banner, per theme.** The welcome/finished page shows the
-  Intellicrack banner. `WizardImageFile` (`banner-light.png`) is a genuinely
+  Intellicrack banner. `WizardImageFile` (`banner-light.png`) is a
   light render - the app-icon tile on a soft light gradient with a dark subtitle -
   and `WizardImageFileDynamicDark` (`banner-dark.png`) is the app-icon tile
   composited over a dark brand background (currently the Neural Ring artwork);
@@ -175,7 +175,7 @@ end user needs none of them.
   `tools/x64dbg/release` (the staging script asserts the `.dp64`/`.dp32`
   plugins exist; it does not build them).
 
-The staging script fails loudly on any missing source. It also expects the
+The staging script stops with an error on any missing source. It also expects the
 full tool trees under `tools/` (Ghidra, radare2, cutter, QEMU with its
 `images/`, etc.) and the vendor pattern trees under `vendor/`.
 

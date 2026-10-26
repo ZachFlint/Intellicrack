@@ -23,7 +23,7 @@ against the defective behaviour:
   their full text.
 
 All tests drive a real :class:`BridgeAnalysisPanel` under an offscreen
-``QApplication`` (no mocks).
+``QApplication``.
 """
 
 from __future__ import annotations
@@ -185,7 +185,7 @@ def test_h33_populated_cells_expose_full_text_via_tooltip(qapp: QApplication) ->
     """Every populated data cell carries a tooltip with its full, unclipped text.
 
     Bare ``QTableWidgetItem(text)`` cells with no ``setToolTip`` call would leave ``item.toolTip()`` as the
-    empty string for a genuinely long value, so this assertion fails against that code.
+    empty string for a long value, so this assertion fails against that code.
 
     Args:
         qapp: The shared QApplication fixture.

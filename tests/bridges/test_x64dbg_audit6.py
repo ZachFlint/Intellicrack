@@ -1312,7 +1312,7 @@ class TestNopRangeAndPatchVerification:
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """No attached PID -> verified=False, no fake success bytes.
+        """No attached PID -> verified=False, no fabricated success bytes.
 
         Args:
             bridge: Fixture bridge instance.
@@ -1334,7 +1334,7 @@ class TestNopRangeAndPatchVerification:
         self,
         bridge: X64DbgBridge,
     ) -> None:
-        """No attached PID -> verified=False, no fake patched bytes.
+        """No attached PID -> verified=False, no fabricated patched bytes.
 
         Args:
             bridge: Fixture bridge instance.
@@ -1993,8 +1993,8 @@ def _patch_read_pe_header(bridge: X64DbgBridge, payload: bytes) -> None:
     async def fake_read_pe_header(base_address: int, module_name: str, size: int = 256) -> tuple[int, bytes]:
         """Return the synthesised PE header.
 
-        Yields back to the loop once so the coroutine is a genuine
-        async function (the real implementation awaits ``read_memory``).
+        Yields back to the loop once so the coroutine suspends, as the
+        production implementation does when it awaits ``read_memory``.
 
         Args:
             base_address: Ignored.

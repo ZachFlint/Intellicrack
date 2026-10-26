@@ -4,8 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates for OAuth against a real authorization server.
 
-``tests/_helpers/mcp_oauth_server.py`` is a genuine OAuth 2.1 authorization
-server guarding a genuine MCP resource, run as a separate process. The whole
+``tests/_helpers/mcp_oauth_server.py`` is an OAuth 2.1 authorization
+server guarding an MCP resource, run as a separate process. The whole
 path runs for real: the ``401`` challenge, protected-resource metadata
 discovery, authorization server metadata discovery, client registration, a
 PKCE-protected authorization code, the token exchange, and the bearer token on

@@ -16,7 +16,7 @@ and assert that:
 * the call completes within a short timeout (no deadlock), and
 * the oldest idle instance has been evicted while the new instance is present.
 
-The tests rely on a real (not mocked) :class:`SandboxBase` subclass injected by
+The tests rely on a :class:`SandboxBase` subclass injected by
 substituting :class:`intellicrack.sandbox.manager.WindowsSandbox` at module
 scope via :class:`pytest.MonkeyPatch`. That keeps the manager's eviction logic
 under test while replacing only the platform-specific sandbox factory it would
@@ -57,8 +57,7 @@ class _FakeSandbox(SandboxBase):
     * :meth:`stop` transitions the state to ``stopped`` and records that the
       teardown ran (the test asserts on this to confirm eviction happened).
 
-    No subprocess, file system or network resources are used. This is a real
-    Python class, not a mock; the deadlock under test is purely about lock
+    No subprocess, file system or network resources are used. The deadlock under test is purely about lock
     acquisition order inside the manager, so a faithful in-process double is
     sufficient.
 

@@ -30,11 +30,11 @@ from the three GUI handlers, and adds the three inbound cases to
 ``_on_state_event`` that apply the bridge-driven value to
 ``self._hex_widget``.
 
-Every test here drives the REAL, unmodified ``HexEditorPanel`` /
-``HexEditorBridge`` / ``HexDocumentState`` against a real
-``intellicrack_hexcore.HexDocument`` opened on a real temp file, changing
-the GUI side through the actual toolbar ``QComboBox`` widgets (the same
-controls a user clicks) and the bridge side through the actual async
+Every test here drives ``HexEditorPanel`` /
+``HexEditorBridge`` / ``HexDocumentState`` against an
+``intellicrack_hexcore.HexDocument`` opened on a temp file, changing
+the GUI side through the toolbar ``QComboBox`` widgets (the same
+controls a user clicks) and the bridge side through the async
 ``HexEditorBridge`` setter coroutines (the same calls an AI tool makes).
 """
 
@@ -78,7 +78,7 @@ class TestGuiChangesPushToBridge:
     def test_display_mode_combo_updates_bridge_get_display_mode(qapp: QApplication) -> None:
         """Selecting a display mode in the toolbar must be readable via ``bridge.get_display_mode``.
 
-        Falsifiable: if ``_on_display_mode_changed`` were reverted to
+        If ``_on_display_mode_changed`` were reverted to
         applying only ``self._hex_widget.set_display_mode(mode)``,
         ``bridge.get_display_mode()`` would stay at the bridge's default
         ``"hex8"`` instead of reflecting ``"hex16_le"``. Broken
@@ -112,7 +112,7 @@ class TestGuiChangesPushToBridge:
     def test_alignment_combo_updates_bridge_get_alignment_grid(qapp: QApplication) -> None:
         """Selecting an alignment grid size in the toolbar must be readable via ``bridge.get_alignment_grid``.
 
-        Falsifiable: if ``_on_alignment_changed`` were reverted to
+        If ``_on_alignment_changed`` were reverted to
         applying only ``self._hex_widget.set_alignment_grid_size(size)``,
         ``bridge.get_alignment_grid()`` would stay at the bridge's
         default ``0`` instead of reflecting ``4096``. Broken production
@@ -146,7 +146,7 @@ class TestGuiChangesPushToBridge:
     def test_color_mode_combo_updates_bridge_get_color_mode(qapp: QApplication) -> None:
         """Selecting a color mode in the toolbar must be readable via ``bridge.get_color_mode``.
 
-        Falsifiable: if ``_on_color_mode_changed`` were reverted to
+        If ``_on_color_mode_changed`` were reverted to
         applying only ``self._hex_widget.set_color_mode(mode)``,
         ``bridge.get_color_mode()`` would stay at the bridge's default
         ``"none"`` instead of reflecting ``"entropy"``. Broken
@@ -184,7 +184,7 @@ class TestBridgeChangesApplyToWidget:
     def test_bridge_set_display_mode_applies_to_widget(qapp: QApplication) -> None:
         """``bridge.set_display_mode`` must change the real widget's display mode.
 
-        Falsifiable: without the new ``DISPLAY_MODE_CHANGED`` case in
+        Without the new ``DISPLAY_MODE_CHANGED`` case in
         ``_on_state_event``, the widget's ``_display_mode`` would stay
         at its default ``"hex8"`` after this bridge call, even though
         the bridge itself accepted and stored ``"dec_u32"``.
@@ -217,7 +217,7 @@ class TestBridgeChangesApplyToWidget:
     def test_bridge_set_alignment_grid_applies_to_widget(qapp: QApplication) -> None:
         """``bridge.set_alignment_grid`` must change the real widget's alignment grid size.
 
-        Falsifiable: without the new ``ALIGNMENT_GRID_CHANGED`` case in
+        Without the new ``ALIGNMENT_GRID_CHANGED`` case in
         ``_on_state_event``, the widget's ``_alignment_grid_size`` would
         stay at its default ``0`` after this bridge call, even though
         the bridge itself accepted and stored ``8192``.
@@ -250,7 +250,7 @@ class TestBridgeChangesApplyToWidget:
     def test_bridge_set_color_mode_applies_to_widget(qapp: QApplication) -> None:
         """``bridge.set_color_mode`` must change the real widget's color mode.
 
-        Falsifiable: without the new ``COLOR_MODE_CHANGED`` case in
+        Without the new ``COLOR_MODE_CHANGED`` case in
         ``_on_state_event``, the widget's ``_color_mode`` would stay at
         its default ``"none"`` after this bridge call, even though the
         bridge itself accepted and stored ``"byte_value"``.

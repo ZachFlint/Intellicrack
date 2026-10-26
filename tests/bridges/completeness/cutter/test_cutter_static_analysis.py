@@ -5,7 +5,7 @@
 """Bridge-completeness gate tests for the Cutter/Rizin static-analysis slice.
 
 Every test drives a real ``CutterBridge`` (backed by a
-recording r2pipe double, the genuine external boundary a live rizin child
+recording r2pipe double, standing in at the external boundary a live rizin child
 process would occupy) and/or a real Qt widget from
 ``intellicrack.ui.panels.cutter_panel``/``cutter_static_extra_tab`` so the
 production bridge parsing, tool-def dispatch, and GUI handler code all run
@@ -177,7 +177,7 @@ def _no_op_run_async(
 class TestRelocationsResourcesSwapRegression:
     """L1 regression gate: ``get_relocations``/``get_resources`` must not have their commands swapped.
 
-    Falsified by: reverting ``cutter.py``'s ``get_relocations``/``get_resources``
+    Reverting ``cutter.py``'s ``get_relocations``/``get_resources``
     command strings back to the swapped state (``get_relocations`` issuing
     ``iRj`` and ``get_resources`` issuing ``irj``) turns every assertion in
     this class red, because the recorder is seeded with *distinct* real
@@ -189,7 +189,7 @@ class TestRelocationsResourcesSwapRegression:
     def test_get_relocations_issues_irj_and_returns_relocation_data() -> None:
         """``get_relocations`` must issue ``irj`` and parse it as relocation entries, not resources.
 
-        Falsifiable: if ``get_relocations`` issued ``iRj`` (the swapped/buggy
+        If ``get_relocations`` issued ``iRj`` (the swapped/buggy
         command), the recorder would return the resource JSON payload
         instead, and the returned ``RelocationInfo.type`` would read
         ``"icon"`` (a resource type) rather than the real relocation type
@@ -216,7 +216,7 @@ class TestRelocationsResourcesSwapRegression:
     def test_get_resources_issues_resources_command_and_returns_resource_data() -> None:
         """``get_resources`` must issue ``iRj`` and parse it as resource entries, not relocations.
 
-        Falsifiable: if ``get_resources`` issued ``irj`` (the swapped/buggy
+        If ``get_resources`` issued ``irj`` (the swapped/buggy
         command), the recorder would return the relocation JSON payload
         instead, and the returned ``ResourceInfo.type`` would read
         ``"R_X86_64_RELATIVE"`` (a relocation type) rather than the real
@@ -248,7 +248,7 @@ class TestRelocationsResourcesToolDefDispatchL2:
     def test_execute_tool_call_get_relocations_returns_real_relocation_data(tmp_path: Path) -> None:
         """Dispatching ``cutter.get_relocations`` via the registry returns real, correctly-typed data.
 
-        Falsifiable: if the tool-def's ``function_name`` did not exactly
+        If the tool-def's ``function_name`` did not exactly
         match the real bound method ``get_relocations``, ``execute_tool_call``
         would raise ``ToolError`` (unknown function) instead of returning the
         parsed relocation list. Broken production line: the ``_tf("get_relocations", ...)``
@@ -275,7 +275,7 @@ class TestRelocationsResourcesToolDefDispatchL2:
     def test_execute_tool_call_get_resources_returns_real_resource_data(tmp_path: Path) -> None:
         """Dispatching ``cutter.get_resources`` via the registry returns real, correctly-typed data.
 
-        Falsifiable: if the tool-def's ``function_name`` did not exactly
+        If the tool-def's ``function_name`` did not exactly
         match the real bound method ``get_resources``, ``execute_tool_call``
         would raise ``ToolError`` (unknown function) instead of returning the
         parsed resource list. Broken production line: the ``_tf("get_resources", ...)``
@@ -308,7 +308,7 @@ class TestAnalysisDepthSelectorL3:
     def test_quick_level_selection_issues_aa_not_aaa(qapp: QApplication) -> None:
         """Selecting 'quick' in the combo box and clicking Analyze must issue rizin's 'aa', not the default 'aaa'.
 
-        Falsifiable: if ``CutterPanel._on_analyze`` ignored
+        If ``CutterPanel._on_analyze`` ignored
         ``self._analysis_level_combo.currentText()`` and always called
         ``self._bridge.analyze()`` with no argument (the regressed behaviour),
         the bridge would always run the default 'normal' level ('aaa'), and
@@ -344,7 +344,7 @@ class TestAnalysisDepthSelectorL3:
     def test_deep_level_selection_issues_aaaa(qapp: QApplication) -> None:
         """Selecting 'deep' in the combo box and clicking Analyze must issue rizin's 'aaaa'.
 
-        Falsifiable: same production line as the quick-level test above --
+        Same production line as the quick-level test above --
         without threading the combo box value through, the deep pass would
         never be reachable from the GUI and 'aaaa' would never be issued.
 
@@ -371,7 +371,7 @@ class TestAnalysisDepthSelectorL3:
     def test_no_bridge_configured_does_not_crash_and_sets_status(qapp: QApplication) -> None:
         """Clicking Analyze with no bridge configured must report status, not raise.
 
-        Falsifiable: if the ``self._bridge is None`` guard were removed from
+        If the ``self._bridge is None`` guard were removed from
         ``_on_analyze``, this call would raise ``AttributeError`` on
         ``self._bridge.state`` instead of setting a status message.
 
@@ -395,7 +395,7 @@ class TestHexdumpWordModeL3:
     def test_word_mode_selection_issues_pxw_not_px(qapp: QApplication) -> None:
         """Selecting 'Words' mode and dumping must issue rizin's 'pxw', not the byte-mode 'px'.
 
-        Falsifiable: if ``HexdumpTab._dump`` ignored the mode combo box and
+        If ``HexdumpTab._dump`` ignored the mode combo box and
         always called ``bridge.hexdump`` (byte mode), 'pxw' would never be
         issued and this assertion would fail. Broken production line: the
         ``coro = self._bridge.hexdump_words(...) if word_mode else self._bridge.hexdump(...)``
@@ -436,7 +436,7 @@ class TestStaticAnalysisExtrasTabConstruction:
     def test_all_seven_sub_tabs_exist_and_are_correct_types() -> None:
         """The composite tab must contain real instances of all 9 remediated sub-tab classes.
 
-        Falsifiable: if any sub-tab construction were removed from
+        If any sub-tab construction were removed from
         ``StaticAnalysisExtrasTab.__init__``, the corresponding
         ``isinstance`` check would fail. Broken production line: the
         ``self._tabs.addTab(...)`` calls in ``StaticAnalysisExtrasTab.__init__``
@@ -465,7 +465,7 @@ class TestClassesTabL3:
     def test_refresh_calls_icj_and_populates_tree(qapp: QApplication) -> None:
         """``ClassesTab.refresh`` must issue ``icj`` and populate the tree with the real class/method/field data.
 
-        Falsifiable: if ``ClassesTab.refresh`` called a different bridge
+        If ``ClassesTab.refresh`` called a different bridge
         method or never invoked ``run_bridge_coroutine_logged``, the
         recorder would never see 'icj' and the tree would stay empty.
         Broken production line: ``bridge.get_classes()`` invocation inside
@@ -504,7 +504,7 @@ class TestCallGraphTabL3:
     def test_refresh_calls_agcj_and_populates_table(qapp: QApplication) -> None:
         """``CallGraphTab.refresh`` must issue ``agcj`` and populate the table with real caller/callee edges.
 
-        Falsifiable: if the tab called a different method or skipped the
+        If the tab called a different method or skipped the
         bridge call entirely, 'agcj' would never appear in the recorder and
         the table would stay at zero rows.
 
@@ -543,7 +543,7 @@ class TestVtablesTabL3:
     def test_refresh_calls_avj_and_populates_table(qapp: QApplication) -> None:
         """``VtablesTab.refresh`` must issue ``avj`` and populate the table with real vtable data.
 
-        Falsifiable: if the tab never called ``bridge.get_vtables()``,
+        If the tab never called ``bridge.get_vtables()``,
         'avj' would never be recorded and the table would remain empty.
 
         Args:
@@ -580,7 +580,7 @@ class TestSyscallsTabL3:
     def test_refresh_calls_asj_and_populates_table(qapp: QApplication) -> None:
         """``SyscallsTab.refresh`` must issue ``asj`` and populate the table with the real syscall entry.
 
-        Falsifiable: if the tab called ``get_classes``/``get_vtables``
+        If the tab called ``get_classes``/``get_vtables``
         instead of ``get_syscalls``, 'asj' would never be recorded.
 
         Args:
@@ -614,7 +614,7 @@ class TestZignaturesTabL3:
     def test_list_button_calls_zj_and_populates_table(qapp: QApplication) -> None:
         """Clicking List must issue rizin's ``zj`` and render the real zignature name.
 
-        Falsifiable: if ``ZignaturesTab._on_list`` called a different
+        If ``ZignaturesTab._on_list`` called a different
         method or never dispatched, 'zj' would never appear in the recorder.
 
         Args:
@@ -641,7 +641,7 @@ class TestZignaturesTabL3:
     def test_generate_button_calls_zg_at_address(qapp: QApplication) -> None:
         """Clicking Generate with an address must issue ``zg @ <addr>``, scoping generation.
 
-        Falsifiable: if ``_on_generate`` failed to pass the parsed address
+        If ``_on_generate`` failed to pass the parsed address
         through to ``bridge.generate_zignatures``, the recorder would only
         see a bare 'zg' (whole-binary) instead of the address-scoped form.
 
@@ -667,7 +667,7 @@ class TestZignaturesTabL3:
     def test_add_button_calls_za_with_name_and_data(qapp: QApplication) -> None:
         """Clicking Add with name/data inputs must issue rizin's ``za <name> <data>``.
 
-        Falsifiable: if ``_on_add`` never forwarded the two input fields to
+        If ``_on_add`` never forwarded the two input fields to
         ``bridge.add_zignature``, the exact 'za check_license 8b4508' command
         would never appear in the recorder.
 
@@ -695,7 +695,7 @@ class TestZignaturesTabL3:
     def test_search_button_calls_zslash_j_and_populates_matches(qapp: QApplication) -> None:
         """Clicking Search Matches must issue rizin's ``z/j`` and render the real match.
 
-        Falsifiable: if ``_on_search`` called ``get_zignatures`` (list)
+        If ``_on_search`` called ``get_zignatures`` (list)
         instead of ``search_zignatures``, 'z/j' would never appear in the
         recorder and the match count would be wrong.
 
@@ -728,7 +728,7 @@ class TestBasicBlocksTabL3:
     def test_set_address_calls_afbj_and_populates_table(qapp: QApplication) -> None:
         """``BasicBlocksTab.set_address`` must issue ``afbj @ <addr>`` and render the real block fields.
 
-        Falsifiable: if ``set_address``/``_on_fetch`` never dispatched to
+        If ``set_address``/``_on_fetch`` never dispatched to
         ``bridge.get_basic_blocks``, 'afbj' would never be recorded and the
         table would remain empty.
 
@@ -764,7 +764,7 @@ class TestFunctionDisasmTabL3:
     def test_set_address_calls_pdf_and_renders_text(qapp: QApplication) -> None:
         """``FunctionDisasmTab.set_address`` must issue ``pdf @ <addr>`` and render the returned text verbatim.
 
-        Falsifiable: if the tab called ``disassemble`` (range-mode ``pdj``, the Disassembly tab's
+        If the tab called ``disassemble`` (range-mode ``pdj``, the Disassembly tab's
         method) instead of the new
         ``disassemble_function`` (``pdf``), 'pdf' would never be recorded
         and the text would be wrong or empty.
@@ -795,7 +795,7 @@ class TestDebugInfoTabL3:
     def test_refresh_calls_idj_and_populates_table(qapp: QApplication) -> None:
         """``DebugInfoTab.refresh`` must issue ``iDj`` and render the real debug-info key/value pairs.
 
-        Falsifiable: if ``DebugInfoTab._on_refresh`` called a different
+        If ``DebugInfoTab._on_refresh`` called a different
         bridge method or never invoked ``run_bridge_coroutine_logged``, the
         recorder would never see 'iDj' and the table would stay empty.
         Broken production line: the ``self._bridge.get_debug_info()`` call
@@ -827,7 +827,7 @@ class TestESILConsoleTabEmulateAndSetPcL3:
     def test_emulate_function_button_calls_aef_at_address(qapp: QApplication) -> None:
         """Clicking "Emulate Function" with an address must issue rizin's ``aef @ <addr>``.
 
-        Falsifiable: if ``_on_emulate_function`` never called
+        If ``_on_emulate_function`` never called
         ``self._bridge.esil_emulate_function(address)``, 'aef @ 4198400'
         would never appear in the recorder and the output console would
         never show the emulation result. Broken production line: the
@@ -858,7 +858,7 @@ class TestESILConsoleTabEmulateAndSetPcL3:
     def test_set_pc_button_calls_aepc_at_address(qapp: QApplication) -> None:
         """Clicking "Set PC" with an address must issue rizin's ``aepc <addr>``.
 
-        Falsifiable: if ``_on_set_pc`` never called
+        If ``_on_set_pc`` never called
         ``self._bridge.esil_set_pc(address)``, 'aepc 4198400' would never
         appear in the recorder. Broken production line: the
         ``run_bridge_coroutine_logged(self._bridge.esil_set_pc(address), ...)``
@@ -889,7 +889,7 @@ class TestESILConsoleTabEmulateAndSetPcL3:
 class TestEsilInitState:
     """L1/L2/L3 gate: ESIL VM state initialization (rizin 'aei') is distinct from memory init (rizin 'aeim').
 
-    Falsified by: aliasing ``esil_init_state`` to issue "aeim" instead of "aei" turns both
+    Aliasing ``esil_init_state`` to issue "aeim" instead of "aei" turns both
     assertions below red immediately, because each asserts the negative (the sibling command must
     NOT appear) in addition to the positive.
     """
@@ -912,7 +912,7 @@ class TestEsilInitState:
     def test_init_vm_button_issues_aei(qapp: QApplication) -> None:
         """Clicking "Init VM" must issue rizin's 'aei', distinct from "Init Mem"'s 'aeim'.
 
-        Falsifiable: if ``_on_init_state`` called ``esil_init_memory`` instead of
+        If ``_on_init_state`` called ``esil_init_memory`` instead of
         ``esil_init_state`` (or vice versa), 'aei' would never appear in the recorder while 'aeim'
         would appear instead. Broken production line: the
         ``run_bridge_coroutine_logged(self._bridge.esil_init_state(), ...)`` call in
@@ -941,7 +941,7 @@ class TestEsilInitState:
 class TestEsilStepUntil:
     """L1/L2/L3 gate: ESIL step-until by address (rizin 'aesu') or expression (rizin 'aesue') must be real and reachable.
 
-    Falsified by: removing the mutual-exclusion guard makes both
+    Removing the mutual-exclusion guard makes both
     ``test_rejects_both_none``/``test_rejects_both_given`` red (no exception raised). Swapping the
     two command strings between branches makes
     ``test_address_mode_issues_aesu``/``test_expression_mode_issues_aesue`` red immediately.
@@ -997,7 +997,7 @@ class TestEsilStepUntil:
     def test_step_until_address_mode_issues_aesu(qapp: QApplication) -> None:
         """Selecting address mode and clicking "Step Until" must issue rizin's 'aesu <addr>'.
 
-        Falsifiable: if ``_on_step_until`` never called
+        If ``_on_step_until`` never called
         ``self._bridge.esil_step_until(address=...)``, 'aesu 0x401000' would never appear in the
         recorder. Broken production line: the ``run_bridge_coroutine_logged(coro, ...)`` call in
         ``ESILConsoleTab._on_step_until`` (``cutter_tabs.py``).
@@ -1029,7 +1029,7 @@ class TestEsilStepUntil:
 class TestAddEsilWatchpoint:
     """L1/L2/L3 gate: ESIL watchpoints on register/memory access (rizin 'de') must be real and reachable.
 
-    Falsified by: swapping the argument order in the issued command turns
+    Swapping the argument order in the issued command turns
     ``test_issues_de_with_correct_argument_order``/
     ``test_add_watchpoint_button_calls_de_with_correct_order`` red immediately (the exact-string
     assertion no longer matches). Removing the ``validate_r2_argument(expression, ...)`` call turns
@@ -1064,7 +1064,7 @@ class TestAddEsilWatchpoint:
     def test_add_watchpoint_button_calls_de_with_correct_order(qapp: QApplication) -> None:
         """Clicking "Add Watchpoint" must issue rizin's 'de <perm> <kind> <expr>' in that exact order.
 
-        Falsifiable: if ``_on_add_watchpoint`` never called
+        If ``_on_add_watchpoint`` never called
         ``self._bridge.add_esil_watchpoint(perm, kind, expression)``, 'de w mem 0x601000'
         would never appear in the recorder. Broken production line: the
         ``run_bridge_coroutine_logged(self._bridge.add_esil_watchpoint(perm, kind, expression), ...)``
@@ -1102,7 +1102,7 @@ class TestFlagsTabAddAndResolveL3:
     def test_add_flag_button_calls_f_command_and_refreshes_table(qapp: QApplication) -> None:
         """Clicking "Add Flag" must issue rizin's ``f <name> <size> @ <addr>`` and then re-list flags.
 
-        Falsifiable: if ``_on_add_flag`` never called
+        If ``_on_add_flag`` never called
         ``self._bridge.add_flag(name, size, address)``, 'f license_ok 4 @
         4198400' would never appear in the recorder and the flags table
         would not gain the new row. Broken production line: the
@@ -1141,7 +1141,7 @@ class TestFlagsTabAddAndResolveL3:
     def test_resolve_flag_button_calls_fdj_and_shows_flag_name(qapp: QApplication) -> None:
         """Clicking "Resolve Flag" with an address must issue rizin's ``fdj @ <addr>`` and display the resolved name.
 
-        Falsifiable: if ``_on_resolve_flag`` never called
+        If ``_on_resolve_flag`` never called
         ``self._bridge.resolve_flag(address)``, 'fdj @ 4198400' would never
         appear in the recorder and the result label would not show the
         real flag name. Broken production line: the
@@ -1180,7 +1180,7 @@ class TestConfigTabGetAndSetL3:
     def test_get_button_calls_e_command_and_shows_value(qapp: QApplication) -> None:
         """Clicking "Get" with a key must issue rizin's ``e <key>`` and display the real value.
 
-        Falsifiable: if ``_on_get`` never called
+        If ``_on_get`` never called
         ``self._bridge.get_config(key)``, 'e asm.arch' would never appear
         in the recorder and the output console would never show the real
         configuration value. Broken production line: the
@@ -1211,7 +1211,7 @@ class TestConfigTabGetAndSetL3:
     def test_set_button_calls_e_key_equals_value_command(qapp: QApplication) -> None:
         """Clicking "Set" with a key/value pair must issue rizin's ``e <key>=<value>``.
 
-        Falsifiable: if ``_on_set`` never called
+        If ``_on_set`` never called
         ``self._bridge.set_config(key, value)``, 'e asm.bits=32' would
         never appear in the recorder. Broken production line: the
         ``run_bridge_coroutine_logged(self._bridge.set_config(key, value), ...)``
@@ -1244,7 +1244,7 @@ class TestConfigTabGetAndSetL3:
 class TestAnalyzeBasicBlocksPass:
     """L1/L2/L3 gate: the standalone basic-block analysis pass (rizin 'aab') must be real and reachable.
 
-    Falsified by: changing the issued command string away from the exact
+    Changing the issued command string away from the exact
     literal ``"aab"`` (e.g. to ``"aaa"``) or dropping the ``_r2_cmd`` call
     entirely turns both assertions below red immediately, because the
     recorder and the menu-driven Qt handler both assert on that exact
@@ -1268,7 +1268,7 @@ class TestAnalyzeBasicBlocksPass:
     def test_menu_action_calls_bridge_method(qapp: QApplication) -> None:
         """Triggering the 'Basic Blocks (aab)' menu action must invoke the real bridge method.
 
-        Falsifiable: if ``CutterPanel._on_analyze_basic_blocks`` called a
+        If ``CutterPanel._on_analyze_basic_blocks`` called a
         different bridge method or never dispatched at all, 'aab' would
         never appear in the recorder. Broken production line: the
         ``self._bridge.analyze_basic_blocks()`` call in
@@ -1297,7 +1297,7 @@ class TestAnalyzeBasicBlocksPass:
 class TestAnalyzeFunctionCallsPass:
     """L1/L2/L3 gate: the standalone function-call analysis pass (rizin 'aac') must be real and reachable.
 
-    Falsified by: changing the issued command string away from the exact
+    Changing the issued command string away from the exact
     literal ``"aac"`` turns both assertions below red immediately, because
     the recorder and the menu-driven Qt handler both assert on that exact
     literal appearing in ``recorder.commands``.
@@ -1320,7 +1320,7 @@ class TestAnalyzeFunctionCallsPass:
     def test_menu_action_calls_bridge_method(qapp: QApplication) -> None:
         """Triggering the 'Function Calls (aac)' menu action must invoke the real bridge method.
 
-        Falsifiable: if ``CutterPanel._on_analyze_function_calls`` called a
+        If ``CutterPanel._on_analyze_function_calls`` called a
         different bridge method or never dispatched at all, 'aac' would
         never appear in the recorder. Broken production line: the
         ``self._bridge.analyze_function_calls()`` call in
@@ -1351,7 +1351,7 @@ class TestAnalyzeFunctionCallsPass:
 class TestAnalyzeReferencesPass:
     """L1/L2/L3 gate: the standalone cross-reference analysis pass (rizin 'aar') must be real and reachable.
 
-    Falsified by: changing the command-building logic to always emit a
+    Changing the command-building logic to always emit a
     fixed string (dropping the ``n_bytes`` branch, or using a different
     base command than ``"aar"``) turns the relevant assertions below red
     immediately, since each asserts on the exact command literal the real
@@ -1375,7 +1375,7 @@ class TestAnalyzeReferencesPass:
     async def test_issues_aar_with_n_bytes(bridge_with_recorder: CutterBridge, recorder: CommandRecorder) -> None:
         """``analyze_references`` with an explicit ``n_bytes`` must issue 'aar <n_bytes>'.
 
-        This is the falsifiable distinction from the bare-command path: a
+        This distinguishes it from the bare-command path: a
         naive implementation that ignores ``n_bytes`` would never emit this
         exact command literal.
 
@@ -1390,7 +1390,7 @@ class TestAnalyzeReferencesPass:
     def test_menu_action_calls_bridge_method(qapp: QApplication) -> None:
         """Triggering the 'Data/Code Refs (aar)' menu action must invoke the real bridge method.
 
-        Falsifiable: if ``CutterPanel._on_analyze_references`` called a
+        If ``CutterPanel._on_analyze_references`` called a
         different bridge method or never dispatched at all, 'aar' would
         never appear in the recorder. Broken production line: the
         ``self._bridge.analyze_references()`` call in
@@ -1419,13 +1419,13 @@ class TestAnalyzeReferencesPass:
 class TestAutonameFunctionsPass:
     """L1/L2/L3 gate: the standalone function autoname pass (rizin 'aan') must be real and reachable.
 
-    Falsified by: changing the issued command string away from the exact
+    Changing the issued command string away from the exact
     literal ``"aan"`` turns the L1 and menu-dispatch assertions red
     immediately; separately, if the handler's success callback stopped
     calling ``_on_analysis_pass_complete``/``_on_refresh_functions``, the
     function-tree-refresh assertion would go red while the command-issued
-    assertion still passed, proving the two assertions gate genuinely
-    independent behaviors.
+    assertion still passed, so the two assertions check independent
+    behaviors.
     """
 
     @staticmethod
@@ -1450,7 +1450,7 @@ class TestAutonameFunctionsPass:
         ``_attached_bridge`` in ``test_cutter_dynamic_navigation.py``), not by
         writing the private attribute directly.
 
-        Falsifiable: if ``CutterPanel._on_autoname_functions`` called a
+        If ``CutterPanel._on_autoname_functions`` called a
         different bridge method, or never refreshed the functions tree
         afterward, 'aan' would never appear in the recorder or the tree
         would stay empty. Broken production line: the
@@ -1487,11 +1487,11 @@ class TestAutonameFunctionsPass:
 class TestDisassembleRange:
     """L1/L2/L3 gate: fixed byte-range disassembly (rizin 'pD'/'pDj') must be real and reachable.
 
-    Falsified by: changing the issued command from ``f"pDj {length}"`` to
+    Changing the issued command from ``f"pDj {length}"`` to
     ``f"pdj {length}"`` (the instruction-count command) turns
     the exact-match assertion on ``"pDj 8"`` red immediately , since a naive implementation could
     accidentally alias to the existing ``disassemble``/``pdj`` path instead
-    of a genuine byte-bounded variant.
+    of a byte-bounded variant.
     """
 
     @staticmethod
@@ -1527,7 +1527,7 @@ class TestDisassembleRange:
     def test_menu_action_fetches_range_and_renders_text(qapp: QApplication) -> None:
         """``FunctionDisasmTab._on_fetch_range`` must issue 'pDj <n>' and render the real mnemonics.
 
-        Falsifiable: if ``_on_fetch_range`` called ``disassemble`` (the
+        If ``_on_fetch_range`` called ``disassemble`` (the
         instruction-count ``pdj`` path) instead of the new
         ``disassemble_range`` (``pDj``), 'pDj 8' would never be recorded and
         the output would stay empty. Broken production line: the
@@ -1569,7 +1569,7 @@ class TestDisassembleRange:
 class TestDecompileAlternateBackend:
     """L1/L2/L3 gate: the jsdec 'pdd' alternate decompiler backend must be real and reachable.
 
-    Falsified by: changing the ``backend == "pdd"`` branch in
+    Changing the ``backend == "pdd"`` branch in
     ``CutterBridge.decompile`` to always fall through to the ``pdg`` path
     turns ``test_pdd_backend_issues_pdd_and_skips_sleighhome`` red
     immediately ('pdd' disappears from ``recorder.commands``, 'pdg' appears
@@ -1640,7 +1640,7 @@ class TestDecompileAlternateBackend:
     def test_backend_combo_selection_threads_pdd_into_bridge_call(qapp: QApplication) -> None:
         """Selecting 'pdd' in the toolbar combo and clicking Decompile must issue 'pdd', not 'pdg'.
 
-        Falsifiable: if ``CutterPanel._on_decompile_selected`` ignored
+        If ``CutterPanel._on_decompile_selected`` ignored
         ``self._decompiler_backend_combo.currentText()``, the bridge would
         always decompile with the default 'pdg' backend regardless of the
         combo box selection, and this assertion (checking 'pdd' is issued
@@ -1700,9 +1700,9 @@ class TestFlirtRoundTrip:
     async def test_export_then_apply_flirt_signature_renames_function(tmp_path: Path) -> None:
         """Export a FLIRT signature from one session, apply it in a fresh session, confirm the rename sticks.
 
-        Falsifiable (the ``Fs`` half): if ``apply_flirt_signatures``
+        For the ``Fs`` half: if ``apply_flirt_signatures``
         issued a no-op instead of ``f"Fs {path}"``, session B's
-        ``functions_after`` would never regain the marker name. Falsifiable (the ``Fc`` half): if
+        ``functions_after`` would never regain the marker name. For the ``Fc`` half: if
         ``create_flirt_signatures`` issued a
         no-op instead of ``f"Fc {path}"``, ``sig_path.is_file()`` would be
         ``False`` and the method's own defensive verification would raise
@@ -1758,7 +1758,7 @@ class TestCreateFlirtSignaturesFileVerification:
     ) -> None:
         """``create_flirt_signatures`` must raise when rizin accepts 'Fc' but writes no file.
 
-        Falsifiable: if the ``is_file()`` verification were removed and the
+        If the ``is_file()`` verification were removed and the
         method returned ``True`` unconditionally after issuing ``Fc``, this
         test would fail (no ``ToolError`` raised even though the file was
         never written).
@@ -1782,7 +1782,7 @@ class TestApplyFlirtSignaturesDispatch:
 
     This unit-level gate runs unconditionally (no real rizin backend required) because it
     exercises only the bridge's own command-building/dispatch logic against a
-    ``CommandRecorder`` double -- the genuine external-process boundary this sandbox
+    ``CommandRecorder`` double -- the external-process boundary this sandbox
     substitutes throughout this test suite. ``TestFlirtRoundTrip`` above additionally proves the
     ``Fs``/``Fc`` dispatch is correct against an actual rizin process wherever one is installed.
     """
@@ -1854,7 +1854,7 @@ class TestZignaturesTabFlirtButtonsL3:
     ) -> None:
         """Clicking 'Apply FLIRT File...' must issue rizin's 'Fs <chosen path>'.
 
-        Falsifiable: if ``_on_apply_flirt`` never called
+        If ``_on_apply_flirt`` never called
         ``self._bridge.apply_flirt_signatures(file_path)``, 'Fs' would
         never appear in the recorder regardless of the dialog's return
         value. Broken production line: the
@@ -1927,7 +1927,7 @@ class TestZignaturesTabFlirtButtonsL3:
     ) -> None:
         """Clicking 'Export FLIRT File...' must issue rizin's 'Fc <chosen path>' and report success.
 
-        Falsifiable: if ``_on_export_flirt`` never called
+        If ``_on_export_flirt`` never called
         ``self._bridge.create_flirt_signatures(file_path)``, 'Fc' would
         never appear in the recorder. Broken production line: the
         ``run_bridge_coroutine_logged(self._bridge.create_flirt_signatures(file_path), ...)``

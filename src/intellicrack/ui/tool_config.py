@@ -1035,7 +1035,7 @@ class ToolSettingsWidget(QFrame):
         self._status_icon.setFixedSize(20, 20)
         status_row.addWidget(self._status_icon)
 
-        self.status_label = QLabel("Unknown")
+        self.status_label: QLabel = QLabel("Unknown")
         self.status_label.setObjectName("status_label")
         self.status_label.setWordWrap(True)
         status_row.addWidget(self.status_label, stretch=1)

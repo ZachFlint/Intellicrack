@@ -12,8 +12,8 @@ mid-flight diff strands its ``NamedTemporaryFile``. This test starts seven real 
 plus a real snapshot tempfile, drives the production ``_cleanup`` orchestration,
 and asserts every thread was joined (stopped) and the tempfile removed. A worker
 whose body only exits on ``isInterruptionRequested`` stays running forever unless
-teardown interrupts and joins it, so ``not worker.isRunning()`` after cleanup is
-a real, falsifiable gate.
+teardown interrupts and joins it, so ``not worker.isRunning()`` after cleanup
+holds only if the teardown stopped it.
 """
 
 from __future__ import annotations

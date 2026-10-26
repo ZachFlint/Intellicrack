@@ -349,7 +349,7 @@ class ScriptListWidget(QListWidget):
         script_selected: Qt signal for script selected.
     """
 
-    script_selected = pyqtSignal(str)
+    script_selected: pyqtSignal = pyqtSignal(str)
 
     @override
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -440,7 +440,7 @@ class ScriptEditor(QPlainTextEdit):
         content_changed: Qt signal for content changed.
     """
 
-    content_changed = pyqtSignal()
+    content_changed: pyqtSignal = pyqtSignal()
 
     @override
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -525,8 +525,8 @@ class ScriptManagerPanel(QWidget):
         script_execution_completed: Qt signal emitted with ``(name, result)`` after acknowledge_execution.
     """
 
-    script_execute = pyqtSignal(str, str, str)
-    script_execution_completed = pyqtSignal(str, str)
+    script_execute: pyqtSignal = pyqtSignal(str, str, str)
+    script_execution_completed: pyqtSignal = pyqtSignal(str, str)
 
     @override
     def __init__(self, parent: QWidget | None = None) -> None:

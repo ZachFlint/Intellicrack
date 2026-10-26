@@ -12,7 +12,7 @@
  * all, and it fails rather than skips if the identifier ever stops arriving.
  * That costs a document: panels.js transitively imports api.js, whose token
  * resolution touches `document` and `window` at module scope, and the panel
- * builds a real element tree. The stub below is therefore a small but genuine
+ * builds a real element tree. The stub below is therefore a small but working
  * node model - parent/child links, class lists, custom properties, listeners -
  * and every expectation reads the tree the panel actually built.
  *

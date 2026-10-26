@@ -104,9 +104,9 @@ class QtMcpPrompts(QObject):
     safe to build a dialog in response to them.
     """
 
-    consent_requested = pyqtSignal(object)
-    elicitation_requested = pyqtSignal(object)
-    prompt_withdrawn = pyqtSignal(object)
+    consent_requested: pyqtSignal = pyqtSignal(object)
+    elicitation_requested: pyqtSignal = pyqtSignal(object)
+    prompt_withdrawn: pyqtSignal = pyqtSignal(object)
 
     def __init__(
         self,

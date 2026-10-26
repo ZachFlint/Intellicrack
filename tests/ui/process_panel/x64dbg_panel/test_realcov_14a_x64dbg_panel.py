@@ -9,7 +9,7 @@ dumps are validated against real
 data. The live x64dbg debugger backend is not present in the test container,
 so these tests cannot drive the bridge end-to-end; that integration path is
 documented as a skip. Instead they feed the panel's *render* methods data
-produced from REAL binaries by the SAME engines the bridge uses in production:
+produced from System32 PE files by the SAME engines the bridge uses in production:
 
 * ``_apply_disassembly`` is fed real ``DisassemblyLine`` objects decoded by
   Capstone (the bridge's own disassembler) from the real ``.text`` section of
@@ -20,7 +20,7 @@ produced from REAL binaries by the SAME engines the bridge uses in production:
   section and export records parsed from a real DLL (e.g. ``LoadLibraryA``).
 * ``_on_mem_read_success`` is fed the real MZ-prefixed bytes of a real PE.
 
-This proves the panel renders genuine tool data correctly without requiring a live debugger.
+This checks that the panel renders tool data correctly without requiring a live debugger.
 """
 
 from __future__ import annotations
@@ -239,8 +239,8 @@ def _real_disassembly_lines(count: int) -> tuple[list[DisassemblyLine], int]:
     """Decode real instructions from kernel32's ``.text`` section via Capstone.
 
     Builds ``DisassemblyLine`` objects exactly as
-    ``X64DbgBridge._capstone_disassemble`` does, so the panel renders genuine
-    machine-code mnemonics from a real binary.
+    ``X64DbgBridge._capstone_disassemble`` does, so the panel renders
+    machine-code mnemonics decoded from kernel32.dll.
 
     Args:
         count: Maximum number of instructions to decode.
@@ -287,7 +287,7 @@ def test_apply_disassembly_renders_real_mnemonics(panel: _X64DbgPanelProbe) -> N
 
     Every decoded instruction's address and mnemonic from the real kernel32
     ``.text`` section must appear in the rendered view text, proving the panel
-    correctly displays genuine disassembly.
+    correctly displays Capstone disassembly.
 
     Args:
         panel: The X64DbgPanel probe under test.

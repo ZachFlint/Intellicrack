@@ -12,11 +12,10 @@ the new Program Tree browser/editor tab, and the new Analysis Extras tab
 (instruction flow, register value, thunk management, external references,
 properties, and the bidirectional call graph).
 
-Every test drives a real, non-mocked bridge double whose methods are genuine
-``async def`` coroutines (never ``MagicMock``) so the assertions verify that
-the handler under test actually calls the real bridge method with the
-expected arguments and renders the real result -- not that a mock was
-invoked. ``run_bridge_coroutine_logged`` is patched at the module level (the
+Every test drives a recording bridge double whose methods are
+``async def`` coroutines (not ``MagicMock``) so the assertions verify that
+the handler under test calls the bridge method with the
+expected arguments and renders the returned result. ``run_bridge_coroutine_logged`` is patched at the module level (the
 same wrapper used everywhere in production) with a synchronous
 capture-and-drive stand-in so the coroutine executes for real without
 spinning up a background Qt worker thread, which is the standard technique
@@ -65,7 +64,7 @@ if TYPE_CHECKING:
 class _RecordingBridge:
     """Recording stub exposing real async coroutines for every L3 row.
 
-    Every method is a genuine ``async def`` that records its call
+    Every method is an ``async def`` that records its call
     arguments and returns a caller-controlled payload -- never a
     ``MagicMock`` standing in for the method itself. This lets each
     test assert the panel handler dispatched the exact bridge call
@@ -468,7 +467,7 @@ class TestXRefsAddDeleteReferenceWiring:
     ) -> None:
         """Clicking Add Reference must call bridge.add_reference with the parsed from/to/type.
 
-        Falsifiable: removing the ``bridge.add_reference(from_addr,
+        Removing the ``bridge.add_reference(from_addr,
         to_addr, ref_type)`` call from ``_on_add_reference`` in
         ``ghidra_panel.py`` (or rewiring the button's ``clicked``
         signal away from it) would leave ``bridge.add_reference_calls``
@@ -498,7 +497,7 @@ class TestXRefsAddDeleteReferenceWiring:
     ) -> None:
         """Clicking Delete Reference must call bridge.delete_reference with the parsed from/to addresses.
 
-        Falsifiable: removing the ``bridge.delete_reference(from_addr,
+        Removing the ``bridge.delete_reference(from_addr,
         to_addr)`` call (or the button wiring) leaves
         ``delete_reference_calls`` empty.
 
@@ -555,7 +554,7 @@ class TestLabelsBookmarksWiring:
     ) -> None:
         """Checking Primary and clicking Set Label must route to bridge.add_label(primary=True).
 
-        Falsifiable: if ``_on_set_label`` ignored the checkbox state
+        If ``_on_set_label`` ignored the checkbox state
         (or the checkbox were absent from the layout), this call would
         never route to ``add_label``.
 
@@ -608,7 +607,7 @@ class TestLabelsBookmarksWiring:
     ) -> None:
         """Clicking Remove Selected on a populated bookmark row must call bridge.remove_bookmark.
 
-        Falsifiable: removing the ``bridge.remove_bookmark(addr,
+        Removing the ``bridge.remove_bookmark(addr,
         category, bookmark_type)`` call from ``_on_remove_bookmark`` or
         dropping the button's ``clicked`` connection leaves
         ``remove_bookmark_calls`` empty.
@@ -642,7 +641,7 @@ class TestLabelsBookmarksWiring:
     ) -> None:
         """The bookmarks-table context menu must offer 'Remove Bookmark' wired to the same handler.
 
-        Falsifiable: if ``_on_bookmark_context_menu`` no longer built a
+        If ``_on_bookmark_context_menu`` no longer built a
         menu with a "Remove Bookmark" action (or stopped calling
         ``_on_remove_bookmark`` when chosen), this would either find no
         matching action text or leave ``remove_bookmark_calls`` empty
@@ -686,7 +685,7 @@ class TestLabelsRemoveLabelWiring:
     ) -> None:
         """Clicking Remove Selected on a populated label row must call bridge.remove_label.
 
-        Falsifiable: removing the ``bridge.remove_label(addr, name)``
+        Removing the ``bridge.remove_label(addr, name)``
         call from ``_on_remove_label`` or dropping the button's
         ``clicked`` connection leaves ``remove_label_calls`` empty.
 
@@ -718,7 +717,7 @@ class TestLabelsRemoveLabelWiring:
     ) -> None:
         """The labels-table context menu must offer 'Remove Label' wired to the same handler.
 
-        Falsifiable: if ``_on_label_context_menu`` no longer built a
+        If ``_on_label_context_menu`` no longer built a
         menu with a "Remove Label" action (or stopped calling
         ``_on_remove_label`` when chosen), this would either find no
         matching action text or leave ``remove_label_calls`` empty
@@ -880,7 +879,7 @@ class TestGoToFunctionWiring:
     ) -> None:
         """Clicking Go must call bridge.get_function with the parsed address.
 
-        Falsifiable: removing the ``bridge.get_function(address)`` call
+        Removing the ``bridge.get_function(address)`` call
         from ``_on_goto_function`` (or wiring the button to a different
         handler) leaves ``get_function_calls`` empty.
 
@@ -907,7 +906,7 @@ class TestGoToFunctionWiring:
     ) -> None:
         """A resolved function must trigger loading its code views via the real function address.
 
-        Falsifiable: if ``_apply_goto_function`` ignored the resolved
+        If ``_apply_goto_function`` ignored the resolved
         address and always loaded ``address`` (the requested address)
         rather than the function's own reported entry, this test's
         second (distinct) address would never reach get_function again
@@ -971,7 +970,7 @@ class TestDataTypeManagerCreateTypeWiring:
     ) -> None:
         """Clicking Create for an enum must call bridge.create_data_type with category/name/kind/fields.
 
-        Falsifiable: removing the
+        Removing the
         ``self._bridge.create_data_type(category, name, kind, fields or
         None)`` call from ``_on_create_type`` (or never wiring the
         Create button) leaves the recorded call list empty.
@@ -1047,7 +1046,7 @@ class TestDataTypeManagerCreateTypeWiring:
     ) -> None:
         """Selecting union in the kind combo must call create_data_type with kind='union'.
 
-        Falsifiable: if the kind combo selection were ignored and the
+        If the kind combo selection were ignored and the
         method always dispatched with 'enum', this assertion on the
         third positional value would fail.
 
@@ -1095,7 +1094,7 @@ class TestProgramTreeWiring:
     ) -> None:
         """Clicking Refresh Program Tree must call bridge.get_program_tree and populate the tree widget.
 
-        Falsifiable: removing the ``self._bridge.get_program_tree()``
+        Removing the ``self._bridge.get_program_tree()``
         call from ``_on_refresh_tree`` leaves the tree widget empty
         even though the stub would otherwise report one tree/module.
 
@@ -1143,7 +1142,7 @@ class TestProgramTreeWiring:
         resolves an empty input to ``None``, which is what every other
         operation passes, so it is asserted here too rather than ignored.
 
-        Falsifiable: removing the ``self._bridge.edit_program_tree(...)``
+        Removing the ``self._bridge.edit_program_tree(...)``
         call from ``_on_edit_tree`` (or wiring Apply to the refresh
         handler instead) leaves the recorded call list empty; dropping
         ``new_name`` from the call reddens the recorded tuple.
@@ -1288,7 +1287,7 @@ class TestAnalysisExtrasWiring:
     ) -> None:
         """Clicking Add Thunk must call bridge.add_thunk, then refresh via get_thunk_info.
 
-        Falsifiable: removing the ``bridge.add_thunk(address, target)``
+        Removing the ``bridge.add_thunk(address, target)``
         call from ``_on_add_thunk`` leaves ``add_thunk_calls`` empty.
 
         Args:
@@ -1430,7 +1429,7 @@ class TestAnalysisExtrasWiring:
     ) -> None:
         """Clicking Build Bidirectional Graph must call bridge.get_call_graph, not get_call_tree.
 
-        Falsifiable: rewiring this button to call ``get_call_tree``
+        Rewiring this button to call ``get_call_tree``
         (the single-direction method that duplicates this path) instead of ``get_call_graph``
         would leave ``calls`` empty since only ``get_call_graph`` is
         implemented on this stub.

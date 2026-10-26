@@ -14,7 +14,7 @@ implementations that raise "not supported", has no QMP pause/continue, and inher
 any instance whose ``sandbox_type`` is not ``"qemu"``.
 
 The capability claims asserted here are checked against the real backend
-classes as well, so the gate stays honest if a future backend gains one of the
+classes as well, so the gate fails if a future backend gains one of the
 operations. The bridge-level half of that anchor - proving the rejection the
 gating exists to avoid - lives in
 ``tests/bridges/test_sandbox_bridge_qemu_only_ops_s17d10.py``.
@@ -165,7 +165,7 @@ def test_deactivation_disables_everything_on_qemu() -> None:
 def test_windows_backend_really_rejects_the_gated_operations() -> None:
     """The gating premise must match the real backend classes, not an assumption.
 
-    Drives the genuine ``WindowsSandbox`` snapshot API and reads its real
+    Drives the ``WindowsSandbox`` snapshot API and reads its real
     ``vnc_port`` property, and contrasts them with ``QEMUSandbox``, so the gate
     is anchored to actual backend capability.
     """

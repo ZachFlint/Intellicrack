@@ -64,13 +64,13 @@ if TYPE_CHECKING:
     from collections.abc import Buffer, Callable, Generator
 
     import pefile
+    from intellicrack_hexcore import Bookmark, HexDocument
 
     from intellicrack.bridges.hex_state import HexDocumentState
     from intellicrack.core.hexpat import HexPatInterpreter, PatternRegistry
     from intellicrack.core.hexpat_compiler import HexPatCompiler, HexPatError
     from intellicrack.core.tools import ToolRegistry
     from intellicrack.core.transform_pipeline import TransformPipeline
-    from intellicrack.core.types import BookmarkLike, HexDocumentFull
     from intellicrack.core.yara_scanner import YaraScanner
 
 
@@ -446,7 +446,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
     def __init__(self) -> None:
         """Initialize the HexEditorBridge instance."""
         super().__init__()
-        self.document: Any | None = None
+        self.document: HexDocument | None = None
         self._cursor_offset: int = 0
         self._selection: tuple[int, int] | None = None
         self._hexcore_available: bool = _hexcore_available
@@ -1903,7 +1903,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         """
         if self.document is None:
             return
-        all_bookmarks: list[BookmarkLike] = self.document.get_bookmarks()
+        all_bookmarks: list[Bookmark] = self.document.get_bookmarks()
         sorted_bookmarks = sorted(all_bookmarks, key=lambda b: b.offset)
         truncated = len(sorted_bookmarks) > bookmark_limit
         visible = sorted_bookmarks[:bookmark_limit]
@@ -2847,7 +2847,14 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         image_base: int,
         mappings: list[dict[str, int]],
     ) -> None:
-        """Parse PE section headers and add VA mappings.
+        """Parse PE section headers and add a VA mapping for each section's file-backed bytes.
+
+        A section maps only the bytes the loader reads from the file: its raw data, cut to the
+        virtual size when that is smaller (the loader ignores raw bytes past it) and to the end
+        of the document. A section with no raw data, such as a packer's virtual-only ``.UPX0``,
+        has no file bytes and is not mapped, so it cannot shadow the section whose bytes sit at
+        its nominal raw offset. This is the same file-backed rule the ELF branch applies with
+        ``p_filesz``.
 
         Args:
             section_offset: File offset of the first section header.
@@ -2855,6 +2862,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             image_base: PE image base address.
             mappings: List to append mapping dicts to.
         """
+        document_length = self.document.length() if self.document is not None else 0
         for i in range(count):
             sec_data = self._read_doc_bytes(section_offset + i * _PE_SECTION_ENTRY_SIZE, _PE_SECTION_ENTRY_SIZE)
             section = unpack_section_header(sec_data, 0)
@@ -2862,7 +2870,10 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             raw_size = cast("int", section["raw_size"])
             raw_offset = cast("int", section["raw_offset"])
             virtual_size = cast("int", section["virtual_size"])
-            sec_length = max(virtual_size, raw_size)
+            file_backed = min(raw_size, virtual_size) if virtual_size else raw_size
+            sec_length = min(file_backed, document_length - raw_offset)
+            if sec_length <= 0:
+                continue
             sec_va = image_base + virtual_addr
             if self.document is not None:  # pragma: no branch - type narrowing; the caller checked
                 self.document.add_va_mapping(raw_offset, sec_va, sec_length)
@@ -3970,14 +3981,15 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                 yield mm
 
     def _export_patches_bps_via_backend(self, original_path: str) -> bytes:
-        """Invoke the Rust backend's BPS exporter without copying the source.
+        """Invoke the Rust backend's BPS exporter.
 
         Prefers the path-based backend entrypoint
-        ``export_patches_bps_from_path`` (which memory-maps the source
-        inside Rust), then falls back to a buffer-protocol mmap pass-
-        through when only the legacy ``export_patches_bps`` byte-slice
-        signature is available. Either way the source file is never
-        materialised as a Python ``bytes`` value.
+        ``export_patches_bps_from_path``, which memory-maps the source
+        inside Rust so the source file is never materialised as a Python
+        ``bytes`` value. When only the legacy ``export_patches_bps``
+        byte-slice signature is available, the memory-mapped source is
+        copied into ``bytes`` first, because that entrypoint accepts only
+        a ``bytes`` object.
 
         Args:
             original_path: Path to the unmodified original file.
@@ -3997,7 +4009,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             result = path_method(original_path)
             return bytes(result)
         with self._open_source_mmap(original_path) as source:
-            return self.document.export_patches_bps(source)
+            return self.document.export_patches_bps(bytes(source))
 
     def _export_patches_bps_pyfallback(self, original_path: str) -> bytes:
         """Build a BPS patch in pure Python with an mmap-backed source.
@@ -4892,7 +4904,7 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
         _logger.info("file_closed")
         return True
 
-    def adopt_document(self, document: HexDocumentFull, path: Path) -> None:
+    def adopt_document(self, document: HexDocument, path: Path) -> None:
         """Adopt an already-open hexcore document as the bridge's active document.
 
         Called by the GUI panel after it opens a file directly through
@@ -6208,7 +6220,8 @@ class HexEditorSearchMixin(HexEditorSelectionMixin):
         match offsets.
 
         Args:
-            value: Numeric value to search for.
+            value: Numeric value to search for. Must be a whole number
+                unless ``value_type`` is ``"float"``.
             size: Byte size of the value: 1, 2, 4, or 8.
             value_type: Value type interpretation: "uint", "int", or "float".
             endianness: Byte order: "little" or "big".
@@ -6222,7 +6235,8 @@ class HexEditorSearchMixin(HexEditorSelectionMixin):
         Raises:
             RuntimeError: If no document is open.
             ValueError: If ``value_type`` or ``endianness`` is not one
-                of the documented enum values.
+                of the documented enum values, or if ``value`` is not a
+                whole number for an ``"int"`` or ``"uint"`` search.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
@@ -6244,7 +6258,12 @@ class HexEditorSearchMixin(HexEditorSelectionMixin):
             _logger.debug("search_numeric_float_completed", matches=len(results))
             return [{"offset": r[0], "length": r[1]} for r in results]
 
-        results = self.document.search_numeric(value, size, value_type == "int", big_endian, alignment, max_results)
+        if isinstance(value, float) and not value.is_integer():
+            _logger.error("search_numeric_failed_non_integral_value", value=value, value_type=value_type)
+            msg = f"value must be a whole number for a {value_type!r} search; got {value!r}"
+            raise ValueError(msg)
+
+        results = self.document.search_numeric(int(value), size, value_type == "int", big_endian, alignment, max_results)
         _logger.debug("search_numeric_completed", matches=len(results))
         return [{"offset": r[0], "length": r[1]} for r in results]
 
@@ -6707,8 +6726,7 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
         disassembler = _get_disassembler()
         if arch == "auto":
             detect_len = min(doc_len, _AUTO_ARCH_DETECT_BYTES)
-            header_raw = self.document.read(0, detect_len)
-            header = header_raw if isinstance(header_raw, bytes) else bytes(header_raw)
+            header = self.document.read(0, detect_len)
             arch, mode = disassembler.auto_detect_arch(header)
 
         binary_path = str(self._state.target_path) if self._state.target_path is not None else ""
@@ -7483,7 +7501,7 @@ class HexEditorBookmarkMixin(HexEditorPatternMixin):
         if self.document is None:
             return []
 
-        bookmarks: list[BookmarkLike] = self.document.get_bookmarks()
+        bookmarks: list[Bookmark] = self.document.get_bookmarks()
         _logger.debug("bookmarks_listed", count=len(bookmarks))
         return [{"offset": b.offset, "length": b.length, "label": b.label, "color": b.color} for b in bookmarks]
 
@@ -8303,7 +8321,7 @@ class HexEditorExportMixin(HexEditorVAMixin):
         start = max(0, start)
 
         data = self._read_doc_bytes(start, end - start)
-        doc_bookmarks: list[BookmarkLike] = self.document.get_bookmarks()
+        doc_bookmarks: list[Bookmark] = self.document.get_bookmarks()
         bookmarks = [
             {
                 "offset": b.offset,
@@ -8376,7 +8394,7 @@ class HexEditorExportMixin(HexEditorVAMixin):
         actual_start = max(0, start)
 
         data = self._read_doc_bytes(actual_start, actual_end - actual_start)
-        bookmarks_raw: list[BookmarkLike] = self.document.get_bookmarks()
+        bookmarks_raw: list[Bookmark] = self.document.get_bookmarks()
         bookmarks: list[dict[str, object]] = [
             {"offset": b.offset, "length": b.length, "label": b.label, "color": b.color} for b in bookmarks_raw
         ]
@@ -8740,7 +8758,7 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
         except ValueError as exc:
             _logger.exception("verify_pe_checksum_failed_native")
             raise RuntimeError(str(exc)) from exc
-        return cast("dict[str, Any]", result)
+        return result
 
     async def repair_pe_checksum(self) -> dict[str, Any]:
         """Recalculate and write the correct PE checksum.
@@ -8762,7 +8780,7 @@ class HexEditorPEMixin(HexEditorDisplayMixin):
             raise RuntimeError(msg)
 
         try:
-            before = cast("dict[str, Any]", self.document.verify_pe_checksum())
+            before = self.document.verify_pe_checksum()
             self.document.repair_pe_checksum()
         except ValueError as exc:
             _logger.exception("repair_pe_checksum_failed_native")
@@ -9158,7 +9176,7 @@ class HexEditorBridge(HexEditorScriptMixin):
         if self.state_holder is not None:
             self.state_holder.set_document(None, None, source="bridge")
         with self._state_lock:
-            self.document = None
+            self.document: HexDocument | None = None
             self._cursor_offset = 0
             self._selection = None
             self._highlight_rules.clear()

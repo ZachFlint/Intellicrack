@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the numeric and pattern splitter-pane drag-collapse fix.
+"""Tests for the numeric and pattern splitter-pane drag-collapse fix.
 
 ``HexEditorPanel._create_content`` builds ``_main_vsplit`` as a
 ``QSplitter(Vertical)`` holding the hex/side-panel split (index
@@ -25,8 +25,8 @@ Qt clamps the drag at the pane's ``minimumSizeHint()``.
 
 Both gates below build the real :class:`HexEditorPanel` headlessly, drive
 its real ``_search_mode_combo`` / ``_toggle_pattern_editor`` and real
-``_main_vsplit``, and then drag the real splitter handle -- no fakes or
-restated constants. Reverting the two
+``_main_vsplit``, and then drag the real splitter handle without restating
+any constants. Reverting the two
 ``self._main_vsplit.setCollapsible(VSPLIT_PATTERN_IDX, False)`` /
 ``self._main_vsplit.setCollapsible(VSPLIT_NUMERIC_IDX, False)`` calls in
 ``_create_content`` (Qt's default ``collapsible=True`` reasserts itself)

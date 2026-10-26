@@ -582,7 +582,7 @@ class SandboxBase:
     ) -> int:
         """Place a target's companion files beside it in the sandbox.
 
-        Real targets are rarely one file. A DLL next to the executable, a
+        Analysis targets are rarely one file. A DLL next to the executable, a
         resource subtree, a config directory, a MUI sidecar - any of them
         missing and the target still launches, still exits ``0``, and still
         does nothing, which a sandbox reports as a successful run. So a

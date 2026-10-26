@@ -198,9 +198,9 @@ class TestModulesTabWalkHeapBlocksWiringL3:
     ) -> None:
         """_refresh_heap_blocks dispatches bridge.enumerate_heaps with the attached pid, not get_heaps.
 
-        Falsified by: rewiring "Walk Heap Blocks" to call ``get_heaps``
-        instead of ``enumerate_heaps``, or dropping the attached-pid
-        argument.
+        Fails if "Walk Heap Blocks" is rewired to call ``get_heaps``
+        instead of ``enumerate_heaps``, or if the attached-pid
+        argument is dropped.
 
         Args:
             modules_tab: ModulesTab fixture.
@@ -305,7 +305,7 @@ class TestModulesTabHeapBlocksTreeRenderingL3:
     ) -> None:
         """A real enumerate_heaps-shaped payload populates one tree node per heap and per block.
 
-        Falsifiable: if the tree-population logic read the wrong dict keys
+        If the tree-population logic read the wrong dict keys
         (e.g. ``heap_id``/``is_default`` -- ``get_heaps``'s schema -- instead
         of ``id``/``blocks``), the heap and block rows would come back
         empty or wrongly shaped.

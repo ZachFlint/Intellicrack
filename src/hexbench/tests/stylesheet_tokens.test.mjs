@@ -15,7 +15,7 @@
  * every colour.
  *
  * The rule checks parse app.css rather than a browser, which is what a node
- * suite can do honestly: they assert that the required declarations are present
+ * suite can do: they assert that the required declarations are present
  * with the required token, so reverting any of them turns this
  * red. What they cannot see is layout, which is why the control sizes are
  * measured in the running app.

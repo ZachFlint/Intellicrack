@@ -56,7 +56,7 @@ def _make_bridge_with_in_memory_document() -> tuple[HexEditorBridge, FakeSandbox
 def test_save_to_sandbox_deletes_the_temp_file_it_created() -> None:
     """The temp file materialised for an unsaved document must not leak.
 
-    Falsifiable: without the ``document.close()`` that releases the memory map,
+    Without the ``document.close()`` that releases the memory map,
     the ``finally`` block's ``unlink`` raises ``PermissionError`` on Windows,
     is swallowed into a warning, and the asserted path still exists.
     """
@@ -95,7 +95,7 @@ def test_save_to_sandbox_copies_real_document_bytes_and_leaves_document_usable()
 def test_save_to_sandbox_leaves_unsaved_document_without_a_path() -> None:
     """The scratch copy must not become the document's file.
 
-    Falsifiable: writing the scratch copy with ``HexDocument.save`` re-points the
+    Writing the scratch copy with ``HexDocument.save`` re-points the
     document at the temp path, so ``file_path()`` returns the path of a file the
     bridge has just deleted and the next Save silently writes there.
     """

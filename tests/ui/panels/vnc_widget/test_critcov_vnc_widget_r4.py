@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Coverage for the framing of an empty SetColourMapEntries message in the VNC viewer client.
 
-The test drives a real ``RFBClient``. Server bytes are written into one end of a genuine loopback ``socket`` pair while the client reads them
+The test drives a real ``RFBClient``. Server bytes are written into one end of a loopback ``socket`` pair while the client reads them
 through asyncio streams wrapped around the other end. The expected framing comes from RFC 6143 section 7.6.2.
 """
 

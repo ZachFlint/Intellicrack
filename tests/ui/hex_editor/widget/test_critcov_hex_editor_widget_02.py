@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Coverage for the paste, mouse, wheel, selection, copy-as, context-menu and highlight paths of the hex editor widget.
 
-Every test drives a real ``HexEditorWidget`` that displays a genuine ``intellicrack_hexcore.HexDocument``. Pasting is driven by the
+Every test drives a real ``HexEditorWidget`` that displays an ``intellicrack_hexcore.HexDocument``. Pasting is driven by the
 Ctrl+V key event with real text on the application clipboard, selection by real mouse press, move and release events and wheel events
 delivered to the viewport, and the context menu through a real context-menu event whose menu is inspected and triggered from inside the
 menu's own event loop. Expected values come from byte arithmetic, the documented labels of each export format, hand-computed Base64

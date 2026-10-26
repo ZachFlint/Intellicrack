@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for Gemini 3.x ``thought_signature`` round-trip.
+"""Tests for Gemini 3.x ``thought_signature`` round-trip.
 
 Gemini 3.x attaches an opaque ``thought_signature`` to the ``Part`` that
 carries a ``function_call``.  When a multi-turn tool chain resumes (the
@@ -16,7 +16,7 @@ data model) as the oracle for the Gemini wire shape, and exercise
 ``GoogleProvider``'s own extraction (``_parse_response`` /
 ``_extract_function_calls``) and rebuild (``_convert_messages_to_provider_format``
 via the public ``convert_messages_to_provider_format`` wrapper) code paths
-directly. No network I/O and no mocking of the code under test.
+directly, with no network I/O.
 """
 
 from __future__ import annotations

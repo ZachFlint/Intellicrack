@@ -382,8 +382,8 @@ class TestVendorPatternCompilation:
         etc.) is a compiler crash and propagates immediately, failing the
         test. Patterns that compile successfully must emit a non-empty
         ``name`` string and a ``fields`` list. The test asserts that at
-        least one real-world pattern compiles successfully, proving the
-        static codegen handles authentic input without masking crashes.
+        least one community pattern compiles successfully, showing the
+        static codegen handles that collection without masking crashes.
         """
         manager: TemplateManager = TemplateManager(Path.cwd())
         patterns: list[dict[str, str]] = manager.list_hexpat_patterns()

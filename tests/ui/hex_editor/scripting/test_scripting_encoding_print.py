@@ -199,7 +199,7 @@ class TestF0020SearchTextEncoding:
     def test_latin1_encoding_not_utf8() -> None:
         """With latin-1 encoding, the forwarded encoding must be exactly ``'latin1'``.
 
-        Falsifiability: a ``_resolve_search_encoding`` that always returns
+        A ``_resolve_search_encoding`` that always returns
         ``"ascii"`` (or any codec other than ``"latin1"``) fails this assertion
         because ``"ascii" != "latin1"``.  A check that only rules out
         ``"utf-8"`` would still pass under that mutation.
@@ -263,7 +263,7 @@ class TestF0021PrintCapture:
         These expected values are independent of ``execute_script``'s
         implementation.
 
-        Falsifiability: changing ``_safe_print`` to prepend a ``"PREFIX"`` to
+        Changing ``_safe_print`` to prepend a ``"PREFIX"`` to
         every line (e.g. ``text = "PREFIX" + text``) produces ``"PREFIXhello\n"``
         and ``"PREFIX1\n"``, both of which differ from the exact expected
         strings ``"hello\n"`` and ``"1\n"``, causing the assertion to fail.

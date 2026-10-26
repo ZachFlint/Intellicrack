@@ -137,7 +137,7 @@ class McpServerConsentDialog(QDialog):
     while blocking refuses until the operator resets it in MCP Settings.
     """
 
-    decision_made = pyqtSignal(bool, bool, bool)
+    decision_made: pyqtSignal = pyqtSignal(bool, bool, bool)
 
     def __init__(
         self,

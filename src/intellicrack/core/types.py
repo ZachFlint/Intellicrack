@@ -32,7 +32,7 @@ _logger = get_logger(__name__)
 class HexDocumentLike(Protocol):
     """Protocol for objects providing hex document read access."""
 
-    def read(self, offset: int, length: int) -> list[int]:
+    def read(self, offset: int, length: int) -> bytes:
         """Read bytes from the document.
 
         Args:
@@ -40,7 +40,7 @@ class HexDocumentLike(Protocol):
             length: Number of bytes to read.
 
         Returns:
-            list[int]: List of byte values.
+            bytes: The requested bytes.
         """
         ...
 
@@ -68,16 +68,7 @@ class BookmarkLike(Protocol):
 
 @runtime_checkable
 class HexDocumentFull(HexDocumentLike, Protocol):
-    """Protocol for full HexDocument with template and write support."""
-
-    def write(self, offset: int, data: bytes) -> None:
-        """Write bytes to the document.
-
-        Args:
-            offset: Byte offset to write at.
-            data: Bytes to write.
-        """
-        ...
+    """Protocol for a full HexDocument with template management and data inspection."""
 
     def list_templates(self) -> list[tuple[str, str]]:
         """List available templates.
@@ -87,28 +78,34 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         """
         ...
 
-    def list_templates_detailed(self) -> list[object]:
-        """List templates with full detail objects.
+    def list_templates_detailed(self) -> list[tuple[str, str, str, int]]:
+        """List every registered template with its details, in name order.
 
         Returns:
-            list[object]: List of template detail objects.
+            list[tuple[str, str, str, int]]: ``(name, description, category, field_count)``
+                tuples; ``category`` is empty for a template that declares none.
         """
         ...
 
-    def register_json_template(self, name: str, json_str: str) -> None:
-        """Register a JSON-defined template.
+    def register_json_template(self, json_str: str) -> str:
+        """Register a JSON-defined template under the name the JSON declares.
 
         Args:
-            name: Template name.
             json_str: JSON string defining the template.
+
+        Returns:
+            str: Name of the registered template.
         """
         ...
 
-    def remove_template(self, name: str) -> None:
+    def remove_template(self, name: str) -> bool:
         """Remove a registered template.
 
         Args:
             name: Template name to remove.
+
+        Returns:
+            bool: True when a template with that name was registered and removed.
         """
         ...
 
@@ -123,14 +120,15 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         """
         ...
 
-    def inspect_at(self, offset: int) -> dict[str, object]:
+    def inspect_at(self, offset: int) -> dict[str, str]:
         """Inspect data at the given offset.
 
         Args:
             offset: Byte offset to inspect.
 
         Returns:
-            dict[str, object]: Inspection results.
+            dict[str, str]: Each interpretation name, such as ``uint32_le`` or ``ipv4``,
+                mapped to the value formatted under that interpretation.
         """
         ...
 

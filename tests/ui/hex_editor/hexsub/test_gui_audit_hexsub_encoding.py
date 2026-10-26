@@ -135,7 +135,7 @@ class TestSearchEncodingResolution:
 
     @staticmethod
     def test_munged_label_would_raise_lookup_error() -> None:
-        """Assert the munged label ``ascii (7bit)`` is genuinely an invalid codec.
+        """Assert the munged label ``ascii (7bit)`` is an invalid codec.
 
         Proves ``"ascii (7bit)"`` (what a ``currentText`` lookup produces) is not
         a resolvable codec, so reading the codec from currentData is required.

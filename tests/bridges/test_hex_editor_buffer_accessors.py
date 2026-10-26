@@ -12,10 +12,10 @@ what the list form does -- a struct format that named the wrong width, or the
 wrong endianness, would yield plausible numbers rather than an error.
 
 Three of the tests compare the two forms element by element against a real PE
-on disk. They are paired with a discriminator, because on their own they would
+on disk. They are paired with a planted-buffer check, because on their own they would
 pass just as well if the bridge had quietly kept taking the list path: a
 document that answers the buffer accessor with numbers the list accessor does
-not report proves which one the bridge actually read.
+not report shows which one the bridge read.
 
 The last test drives the width check. A payload that is not a whole number of
 elements wide means the engine packed something other than what was asked for,
@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import struct
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, cast
 
 import pytest
 
@@ -34,6 +34,8 @@ import pytest
 if TYPE_CHECKING:
     from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack_hexcore import HexDocument
 
     from intellicrack.bridges.hex_editor import HexEditorBridge
 
@@ -51,10 +53,10 @@ _DIGRAM_CELLS: Final[int] = 65536
 """Cells in the 256x256 digram matrix."""
 
 _SENTINEL_BYTE: Final[int] = 0x41
-"""Byte value the discriminator plants an impossible count against."""
+"""Byte value the planted-buffer test assigns an impossible count to."""
 
 _SENTINEL_COUNT: Final[int] = 999_999_999
-"""A count no document in this suite could genuinely produce."""
+"""A count no document in this suite could produce."""
 
 _TRUNCATED_WIDTH: Final[int] = 4
 """Bytes of a payload that should have been a multiple of eight."""
@@ -76,7 +78,7 @@ class _BufferOverrideDoc:
     """A real document whose packed accessors answer with planted numbers.
 
     Every attribute other than the one being overridden is delegated to the
-    genuine document, so the bridge is talking to the real engine for
+    wrapped document, so the bridge is talking to the real engine for
     everything else. The override exists to tell the two code paths apart: the
     list accessor still reports the document's true numbers, so a result
     carrying the planted ones can only have come through the buffer.
@@ -86,14 +88,14 @@ class _BufferOverrideDoc:
         """Wrap a document and fix what its packed accessors return.
 
         Args:
-            inner: The genuine document to delegate to.
+            inner: The document to delegate to.
             payload: Bytes every packed accessor should answer with.
         """
         self._inner = inner
         self._payload = payload
 
     def __getattr__(self, name: str) -> object:
-        """Delegate everything not overridden to the genuine document.
+        """Delegate everything not overridden to the wrapped document.
 
         Args:
             name: Attribute being looked up.
@@ -151,7 +153,7 @@ class TestPackedAccessorsAgreeWithTheListForm:
 
         Args:
             bridge: An initialised bridge connected to the real engine.
-            pe_binary: A genuine PE image on disk.
+            pe_binary: A PE image on disk.
         """
         _run(bridge.open_file(str(pe_binary)))
         document = bridge.document
@@ -166,7 +168,7 @@ class TestPackedAccessorsAgreeWithTheListForm:
 
         Args:
             bridge: An initialised bridge connected to the real engine.
-            pe_binary: A genuine PE image on disk.
+            pe_binary: A PE image on disk.
         """
         _run(bridge.open_file(str(pe_binary)))
         document = bridge.document
@@ -182,7 +184,7 @@ class TestPackedAccessorsAgreeWithTheListForm:
 
         Args:
             bridge: An initialised bridge connected to the real engine.
-            pe_binary: A genuine PE image on disk.
+            pe_binary: A PE image on disk.
         """
         _run(bridge.open_file(str(pe_binary)))
         document = bridge.document
@@ -195,23 +197,23 @@ class TestPackedAccessorsAgreeWithTheListForm:
 
 
 class TestTheBridgeReadsTheBufferAndNotTheList:
-    """The discriminator, without which the comparisons above prove nothing."""
+    """Planted buffer contents reach the caller, so the bridge decodes the buffer and not the list."""
 
     def test_a_planted_distribution_buffer_is_what_the_bridge_reports(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """The counts that come back are the planted ones, not the document's own.
 
         Args:
             bridge: An initialised bridge connected to the real engine.
-            pe_binary: A genuine PE image on disk.
+            pe_binary: A PE image on disk.
         """
         _run(bridge.open_file(str(pe_binary)))
         document = bridge.document
         assert document is not None
-        genuine = list(document.byte_distribution_full())
-        bridge.document = _BufferOverrideDoc(document, _planted_distribution())
+        document_counts = list(document.byte_distribution_full())
+        bridge.document = cast("HexDocument", _BufferOverrideDoc(document, _planted_distribution()))
         observed = _run(bridge.get_byte_distribution())
         assert observed[_SENTINEL_BYTE] == _SENTINEL_COUNT
-        assert observed != genuine
+        assert observed != document_counts
         assert sum(observed) == _SENTINEL_COUNT
 
     def test_the_engine_really_exposes_the_packed_accessors(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
@@ -219,7 +221,7 @@ class TestTheBridgeReadsTheBufferAndNotTheList:
 
         Args:
             bridge: An initialised bridge connected to the real engine.
-            pe_binary: A genuine PE image on disk.
+            pe_binary: A PE image on disk.
         """
         _run(bridge.open_file(str(pe_binary)))
         for accessor in ("entropy_map_bytes", "byte_distribution_bytes", "digram_matrix_bytes"):
@@ -227,17 +229,17 @@ class TestTheBridgeReadsTheBufferAndNotTheList:
 
 
 class TestAMisshapenBufferIsRefused:
-    """A payload of the wrong width must fail loudly rather than decode."""
+    """A payload of the wrong width must raise ValueError rather than decode."""
 
     def test_a_truncated_distribution_buffer_raises(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
         """Four bytes cannot be a whole number of eight-byte counts.
 
         Args:
             bridge: An initialised bridge connected to the real engine.
-            pe_binary: A genuine PE image on disk.
+            pe_binary: A PE image on disk.
         """
         _run(bridge.open_file(str(pe_binary)))
-        bridge.document = _BufferOverrideDoc(bridge.document, b"\x00" * _TRUNCATED_WIDTH)
+        bridge.document = cast("HexDocument", _BufferOverrideDoc(bridge.document, b"\x00" * _TRUNCATED_WIDTH))
         with pytest.raises(ValueError, match="byte_distribution_bytes"):
             _run(bridge.get_byte_distribution())
 
@@ -246,10 +248,10 @@ class TestAMisshapenBufferIsRefused:
 
         Args:
             bridge: An initialised bridge connected to the real engine.
-            pe_binary: A genuine PE image on disk.
+            pe_binary: A PE image on disk.
         """
         _run(bridge.open_file(str(pe_binary)))
-        bridge.document = _BufferOverrideDoc(bridge.document, b"\x00" * _TRUNCATED_WIDTH)
+        bridge.document = cast("HexDocument", _BufferOverrideDoc(bridge.document, b"\x00" * _TRUNCATED_WIDTH))
         with pytest.raises(ValueError, match="entropy_map_bytes"):
             _run(bridge.get_entropy_map(_BLOCK_SIZE))
 
@@ -258,14 +260,14 @@ class TestAMisshapenBufferIsRefused:
 
         The matrix is too large to plant sentinel counts across the way the
         distribution test does, so the misshapen payload doubles as this
-        accessor's discriminator: only the buffer branch could have produced a
+        accessor's path check: only the buffer branch could have produced a
         complaint about ``digram_matrix_bytes``.
 
         Args:
             bridge: An initialised bridge connected to the real engine.
-            pe_binary: A genuine PE image on disk.
+            pe_binary: A PE image on disk.
         """
         _run(bridge.open_file(str(pe_binary)))
-        bridge.document = _BufferOverrideDoc(bridge.document, b"\x00" * _TRUNCATED_WIDTH)
+        bridge.document = cast("HexDocument", _BufferOverrideDoc(bridge.document, b"\x00" * _TRUNCATED_WIDTH))
         with pytest.raises(ValueError, match="digram_matrix_bytes"):
             _run(bridge.get_digram_matrix(top_k=0))

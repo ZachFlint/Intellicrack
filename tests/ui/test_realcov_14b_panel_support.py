@@ -7,7 +7,7 @@
 
 This module covers ``qt_compat.py``, ``base_panel.py``, and the Frida / Ghidra /
 Cutter panels. A live Frida agent,
-Ghidra server, and Cutter/Rizin backend are genuine external infrastructure
+Ghidra server, and Cutter/Rizin backend are external infrastructure
 that is absent in the container; the network-bound operations are therefore
 out of scope here and covered by the bridge suites.
 
@@ -211,7 +211,7 @@ class TestBasePanelLifecycle:
 
 @pytest.mark.usefixtures("qapp")
 class TestToolPanelAddressParsersRealAddresses:
-    """Tool-panel address parsers must round-trip real binary addresses."""
+    """Tool-panel address parsers must round-trip addresses taken from a System32 PE."""
 
     @staticmethod
     def test_ghidra_parser_round_trips_real_addresses(real_pe_exe: Path) -> None:

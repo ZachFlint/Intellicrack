@@ -167,7 +167,7 @@ def _words(text: str) -> list[str]:
 def _max_char_run_ratio(text: str) -> float:
     """Compute the fraction of ``text`` occupied by its longest single-char run.
 
-    A degenerate output such as ``"aaaaaaaaaa"`` yields ``1.0``; genuine prose
+    A degenerate output such as ``"aaaaaaaaaa"`` yields ``1.0``; ordinary prose
     yields a small fraction. This provides an implementation-independent signal
     for detecting repetition collapse without re-deriving model logic.
 
@@ -896,7 +896,7 @@ class TestRealInference:
 
         The coherence oracle is independent of the model: a single repeated
         character, control-character noise, or markup fails the distinct-token,
-        unique-letter, repetition-ratio, and common-vocabulary gates. A genuine
+        unique-letter, repetition-ratio, and common-vocabulary gates. A coherent
         sentence passes all of them.
 
         Args:

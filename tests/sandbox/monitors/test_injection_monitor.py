@@ -513,9 +513,9 @@ def test_smoke_lifecycle_records_started_and_stopped(tmp_path: Path) -> None:
     states = {ln.split("|")[2] for ln in records if ln.count("|") >= 3}
     assert "started" in states, (
         f"lifecycle log missing 'started' record; states={states!r} raw={raw!r}; "
-        f"falsified by removing the Write-InjectionLifecycle -State 'started' call from the script"
+        f"the Write-InjectionLifecycle -State 'started' call in the script did not run"
     )
     assert "stopped" in states, (
         f"lifecycle log missing 'stopped' record; states={states!r} raw={raw!r}; "
-        f"falsified by removing the Write-InjectionLifecycle -State 'stopped' call from the script"
+        f"the Write-InjectionLifecycle -State 'stopped' call in the script did not run"
     )

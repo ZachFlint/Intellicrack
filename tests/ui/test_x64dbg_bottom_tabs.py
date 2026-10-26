@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate: the x64dbg bottom tabs must fit inside the viewport.
+"""The x64dbg bottom tabs must fit inside the viewport.
 
 The x64dbg panel's "Analysis" tab stacks a disassembly/inspect splitter pane
 above a bottom tabbed section (Breakpoints/Memory/Console/...) inside a
@@ -12,7 +12,7 @@ whole cluster still fits a short window. That scroll area's minimum height must 
 the *comfortable default* split size (450 + 250 = 700px). Pinning it there renders the bottom tabs,
 and the Add-Breakpoint row inside them, below the visible viewport at a realistic window size instead
 of sharing the available space with the top pane. This module drives the real panel at a realistic window size and
-asserts the Breakpoints tab's "Add BP" button is genuinely inside every
+asserts the Breakpoints tab's "Add BP" button is inside every
 enclosing scroll viewport, not merely reachable by scrolling further down.
 """
 
@@ -96,7 +96,7 @@ def _fully_visible_within_scroll_ancestors(widget: QWidget) -> tuple[bool, str]:
 def test_add_breakpoint_button_visible_at_realistic_window_size(qapp: QApplication) -> None:
     """The Breakpoints "Add BP" button must sit inside the viewport, not below it.
 
-    Falsifiable: restoring the fixed ``_MAIN_SPLIT_TOP=450``/``_MAIN_SPLIT_BOTTOM=250`` split,
+    Restoring the fixed ``_MAIN_SPLIT_TOP=450``/``_MAIN_SPLIT_BOTTOM=250`` split,
     ``bottom_tabs.setMinimumHeight(_MIN_PANE_HEIGHT)``, and the content scroll area's
     ``min_height=_MAIN_SPLIT_TOP + _MAIN_SPLIT_BOTTOM`` (700px) forces the content cluster to demand 700px of height regardless
     of the window's actual size. At the realistic window size used here,

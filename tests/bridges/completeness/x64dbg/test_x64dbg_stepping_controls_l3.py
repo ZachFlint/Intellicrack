@@ -90,7 +90,7 @@ class TestStepCountButtonDrivesStepCountRpc:
     ) -> None:
         """Clicking Step N must send ``TraceIntoConditional 0, <count>`` and log the verified count.
 
-        Falsifiable: if ``_on_step_count`` read a different widget, built the
+        If ``_on_step_count`` read a different widget, built the
         wrong ``exec`` command, or forwarded the wrong ``step_type``, the
         recorded ``exec`` command would not match ``TraceIntoConditional 0,
         7`` exactly, and the console message would not report a verified
@@ -147,7 +147,7 @@ class TestStepCountButtonDrivesStepCountRpc:
     ) -> None:
         """Non-numeric Step N input must be rejected locally without any RPC dispatch.
 
-        Falsifiable: if the ``int(count_text)`` guard in ``_on_step_count``
+        If the ``int(count_text)`` guard in ``_on_step_count``
         were removed, this would either raise an uncaught ``ValueError`` or
         dispatch a malformed ``TraceIntoConditional`` command instead of
         leaving the fake pipe untouched.
@@ -193,7 +193,7 @@ class TestAnimateStartButtonDrivesAnimateStartRpc:
     ) -> None:
         """Clicking Animate Start must send the animate conditional trace and report verified.
 
-        Falsifiable: if ``_on_animate_start`` called a different bridge
+        If ``_on_animate_start`` called a different bridge
         method, or the bridge sent a different console command, the
         recorded ``exec`` command list would not contain
         ``TraceIntoConditional 0, <budget>`` and the console would not
@@ -255,7 +255,7 @@ class TestAnimateStopButtonDrivesAnimateStopRpc:
     ) -> None:
         """Clicking Animate Stop must send ``pause`` and report a verified stop.
 
-        Falsifiable: if ``_on_animate_stop`` were wired to any other
+        If ``_on_animate_stop`` were wired to any other
         bridge method, or the bridge sent a different console command
         than ``pause``, the recorded ``exec`` command list would not
         contain it and the console would not report "Animation stopped"
@@ -315,7 +315,7 @@ class TestGetTraceRecordButtonDrivesTraceRecordRpc:
     ) -> None:
         """Clicking Get Trace Record must query ``trace_record`` at the entered address.
 
-        Falsifiable: if ``_on_get_trace_record`` read a different address
+        If ``_on_get_trace_record`` read a different address
         widget, or passed the wrong address to the bridge, the recorded
         ``trace_record`` params would not match this address exactly, and
         the trace-output line would not report the exact ``hitCount``
@@ -368,7 +368,7 @@ class TestGetTraceRecordButtonDrivesTraceRecordRpc:
     ) -> None:
         """An unparseable address must be rejected locally without any RPC dispatch.
 
-        Falsifiable: if the address-parsing guard in
+        If the address-parsing guard in
         ``_on_get_trace_record`` were removed, this would either raise an
         uncaught ``ValueError`` or dispatch a malformed request instead of
         leaving the fake pipe untouched.
@@ -419,7 +419,7 @@ class TestEnableRecordingButtonArmsThePage:
     ) -> None:
         """Clicking Enable Recording must drive ``set_trace_record`` for that address.
 
-        Falsifiable: if the handler read a different widget, dropped the
+        If the handler read a different widget, dropped the
         combo's selection, or never dispatched, the recorded
         ``trace_record_set`` params would not carry this address and this
         record type, and the armed page would not be echoed to the trace

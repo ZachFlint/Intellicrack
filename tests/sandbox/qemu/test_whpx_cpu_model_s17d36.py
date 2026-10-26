@@ -28,7 +28,7 @@ processor it describes. So:
   running after the window the fault falls in. It then starts the *same*
   command with the named features stripped back out and requires that one to
   abort with the WHPX exit-code message. The second half is a live
-  discriminator rather than a control constant: it re-proves on every run that
+  check rather than a control constant: it verifies on every run that
   this media really does reject a featureless ``qemu64``, so the first half
   cannot pass vacuously.
 
@@ -95,7 +95,7 @@ def _without_named_features(cpu_argument: str) -> str:
     and the same anti-evasion masks, minus the ``+feature`` tokens.
 
     A value that names no feature fails the calling test: there is then nothing
-    to strip, the discriminator cannot be built, and the launcher has regressed
+    to strip, the featureless comparison command cannot be built, and the launcher has regressed
     to exactly the model the fix describes.
 
     Args:
@@ -107,7 +107,7 @@ def _without_named_features(cpu_argument: str) -> str:
     tokens = cpu_argument.split(",")
     kept = [token for token in tokens if not token.startswith(_CPU_FLAG_PREFIX)]
     assert len(kept) < len(tokens), (
-        f"the launcher's -cpu value {cpu_argument!r} names no +feature, so the WHPX Windows-start discriminator cannot be built (S17-D36)"
+        f"the launcher's -cpu value {cpu_argument!r} names no +feature, so the WHPX Windows-start comparison cannot be built (S17-D36)"
     )
     return ",".join(kept)
 
@@ -173,8 +173,8 @@ class TestTheWhpxCpuModelStartsAWindowsKernel:
     ) -> None:
         """The identical command without the named features is rejected by WHPX.
 
-        This is the live discriminator behind the companion test: it proves on
-        every run that this medium genuinely refuses a featureless ``qemu64``,
+        Companion check: verifies on
+        every run that this medium refuses a featureless ``qemu64``,
         so surviving the start is a real result and not an artefact of a medium
         that would have run on anything.
 

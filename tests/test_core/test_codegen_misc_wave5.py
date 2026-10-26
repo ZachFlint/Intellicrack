@@ -49,7 +49,7 @@ class _FailingExportDocument:
     exercise the ``_bootstrap_single_template`` error-accumulation path.
     """
 
-    def read(self, offset: int, length: int) -> list[int]:
+    def read(self, offset: int, length: int) -> bytes:
         """Return zeros for any read request.
 
         Args:
@@ -57,10 +57,10 @@ class _FailingExportDocument:
             length: Number of bytes to read.
 
         Returns:
-            list[int]: Zero-filled list of ``length`` bytes.
+            bytes: ``length`` zero bytes.
         """
         del offset
-        return [0] * length
+        return bytes(length)
 
     def length(self) -> int:
         """Return a nominal document length.
@@ -70,15 +70,6 @@ class _FailingExportDocument:
         """
         return 4096
 
-    def write(self, offset: int, data: bytes) -> None:
-        """Accept write requests silently.
-
-        Args:
-            offset: Byte offset (unused).
-            data: Data to write (unused).
-        """
-        del offset, data
-
     def list_templates(self) -> list[tuple[str, str]]:
         """Return one template name/description pair.
 
@@ -87,30 +78,37 @@ class _FailingExportDocument:
         """
         return [("pe_header", "PE Header")]
 
-    def list_templates_detailed(self) -> list[object]:
+    def list_templates_detailed(self) -> list[tuple[str, str, str, int]]:
         """Return one full-detail template entry that will fail on export.
 
         Returns:
-            list[object]: List of (name, description, category, field_count) tuples.
+            list[tuple[str, str, str, int]]: List of (name, description, category, field_count) tuples.
         """
         return [("pe_header", "PE Header", "pe", 10)]
 
-    def register_json_template(self, name: str, json_str: str) -> None:
+    def register_json_template(self, json_str: str) -> str:
         """Accept template registration silently.
 
         Args:
-            name: Template name (unused).
             json_str: JSON template string (unused).
-        """
-        del name, json_str
 
-    def remove_template(self, name: str) -> None:
+        Returns:
+            str: Empty string, as no template is registered.
+        """
+        del json_str
+        return ""
+
+    def remove_template(self, name: str) -> bool:
         """Accept template removal silently.
 
         Args:
             name: Template name to remove (unused).
+
+        Returns:
+            bool: False, as no template is removed.
         """
         del name
+        return False
 
     def export_template_json(self, name: str) -> str:
         """Always raise RuntimeError to trigger bootstrap failure tracking.
@@ -127,14 +125,14 @@ class _FailingExportDocument:
         del name
         raise RuntimeError
 
-    def inspect_at(self, offset: int) -> dict[str, object]:
+    def inspect_at(self, offset: int) -> dict[str, str]:
         """Return an empty inspection result.
 
         Args:
             offset: Byte offset to inspect (unused).
 
         Returns:
-            dict[str, object]: Empty dict.
+            dict[str, str]: Empty dict.
         """
         del offset
         return {}

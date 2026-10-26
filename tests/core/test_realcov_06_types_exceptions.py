@@ -5,7 +5,7 @@
 
 """Real-data coverage for the core exception hierarchy in ``core.types``.
 
-These tests instantiate the genuine exception classes used by config and
+These tests instantiate the exception classes used by config and
 sandbox code paths, then assert on the real attributes, the real ``str()``
 representation, and the real subclass relationships. The exceptions are pure
 data-carrying logic units with no external dependency, so they are constructed

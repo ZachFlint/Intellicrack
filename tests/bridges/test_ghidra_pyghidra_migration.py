@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Ghidra bridge PyGhidra launch path.
+"""Gates for the Ghidra bridge PyGhidra launch path.
 
 Ghidra 11.3+/12.x dropped the bundled Jython interpreter, so the bridge launches ``analyzeHeadless`` through PyGhidra (CPython/jpype). These gates pin the migration-specific invariants that cannot regress silently:
 

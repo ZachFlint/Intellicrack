@@ -5,7 +5,7 @@
 """Tests for the ``CompiledYaraRules`` Protocol convention.
 
 Asserts that the ``CompiledYaraRules.match`` body is ``...`` (the
-Protocol convention) rather than a fake
+Protocol convention) rather than a
 ``_ = (self, ...); return []`` placeholder. The check is performed both
 structurally and at runtime: ``CompiledYaraRules`` must be a
 ``typing.Protocol`` and any concrete implementer must be able to
@@ -67,7 +67,7 @@ def test_compiled_yara_match_body_is_ellipsis() -> None:
 
 
 def test_compiled_yara_concrete_implementation_overrides_protocol() -> None:
-    """Protocol body is the ``...`` sentinel, not a fake placeholder that shadows overrides.
+    """Protocol body is the ``...`` sentinel, so it cannot shadow a concrete override.
 
     A Protocol body of ``_ = (self, ...); return []`` instead of the ``...``
     sentinel is the defect.  Two independent gates catch any regression:
@@ -90,7 +90,7 @@ def test_compiled_yara_concrete_implementation_overrides_protocol() -> None:
       (the sentinel is injected by the *concrete class*, not by the Protocol, so
       the Protocol body is irrelevant to this assertion).
 
-    Falsifiable mutation: change ``CompiledYaraRules.match`` body from ``...`` to
+    Example regression: change ``CompiledYaraRules.match`` body from ``...`` to
     ``_ = (self, ...); return []`` in ``src/intellicrack/core/types.py``.
     Gate 1 fails immediately: ``direct_result`` becomes ``[]``, which is not ``None``.
     """

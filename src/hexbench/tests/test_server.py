@@ -178,9 +178,9 @@ _UNSERVED_ASSET: Final = "/static/there-is-no-such-file.py"
 _UNSERVED_KIND: Final = "unsupported_asset"
 """Error slug returned for an extension the application will not serve.
 
-It differs from :data:`_FORBIDDEN_KIND`, which is what makes the traversal test
-above a real check: a containment failure and an extension failure are told
-apart, so a refusal cannot be credited to the wrong rule.
+It differs from :data:`_FORBIDDEN_KIND`, so the traversal test above can tell
+a containment failure from an extension failure, and a refusal cannot be
+credited to the wrong rule.
 """
 
 _ESCAPES: Final[tuple[tuple[str, str], ...]] = (

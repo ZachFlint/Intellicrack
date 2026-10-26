@@ -137,7 +137,7 @@ def test_tool_registry_lazy_reexport_resolves_after_bridge_import() -> None:
 def test_core_getattr_rejects_unknown_attribute() -> None:
     """The package ``__getattr__`` still raises for unknown attributes.
 
-    The lazy hook must not mask genuine ``AttributeError`` for names it
+    The lazy hook must not mask the ``AttributeError`` for names it
     does not export, otherwise ``from intellicrack.core import <typo>``
     would silently trigger an unrelated import attempt.
     """

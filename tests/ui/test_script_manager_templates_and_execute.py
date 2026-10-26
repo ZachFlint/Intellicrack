@@ -19,7 +19,7 @@
 
 All tests drive real ``ScriptManagerPanel``/``ToolOutputPanel`` widgets under an offscreen
 ``QApplication`` and a real ``ScriptManager`` backend; the Python execution path runs a
-genuine subprocess and asserts on its captured stdout. Nothing here is mocked or stubbed.
+subprocess and asserts on its captured stdout.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def _auto_dismiss_blocking_dialogs(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestS16D14ScriptTemplates:
-    """Falsifiable gate: ``get_template`` must not crash for any script type."""
+    """``get_template`` must not crash for any script type."""
 
     def test_get_template_substitutes_placeholders_without_raising(self) -> None:
         """``get_template`` must return a real template with placeholders substituted for every type.
@@ -130,10 +130,10 @@ class TestS16D14ScriptTemplates:
 
 
 class TestS15D13ScriptExecute:
-    """Falsifiable gate: Scripts-panel Execute must actually run scripts."""
+    """Scripts-panel Execute must actually run scripts."""
 
     def test_run_python_script_captures_real_stdout(self) -> None:
-        """``_run_python_script`` must run genuine Python code and capture its stdout."""
+        """``_run_python_script`` must run Python code and capture its stdout."""
         output = _run_python_script('print("AUDIT_PY_OUTPUT:", 6 * 7)')
         assert "AUDIT_PY_OUTPUT: 42" in output
 

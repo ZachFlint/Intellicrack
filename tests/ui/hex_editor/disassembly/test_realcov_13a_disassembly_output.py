@@ -8,12 +8,12 @@ The debounce tests validate timing and dispatch count; this module verifies
 the disassembly output is correct (mnemonics, operands, hex bytes,
 addressing).
 
-It opens a REAL Windows PE (``kernel32.dll``) through the real
-:class:`HexEditorBridge`, disassembles real bytes from the real ``.text``
-section with the real x86-64 backend, then renders the genuine instruction
+It opens a Windows PE (``kernel32.dll``) through
+:class:`HexEditorBridge`, disassembles bytes from the ``.text``
+section with the x86-64 backend, then renders the decoded instruction
 records through the production :meth:`DisassemblyMixin._apply_disassemble_result`.
-Assertions check verifiable real properties: the deterministic ``int3`` decode
-of real ``0xCC`` padding bytes, that rendered hex-byte columns match the real
+Assertions check: the deterministic ``int3`` decode
+of ``0xCC`` padding bytes, that rendered hex-byte columns match the
 document bytes, that addresses are monotonically increasing by instruction
 size, and that the table row count equals the number of decoded instructions.
 """

@@ -192,7 +192,7 @@ class TestPreviouslyMissingStalkerMethods:
     ) -> None:
         """``frida.stalker_garbage_collect`` must dispatch and run ``Stalker.garbageCollect`` for real.
 
-        Falsifiable: if the ``ToolFunction`` entry were missing, ``execute_tool_call`` would raise ``ToolError`` for an
+        If the ``ToolFunction`` entry were missing, ``execute_tool_call`` would raise ``ToolError`` for an
         unknown function before ``Stalker.garbageCollect()`` ever ran in the
         target process. If the method body were a stub, it would return
         without ever calling ``self._execute_script_and_wait`` and any
@@ -213,7 +213,7 @@ class TestPreviouslyMissingStalkerMethods:
     ) -> None:
         """``frida.stalker_exclude`` must dispatch and exclude a real allocated memory range.
 
-        Falsifiable: if ``stalker_exclude`` were a stub returning ``True``
+        If ``stalker_exclude`` were a stub returning ``True``
         without ever running ``Stalker.exclude({...})`` in the target, a
         malformed ``base``/``size`` object shape would never surface as a
         real Frida ``ToolError`` -- but passing a non-numeric address here
@@ -244,10 +244,10 @@ class TestPreviouslyMissingStalkerMethods:
     ) -> None:
         """``frida.stalker_invalidate`` must dispatch and run ``Stalker.invalidate`` for the calling thread.
 
-        Falsifiable: if the tool-def were missing, dispatch would raise
+        If the tool-def were missing, dispatch would raise
         before ``Stalker.invalidate`` ever executed. If the method silently
         swallowed Frida errors instead of propagating them via
-        ``ToolError``, a genuinely invalid address (an unmapped, non-code
+        ``ToolError``, an invalid address (an unmapped, non-code
         address that Frida's ``Stalker.invalidate`` implementation
         legitimately rejects) would return ``True`` instead of raising.
 
@@ -272,8 +272,8 @@ class TestPreviouslyMissingStalkerMethods:
     ) -> None:
         """``frida.stalker_set_trust_threshold`` must dispatch and set ``Stalker.trustThreshold`` for real.
 
-        Falsifiable: if ``stalker_set_trust_threshold`` never executed
-        ``Stalker.trustThreshold = {threshold}`` inside the real target
+        If ``stalker_set_trust_threshold`` never executed
+        ``Stalker.trustThreshold = {threshold}`` inside the attached target
         process, this would either raise (Frida rejects reassigning
         ``trustThreshold`` outside a valid range) or silently return without
         confirming success -- here, a valid, in-range threshold must
@@ -295,7 +295,7 @@ class TestPreviouslyMissingStalkerMethods:
     def test_stalker_methods_not_attached_raise_tool_error() -> None:
         """All four Stalker primitives must raise ``ToolError`` when not attached.
 
-        Falsifiable: without the ``if self._session is None: raise
+        Without the ``if self._session is None: raise
         ToolError(_ERR_NOT_ATTACHED)`` guard at the top of each method, an
         unattached bridge would instead crash with an ``AttributeError`` on
         ``self._session.create_script`` (or an equivalent internal call)
@@ -326,7 +326,7 @@ class TestPreviouslyMissingStalkerMethods:
     def test_tool_def_registered(self_attached_bridge: FridaBridge, expected_name: str) -> None:
         """Each Stalker method must have a real ToolFunction entry.
 
-        Falsifiable: removing any of these four ``ToolFunction`` entries
+        Removing any of these four ``ToolFunction`` entries
         from ``_FRIDA_FUNCTIONS`` in ``frida_bridge.py`` makes the
         containment check fail.
 
@@ -346,7 +346,7 @@ class TestRevertHookAndFlushInterceptorL1:
     def test_flush_interceptor_dispatchable_via_registry(registry: ToolRegistry) -> None:
         """``frida.flush_interceptor`` must dispatch and run ``Interceptor.flush()`` for real.
 
-        Falsifiable: if the tool-def were absent, dispatch would raise
+        If the tool-def were absent, dispatch would raise
         before ``Interceptor.flush()`` ever ran in the attached process.
 
         Args:
@@ -364,17 +364,17 @@ class TestRevertHookAndFlushInterceptorL1:
         Real Frida's ``Interceptor.revert(target)`` is documented as a safe,
         idempotent no-op for a target address that currently has no active
         interceptor -- it does not raise. ``revert_hook`` must reach the
-        genuine ``Interceptor.revert`` call and report the true JS-side
+        ``Interceptor.revert`` call and report the true JS-side
         result rather than raising a synthetic precondition error.
 
-        Falsifiable: if ``revert_hook`` stopped executing the real
+        If ``revert_hook`` stopped executing the real
         ``Interceptor.revert(targetAddr)`` script against the live Frida
         session (e.g. reduced to a local no-op that never talks to the
-        process), a genuine JS-side failure (bad address resolution,
+        process), a JS-side failure (bad address resolution,
         crashed script) would go undetected because nothing would ever
-        exercise the real call path; this test proves the real path runs
-        end-to-end and returns ``True`` for the real no-op result Frida
-        itself reports.
+        exercise the ``Interceptor.revert`` call path; this test checks that
+        the ``Interceptor.revert`` path runs end-to-end and returns ``True``
+        for the no-op result Frida itself reports.
 
         Args:
             registry: ToolRegistry with a real, self-attached bridge.
@@ -395,14 +395,14 @@ class TestRevertHookAndFlushInterceptorL1:
         calls ``revert_hook`` on the exact same target string. Frida's
         ``Interceptor.revert`` is a real, successful no-op-safe call for an
         address that currently has an active interceptor -- so this must
-        return ``True`` rather than raising, .
+        return ``True`` rather than raising.
 
-        Falsifiable: if ``revert_hook`` no longer executed
+        If ``revert_hook`` no longer executed
         ``Interceptor.revert(targetAddr)`` against the real Frida runtime
         (e.g. reduced to a local no-op), this would still return ``True``
         trivially -- the discriminating half of this regression is the
         companion ``test_revert_hook_on_never_hooked_target_raises_hook_failed``
-        test, which proves the real Frida call path is reached and can fail;
+        test, which checks that the Frida call path is reached and can fail;
         together they bound the behavior on both sides.
 
         Args:
@@ -427,7 +427,7 @@ class TestCallProbeManagementL1:
     ) -> None:
         """``stalker_add_call_probe``/``stalker_remove_call_probe`` must both dispatch and really track state.
 
-        Falsifiable: if ``stalker_add_call_probe`` never registered the
+        If ``stalker_add_call_probe`` never registered the
         returned probe ID in ``self._call_probes``, a subsequent real
         ``stalker_remove_call_probe`` call with that exact ID would return
         ``False`` (not-found) instead of ``True``.
@@ -472,7 +472,7 @@ class TestMemoryPatchAndStringAllocationL1:
     ) -> None:
         """``frida.patch_code`` dispatched via the registry must write the exact requested bytes.
 
-        Falsifiable: if the tool-def were absent, dispatch would raise. If
+        If the tool-def were absent, dispatch would raise. If
         ``patch_code`` wrote the wrong bytes, or the wrong number of bytes,
         a subsequent real ``read_memory`` at the patched address would not
         equal the exact ``DE AD BE EF`` sequence requested.
@@ -503,7 +503,7 @@ class TestMemoryPatchAndStringAllocationL1:
     ) -> None:
         r"""``frida.allocate_string`` with ``utf16`` encoding must produce a real UTF-16LE-encoded string.
 
-        Falsifiable: if ``allocate_string`` ignored the ``encoding``
+        If ``allocate_string`` ignored the ``encoding``
         parameter (e.g. always allocating UTF-8 regardless of the request),
         the bytes read back at the returned address would not decode as
         the exact UTF-16LE representation of the independently-known
@@ -538,7 +538,7 @@ class TestSymbolAndModuleLookupL1:
     ) -> None:
         """``frida.enumerate_symbols`` for kernel32.dll must return real, well-known exported symbols.
 
-        Falsifiable: if ``enumerate_symbols`` were broken (e.g. always
+        If ``enumerate_symbols`` were broken (e.g. always
         returning an empty list or garbage names), the independently-known
         Win32 API name ``CreateFileW`` -- guaranteed present in
         ``kernel32.dll`` on every supported Windows version -- would not
@@ -563,7 +563,7 @@ class TestSymbolAndModuleLookupL1:
     ) -> None:
         """``frida.find_module_by_address`` must resolve kernel32's own real base address back to kernel32.
 
-        Falsifiable: if ``find_module_by_address`` used the wrong Frida API
+        If ``find_module_by_address`` used the wrong Frida API
         (e.g. always returning the first loaded module) the resolved
         module's name would not equal ``kernel32.dll`` (case-insensitive)
         for kernel32's own, independently-resolved base address.
@@ -588,10 +588,10 @@ class TestSymbolAndModuleLookupL1:
     ) -> None:
         """``find_module_by_address`` for an address with no owning module must return ``None``.
 
-        Falsifiable: if the null-check branch (``result.get(...) is
+        If the null-check branch (``result.get(...) is
         None``-style guard) were removed, this would instead raise or
         return a bogus non-``None`` ``ModuleInfo`` for an address that
-        genuinely maps to no loaded module.
+        maps to no loaded module.
         """
         unmapped_address = 0x1
         module = _run_async(self_attached_bridge.find_module_by_address(unmapped_address))
@@ -603,7 +603,7 @@ class TestSymbolAndModuleLookupL1:
     ) -> None:
         """``frida.find_functions_matching`` must resolve a glob pattern to a real exported function.
 
-        Falsifiable: if ``find_functions_matching`` ignored the pattern
+        If ``find_functions_matching`` ignored the pattern
         argument or used the wrong ``DebugSymbol`` API, the independently-
         known Win32 API name ``CreateFileW`` would not appear among the
         real matches for the ``*CreateFileW*`` glob.
@@ -637,7 +637,7 @@ class TestCallSystemFunctionL1:
         known Win32 constant, not derived from the implementation under
         test.
 
-        Falsifiable: if ``call_system_function`` fell back to the plain
+        If ``call_system_function`` fell back to the plain
         ``call_function`` code path (which does not capture
         ``GetLastError``), or captured the wrong Win32 TLS slot, the
         returned ``SystemCallResult.last_error`` would not equal 6.
@@ -687,7 +687,7 @@ class TestScriptMessagingL2Dispatch:
     ) -> None:
         """``frida.rpc_call`` must dispatch through the registry and invoke a real ``rpc.exports`` function.
 
-        Falsifiable: if the ``frida.rpc_call`` ``ToolFunction`` entry were
+        If the ``frida.rpc_call`` ``ToolFunction`` entry were
         missing, dispatch would raise ``ToolError`` before ``addTwo`` ever
         ran in the target. If dispatch used the wrong parameter name for
         ``args``, the exported function would receive the wrong arguments
@@ -719,7 +719,7 @@ class TestScriptMessagingL2Dispatch:
     ) -> None:
         """``frida.post_message`` must dispatch through the registry and really deliver into ``recv``.
 
-        Falsifiable: if the ``frida.post_message`` ``ToolFunction`` entry
+        If the ``frida.post_message`` ``ToolFunction`` entry
         were missing, dispatch would raise before ``script.post`` ever ran.
         If it were dispatched but the payload were dropped in transit, the
         marker byte allocated below would remain zero forever.
@@ -762,7 +762,7 @@ class TestScriptMessagingL2Dispatch:
     ) -> None:
         """``frida.eternalize_script`` must dispatch through the registry and really drop bridge tracking.
 
-        Falsifiable: if the ``frida.eternalize_script`` ``ToolFunction``
+        If the ``frida.eternalize_script`` ``ToolFunction``
         entry were missing, dispatch would raise before ``script.eternalize``
         ever ran. If the dispatched call were a no-op that left the script
         ID tracked in the bridge's script table, a subsequent
@@ -797,7 +797,7 @@ class TestCancellableL2Dispatch:
     ) -> None:
         """``frida.create_cancellable``/``frida.cancel`` must dispatch through the registry and mint/cancel a real token.
 
-        Falsifiable: if either ``ToolFunction`` entry were missing, dispatch
+        If either ``ToolFunction`` entry were missing, dispatch
         would raise before the underlying bridge method ever ran. If
         ``create_cancellable`` never stored the returned ID in the bridge's
         cancellable table, the first registry-dispatched ``cancel`` call
@@ -843,7 +843,7 @@ class TestLoadModuleL1L2:
         now resolvable by base address through a second, unrelated bridge
         call.
 
-        Falsifiable: if the ``frida.load_module`` ``ToolFunction`` entry
+        If the ``frida.load_module`` ``ToolFunction`` entry
         were missing, dispatch would raise before ``Module.load`` ever ran.
         If ``load_module`` returned a fabricated ``ModuleInfo`` instead of
         the real one Frida resolves, the returned base address would not
@@ -874,7 +874,7 @@ class TestWriteMemoryHexCoercionRegression:
     ``frida.write_memory`` declares its ``data`` tool-def parameter as a
     JSON ``string`` (hex-encoded bytes) but the real bound bridge method
     ``FridaBridge.write_memory`` requires an actual ``bytes`` object. This
-    is the only falsifiable end-to-end gate for
+    is the only end-to-end test of
     ``ToolRegistry``/``core/tools.py``'s ``_coerce_hex_string_arguments``
     helper against a real, bytes-typed tool-def: it dispatches
     ``frida.write_memory`` through the registry with a hex *string*
@@ -890,7 +890,7 @@ class TestWriteMemoryHexCoercionRegression:
     ) -> None:
         """``frida.write_memory`` dispatched with a hex string ``data`` argument must write the decoded bytes.
 
-        Falsifiable: if ``_coerce_hex_string_arguments`` were removed (or
+        If ``_coerce_hex_string_arguments`` were removed (or
         broken) from the ``ToolRegistry.execute_tool_call`` dispatch path,
         ``FridaBridge.write_memory`` -- which requires ``bytes`` -- would
         receive a raw ``str`` for ``data`` instead. The bridge's own
@@ -930,9 +930,9 @@ class TestReplaceFunctionFastA6:
     def test_replace_function_fast_installs_and_the_trampoline_still_calls_the_real_original(
         self_attached_bridge: FridaBridge,
     ) -> None:
-        """Interceptor.replaceFast must patch the target AND return a genuinely working original-call trampoline.
+        """Interceptor.replaceFast must patch the target AND return a working original-call trampoline.
 
-        Falsifiable: if replace_function_fast used Interceptor.replace
+        If replace_function_fast used Interceptor.replace
         instead (a plausible copy-paste mistake), the trampoline pointer
         would be None (replace() returns nothing), failing the first
         assertion. If it fabricated a fake/zero trampoline instead of
@@ -941,7 +941,7 @@ class TestReplaceFunctionFastA6:
         424242 (proving it silently points at the *replacement*, not the
         original) - both are ruled out below by calling the real pointer
         through a real NativeFunction and checking it behaves like the
-        genuine, unpatched GetTickCount.
+        unpatched GetTickCount.
 
         Args:
             self_attached_bridge: Bridge fixture attached to the current process.
@@ -978,7 +978,7 @@ class TestReplaceFunctionFastA6:
     ) -> None:
         """``frida.replace_function_fast`` must be registered as a ToolFunction (L2).
 
-        Falsifiable: if the ``ToolFunction`` entry were never added to
+        If the ``ToolFunction`` entry were never added to
         ``_FRIDA_FUNCTIONS``, this name would be absent from the bridge's
         advertised tool definition even though the L1 method exists.
 
@@ -997,7 +997,7 @@ class TestStalkerTransformB3:
     def test_transform_putcallout_runs_for_real_traced_blocks(self_attached_bridge: FridaBridge) -> None:
         """``frida.stalker_follow_with_transform``'s transform_code must run for real, via iterator.putCallout.
 
-        Falsifiable: if the ``transform`` option were never wired into the
+        If the ``transform`` option were never wired into the
         ``Stalker.follow`` call (e.g. silently dropped), the callout would
         never fire, the marker byte would stay 0, and the final assertion
         fails. If every instruction were unconditionally kept without
@@ -1006,7 +1006,7 @@ class TestStalkerTransformB3:
         (iterator) { while (...) { {transform_code} } }`` wiring inside
         ``FridaBridge.stalker_follow_with_transform`` (frida_bridge.py).
 
-        A genuinely separate, real OS thread drives the traced call -- not
+        A separate OS thread drives the traced call -- not
         Frida's own internal script-execution thread (which Gum's Stalker
         cannot safely follow) and not a continuously-spinning thread (whose
         CPython interpreter overhead would flood every instruction with a
@@ -1076,7 +1076,7 @@ class TestStalkerFlushB5:
     def test_flush_acks_for_real_and_leaves_the_trace_running(self_attached_bridge: FridaBridge) -> None:
         """``frida.stalker_flush`` must really call ``Stalker.flush()`` and must not stop the trace.
 
-        Falsifiable: if ``stalker_flush`` were a stub that never posted into
+        If ``stalker_flush`` were a stub that never posted into
         the script (or posted the wrong message type the script doesn't
         recognize), no ``stalker_flushed`` ack would ever arrive and the
         wait for it times out. If it accidentally called ``stopStalker()``
@@ -1150,10 +1150,10 @@ class TestQueryMemoryProtectionC5:
     def test_query_reflects_a_real_protection_change(self_attached_bridge: FridaBridge) -> None:
         """``frida.query_memory_protection`` must report the real, current, live page protection.
 
-        Falsifiable: if the method returned a hardcoded/cached string
+        If the method returned a hardcoded/cached string
         instead of a real ``Memory.queryProtection`` call, the "before"/
         "after" values would be identical even though ``protect_memory``
-        genuinely changed the page. Broken production line: the
+        changed the page. Broken production line: the
         ``Memory.queryProtection(ptr(...))`` call inside
         ``FridaBridge.query_memory_protection`` (frida_bridge.py).
 
@@ -1171,7 +1171,7 @@ class TestQueryMemoryProtectionC5:
         after = _run_async(self_attached_bridge.query_memory_protection(addr))
         assert after == "r--", f"query must reflect the real change just made, got {after!r}"
         assert after != before or before == "r--", (
-            f"before/after must genuinely differ when the protection was changed: {before!r} -> {after!r}"
+            f"before/after must differ when the protection was changed: {before!r} -> {after!r}"
         )
 
 
@@ -1181,9 +1181,9 @@ class TestCopyMemoryC9:
 
     @staticmethod
     def test_copy_memory_moves_real_bytes_natively(self_attached_bridge: FridaBridge) -> None:
-        """``frida.copy_memory`` must genuinely move bytes between two real, independently allocated regions.
+        """``frida.copy_memory`` must move bytes between two real, independently allocated regions.
 
-        Falsifiable: if ``copy_memory`` were a stub that never called the
+        If ``copy_memory`` were a stub that never called the
         real ``Memory.copy``, the destination block would still read back
         as its original (non-matching) content. Broken production line:
         the ``Memory.copy(ptr(dst), ptr(src), size)`` call inside
@@ -1217,7 +1217,7 @@ class TestStalkerCallSummaryB2:
     def test_call_summary_aggregates_real_call_counts(self_attached_bridge: FridaBridge) -> None:
         """frida.stalker_follow_call_summary must report real, aggregated per-target call counts.
 
-        Falsifiable: if ``onCallSummary`` were never wired (e.g.
+        If ``onCallSummary`` were never wired (e.g.
         ``onReceive`` used instead), ``self._stalker_summaries`` would stay
         empty and ``counts == {}`` forever. If the accumulation logic
         dropped repeated summary callbacks instead of summing them, the
@@ -1308,7 +1308,7 @@ class TestTypedMemoryAccessD3:
     ) -> None:
         """frida.write_typed_value + frida.read_typed_value must round-trip real memory for every result shape.
 
-        Falsifiable: if the dispatch table used the wrong accessor for a
+        If the dispatch table used the wrong accessor for a
         given value_type (e.g. ``readU32`` for ``'u64'``), or the
         u64/s64/pointer string-transport parsing assumed the wrong radix,
         the round-tripped value would not equal the original -- this
@@ -1338,7 +1338,7 @@ class TestTypedMemoryAccessD3:
     def test_pointer_round_trips_a_real_address(self_attached_bridge: FridaBridge) -> None:
         """frida.write_typed_value/read_typed_value must round-trip a real pointer value.
 
-        Falsifiable: if pointer writes/reads mishandled the hex-with-0x-prefix
+        If pointer writes/reads mishandled the hex-with-0x-prefix
         transport (e.g. treating it as decimal, like u64/s64), the
         round-tripped address would not equal the real allocated address.
 
@@ -1355,7 +1355,7 @@ class TestTypedMemoryAccessD3:
     def test_cstring_write_is_rejected_as_read_only(self_attached_bridge: FridaBridge) -> None:
         """frida.write_typed_value must reject value_type='cstring' rather than silently redirecting it.
 
-        Falsifiable: if ``_build_typed_write_call`` silently redirected
+        If ``_build_typed_write_call`` silently redirected
         ``cstring`` writes to ``writeUtf8String`` instead of raising, this
         call would succeed instead of raising ``ToolError``.
 
@@ -1372,10 +1372,10 @@ class TestEnumerateModuleRangesE5:
     """L1/L2/L3 gate for the module-scoped ``Module.enumerateRanges`` (``frida.enumerate_module_ranges``)."""
 
     @staticmethod
-    def test_ranges_are_genuinely_scoped_to_the_module(self_attached_bridge: FridaBridge) -> None:
+    def test_ranges_fall_inside_the_module_address_window(self_attached_bridge: FridaBridge) -> None:
         """frida.enumerate_module_ranges must return ranges confined to the named module's own address window.
 
-        Falsifiable: if the implementation fell back to
+        If the implementation fell back to
         Process.enumerateRanges (the already-working, unscoped process-wide
         call) instead of mod.enumerateRanges, this test would see ranges
         from unrelated modules/private allocations far outside
@@ -1404,7 +1404,7 @@ class TestEnumerateModuleRangesE5:
     def test_unknown_module_raises_module_not_found(self_attached_bridge: FridaBridge) -> None:
         """frida.enumerate_module_ranges must raise ToolError for a module that is not loaded.
 
-        Falsifiable: if the ``Process.findModuleByName`` guard were missing,
+        If the ``Process.findModuleByName`` guard were missing,
         this call would either crash inside the script or silently return
         an empty list instead of raising.
 
@@ -1423,7 +1423,7 @@ class TestModuleSectionsAndDependenciesE6:
     def test_enumerate_module_sections_finds_the_real_text_section(self_attached_bridge: FridaBridge) -> None:
         """frida.enumerate_module_sections must report kernel32.dll's real PE sections.
 
-        Falsifiable: a stub returning [] fails the non-empty assertion; a
+        A stub returning [] fails the non-empty assertion; a
         stub returning fabricated placeholder names fails the '.text'
         containment check, since every real Windows PE image has a .text
         section. Broken production line: ``mod.enumerateSections()`` inside
@@ -1445,13 +1445,13 @@ class TestModuleSectionsAndDependenciesE6:
         Empirically confirmed live (frida 17.17.0, Windows PE module
         backend, verified directly with raw frida-python independent of
         this bridge against kernel32.dll, ntdll.dll, user32.dll, the main
-        module, and others): ``Module.enumerateDependencies()`` genuinely
+        module, and others): ``Module.enumerateDependencies()``
         returns an empty array for every module on this platform/version
         combination -- Windows PE modules do not expose a dependency list
         the way ELF/Mach-O modules do. An empty result here is therefore
         real, correct Frida behavior, not evidence of a bug.
 
-        Falsifiable anyway: ``enumerate_module_sections``/``enumerate_imports``
+        The test still detects a wrong API: ``enumerate_module_sections``/``enumerate_imports``
         report hundreds of real entries for kernel32.dll (ntdll.dll
         included among its imports), so if ``enumerate_module_dependencies``
         regressed into a copy-paste bug calling ``enumerateImports()`` or
@@ -1470,7 +1470,7 @@ class TestModuleSectionsAndDependenciesE6:
     def test_unknown_module_raises_module_not_found(self_attached_bridge: FridaBridge) -> None:
         """Both enumerate_module_sections and enumerate_module_dependencies must raise for an unloaded module.
 
-        Falsifiable: if the ``Process.findModuleByName`` guard were
+        If the ``Process.findModuleByName`` guard were
         missing, either call would crash inside the script or silently
         return an empty list instead of raising ``ToolError``.
 
@@ -1491,7 +1491,7 @@ class TestFindExportByNameE10:
     def test_scoped_and_global_lookup_agree_with_the_real_export_table(self_attached_bridge: FridaBridge) -> None:
         """frida.find_export_by_name must return the exact real address enumerate_exports independently reports.
 
-        Falsifiable: if the implementation used the wrong JS call (e.g.
+        If the implementation used the wrong JS call (e.g.
         Module.getGlobalExportByName's throwing variant without a
         try/catch, or a hardcoded/incorrect address), either an unexpected
         exception would propagate or the returned address would not match
@@ -1513,9 +1513,9 @@ class TestFindExportByNameE10:
 
     @staticmethod
     def test_unknown_export_returns_none_not_an_exception(self_attached_bridge: FridaBridge) -> None:
-        """A genuinely nonexistent export must return None (the find-prefixed contract), not raise.
+        """A nonexistent export must return None (the find-prefixed contract), not raise.
 
-        Falsifiable: if the implementation used the throwing get-prefixed
+        If the implementation used the throwing get-prefixed
         variant without converting the resulting error into None, this
         call would raise ``ToolError`` instead of returning ``None``.
 

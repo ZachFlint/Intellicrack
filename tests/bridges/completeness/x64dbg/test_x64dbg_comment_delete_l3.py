@@ -106,7 +106,7 @@ class TestDeleteCommentButtonDrivesDeleteCommentRpc:
     ) -> None:
         """Clicking Delete must send ``commentdel 0x401000`` and drop the row once verified gone.
 
-        Falsifiable: if ``_on_delete_comment`` read a different table
+        If ``_on_delete_comment`` read a different table
         column, or ``X64DbgBridge.delete_comment`` (``bridges/x64dbg.py``)
         queued a different console command or never read back
         ``cmt_list`` to confirm the comment was actually removed, the
@@ -164,7 +164,7 @@ class TestDeleteCommentButtonDrivesDeleteCommentRpc:
     ) -> None:
         """A ``cmt_list`` that still reports the comment after ``commentdel`` must surface as an error.
 
-        Falsifiable: a naive implementation that returns ``{"success":
+        A naive implementation that returns ``{"success":
         True, ..., "verified": False}`` without checking ``cmt_list``'s
         readback would report success here even though the plugin's own
         comment listing proves the delete never took effect; this test

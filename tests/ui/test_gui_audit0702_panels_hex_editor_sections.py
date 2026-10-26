@@ -18,7 +18,7 @@ compare the emitting worker's identity against the live ``self._strings_worker``
 worker that has already been superseded.
 
 Every test below drives the real ``SectionsMixin`` / ``TemplatesMixin``
-implementations (no mocks standing in for the mixin logic) under an
+implementations under an
 offscreen ``QApplication``, using real ``GenericCallableWorker`` QThreads for
 the race reproduction.
 """

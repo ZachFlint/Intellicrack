@@ -9,7 +9,7 @@ These tests exercise the installer against real archives, the real
 filesystem, real PE bytes, and real Python subprocesses rather than
 faking the capability under test:
 
-* ``install_tool`` runs the genuine ``_extract_zip`` + post-install
+* ``install_tool`` runs the ``_extract_zip`` + post-install
   executable search over a Cutter-shaped release archive.  The HTTP
   transport is controlled via ``httpx.MockTransport`` (injected via
   monkeypatch on ``_get_client``) so the real ``_get_latest_release_url``,
@@ -29,7 +29,7 @@ faking the capability under test:
   realistic x64dbg tree and the per-arch result is asserted
 .
 * ``find_tool_detailed`` discovers the builtin PROCESS tool and the
-  Frida python-package tool with no mocked subprocess.
+  Frida python-package tool.
 """
 
 from __future__ import annotations
@@ -327,8 +327,7 @@ class TestInstallToolRealNetworkPipeline:
     ``_download_file``, ``_extract_zip``, ``_has_expected_executable``,
     ``_finalize_archive_install``, and ``get_version`` all execute their
     production code paths.  The transport only controls what bytes come back
-    over the wire; no production method is replaced, so every code path being
-    tested is the genuine one.
+    over the wire; no production method is replaced.
 
     Covers the network-error path, exact error strings and the install pipeline.
     """
@@ -383,7 +382,7 @@ class TestInstallToolRealNetworkPipeline:
         ``_ERR_NO_VERSION_AFTER_INSTALL`` is asserted so any rename or reworded
         message immediately breaks this test.
 
-        Exact equality on the error string (not a substring), and the real network pipeline runs without any method stub.
+        The error string is compared for exact equality, not as a substring.
 
         Args:
             tmp_path: Pytest temporary directory.
@@ -417,7 +416,6 @@ class TestInstallToolRealNetworkPipeline:
         ``_get_latest_release_url`` that catches ``httpx.HTTPError`` (raised by
         ``response.raise_for_status()`` on a 500) and returns None, which
         ``_install_archive_tool`` converts to the exact production error string.
-        No method is stubbed; the real ``_get_latest_release_url`` code path runs.
 
         Args:
             tmp_path: Pytest temporary directory.
@@ -468,7 +466,7 @@ class TestInstallToolRealNetworkPipeline:
         method calls ``response.raise_for_status()`` which raises
         ``httpx.HTTPStatusError`` (a subclass of ``httpx.HTTPError``), the
         ``except (httpx.HTTPError, OSError, ValueError)`` clause catches it,
-        removes the partial temp file, and returns None.  No method is stubbed.
+        removes the partial temp file, and returns None.
 
         Args:
             tmp_path: Pytest temporary directory.

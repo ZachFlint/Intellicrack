@@ -12,9 +12,9 @@ actually work. These tests establish the premise against the real
 observed bridge behaviour rather than to an assumption about it.
 
 The manager builds the real :class:`~tests.sandbox.conftest.LocalProcessSandbox`
-backend for both types, so the sandboxes genuinely start and stop; the only
+backend for both types, so the sandboxes start and stop; the only
 thing that differs between the two cases is the ``sandbox_type`` recorded on the
-instance, which is exactly the discriminator the bridge branches on.
+instance, which is exactly the field the bridge branches on.
 """
 
 from __future__ import annotations

@@ -237,7 +237,7 @@ class TestBytesPassthrough:
         causes this test to fail.  The expected values are independently computed from the
         test's own payload, not derived from the implementation.
 
-        Falsifiability proof:
+        Mutations this test detects:
 
         - If the function returned ``raw[:-1]`` (off-by-one), ``len(result) == 256`` fails.
         - If the function returned ``bytearray(raw)``, ``type(result) is bytes`` fails.

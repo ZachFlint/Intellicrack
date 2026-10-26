@@ -217,7 +217,7 @@ def _installed_ollama_models() -> list[str]:
 
 
 def _is_local_model_name(name: str) -> bool:
-    """Return whether an Ollama tag names a genuinely-local, runnable model.
+    """Return whether an Ollama tag names a local (non-cloud), runnable model.
 
     Ollama surfaces cloud-run models with a ``-cloud`` tag suffix; those require
     an ollama.com subscription and cannot back a local chat test, so they are
@@ -234,11 +234,11 @@ def _is_local_model_name(name: str) -> bool:
 
 
 def _has_local_ollama_model() -> bool:
-    """Return whether at least one genuinely-local model is installed.
+    """Return whether at least one non-cloud local model is installed.
 
     Cloud-only listings (every entry ``-cloud`` suffixed) count as *no* local
     model, so the caller pulls a small default to give the local chat tests a
-    real target.
+    model to run against.
 
     Returns:
         bool: ``True`` when a non-cloud model is installed locally.
@@ -309,7 +309,7 @@ def _provision_ollama() -> subprocess.Popen[bytes] | None:
     """Ensure a local Ollama daemon is running with at least one local model.
 
     Locates the ``ollama`` binary, starts the daemon when needed, and pulls a
-    small default model when no *genuinely-local* model is installed. A signed-in
+    small default model when no *non-cloud* local model is installed. A signed-in
     account may list subscription-only cloud models (``-cloud`` suffixed), which
     do not count: the local chat tests need a model that runs locally, so the
     default is pulled even when only cloud models are present. Failures are

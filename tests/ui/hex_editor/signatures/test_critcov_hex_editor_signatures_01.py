@@ -5,7 +5,7 @@
 """Coverage for the signature databases, scanners and panel mixin of the hex editor signatures tab.
 
 Every test drives the production code with real objects: signature databases written to disk in the formats the product reads (DIE JSON,
-ClamAV ``.hdb`` and ``.ndb``, custom JSON, YARA rules), a genuine ``intellicrack_hexcore.HexDocument`` holding known bytes, a real
+ClamAV ``.hdb`` and ``.ndb``, custom JSON, YARA rules), an ``intellicrack_hexcore.HexDocument`` holding known bytes, a real
 ``HexEditorWidget``, the real Qt controls built by ``SignaturesMixin._create_signatures_tab`` and the real asynchronous worker used by the
 Scan button. Expected values are derived from byte arithmetic, the file formats, the Python standard library, or the documented contract of
 each function rather than read back from the code under test.

@@ -15,8 +15,8 @@ which derives from ``openai.APIError`` and from none of the builtin
 provider that honours ``api_base`` checks each provider's exception mapping
 separately.
 
-Each case points the real client at a loopback port with no listener, so the
-failure is a genuine refused connection rather than a stubbed exception.
+Each case points the client at a loopback port with no listener, so the
+failure is a refused TCP connection.
 """
 
 from __future__ import annotations

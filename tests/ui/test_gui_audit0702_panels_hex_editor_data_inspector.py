@@ -18,7 +18,7 @@ Both gates drive the real, unmodified ``DataInspectorMixin`` handlers
 against a real ``intellicrack_hexcore.HexDocument`` and a real
 ``HexEditorBridge`` subclass whose ``toggle_bit``/``encode_text``
 overrides insert an artificial ``asyncio.sleep`` delay before
-delegating to the genuine implementation via ``super()``. The delay
+delegating to the base implementation via ``super()``. The delay
 makes the blocking-vs-non-blocking distinction observable from the
 calling (GUI) thread: a blocking dispatch makes the handler call itself
 take as long as the delay, while a non-blocking dispatch returns near-
@@ -103,7 +103,7 @@ class _DelayedHexEditorBridge(HexEditorBridge):
     ``toggle_bit`` and ``encode_text`` each record the OS thread they
     ran on before sleeping ``delay_s`` and delegating to the real
     implementation via ``super()``, so the resulting document/encoding
-    state is genuine end-to-end output rather than a canned response.
+    state is end-to-end output rather than a canned response.
 
     Attributes:
         toggle_bit_thread_ids: OS thread identifier recorded on each

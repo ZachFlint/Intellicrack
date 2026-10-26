@@ -59,7 +59,7 @@ _QUERY_STOPWORDS: frozenset[str] = frozenset({
 
 A multi-word natural-language query (``"set a breakpoint at an address"``)
 otherwise scores every function whose description happens to contain
-``"a"`` or ``"at"``, drowning genuinely relevant matches in unrelated noise.
+``"a"`` or ``"at"``, drowning relevant matches in unrelated noise.
 Filtering these out of the *query* only (never out of function names or
 descriptions, which are matched as written) keeps token overlap scoring
 meaningful for real natural-language queries.

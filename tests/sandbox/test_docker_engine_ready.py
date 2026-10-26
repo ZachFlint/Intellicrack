@@ -13,7 +13,7 @@ readiness on ``docker ps`` (``_engine_ready``) in addition to ``docker version``
 
 These tests drive the real driver functions in a subprocess against a **stub**
 Docker CLI on ``PATH`` whose per-verb exit codes are controlled. The stub is a
-real executable, so the tests observe genuine subprocess behaviour. If the
+real executable, so the tests observe actual subprocess behavior. If the
 engine gate is removed -- so readiness reflects only the daemon --
 ``ensure_docker_running`` returns while ``docker ps`` is still failing and the
 final test fails.

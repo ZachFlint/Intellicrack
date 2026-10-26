@@ -3,6 +3,11 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! The piece table that holds a document's bytes: an immutable original
+//! buffer (owned, or a read-only file mapping) plus an append-only buffer of
+//! edited bytes, with edits recorded as a list of slices of the two. The add
+//! buffer and piece list are compacted as edits accumulate.
+
 use memmap2::Mmap;
 use std::collections::TryReserveError;
 use std::io::{self, Write};
@@ -176,12 +181,30 @@ impl PieceTable {
 
     /// Returns the current number of pieces in the table.
     ///
-    /// Test-only: used to confirm that adjacent edits coalesce instead of
-    /// growing the piece list without bound.
+    /// Test-only: the current number of pieces, so a test can confirm that
+    /// adjacent edits coalesce.
     #[cfg(test)]
     #[must_use]
     pub(crate) fn piece_count(&self) -> usize {
         self.pieces.len()
+    }
+
+    /// Test-only: panics unless every piece is non-empty and inside its
+    /// buffer, and the piece lengths sum to the document length.
+    #[cfg(test)]
+    pub(crate) fn assert_invariants(&self) {
+        for piece in &self.pieces {
+            assert!(piece.length > 0, "zero-length piece {piece:?}");
+            assert!(
+                piece.start + piece.length <= self.get_buffer(piece.source).len(),
+                "piece {piece:?} runs past its buffer"
+            );
+        }
+        assert_eq!(
+            self.pieces.iter().map(|piece| piece.length).sum::<usize>(),
+            self.total_length,
+            "piece lengths do not sum to the document length"
+        );
     }
 
     /// Merges `self.pieces[idx]` into `self.pieces[idx + 1]` when both
@@ -560,12 +583,34 @@ impl PieceTable {
     ///
     /// Panics only if the table is internally corrupt, i.e. a piece points
     /// outside its backing buffer.
-    pub fn write_to<W: Write>(&self, writer: &mut W) -> io::Result<()> {
+    pub fn write_to<W: Write + ?Sized>(&self, writer: &mut W) -> io::Result<()> {
         for piece in &self.pieces {
             let buf = self.get_buffer(piece.source);
             writer.write_all(&buf[piece.start..piece.start + piece.length])?;
         }
         Ok(())
+    }
+
+    /// Reports whether the document's bytes are exactly `other`, comparing
+    /// piece by piece without building a copy of the document.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the table is internally corrupt, i.e. a piece points
+    /// outside its backing buffer.
+    #[must_use]
+    pub fn content_equals(&self, other: &[u8]) -> bool {
+        if other.len() != self.total_length {
+            return false;
+        }
+        let mut position = 0;
+        self.pieces.iter().all(|piece| {
+            let buf = self.get_buffer(piece.source);
+            let matches = buf[piece.start..piece.start + piece.length]
+                == other[position..position + piece.length];
+            position += piece.length;
+            matches
+        })
     }
 
     /// Appends every piece's bytes to `out` in document order.
@@ -756,10 +801,9 @@ mod tests {
         assert_eq!(mat, b"hello World".to_vec());
     }
 
-    /// `insert` and `delete` must merge adjacent, contiguous pieces from the same
-    /// source, so a run of sequential single-byte overwrites (each internally a
-    /// delete+insert pair) coalesces into a single run instead of leaving one tiny
-    /// `AddBuffer` piece per byte.
+    /// `insert` and `delete` merge adjacent, contiguous pieces from the same
+    /// source, so a run of sequential single-byte overwrites (each internally
+    /// a delete+insert pair) coalesces into one `AddBuffer` run.
     #[test]
     fn test_adjacent_single_byte_overwrites_coalesce_pieces() {
         let mut pt = PieceTable::new(&[0u8; 8]);
@@ -770,12 +814,11 @@ mod tests {
         }
 
         assert_eq!(pt.read(0, 8), vec![0xFFu8; 8]);
-        assert!(
-            pt.piece_count() <= before + 1,
-            "8 adjacent single-byte overwrites left {} pieces; expected them \
-             to coalesce down to at most {}",
+        assert_eq!(before, 1);
+        assert_eq!(
             pt.piece_count(),
-            before + 1
+            1,
+            "8 adjacent single-byte overwrites must coalesce into one run"
         );
     }
 
@@ -787,10 +830,9 @@ mod tests {
         assert_eq!(pt.read(0, 10), b"AXAAAYAAAA".to_vec());
     }
 
-    /// `overwrite` must not always append its bytes to the add buffer, even when
-    /// the range already lives inside one add-buffer piece. Otherwise rewriting the
-    /// same byte 100 times retains 101 add-buffer bytes for one live byte, and a
-    /// session of repeated patches grows without bound.
+    /// `overwrite` rewrites bytes in place when the range already lives inside
+    /// one add-buffer piece, so rewriting the same byte many times keeps the
+    /// add buffer at one byte rather than one per rewrite.
     #[test]
     fn test_overwrite_inside_add_buffer_piece_reuses_bytes_in_place() {
         let mut pt = PieceTable::new(&[0u8; 8]);
@@ -824,6 +866,86 @@ mod tests {
         assert_eq!(pt.materialize(), b"01ab234cd56Z89".to_vec());
         assert_eq!(pt.read(1, 12), b"1ab234cd56Z8".to_vec());
         assert_eq!(pt.read(13, 50), b"9".to_vec());
+    }
+
+    /// Overwrite cuts its data at the end of the document, delete cuts its
+    /// length there, and insert past the end appends.
+    #[test]
+    fn test_edits_past_the_end_clamp_or_append() {
+        let mut overwritten = PieceTable::new(b"AB");
+        overwritten.overwrite(1, b"XYZ");
+        assert_eq!(overwritten.length(), 2);
+        assert_eq!(overwritten.materialize(), b"AX".to_vec());
+
+        let mut deleted = PieceTable::new(b"Hello");
+        deleted.delete(2, 100);
+        assert_eq!(deleted.length(), 2);
+        assert_eq!(deleted.materialize(), b"He".to_vec());
+
+        let mut appended = PieceTable::new(b"AB");
+        appended.insert(99, b"Z");
+        assert_eq!(appended.materialize(), b"ABZ".to_vec());
+        for pt in [&overwritten, &deleted, &appended] {
+            pt.assert_invariants();
+        }
+    }
+
+    /// An original piece that moved away from its own position is compared
+    /// byte for byte: deleting the `A` of `ABCD` and appending a `D` gives
+    /// `BCDD`, where the appended byte matches the original at its position
+    /// and only the shifted `BCD` differs.
+    #[test]
+    fn test_differs_from_original_compares_moved_original_pieces() {
+        let mut pt = PieceTable::new(b"ABCD");
+        pt.delete(0, 1);
+        pt.insert(3, b"D");
+        assert_eq!(pt.materialize(), b"BCDD".to_vec());
+        assert!(pt.differs_from_original());
+    }
+
+    /// A long stream of small edits, including zero-length edits and offsets
+    /// past the end, leaves the table equal to a `Vec` applying the same rules,
+    /// with every structural invariant holding after each step.
+    #[test]
+    fn test_random_edit_sequence_matches_vec_model() {
+        let mut pt = PieceTable::new(b"0123456789");
+        let mut model: Vec<u8> = b"0123456789".to_vec();
+        let mut state: u64 = 0xD1B5_4A32_D192_ED03;
+        let mut next = |bound: usize| -> usize {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            usize::try_from(state >> 33).unwrap() % bound
+        };
+        for step in 0..2000 {
+            let len = model.len();
+            let offset = next(len + 4);
+            let count = next(6);
+            let byte = u8::try_from(next(256)).unwrap();
+            match next(3) {
+                0 => {
+                    let data = vec![byte; count];
+                    pt.insert(offset, &data);
+                    let at = offset.min(len);
+                    model.splice(at..at, data);
+                }
+                1 => {
+                    pt.delete(offset, count);
+                    if offset < len {
+                        model.drain(offset..(offset + count).min(len));
+                    }
+                }
+                _ => {
+                    pt.overwrite(offset, &vec![byte; count]);
+                    if offset < len {
+                        model[offset..(offset + count).min(len)].fill(byte);
+                    }
+                }
+            }
+            assert_eq!(pt.length(), model.len(), "step {step}");
+            assert_eq!(pt.materialize(), model, "step {step}");
+            pt.assert_invariants();
+        }
     }
 
     /// Whether the table differs from its original buffer is decided
@@ -940,33 +1062,33 @@ mod tests {
         let mut pt = PieceTable::new(seed);
         let mut oracle: Vec<u8> = seed.to_vec();
         let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
-        let mut next = || {
+        let mut next = || -> usize {
             state ^= state << 13;
             state ^= state >> 7;
             state ^= state << 17;
-            state
+            usize::try_from(state >> 32).unwrap()
         };
 
         for _ in 0..500 {
             let len = oracle.len();
             match next() % 3 {
                 0 => {
-                    let pos = (next() as usize) % (len + 1);
-                    let n = 1 + (next() as usize) % 2048;
-                    let data = vec![(next() & 0xFF) as u8; n];
+                    let pos = next() % (len + 1);
+                    let n = 1 + next() % 2048;
+                    let data = vec![u8::try_from(next() & 0xFF).unwrap(); n];
                     pt.insert(pos, &data);
                     oracle.splice(pos..pos, data);
                 }
                 1 if len > 0 => {
-                    let pos = (next() as usize) % len;
-                    let n = 1 + (next() as usize) % (len - pos);
+                    let pos = next() % len;
+                    let n = 1 + next() % (len - pos);
                     pt.delete(pos, n);
                     oracle.drain(pos..pos + n);
                 }
                 _ if len > 0 => {
-                    let pos = (next() as usize) % len;
-                    let n = 1 + (next() as usize) % (len - pos);
-                    let data = vec![(next() & 0xFF) as u8; n];
+                    let pos = next() % len;
+                    let n = 1 + next() % (len - pos);
+                    let data = vec![u8::try_from(next() & 0xFF).unwrap(); n];
                     pt.overwrite(pos, &data);
                     oracle[pos..pos + n].copy_from_slice(&data);
                 }
@@ -974,6 +1096,7 @@ mod tests {
             }
             assert_eq!(pt.length(), oracle.len());
             assert_eq!(pt.materialize(), oracle, "content diverged after an edit");
+            pt.assert_invariants();
         }
 
         assert!(

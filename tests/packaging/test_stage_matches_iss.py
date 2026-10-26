@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable verification that ``build/stage`` matches the Inno Setup script.
+"""Verification that ``build/stage`` matches the Inno Setup script.
 
 The Windows installer is assembled in two coupled steps: ``packaging/stage.ps1``
 materialises the full payload under the repo-relative ``build/stage`` directory,
@@ -29,7 +29,7 @@ stage:
 The real ``build/stage`` tree is ~100+ GB and only exists on a build host, so the
 two production gates skip with a clear reason when it is absent (for example
 inside the test sandbox, which never stages the installer). Their detection
-logic is proven falsifiable by companion tests that build a tiny complete fake
+logic is checked by companion tests that build a tiny complete fake
 stage in ``tmp_path``, confirm the checkers report it clean, then remove or
 duplicate a required entry and confirm the same checkers report the regression.
 """
@@ -315,7 +315,7 @@ def missing_required_binaries(stage_root: Path) -> list[str]:
 
 
 def test_every_iss_source_exists_in_stage() -> None:
-    """Real gate: every ``[Files]`` Source in the ``.iss`` exists in ``build/stage``.
+    """Every ``[Files]`` Source in the ``.iss`` exists in ``build/stage``.
 
     Skips when the staging tree has not been built (for example inside the test
     sandbox, which never assembles the ~100+ GB installer payload). When the
@@ -341,9 +341,9 @@ def test_every_iss_source_exists_in_stage() -> None:
 
 
 def test_required_binaries_present_in_stage() -> None:
-    """Real gate: the required-binary checklist is present in ``build/stage``.
+    """The required-binary checklist is present in ``build/stage``.
 
-    Skips when the staging tree is absent; otherwise fails loudly listing every
+    Skips when the staging tree is absent; otherwise fails with a message listing every
     missing critical binary, directory, or JDK.
     """
     if not _BUILD_STAGE.is_dir():
@@ -353,7 +353,7 @@ def test_required_binaries_present_in_stage() -> None:
     assert not missing, "staged tree is missing required binaries:\n  " + "\n  ".join(missing)
 
 
-# Falsifiability proofs (run everywhere, including the sandbox)
+# Checker self-tests (run everywhere, including the sandbox)
 
 _FAKE_ISS: Final[str] = (
     '#define MyAppName "Intellicrack"\n'
@@ -403,7 +403,7 @@ def test_iss_source_parsing_extracts_stage_relative_paths() -> None:
     Proves the parser drops commented ``Source`` lines, expands nested defines
     (the ``{#AppExeName}`` reference resolves to ``Intellicrack.exe``), strips the
     StageRoot prefix, and flags trailing-``*`` copies as directory requirements --
-    the transform the real gate depends on.
+    the transform ``test_every_iss_source_exists_in_stage`` depends on.
     """
     parsed = iss_source_relpaths(_FAKE_ISS)
     assert set(parsed) == {
@@ -414,7 +414,7 @@ def test_iss_source_parsing_extracts_stage_relative_paths() -> None:
     assert parse_stage_root_define(_FAKE_ISS) == "..\\build\\stage"
 
 
-def test_iss_source_checker_is_falsifiable(tmp_path: Path) -> None:
+def test_iss_source_checker_reports_a_missing_source(tmp_path: Path) -> None:
     """The ``.iss`` source checker passes on a complete stage and fails on a gap.
 
     Args:
@@ -450,7 +450,7 @@ def test_iss_wildcard_requires_a_nonempty_directory(tmp_path: Path) -> None:
     assert any(entry.startswith("runtime/*") for entry in missing)
 
 
-def test_required_binary_checker_is_falsifiable(tmp_path: Path) -> None:
+def test_required_binary_checker_reports_a_removed_binary(tmp_path: Path) -> None:
     """The required-binary checker passes on a complete stage and fails on removal.
 
     Args:
@@ -510,7 +510,7 @@ _WIZARD_IMAGE_DIRECTIVES: Final[tuple[str, ...]] = (
 
 
 def _read_real_iss() -> str:
-    """Read the production ``.iss`` script, failing loudly if it is absent.
+    """Read the production ``.iss`` script, failing an assertion if it is absent.
 
     Returns:
         str: The full UTF-8 text of ``packaging/intellicrack.iss`` (a leading
@@ -521,7 +521,7 @@ def _read_real_iss() -> str:
 
 
 def test_installer_theme_arch_and_license_directives_are_set() -> None:
-    """Real gate: the ``.iss`` pins the theme, native-x64, license and close config.
+    """The ``.iss`` pins the theme, native-x64, license and close config.
 
     These are the user-selected installer invariants that carry no staged
     artifact to catch them: the dynamic dark/light wizard style, native-x64-only
@@ -550,7 +550,7 @@ def test_installer_theme_arch_and_license_directives_are_set() -> None:
 
 
 def test_installer_declares_no_persistent_environment_change() -> None:
-    """Real gate: the installer performs no persistent environment modification.
+    """The installer performs no persistent environment modification.
 
     The hard isolation requirement is that nothing installed under the install
     dir leaks onto the machine/user environment. The ``.iss`` must therefore
@@ -567,7 +567,7 @@ def test_installer_declares_no_persistent_environment_change() -> None:
 
 
 def test_installer_wizard_images_exist_next_to_iss() -> None:
-    """Real gate: every wizard image the ``.iss`` names is present on disk.
+    """Every wizard image the ``.iss`` names is present on disk.
 
     The three wizard PNG directives reference files by a packaging-relative
     path; each must resolve to a real file so the compile does not fail and the
@@ -587,7 +587,7 @@ def test_setup_directive_parser_is_section_scoped() -> None:
 
     Proves :func:`parse_setup_directives` reads only the ``[Setup]`` section: a
     later ``[Files]`` line reusing a directive name is ignored, and a commented
-    line inside ``[Setup]`` is skipped. Falsifiable -- a section-blind parser
+    line inside ``[Setup]`` is skipped. A section-blind parser
     would capture the ``[Files]`` override.
     """
     sample = (
@@ -616,7 +616,7 @@ _EXPECTED_APP_MUTEX: Final[str] = "Global\\IntellicrackSingleInstance"
 
 
 def test_installer_declares_appmutex_and_setup_logging() -> None:
-    """Real gate: the ``.iss`` sets the AppMutex and enables setup logging.
+    """The ``.iss`` sets the AppMutex and enables setup logging.
 
     ``AppMutex`` is what lets Setup detect a running Intellicrack (the app holds
     the identically named mutex) so it can close it via the Restart Manager
@@ -635,7 +635,7 @@ def test_installer_declares_appmutex_and_setup_logging() -> None:
 
 
 def test_run_section_offers_launch_and_defers_dism_to_code() -> None:
-    """Real gate: ``[Run]`` launches the app on finish and runs no inline DISM.
+    """``[Run]`` launches the app on finish and runs no inline DISM.
 
     The finished page must offer to launch Intellicrack (a ``postinstall``
     ``[Run]`` entry for the launcher exe). The Hypervisor-Platform enable moved
@@ -656,7 +656,7 @@ def test_run_section_offers_launch_and_defers_dism_to_code() -> None:
 
 
 def test_uninstall_delete_purges_config_and_install_dir() -> None:
-    """Real gate: ``[UninstallDelete]`` removes runtime config and the install dir.
+    """``[UninstallDelete]`` removes runtime config and the install dir.
 
     Uninstall must clear the runtime-generated ``.intellicrack`` config tree
     under ``{app}`` and finally sweep the whole ``{app}`` directory so no
@@ -673,7 +673,7 @@ def test_uninstall_delete_purges_config_and_install_dir() -> None:
 
 
 def test_tasks_declare_hyperv_and_defender_optins() -> None:
-    """Real gate: the two opt-in system tasks exist with the right defaults.
+    """The two opt-in system tasks exist with the right defaults.
 
     ``enablehyperv`` gates the DISM Hypervisor-Platform enable (only meaningful
     with the QEMU component) and ``defenderexclusion`` gates the Defender folder
@@ -693,7 +693,7 @@ def test_tasks_declare_hyperv_and_defender_optins() -> None:
 
 
 def test_code_wires_reboot_detection_and_uninstall_cleanup() -> None:
-    """Real gate: ``[Code]`` implements the 3010 reboot and uninstall handlers.
+    """``[Code]`` implements the 3010 reboot and uninstall handlers.
 
     The post-install step must detect DISM's 3010 (reboot-required) exit and
     surface it through ``NeedRestart``, and the uninstall step must run the
@@ -715,7 +715,7 @@ def test_code_wires_reboot_detection_and_uninstall_cleanup() -> None:
 
 
 def test_setup_shows_welcome_and_disables_solid_compression() -> None:
-    """Real gate: the welcome page is shown and solid compression is off.
+    """The welcome page is shown and solid compression is off.
 
     ``DisableWelcomePage=no`` makes the wizard banner visible up front instead of
     only on the finished page. ``SolidCompression=no`` keeps a Compact/custom
@@ -733,7 +733,7 @@ def test_setup_shows_welcome_and_disables_solid_compression() -> None:
 
 
 def test_setup_version_comes_from_generated_include() -> None:
-    """Real gate: the ``.iss`` single-sources its version via the generated include.
+    """The ``.iss`` single-sources its version via the generated include.
 
     The two hand-typed ``#define AppVersion``/``#define AppVerNumeric`` lines were
     replaced by ``#include "version.generated.iss"`` (regenerated by stage.ps1 from
@@ -749,7 +749,7 @@ def test_setup_version_comes_from_generated_include() -> None:
 
 
 def test_install_delete_clears_managed_trees_before_copy() -> None:
-    """Real gate: ``[InstallDelete]`` purges the install-managed trees.
+    """``[InstallDelete]`` purges the install-managed trees.
 
     An upgrade must clear the runtime, source, tool, vendor, hexbench, and guest
     trees before the new files are copied so no stale module shadows a new one on
@@ -768,7 +768,7 @@ def test_install_delete_clears_managed_trees_before_copy() -> None:
 
 
 def test_enablehyperv_task_defaults_unchecked() -> None:
-    """Real gate: the machine-wide Hypervisor-Platform task starts unchecked.
+    """The machine-wide Hypervisor-Platform task starts unchecked.
 
     ``enablehyperv`` runs DISM to turn on a machine-wide hypervisor feature, so it
     must never be silently pre-selected; the user opts into it deliberately. This
@@ -784,7 +784,7 @@ def test_enablehyperv_task_defaults_unchecked() -> None:
 
 
 def test_defender_exclusion_runs_before_payload_extraction() -> None:
-    """Real gate: the Defender exclusion is added at ``ssInstall``, not post-install.
+    """The Defender exclusion is added at ``ssInstall``, not post-install.
 
     The bundled activation/injection utilities can trip antivirus heuristics, so
     the folder must be excluded *before* ``[Files]`` extracts them. The add path
@@ -812,7 +812,7 @@ def test_defender_exclusion_runs_before_payload_extraction() -> None:
 
 
 def test_defender_exclusion_escapes_the_install_path() -> None:
-    r"""Real gate: the Defender exclusion escapes single quotes in the install path.
+    r"""The Defender exclusion escapes single quotes in the install path.
 
     The exclusion path is embedded inside a PowerShell single-quoted literal, so a
     custom install directory containing an apostrophe (for example
@@ -924,9 +924,9 @@ def unresolved_icon_targets(iss_text: str) -> list[str]:
 
 
 def test_every_icon_points_at_a_staged_file() -> None:
-    r"""Real gate: every ``[Icons]`` shortcut resolves to a ``[Files]`` destination.
+    r"""Every ``[Icons]`` shortcut resolves to a ``[Files]`` destination.
 
-    Falsifiable against a dead Hexbench
+    Detects a dead Hexbench
     shortcut: had ``{app}\hexbench\hexbench.exe`` been named while the exe is
     staged as ``{app}\Hexbench.exe``, it would appear here as unresolved.
     """
@@ -934,7 +934,7 @@ def test_every_icon_points_at_a_staged_file() -> None:
     assert unresolved == [], "[Icons] shortcuts point at paths no [Files] entry installs:\n  " + "\n  ".join(unresolved)
 
 
-def test_icon_files_cross_check_is_falsifiable() -> None:
+def test_icon_files_cross_check_flags_an_unresolved_shortcut() -> None:
     """The icon/files cross-check accepts staged targets and rejects a bad one.
 
     Proves :func:`unresolved_icon_targets` resolves an exact exe destination and a
@@ -969,7 +969,7 @@ def test_icon_files_cross_check_is_falsifiable() -> None:
     assert unresolved == ["{app}/hexbench/hexbench.exe"]
 
 
-# Section-parser falsifiability proofs (run everywhere)
+# Section-parser self-tests (run everywhere)
 
 _FAKE_SECTIONS_ISS: Final[str] = (
     "[Setup]\n"
@@ -1098,10 +1098,10 @@ def vcs_metadata_in_stage(stage_root: Path) -> list[str]:
 
 
 def test_staged_runtime_has_no_build_path_shims() -> None:
-    r"""Real gate: no staged ``Scripts`` shim embeds the build interpreter path.
+    r"""No staged ``Scripts`` shim embeds the build interpreter path.
 
     Skips when the staging tree is absent (for example in the sandbox); on a
-    build host it fails loudly if the shim-strip step regressed and left a
+    build host it fails if the shim-strip step regressed and left a
     console-script launcher hardcoding a ``.pixi\envs\`` build path.
     """
     if not _BUILD_STAGE.is_dir():
@@ -1112,7 +1112,7 @@ def test_staged_runtime_has_no_build_path_shims() -> None:
 
 
 def test_staged_runtime_has_no_editable_dist_info() -> None:
-    """Real gate: no staged editable ``intellicrack*.dist-info`` leaks the source path.
+    """No staged editable ``intellicrack*.dist-info`` leaks the source path.
 
     Skips when the staging tree is absent; otherwise fails if the dist-info strip
     regressed and left the path-leaking editable metadata in the runtime.
@@ -1125,7 +1125,7 @@ def test_staged_runtime_has_no_editable_dist_info() -> None:
 
 
 def test_staged_vendor_trees_carry_no_vcs_metadata() -> None:
-    """Real gate: no VCS or IDE metadata ships inside the staged vendor trees.
+    """No VCS or IDE metadata ships inside the staged vendor trees.
 
     The vendor trees are git submodules, so each carries a ``.git`` gitdir pointer
     naming a ``.git/modules`` path that does not exist on a target machine, plus
@@ -1142,7 +1142,7 @@ def test_staged_vendor_trees_carry_no_vcs_metadata() -> None:
     assert offenders == [], "staged tree ships VCS/IDE metadata:\n  " + "\n  ".join(offenders)
 
 
-def test_vcs_metadata_checker_is_falsifiable(tmp_path: Path) -> None:
+def test_vcs_metadata_checker_flags_each_planted_item(tmp_path: Path) -> None:
     """The VCS-metadata checker passes on a clean stage and flags each planted item.
 
     Proves the checker sees a submodule ``.git`` pointer *file*, a ``.git``
@@ -1167,7 +1167,7 @@ def test_vcs_metadata_checker_is_falsifiable(tmp_path: Path) -> None:
     assert "app/vendor/other/.github" in offenders, f"the checker missed a nested .github directory: {offenders}"
 
 
-def test_build_path_hygiene_checkers_are_falsifiable(tmp_path: Path) -> None:
+def test_build_path_hygiene_checkers_flag_planted_leaks(tmp_path: Path) -> None:
     """The shim and dist-info checkers pass on a clean stage and flag a leak.
 
     Builds a tiny fake stage: a clean ``Scripts`` exe and a clean site-packages,
@@ -1217,11 +1217,11 @@ _TRACKED_LAUNCHER_FILES: Final[tuple[str, ...]] = (
 
 
 def test_launcher_specs_and_bootstrappers_are_tracked() -> None:
-    """Real gate: no launcher build input is swallowed by a gitignore rule.
+    """No launcher build input is swallowed by a gitignore rule.
 
     Reads the git index at the repository root (outside the sandbox's mounted
-    subtree), so it runs in the host-native pass. Falsifiable by re-adding a
-    blanket ``*.spec`` ignore without the per-file negation: the swallowed specs
+    subtree), so it runs in the host-native pass. It fails if a blanket
+    ``*.spec`` ignore is re-added without the per-file negation: the swallowed specs
     drop out of ``git ls-files`` and ``git add`` becomes a silent no-op, so a
     clean clone cannot build them.
 

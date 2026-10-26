@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for bundled QEMU guest-image discovery.
+"""Tests for bundled QEMU guest-image discovery.
 
 The installer stages an ~800 MB ready-to-run guest at
 ``<install_root>/qemu-guest``, but the sandbox settings leave ``qemu_image_path``
@@ -159,7 +159,7 @@ def test_default_image_resolves_install_root_from_bundled_runtime(tmp_path: Path
     resolves somewhere entirely unrelated (a wheel / ``site-packages`` install).
     The bundled guest at ``<install_root>/qemu-guest`` must still be discovered
     via the runtime-derived install root, even though neither the package-relative
-    root nor its parent contains a guest. Falsifiable: a discovery that
+    root nor its parent contains a guest. A discovery that
     only probes ``get_project_root()`` and its parent returns ``None`` here.
 
     Args:
@@ -188,7 +188,7 @@ def test_non_runtime_interpreter_is_not_used_as_install_root(tmp_path: Path, mon
     directory, which is the contract the frozen launcher guarantees. A dev
     interpreter (here under ``.pixi/envs/default``) must not have its grandparent
     adopted as a deployment root, so an unrelated ``*.qcow2`` sitting beside it is
-    never mistaken for a bundled guest. Falsifiable: dropping the ``runtime``
+    never mistaken for a bundled guest. Dropping the ``runtime``
     gate and using the interpreter grandparent unconditionally discovers the
     stray image and this gate reddens.
 

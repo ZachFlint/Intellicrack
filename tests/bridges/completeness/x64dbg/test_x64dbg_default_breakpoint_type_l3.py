@@ -76,7 +76,7 @@ class TestSetDefaultBreakpointTypeButtonDrivesSetBpxOptionsRpc:
     ) -> None:
         """Selecting each opcode style and clicking must send ``SetBPXOptions <opcode>`` exactly.
 
-        Falsifiable: if ``_on_set_default_breakpoint_type``
+        If ``_on_set_default_breakpoint_type``
         (``ui/panels/x64dbg_panel.py``) ignored the combo selection and
         hardcoded one opcode value, the ``long``/``ud2`` sub-cases
         would record ``SetBPXOptions short`` instead of the expected

@@ -3,16 +3,16 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Cutter detached-panel splitter and sub-tab clipping.
+"""Gates for the Cutter detached-panel splitter and sub-tab clipping.
 
 Guards three defects in the docked/detached Cutter panel. The top/bottom outer
-splitter must give its sub-tab pane a genuine minimum height, so an ordinary window
+splitter must give its sub-tab pane a non-zero minimum height, so an ordinary window
 resize cannot squeeze it to a sliver; the outer splitter's proportions must be
 persisted, so a dragged layout survives a redock or relaunch; and the Advanced
 Search mode row and the Debugger attach/step row must have a floor, so they cannot
 be compressed to zero height or have their leftmost controls clipped off-screen.
-Every assertion below exercises real Qt widget geometry and real ``QSettings``
-round-trips, never a stubbed value.
+Every assertion below reads Qt widget geometry or a ``QSettings``
+round-trip.
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ def _clean_cutter_panel_settings() -> Generator[None]:
 
 @pytest.mark.usefixtures("qapp", "_clean_cutter_panel_settings")
 class TestCutterOuterSplitterMinimumHeight:
-    """The sub-tab and console panes must carry a genuine minimum height floor."""
+    """The sub-tab and console panes must carry a non-zero minimum height floor."""
 
     @staticmethod
     def test_data_tabs_and_console_panes_have_real_minimum_height() -> None:
@@ -180,7 +180,7 @@ class TestSearchTabModeRowNeverCollapses:
 
     @staticmethod
     def test_mode_row_is_wrapped_in_a_fixed_height_scroll_area() -> None:
-        """The mode row must be hosted in a QScrollArea with a genuine fixed, non-zero height.
+        """The mode row must be hosted in a QScrollArea with a fixed, non-zero height.
 
         Without this wrap, a squeezed sub-tab pane could compress the header
         label and Mode combo down toward zero height, making the
@@ -212,7 +212,7 @@ class TestDebuggerTabAttachRowNeverClips:
 
     @staticmethod
     def test_attach_row_is_wrapped_in_a_fixed_height_scroll_area() -> None:
-        """The attach/step row must be hosted in a QScrollArea with a genuine fixed, non-zero height.
+        """The attach/step row must be hosted in a QScrollArea with a fixed, non-zero height.
 
         Without this wrap, a squeezed sub-tab pane clipped the Start/Attach/
         Spawn entry control off the left edge, leaving only Step Into/Over/

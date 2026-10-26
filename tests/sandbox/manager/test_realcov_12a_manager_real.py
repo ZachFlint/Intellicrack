@@ -4,22 +4,22 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real-data coverage for ``intellicrack.sandbox.manager``.
 
-These tests drive the REAL :class:`SandboxManager` against the REAL
+These tests drive :class:`SandboxManager` against the
 :class:`QEMUSandbox` / :class:`WindowsSandbox` classes:
 
-* ``get_available_types`` / availability probing query the REAL host and return
-  only types whose ``is_available`` truly succeeds (no mocked availability).
-* ``SandboxInstance`` wraps a REAL ``QEMUSandbox`` and the manager's lifecycle
+* ``get_available_types`` / availability probing query the host and return
+  only types whose ``is_available`` succeeds.
+* ``SandboxInstance`` wraps a ``QEMUSandbox`` and the manager's lifecycle
   operations (``get``, ``destroy``, ``destroy_all``, ``cleanup_stale``,
-  ``get_status``, ``active_count``) act on that real instance and its real
-  ``SandboxState`` — exercising the real teardown path through
-  ``QEMUSandbox.stop`` rather than an in-memory stub.
+  ``get_status``, ``active_count``) act on that instance and its
+  ``SandboxState`` — exercising the teardown path through
+  ``QEMUSandbox.stop``.
 
 Booting an actual VM is out of scope for the unit suite (it needs a prepared
 disk image and nested virtualisation), so the running-VM state is established by
 the real ``SandboxState`` object the real sandbox exposes; teardown then routes
 through the real ``QEMUSandbox.stop`` implementation, whose ``stopped`` early
-return is the genuine no-VM path.
+return is the no-VM path.
 """
 
 from __future__ import annotations
@@ -112,9 +112,9 @@ class _AbsentBinaryQEMUSandbox(QEMUSandbox):
 
     The real, unmodified :meth:`QEMUSandbox.is_available` logic runs end to end;
     only the executable *discovery* helper is injected to report no binary
-    (the genuine outcome on a host without QEMU installed), exercising the real
-    ``qemu_path is None`` availability branch under test. The operation being
-    gated -- the availability decision -- is never mocked.
+    (the outcome on a host without QEMU installed), exercising the real
+    ``qemu_path is None`` availability branch under test. The availability
+    decision itself runs unmodified.
     """
 
     async def _find_qemu(self) -> Path | None:
@@ -122,7 +122,7 @@ class _AbsentBinaryQEMUSandbox(QEMUSandbox):
 
         Returns:
             Path | None: Always ``None`` so the real availability decision takes
-            its genuine no-binary branch.
+            its no-binary branch.
         """
         return None
 
@@ -134,7 +134,7 @@ class _ProbeRoutingManager(_RealManager):
     :meth:`SandboxManager._probe_type` is redirected; the real probe, the real
     cache write, and the real :meth:`SandboxManager.get_available_types`
     filtering all execute unchanged. This proves the manager faithfully reflects
-    whatever the genuine ``is_available`` of the injected real sandbox returns.
+    whatever ``is_available`` of the injected real sandbox returns.
     """
 
     def __init__(self, qemu_factory: type[QEMUSandbox], default_config: SandboxConfig) -> None:
@@ -155,7 +155,7 @@ class _ProbeRoutingManager(_RealManager):
             sandbox_type: Sandbox type to probe on the real host.
 
         Returns:
-            bool: The genuine ``is_available`` result for the real sandbox.
+            bool: The ``is_available`` result for the real sandbox.
         """
         sandbox: SandboxBase = (
             self._qemu_factory(self._default_config, QEMUConfig()) if sandbox_type == "qemu" else WindowsSandbox(self._default_config)
@@ -164,9 +164,9 @@ class _ProbeRoutingManager(_RealManager):
 
 
 def _real_qemu_instance() -> SandboxInstance:
-    """Build a managed instance wrapping a REAL ``QEMUSandbox``.
+    """Build a managed instance wrapping a ``QEMUSandbox``.
 
-    The wrapped sandbox is a genuine :class:`QEMUSandbox` whose
+    The wrapped sandbox is a :class:`QEMUSandbox` whose
     :class:`SandboxState` is marked ``running`` so the manager's running-instance
     accounting and teardown route through the real object.
 
@@ -180,14 +180,14 @@ def _real_qemu_instance() -> SandboxInstance:
 
 
 class TestRealAvailabilityProbing:
-    """``get_available_types`` must reflect REAL host probes, never fabrication."""
+    """``get_available_types`` must reflect the host probe results."""
 
     def test_absent_real_qemu_binary_excludes_qemu_from_reported_types(self) -> None:
         """An absent real QEMU binary must drive ``qemu`` out of reported types.
 
         The manager probes a real :class:`QEMUSandbox` whose executable name is
-        genuinely absent from the host, so the unmodified, real
-        ``is_available`` returns ``False`` through its true filesystem search.
+        absent from the host, so the unmodified
+        ``is_available`` returns ``False`` through its filesystem search.
         This gate fails if the manager fabricates availability or ignores the
         real probe result: an independent direct probe of the same real sandbox
         must agree, and ``get_available_types`` must omit ``qemu`` accordingly.
@@ -246,7 +246,7 @@ class TestRealAvailabilityProbing:
 
 
 class TestRealInstanceLifecycle:
-    """Manager lifecycle must operate on REAL ``QEMUSandbox`` instances."""
+    """Manager lifecycle must operate on ``QEMUSandbox`` instances."""
 
     def test_get_returns_the_real_managed_instance(self) -> None:
         """``get`` returns the exact real instance registered with the manager."""

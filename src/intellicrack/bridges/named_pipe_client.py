@@ -489,7 +489,7 @@ class NamedPipeClient:
         silent for an unbounded time between messages (for example while a
         debuggee runs between breakpoints), and treating that idle gap as a
         fatal read timeout would permanently kill an otherwise healthy
-        connection. A genuinely dead peer is still detected promptly
+        connection. A dead peer is still detected promptly
         because the underlying blocking read fails with a broken-pipe error
         as soon as the OS tears down the handle.
 
@@ -677,7 +677,7 @@ class NamedPipeClient:
                 prefix, since a connected peer may legitimately stay silent
                 for an unbounded time (for example while a debuggee runs
                 between breakpoints); every other caller passes a bounded
-                timeout so a genuinely stuck read still fails loudly.
+                timeout so a stuck read still raises ``ToolError``.
 
         Returns:
             bytes: Bytes read.
@@ -803,7 +803,7 @@ class NamedPipeClient:
 
         # FILE_FLAG_OVERLAPPED is required so the background reader thread's
         # indefinite ReadFile and a concurrent send_command's WriteFile can
-        # both be genuinely in flight on this one duplex handle at the same
+        # both be in flight on this one duplex handle at the same
         # time. A synchronous (non-overlapped) handle does not support that:
         # a second thread's I/O call on the same handle can block for the
         # full duration of an unrelated already-pending operation.

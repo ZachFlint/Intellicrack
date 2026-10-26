@@ -65,7 +65,7 @@ pefile: Any = pytest.importorskip("pefile")
 
 _MAX_DECODE_BYTES: Final[int] = 256
 _MIN_INSTRUCTIONS: Final[int] = 8
-# A genuine x86 mnemonic decoded by capstone is a non-empty lowercase token
+# An x86 mnemonic decoded by capstone is a non-empty lowercase token
 # of letters/digits (e.g. "mov", "jmp", "je", "jno", "int3", "movsxd",
 # "pcmpeqb"). Optional REP/REPNE/LOCK prefixes appear space-separated.
 _X86_MNEMONIC_RE: Final[re.Pattern[str]] = re.compile(r"^[a-z][a-z0-9]*( [a-z][a-z0-9]*)*$")
@@ -75,7 +75,7 @@ def _decode_text_section(pe: pefile_types.PE) -> tuple[list[DisassemblyLine], in
     """Decode real instructions from the ``.text`` section of a parsed PE.
 
     Skips the leading ``int3`` / zero alignment padding so the first
-    decoded instruction is a genuine function prologue, then packs each
+    decoded instruction is a function prologue, then packs each
     decoded instruction into a :class:`DisassemblyLine` exactly as the
     concrete debugger bridge does.
 
@@ -122,7 +122,7 @@ def _disassemble_real_text(dll_path: Path) -> tuple[list[DisassemblyLine], int, 
 
     Mirrors the exact capstone construction the concrete debugger bridge
     uses (``CS_ARCH_X86`` / ``CS_MODE_64``) so the :class:`DisassemblyLine`
-    dataclass is exercised over genuine disassembly output.
+    dataclass is exercised over capstone disassembly output.
 
     Args:
         dll_path: Path to a real 64-bit PE DLL.
@@ -197,7 +197,7 @@ def _oracle_decode_first(
 
 
 class TestDisassemblyLineFromRealBinary:
-    """Verify DisassemblyLine carries genuine disassembly of a real PE."""
+    """Verify DisassemblyLine carries capstone disassembly of a system PE DLL."""
 
     @staticmethod
     def test_decodes_real_text_mnemonics(real_pe_dll: Path) -> None:

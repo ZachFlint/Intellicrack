@@ -50,7 +50,7 @@ def test_tools_directory(tmp_path: Path) -> None:
     The directory is NOT pre-created: ``ToolRegistry.__init__`` passes
     ``tools_dir`` into its ``ToolInstaller``, whose ``__init__`` performs
     ``mkdir(parents=True, exist_ok=True)``. The post-condition that the
-    directory now exists proves ``tools_dir`` is genuinely wired into the
+    directory now exists proves ``tools_dir`` is wired into the
     installer (not merely stored), and the equality/name checks prove the
     property reports that exact path rather than a derived one (e.g.
     ``self._tools_dir.parent``).
@@ -219,12 +219,12 @@ async def test_ensure_tool_ready_not_found(registry: ToolRegistry) -> None:
 async def test_shutdown_empty(tmp_path: Path) -> None:
     """Verify shutdown clears bridges and definitions from a populated registry.
 
-    The test drives a genuine state transition: initialize() populates the
+    The test drives a state transition: initialize() populates the
     registry with all bridges (observable pre-condition), then shutdown()
     must empty it (asserted post-condition). An implementation that omits
     ``self._bridges.clear()`` inside shutdown() would leave len > 0 and fail.
 
-    Mutation that falsifies: remove ``self._bridges.clear()`` from
+    Mutation that fails this test: remove ``self._bridges.clear()`` from
     ToolRegistry.shutdown() (src/intellicrack/core/tools.py line 281);
     get_available_tools() would then return the same non-empty list it
     returned before shutdown, so both equality assertions would fail.

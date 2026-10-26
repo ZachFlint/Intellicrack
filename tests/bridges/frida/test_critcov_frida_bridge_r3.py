@@ -7,7 +7,7 @@
 
 Every test drives the real Frida runtime against a child process that the test
 itself starts (a Python interpreter blocked on stdin), never against the pytest
-process. The cases cover the error replies that a real target does produce for
+process. The cases cover the error replies that a live target process does produce for
 inputs the bridge accepts (an unsigned-integer violation in Stalker, a negative
 Cloak argument, an allocation that cannot be satisfied, a string that cannot be
 converted), an install reply that arrives after the wait limit, the failure of

@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Coverage for the sandbox, document API and panel mixin of the hex editor scripting tab.
 
-Every test drives the production code with real objects: a genuine ``intellicrack_hexcore.HexDocument`` holding known bytes, a real
+Every test drives the production code with real objects: an ``intellicrack_hexcore.HexDocument`` holding known bytes, a real
 ``HexEditorWidget``, real Qt controls built by ``ScriptingMixin._create_scripting_tab``, and the real asynchronous worker used by the Run
 button. Expected values are derived from byte arithmetic, the Python standard library, or the documented contract of each function rather
 than read back from the code under test.

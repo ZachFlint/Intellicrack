@@ -14,11 +14,11 @@ real Windows 11 QEMU guest. Before the fix, :func:`read_log_lines` decoded the
 file as plain ``utf-8``, so the BOM character (``\ufeff``) survived into the
 first field of the first parsed record of every log-backed tab.
 
-These tests write real on-disk log files carrying a genuine UTF-8 BOM
+These tests write on-disk log files carrying a UTF-8 BOM
 (the literal ``EF BB BF`` byte sequence, not just the decoded character) in
 the exact pipe-delimited schema each in-guest monitor emits, then exercise
 every ``parse_*`` function in :mod:`intellicrack.sandbox.log_parsers` against
-those files. No mocking is used: the parsers read the same bytes the guest
+those files. The parsers read the same bytes the guest
 monitors would have written.
 """
 

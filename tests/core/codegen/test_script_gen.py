@@ -338,7 +338,7 @@ def test_script_save_emits_success_log_only_after_write(tmp_path: Path) -> None:
 def test_script_save_failure_logs_failure_not_success(tmp_path: Path) -> None:
     """When a real write_text fails, success log is NOT emitted; failure log is.
 
-    Drives a genuine :class:`OSError` from the filesystem rather than mocking
+    Triggers an :class:`OSError` from the filesystem rather than patching
     the write that ``save`` performs: the save target is an existing directory,
     so ``Path.write_text`` raises a real :class:`PermissionError` (an
     ``OSError`` subclass) on Windows and :class:`IsADirectoryError` elsewhere.
@@ -376,9 +376,9 @@ def test_script_save_failure_logs_failure_not_success(tmp_path: Path) -> None:
 def _require_node() -> None:
     """Skip the calling test when the real ``node`` runtime is unavailable.
 
-    ``validate_javascript`` shells out to ``node --check`` to perform genuine
+    ``validate_javascript`` shells out to ``node --check`` to perform
     syntax validation. The cleanup-ordering and verdict assertions below need
-    the real runtime so the verdict oracle is node's own parser, not a stub.
+    the installed runtime so the verdict oracle is node's own parser.
     Calls :func:`pytest.skip` when ``node`` is not on ``PATH``.
     """
     if shutil.which("node") is None:
@@ -436,7 +436,7 @@ def _install_recording_processors(processors: list[Processor]) -> tuple[list[str
 def test_validate_javascript_emits_cleanup_after_unlink_attempt_on_real_run() -> None:
     """A real node validation cleans its temp file and logs cleanup in order.
 
-    Drives the genuine ``node --check`` path on valid JavaScript and asserts
+    Drives the ``node --check`` path on valid JavaScript and asserts
     the exact verdict ``(True, None)`` produced by node's own parser (the
     independent oracle), then asserts unconditionally that the temp file was
     unlinked and that ``temp_file_cleaned`` followed ``temp_file_unlink_attempt``.
@@ -483,14 +483,13 @@ def test_validate_javascript_reports_node_syntax_error_and_still_cleans_up() -> 
     reason="Windows refuses to delete a read-only file; POSIX unlinks it, so no unlink failure occurs",
 )
 def test_validate_javascript_unlink_failure_suppresses_cleaned_log() -> None:
-    """A real read-only temp file makes unlink fail; cleanup log is suppressed.
+    """A read-only temp file makes unlink fail; cleanup log is suppressed.
 
-    Instead of mocking ``Path.unlink`` (the operation under test), this drives
-    the real production cleanup against a real read-only file. A leading
-    structlog processor observes the genuine ``temp_file_created`` event,
-    extracts the live temp path production chose, and marks that real file
+    This drives the production cleanup against a read-only file. A leading
+    structlog processor observes the emitted ``temp_file_created`` event,
+    extracts the live temp path production chose, and marks that file
     read-only via :meth:`pathlib.Path.chmod`. On Windows, unlinking a read-only
-    file raises :class:`PermissionError`, so production's real
+    file raises :class:`PermissionError`, so production's
     ``except OSError`` branch runs: ``temp_file_unlink_failed`` is emitted and
     ``temp_file_cleaned`` is not. The side effect runs synchronously inside the
     ``temp_file_created`` log call, deterministically before the ``finally``

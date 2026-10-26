@@ -82,7 +82,7 @@ def _host_tab_widget(vnc: VNCWidget) -> QTabWidget:
 
 
 class TestVncWidgetPopoutAndRedock:
-    """The VM Display widget must genuinely leave and rejoin its host tab widget."""
+    """The VM Display widget must leave and rejoin its host tab widget."""
 
     @staticmethod
     def test_popout_removes_the_widget_from_its_host_tab_widget(qapp: QApplication) -> None:
@@ -99,7 +99,7 @@ class TestVncWidgetPopoutAndRedock:
         vnc.popout()
 
         assert tabs.indexOf(vnc) == -1, "the widget must be a real top-level window's child, not still a tab page"
-        assert tabs.count() == 2, "the tab widget must genuinely have one fewer page while popped out"
+        assert tabs.count() == 2, "the tab widget must have one fewer page while popped out"
 
     @staticmethod
     def test_popout_gives_the_widget_a_new_top_level_window(qapp: QApplication) -> None:
@@ -235,7 +235,7 @@ class _ExposedSandboxPanel(SandboxPanel):
 
 
 class TestSandboxCreateHeaderState:
-    """The header must reflect that a create is genuinely in progress, not just its two extremes."""
+    """The header must reflect that a create is in progress, not just its two extremes."""
 
     @staticmethod
     def _make_panel(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> _ExposedSandboxPanel:

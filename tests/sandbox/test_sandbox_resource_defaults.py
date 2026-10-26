@@ -10,7 +10,7 @@ per-run CPU and memory share is left unpinned by default so the admission
 governor can size it from the host (letting several runs fit concurrently),
 an explicitly pinned ``--cpus`` / ``--memory`` is honoured verbatim, and the
 ``COVERAGE_JOBS`` host environment variable is forwarded into the container so
-coverage group parallelism can be tuned. Each assertion fails loudly if sizing
+coverage group parallelism can be tuned. Each assertion fails if sizing
 regresses to a fixed constant, if a pinned value is silently rewritten, or if
 the forwarding is removed.
 """

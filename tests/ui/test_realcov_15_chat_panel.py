@@ -9,10 +9,10 @@ and re-emits it as ``message_submitted``, renders real :class:`Message`
 objects into message bubbles, supports incremental streaming updates, and
 manages conversation history.
 
-These tests drive the genuine widget through ``qtbot`` -- typing real text and
+These tests drive the widget through ``qtbot`` -- typing real text and
 pressing the real Send button, feeding real :class:`Message`/:class:`ToolCall`
-objects, and streaming real chunks -- then assert on the genuine rendered
-content and emitted signal payloads. No widget behavior is stubbed.
+objects, and streaming real chunks -- then assert on the rendered
+content and emitted signal payloads.
 """
 
 from __future__ import annotations
@@ -234,7 +234,7 @@ def test_clear_messages_empties_history_and_view(qtbot: QtBot) -> None:
 
 
 def test_insert_context_text_populates_input(qtbot: QtBot) -> None:
-    """``insert_context_text`` loads text into the real input widget.
+    """``insert_context_text`` loads text into the chat input widget.
 
     Args:
         qtbot: pytest-qt bot fixture.

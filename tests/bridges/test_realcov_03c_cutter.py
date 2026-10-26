@@ -5,7 +5,7 @@
 
 """Real-data integration tests for :class:`CutterBridge`.
 
-These tests drive the bridge against a genuine rizin/radare2 backend and
+These tests drive the bridge against an installed rizin/radare2 backend and
 real, on-disk PE and ELF binaries. Unlike the command-recorder unit tests in
 ``test_cutter.py`` (which validate command construction with a Python double),
 every assertion here is anchored to a value computed by the real Rizin engine:
@@ -79,7 +79,7 @@ async def test_backend_available_or_explicit_skip() -> None:
 
     When the environment variable ``EXPECT_RIZIN_BACKEND`` is set to any
     non-empty value, a missing rizin/radare2 binary is treated as a hard
-    failure rather than a skip. This distinguishes "backend genuinely
+    failure rather than a skip. This distinguishes "backend
     absent on this host" from "backend missing because the container was
     mis-configured". Without the variable the test skips as normal.
 
@@ -294,7 +294,7 @@ class TestRealDisassembly:
 
 
 class TestRealByteIo:
-    """Validate raw byte read and hex dump against real binary content."""
+    """Validate raw byte read and hex dump against on-disk binary content."""
 
     async def test_read_bytes_matches_disassembly(self, pe_bridge: CutterBridge) -> None:
         """Bytes read at the text section start match the first disassembled op.
@@ -400,7 +400,7 @@ class TestRealPatching:
 
         XOR is its own inverse, so two identical ``write_xor`` passes over the
         same range must return the bytes to their original values. This proves
-        the transform genuinely executed against the loaded image rather than
+        the transform executed against the loaded image rather than
         merely dispatching a command.
 
         Args:
@@ -417,7 +417,7 @@ class TestRealPatching:
 
 
 class TestRealStringSearch:
-    """Validate string extraction and search against real binary content."""
+    """Validate string extraction and search against on-disk binary content."""
 
     async def test_search_strings_finds_known(self, pe_bridge: CutterBridge) -> None:
         """Searching for ``Microsoft`` returns matching real data-section strings.
@@ -445,7 +445,7 @@ class TestRealStringSearch:
 
         The presence of a known substring yields a non-empty real match set
         while a string that cannot occur yields none, proving the byte search
-        genuinely scans the loaded image rather than echoing a constant.
+        scans the loaded image rather than echoing a constant.
 
         Args:
             pe_bridge: Analyzed kernel32.dll bridge.
@@ -599,7 +599,7 @@ async def _gather_concurrent_panel_refresh(bridge: CutterBridge) -> _ConcurrentR
 
     Mirrors ``CutterPanel._on_analysis_complete`` -> ``_refresh_new_tabs``,
     which fires every data-tab refresh coroutine at once rather than
-    sequentially, so the underlying analysis pipe sees genuine concurrent
+    sequentially, so the underlying analysis pipe sees concurrent
     command dispatch instead of one command at a time. ``search_rop_gadgets``
     (rizin's ``/Rj``) is deliberately excluded: it is the single slowest
     command the bridge exposes (a full-binary gadget scan), and under host
@@ -694,7 +694,7 @@ class TestRealConcurrentCommands:
         assert imports, "concurrent get_imports() must return real imports, not a corrupted empty stub"
         assert exports, "concurrent get_exports() must return real exports, not a corrupted empty stub"
         section_names = {section.name for section in sections}
-        assert {".text", ".rdata"} <= section_names, "concurrent get_sections() must return the real section table, not a stub row"
+        assert {".text", ".rdata"} <= section_names, "concurrent get_sections() must return the section table including .text and .rdata"
         assert len(all_strings) > 10
         assert len(symbols) > 50
         assert libraries
@@ -808,7 +808,7 @@ def _resolve_pipe_binary() -> tuple[str, Path] | None:
 
 
 class _RawUnlockedR2Pipe:
-    """A genuine radare2/rizin subprocess speaking the raw NUL-framed r2 wire protocol with no internal lock.
+    """A radare2/rizin subprocess speaking the raw NUL-framed r2 wire protocol with no internal lock.
 
     Both ``r2pipe`` and ``rzpipe`` synchronize command execution internally
     -- ``r2pipe.open_sync.open`` wraps every command in ``self._cmd_lock``
@@ -819,7 +819,7 @@ class _RawUnlockedR2Pipe:
     first. This class reimplements the identical wire protocol used by
     both bindings -- spawn ``<binary> -2 -q0 <file>``, discard the leading
     NUL startup banner, then for each command write the command terminated
-    by a newline and read until a NUL terminator -- against a genuine, real subprocess, with no
+    by a newline and read until a NUL terminator -- against a live subprocess, with no
     synchronization of its own. Installed as ``CutterBridge.r2``,
     ``CutterBridge._r2_lock`` becomes the *only* thing that can prevent
     concurrent ``execute_command`` calls from interleaving reads and writes
@@ -902,7 +902,7 @@ def _as_r2(pipe: _RawUnlockedR2Pipe) -> r2pipe.open:
 
 
 class TestRealPipeSerializationGate:
-    """Falsifiable gate for ``CutterBridge._r2_lock`` using a real, lock-free backend adapter.
+    """Check ``CutterBridge._r2_lock`` using a lock-free subprocess backend adapter.
 
     ``r2pipe``/``rzpipe`` each carry their own internal synchronization,
     which independently prevents pipe corruption and would mask a missing
@@ -969,7 +969,7 @@ class TestRealPipeSerializationGate:
 
 
 class TestRealCrossFormatElf:
-    """Validate the bridge parses a genuinely different binary format (ELF)."""
+    """Validate the bridge parses a different binary format (ELF)."""
 
     async def test_elf_header_fields(self, elf_bridge: CutterBridge, real_elf_binary: Path) -> None:
         """The committed ELF reports real ELF64 metadata distinct from a PE.

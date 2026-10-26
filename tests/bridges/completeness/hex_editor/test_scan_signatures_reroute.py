@@ -23,7 +23,7 @@ through a real ``HexEditorPanel`` against a real
 on disk; the only test double is a recording ``HexEditorBridge``
 subclass (``RecordingHexEditorBridge`` in ``conftest.py``) that
 delegates to the real scan implementations after appending to its call
-ledgers, so the rendered results remain genuine end-to-end matches
+ledgers, so the rendered results remain end-to-end matches
 rather than canned responses.
 """
 
@@ -76,7 +76,7 @@ class TestScanSignaturesRoutesThroughMatchingBridgeMethod:
     def test_die_scan_with_bridge_dispatches_scan_die_signatures(qapp: QApplication) -> None:
         """Selecting "DIE (JSON)" with a bridge attached must call ``bridge.scan_die_signatures`` only.
 
-        Falsifiable: if ``_on_scan_signatures`` were reverted to always
+        If ``_on_scan_signatures`` were reverted to always
         run the ``GenericCallableWorker``/``execute_signature_scan_from_source``
         path (the unrouted behaviour), ``scan_die_signatures_calls``
         would stay empty even though a bridge was attached and "DIE
@@ -118,7 +118,7 @@ class TestScanSignaturesRoutesThroughMatchingBridgeMethod:
     def test_clamav_scan_with_bridge_dispatches_scan_clamav_signatures(qapp: QApplication) -> None:
         """Selecting "ClamAV (.ndb/.hdb)" with a bridge attached must call ``bridge.scan_clamav_signatures`` only.
 
-        Falsifiable: same failure mode as the DIE case above, but for
+        Same failure mode as the DIE case above, but for
         the ClamAV branch of the dispatch table -- if the dispatch
         table were removed or hard-coded to a single method,
         ``scan_clamav_signatures_calls`` would stay empty (or the wrong
@@ -156,7 +156,7 @@ class TestScanSignaturesRoutesThroughMatchingBridgeMethod:
     def test_custom_scan_with_bridge_dispatches_scan_custom_signatures(qapp: QApplication) -> None:
         """Selecting "Custom (JSON)" with a bridge attached must call ``bridge.scan_custom_signatures`` only.
 
-        Falsifiable: same failure mode as the DIE/ClamAV cases above,
+        Same failure mode as the DIE/ClamAV cases above,
         but for the custom-JSON branch -- proves all three dispatch
         arms are wired, not just one.
 

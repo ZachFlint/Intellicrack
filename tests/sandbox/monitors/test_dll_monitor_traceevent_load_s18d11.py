@@ -41,7 +41,7 @@ _ASSEMBLY: Final[str] = "Microsoft.Diagnostics.Tracing.TraceEvent.dll"
 _TYPE_NAME: Final[str] = "Microsoft.Diagnostics.Tracing.Session.TraceEventSession, Microsoft.Diagnostics.Tracing.TraceEvent"
 _LOADER_FUNCTIONS: Final[tuple[str, ...]] = ("Register-TraceEventDependencyResolver", "Import-TraceEventAssembly")
 # Lifted together so the harness can call the collector's own decision function
-# rather than the loader directly: that is what proves the load is actually
+# rather than the loader directly, so the test checks that the load is
 # reached on the path that chooses between realtime ETW and the WMI fallback.
 _PROBE_FUNCTION: Final[str] = "Test-TraceEventAvailable"
 _POWERSHELL_TIMEOUT_S: Final[float] = 180.0

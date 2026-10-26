@@ -24,7 +24,7 @@ found". A scan that never reached the guest's artifacts looked exactly like a
 guest that was clean.
 
 These gates run the real ``yara-python`` compiler over real files on disk. The
-artifacts are genuine byte content written into a genuine shared-folder output
+artifacts are byte content written into a shared-folder output
 directory, and the matches come back from the real rule engine.
 """
 
@@ -99,7 +99,7 @@ class TestAScanThatFoundNothingMustHaveScannedSomething:
 
     @pytest.mark.asyncio
     async def test_a_file_scan_with_no_collected_artifacts_is_raised_not_returned(self, tmp_path: Path) -> None:
-        """With an empty output directory the scan must fail loudly.
+        """With an empty output directory the scan must raise ``SandboxError``.
 
         Args:
             tmp_path: Pytest temporary directory.
@@ -113,7 +113,7 @@ class TestAScanThatFoundNothingMustHaveScannedSomething:
 
     @pytest.mark.asyncio
     async def test_a_memory_scan_with_no_dump_is_raised_not_returned(self, tmp_path: Path) -> None:
-        """Scanning memory that was never dumped must fail loudly.
+        """Scanning memory that was never dumped must raise ``SandboxError``.
 
         Args:
             tmp_path: Pytest temporary directory.

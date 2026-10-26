@@ -8,9 +8,9 @@ via :meth:`HexPatInterpreter.execute_bytes` and assert on concrete decoded
 values rather than mere field presence.
 
 Where a real compiled binary is available (a System32 PE on Windows, or the
-committed ELF/Mach-O corpus fixtures), the pattern is run against the genuine
+committed ELF/Mach-O corpus fixtures), the pattern is run against the
 file bytes and validated against fields independently computed with
-:mod:`struct`, so the test proves the evaluator decodes authentic binary
+:mod:`struct`, so the test checks that the evaluator decodes compiled binary
 structures correctly.
 """
 
@@ -299,7 +299,7 @@ class TestStringEncodingE2E:
 
 
 class TestRealPeBinaryParsing:
-    """Parse genuine System32 PE bytes and validate against struct-computed fields."""
+    """Parse System32 PE bytes and validate against struct-computed fields."""
 
     def test_dos_and_pe_headers_decode_from_real_dll(self, interp: HexPatInterpreter, real_pe_dll: Path) -> None:
         """Decode the DOS magic and e_lfanew of a real DLL and confirm the PE signature.
@@ -385,7 +385,7 @@ class TestRealElfBinaryParsing:
 
 
 class TestDataReaderRealBinary:
-    """DataReader read methods validated directly against real binary bytes."""
+    """DataReader read methods validated directly against System32 DLL bytes and crafted buffers."""
 
     def test_read_string_finds_real_dll_internal_name(self, real_pe_dll: Path) -> None:
         """read_string decodes a real ASCII section name found in a real DLL.

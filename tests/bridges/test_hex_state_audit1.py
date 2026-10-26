@@ -13,7 +13,7 @@ The tests check these invariants:
 * Property getters must read shared state under the lock.
 * ``clear_all`` must emit a removed event for each dropped highlight rule.
 
-The tests use real ``threading.Thread`` interleavings and real subclassing of inspection points (no mocks), and assert state-machine invariants. All state interactions go through the public API surface; no test reaches into the state holder's private members.
+The tests use real ``threading.Thread`` interleavings and real subclassing of inspection points, and assert state-machine invariants. All state interactions go through the public API surface; no test reaches into the state holder's private members.
 """
 
 from __future__ import annotations
@@ -51,18 +51,18 @@ class _DummyDoc:
         """
         self._doc_length = doc_length
 
-    def read(self, offset: int, length: int) -> list[int]:
-        """Return an empty list of byte values.
+    def read(self, offset: int, length: int) -> bytes:
+        """Return no bytes.
 
         Args:
             offset: Ignored byte offset.
             length: Ignored read length.
 
         Returns:
-            list[int]: Always empty.
+            bytes: Always empty.
         """
         _ = (offset, length)
-        return []
+        return b""
 
     def length(self) -> int:
         """Return the configured document length.
@@ -72,15 +72,6 @@ class _DummyDoc:
         """
         return self._doc_length
 
-    def write(self, offset: int, data: bytes) -> None:
-        """No-op write.
-
-        Args:
-            offset: Ignored byte offset.
-            data: Ignored payload bytes.
-        """
-        _ = (offset, data)
-
     def list_templates(self) -> list[tuple[str, str]]:
         """Return an empty template list.
 
@@ -89,30 +80,37 @@ class _DummyDoc:
         """
         return []
 
-    def list_templates_detailed(self) -> list[object]:
+    def list_templates_detailed(self) -> list[tuple[str, str, str, int]]:
         """Return an empty detailed template list.
 
         Returns:
-            list[object]: Always empty.
+            list[tuple[str, str, str, int]]: Always empty.
         """
         return []
 
-    def register_json_template(self, name: str, json_str: str) -> None:
+    def register_json_template(self, json_str: str) -> str:
         """No-op template registration.
 
         Args:
-            name: Ignored template name.
             json_str: Ignored JSON body.
-        """
-        _ = (name, json_str)
 
-    def remove_template(self, name: str) -> None:
+        Returns:
+            str: Always empty, as no template is registered.
+        """
+        _ = json_str
+        return ""
+
+    def remove_template(self, name: str) -> bool:
         """No-op template removal.
 
         Args:
             name: Ignored template name.
+
+        Returns:
+            bool: Always False, as no template is ever registered.
         """
         _ = name
+        return False
 
     def export_template_json(self, name: str) -> str:
         """Return an empty JSON string.
@@ -126,14 +124,14 @@ class _DummyDoc:
         _ = name
         return ""
 
-    def inspect_at(self, offset: int) -> dict[str, object]:
+    def inspect_at(self, offset: int) -> dict[str, str]:
         """Return an empty inspection dict.
 
         Args:
             offset: Ignored offset.
 
         Returns:
-            dict[str, object]: Always empty.
+            dict[str, str]: Always empty.
         """
         _ = offset
         return {}
@@ -278,7 +276,7 @@ class TestF0036NotifyDropsDownstreamEvents:
             data_thread.join(timeout=5.0)
 
     def test_runaway_dispatch_terminates_at_depth_cap(self) -> None:
-        """A genuinely runaway callback chain stops at the documented depth cap.
+        """A runaway callback chain stops at the documented depth cap.
 
         Total per-outer dispatch invocations are bounded at ``NOTIFY_MAX_DEPTH``, so unbounded queueing cannot loop forever.  This proves that legitimate downstream
         events are delivered (count grows beyond 1) while infinite loops

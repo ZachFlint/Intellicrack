@@ -114,7 +114,7 @@ class TestPatchesTabExistsAndIsWired:
     def test_patch_table_and_buttons_exist(wired_panel: tuple[X64DbgPanel, X64DbgBridge]) -> None:
         """The panel must expose ``_patch_table`` plus refresh/restore/export buttons.
 
-        Falsifiable: if the Patches tab were removed from ``_setup_tabs``,
+        If the Patches tab were removed from ``_setup_tabs``,
         these attributes would not exist and ``hasattr`` would fail.
 
         Args:
@@ -159,7 +159,7 @@ class TestRefreshPatchesCallsGetPatchesAndPopulatesTable:
     ) -> None:
         """The patch table must contain the exact address/old-byte/new-byte values from ``get_patches``.
 
-        Falsifiable: if ``_on_refresh_patches`` called a different bridge
+        If ``_on_refresh_patches`` called a different bridge
         method, or ``_apply_patches`` dropped/mis-mapped a field, the exact
         cell-text assertions below fail. Broken production line:
         ``self._bridge.get_patches()`` in ``_on_refresh_patches`` and the
@@ -220,7 +220,7 @@ class TestRestorePatchDrivesRestorePatchRpc:
     ) -> None:
         """Restoring the selected row must issue ``patch_restore`` with that row's exact address.
 
-        Falsifiable: if ``_on_restore_patch`` read the wrong row, or passed
+        If ``_on_restore_patch`` read the wrong row, or passed
         the row index instead of the stored address, the recorded RPC
         params would not match ``_PATCH_ADDR_2``. Broken production line:
         ``address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))``
@@ -299,7 +299,7 @@ class TestExportPatchesDrivesExportPatchesBridgeCall:
         writes a file of the expected size so the bridge's
         write-verification succeeds.
 
-        Falsifiable: if ``_on_export_patches`` called a different bridge
+        If ``_on_export_patches`` called a different bridge
         method, or built the export path differently, the recorded
         ``exec`` command would not match ``expected_command`` exactly and
         the responder's assertion raises; if the button never dispatched

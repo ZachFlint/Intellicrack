@@ -119,7 +119,7 @@ _PUMP_IDLE_SLEEP_S: Final[float] = 0.01
 _DEFAULT_CONNECT_TIMEOUT: Final[float] = 10.0
 _MESSAGE_READ_TIMEOUT: Final[float] = 0.1
 # Once a message's type byte has actually arrived, the rest of it is expected
-# within this window. This is a genuine-stall guard, not a poll interval: it
+# within this window. This is a mid-message stall guard, not a poll interval: it
 # only ever starts counting after real data has been seen, so it is sized to
 # comfortably cover a large non-incremental framebuffer update rather than a
 # single protocol message.
@@ -148,7 +148,7 @@ class _NoMessagePendingError(Exception):
     """Raised internally when a poll for a new server message finds nothing waiting.
 
     Distinguishes the read loop's normal "nothing to read yet" outcome -
-    expected continuously while the guest console is idle - from a genuine
+    expected continuously while the guest console is idle - from a
     mid-message stall, so only the latter is ever logged as a timeout warning.
     """
 
@@ -588,7 +588,7 @@ class RFBClient:
         rest of the message: that first read is expected to time out
         continuously while the console is idle, which is normal and not a
         stall, whereas a timeout while reading the body of a message that has
-        already started is a genuine protocol stall.
+        already started is a protocol stall.
 
         Args:
             reader: Active stream reader for the connected VNC socket.
@@ -619,7 +619,7 @@ class RFBClient:
 
         Returns:
             bool: True if a message was handled, False when none was pending,
-            the connection was lost, or a genuine mid-message stall was
+            the connection was lost, or a mid-message stall was
             detected.
         """
         if self._reader is None or not self._connected:

@@ -7,7 +7,7 @@
 
 Exercises the real widgets produced by :mod:`intellicrack.ui.panels.base_panel`
 and :mod:`intellicrack.ui.overflow_toolbar`: that panel toolbars are
-overflow-aware, that a scroll-wrapped control cluster genuinely scrolls instead
+overflow-aware, that a scroll-wrapped control cluster scrolls instead
 of clipping when its viewport is narrower than the content, that grouped tool
 menus build connected actions, that a clipped dropdown button is re-exposed as
 an overflow submenu, and that the theme stylesheet enforces a minimum width on

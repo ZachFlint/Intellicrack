@@ -12,7 +12,7 @@ debug-info accessors, plus the transport primitives ``_execute_remote`` and
 
 Three kinds of real object stand in for a running Ghidra:
 
-* a genuine ``ghidra_bridge.GhidraBridge`` RPC client pointed at a closed
+* a ``ghidra_bridge.GhidraBridge`` RPC client pointed at a closed
   loopback port, attached through ``attach_remote_bridge``, so every remote call
   fails the way a vanished Ghidra peer does;
 * ``_ScriptedBridge``, a subclass of the real ``GhidraBridge`` that replaces only
@@ -728,7 +728,7 @@ async def test_create_bookmark_rejects_a_readback_that_is_not_a_list() -> None:
 
 @pytest.mark.asyncio
 async def test_add_reference_ignores_readback_offsets_that_are_not_integers() -> None:
-    """Offsets that cannot be converted to integers are skipped; the real target still verifies."""
+    """Offsets that cannot be converted to integers are skipped; the requested target still verifies."""
     bridge = _ScriptedBridge(exec_outcomes=[None], eval_outcomes=[[None, "not-a-number", 0x2000]])
 
     result = await bridge.add_reference(0x1000, 0x2000)

@@ -37,7 +37,7 @@ so the run-time data plane is driven here too: the in-guest monitor agent is a
 second real loopback server, and ``run_binary`` and ``extract_dropped_files``
 run against it exactly as they do against a booted guest.
 
-Nothing is mocked - the client under test opens a socket, writes JSON and
+The client under test opens a socket, writes JSON and
 parses replies.
 """
 
@@ -1537,7 +1537,7 @@ class TestLinuxFatShareIsMountedInTheGuest:
     ) -> None:
         """The share is found by filesystem type, not by device ordering.
 
-        The modelled guest is the real target layout: the EFI System Partition
+        The modelled guest matches the deployed guest layout: the EFI System Partition
         on ``/dev/vda15`` is ``vfat`` too and is enumerated before the share, so
         taking the first ``vfat`` row remounts the boot partition instead.
 

@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable tests that ``[project.dependencies]`` describes the real runtime.
+r"""Tests that ``[project.dependencies]`` describes the real runtime.
 
 The installer stager and the ML-split projection both trust
 ``[project.dependencies]`` in ``pyproject.toml`` to enumerate the packages the
@@ -15,7 +15,7 @@ the core runtime, so the installer's core-runtime gate rejected the build.
 
 The contract lives in ``packaging/check_runtime_deps.py`` -- the same guard the
 ``just git-commit`` prep runs -- so these tests and the commit-time guard cannot
-drift. The discriminator is derived from the source tree, never a hand-kept list:
+drift. The required set is derived from the source tree, never a hand-kept list:
 a distribution is required iff ``src/intellicrack`` imports it at module scope and
 it resolves to an installed distribution, so a dependency legitimately removed
 from both the code and the manifest raises nothing while a still-imported one is
@@ -205,7 +205,7 @@ def test_fix_fully_reverts_a_prune_via_the_committed_head_baseline(tmp_path: Pat
     ``capstone`` is committed in ``[project.dependencies]`` but never imported, so
     only the ``HEAD`` baseline can recover it; ``psutil`` is imported. Both are
     pruned from the working tree and must both come back. ``gone`` is committed
-    too but removed from the pixi manifest alongside the prune -- a genuine
+    too but removed from the pixi manifest alongside the prune -- an intended
     removal -- so it must NOT be restored. If the baseline recovery regresses,
     ``capstone`` stays missing; if it ignores the pixi filter, ``gone`` reappears.
     """
@@ -230,7 +230,7 @@ def test_fix_fully_reverts_a_prune_via_the_committed_head_baseline(tmp_path: Pat
     _git(repo, "add", "-A")
     _git(repo, "commit", "--no-verify", "-m", "baseline")
 
-    # Working-tree prune: drop every runtime entry, and genuinely retire ``gone``
+    # Working-tree prune: drop every runtime entry, and fully retire ``gone``
     # by also removing it from the pixi manifest.
     (repo / "pyproject.toml").write_text(
         '[project]\nname = "synthetic"\nversion = "0"\n'

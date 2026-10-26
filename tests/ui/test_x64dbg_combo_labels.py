@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate: x64dbg option combos show capitalized labels but keep bridge-token values.
+"""The x64dbg option combos show capitalized labels but keep bridge-token values.
 
 The Breakpoints/Watchpoints/Console/Memory-Map combos must not list their options in lowercase
 (``software``/``hardware``/``memory``), because those strings would double as both the display text

@@ -18,7 +18,7 @@ methods through ``run_bridge_coroutine`` and write the result to disk.
 raises a real, descriptive ``ToolError`` here. The PDF tests assert that
 exact real failure mode end-to-end (bridge and GUI both reach the real
 ``fpdf2``-backed code path and surface the real dependency error), which is
-itself a genuine falsifiable gate on the wiring; the HTML tests, which have
+itself a check on the wiring; the HTML tests, which have
 no optional-dependency gap, assert the full real byte-accurate HTML content.
 """
 
@@ -140,8 +140,8 @@ class TestExportAnnotatedPdfBridgeL1:
     def test_missing_fpdf2_dependency_raises_descriptive_tool_error(bridge: HexEditorBridge) -> None:
         """With a document open and fpdf2 absent, the real dependency-check code path is reached.
 
-        Confirms the bridge genuinely attempts fpdf2-backed PDF generation
-        (not a stub) by asserting the specific, descriptive error message
+        Confirms the bridge attempts fpdf2-backed PDF generation
+        by asserting the specific, descriptive error message
         the real ``_generate_pdf`` helper raises when the optional
         dependency is absent, rather than a generic/opaque failure.
 
@@ -164,7 +164,7 @@ class TestExportReportGuiControlsExistL3:
     def test_export_report_button_exists_with_html_and_pdf_actions(qapp: QApplication) -> None:
         """The panel's export-report menu must expose both "Annotated HTML..." and "Annotated PDF..." actions.
 
-        Falsifiable: if the "Export Report" toolbar block were removed
+        If the "Export Report" toolbar block were removed
         from ``_populate_toolbar`` (``panel.py``), calling
         ``_build_export_report_menu`` would either not exist or return a
         menu missing these actions.
@@ -239,7 +239,7 @@ class TestExportAnnotatedHtmlGuiDispatchesRealBridgeL3:
     """L3: the "Annotated HTML..." action drives the real bridge call end-to-end and writes the file.
 
     ``AnnotatedExportRangeDialog.exec`` and ``QFileDialog.getSaveFileName``
-    are genuine modal Qt chrome that cannot be driven headlessly; as the other gate tests do for
+    are modal Qt chrome that cannot be driven headlessly; as the other gate tests do for
     ``QMessageBox.warning``, only that chrome is substituted --
     never the bridge or the dispatch call under test.
     """
@@ -248,7 +248,7 @@ class TestExportAnnotatedHtmlGuiDispatchesRealBridgeL3:
     def test_click_writes_real_html_bytes_to_the_chosen_path(qapp: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """Triggering the HTML export action writes the exact real bridge output to disk.
 
-        Falsifiable: if ``_on_export_annotated_html`` called anything other
+        If ``_on_export_annotated_html`` called anything other
         than ``bridge.export_annotated_html`` (or wrote different bytes
         than the bridge returned), the file on disk would not equal the
         bridge's own independently-invoked result. Broken production line:

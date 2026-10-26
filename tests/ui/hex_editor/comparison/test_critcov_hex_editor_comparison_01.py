@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Coverage for the file comparison tab of the hex editor panel.
 
-Every test drives ``ComparisonMixin`` through a small concrete widget host with real objects: a genuine ``intellicrack_hexcore.HexDocument``,
+Every test drives ``ComparisonMixin`` through a small concrete widget host with real objects: an ``intellicrack_hexcore.HexDocument``,
 a real ``HexEditorWidget``, a real ``HexEditorBridge``, the real Qt controls built by ``_create_comparison_tab`` and the real asynchronous
 worker the Compare button starts. The files being compared are written under ``tmp_path``, and every expected value (differing byte count,
 first differing offset, region count, file sizes) is computed here from the two byte strings rather than read back from the code under test.

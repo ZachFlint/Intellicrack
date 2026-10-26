@@ -27,7 +27,7 @@ log viewer.
 
 Every site must route through the shared
 ``intellicrack.ui.resources.font_manager.FontManager`` singleton instead.
-This module drives each real, unmocked widget-construction method under an
+This module drives each widget-construction method under an
 offscreen ``QApplication`` and asserts the constructed widget's font family is
 exactly the family the shared ``FontManager`` singleton currently resolves --
 not a literal hardcoded in the call site -- and separately scans the fixed

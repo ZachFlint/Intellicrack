@@ -9,7 +9,7 @@ Measured live through the GUI's own bridge,
 immediately after ``snapshot_list`` had returned ``[]`` for that instance.
 QEMU's job-based ``snapshot-delete`` is lenient where its siblings are not:
 it concludes without error for a tag no disk holds, while ``snapshot-load``
-of the same missing tag fails loudly and the block-layer command refuses it
+of the same missing tag fails with an error and the block-layer command refuses it
 outright (``Snapshot with id 'null' and name 'never-created' does not exist
 on device 'virtio0'``). So this was a leniency the app chose to pass on, not
 a QEMU limitation it had to accept - the same false-green family,
@@ -139,7 +139,7 @@ class TestDeletingASnapshotReportsWhatHappened:
     async def test_a_snapshot_that_exists_is_still_deleted(self, live_qemu: LiveQemu) -> None:
         """The control: a real tag is removed from the image and no error is raised.
 
-        This is what keeps the refusal honest. A ``delete_snapshot`` that
+        A ``delete_snapshot`` that
         raised for everything, or one whose post-check misread the block
         layer and rejected its own successful work, would satisfy the two
         tests above and fail this one.

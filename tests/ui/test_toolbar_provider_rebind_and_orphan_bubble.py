@@ -21,9 +21,8 @@ rendered into a live streaming bubble. ``MainWindow._on_message_received`` folds
 message into that bubble via ``ChatPanel.finalize_streaming_message`` instead of appending a
 second one.
 
-All three tests drive the real :class:`MainWindow` over a real :class:`Orchestrator` and real,
-self-contained :class:`LLMProviderBase` subclasses -- no mocked provider calls or asserted-on
-mocks. The toolbar and orphan-bubble tests disable streaming on the orchestrator config to exercise
+All three tests drive :class:`MainWindow` over an :class:`Orchestrator` and self-contained
+:class:`LLMProviderBase` subclasses. The toolbar and orphan-bubble tests disable streaming on the orchestrator config to exercise
 the non-streaming completion path described above; the duplicate-bubble test forces streaming on
 to exercise the streamed completion path.
 """
@@ -221,11 +220,10 @@ _STREAM_CHUNKS: Final[tuple[str, ...]] = ("Streaming ", "reply ", "chunks", ".")
 
 
 class _StreamingProvider(LLMProviderBase):
-    """Real, connectable provider whose ``chat_stream`` yields several deltas.
+    """Connectable provider whose ``chat_stream`` yields several deltas.
 
-    Used to drive a genuine streamed turn end to end through the real ``ChatPanel`` and
-    ``MainWindow`` signal wiring, so the duplicate assistant-bubble question is checked against
-    actual application code rather than a mocked chat panel.
+    Used to drive a streamed turn end to end through the ``ChatPanel`` and
+    ``MainWindow`` signal wiring to check the duplicate assistant-bubble question.
     """
 
     def __init__(self, provider_name: str, model_id: str) -> None:

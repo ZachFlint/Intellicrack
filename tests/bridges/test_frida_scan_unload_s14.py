@@ -12,7 +12,7 @@
 * ``unload_all_scripts`` ("Stop All Scripts") treats a script whose ``unload()`` raises because it is already
   destroyed or detached as a tolerated no-op, and always clears the registry.
 
-Both tests drive a REAL Frida runtime attached to the current test process
+Both tests drive a Frida runtime attached to the current test process
 (no external process is spawned, so no ``spawns_process`` marker is needed --
 matching the ``self_attached_bridge`` idiom also used in
 ``tests/bridges/test_frida_bridge.py``). Requires frida-python and a Windows
@@ -132,7 +132,7 @@ def test_scan_memory_resolves_within_timeout_and_finds_known_pattern(self_attach
     """Verify scan_memory finds a known pattern and always resolves within a bounded timeout.
 
     The scan runs in chunks through an async ``Memory.scan`` RPC agent, so the coroutine always resolves. Wrapping the
-    call in ``asyncio.wait_for`` is the falsifiable gate here: a real hang fails this test loudly with a
+    call in ``asyncio.wait_for`` bounds it: a hang fails this test with a
     ``TimeoutError`` instead of hanging the whole suite, and a broken scan (e.g. one that silently returns no results)
     fails the match assertion.
 

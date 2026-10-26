@@ -10,7 +10,7 @@
  * `aria-activedescendant` that names a live element, a ruler and a row pool
  * that come back at a new width, an ArrowDown that moves by that width - so
  * reading the source as text could not answer either of them. This suite
- * therefore builds the grid for real against a node model, the technique
+ * therefore builds the grid against a node model, the technique
  * dom_accessibility.test.mjs already uses, extended by the few things a
  * virtualised view needs that a button does not: a `getBoundingClientRect`
  * that derives a row's size from the cells actually in it, frame and timer
@@ -19,8 +19,8 @@
  *
  * grid.js imports api.js, which reads `document` and `window` at module scope,
  * which is why both globals are installed before the dynamic import rather
- * than after it. Nothing about the grid itself is stubbed: the class under
- * test is the real one, and every assertion below reads the DOM it produced.
+ * than after it. The class under test is the one grid.js exports, and every
+ * assertion below reads the DOM it produced.
  *
  * Run by gate.ps1 (or directly with node). Exits non-zero on failure.
  */

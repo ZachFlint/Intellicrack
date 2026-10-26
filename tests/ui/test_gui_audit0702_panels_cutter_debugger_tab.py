@@ -79,7 +79,7 @@ def _sample_modules() -> list[ModuleInfo]:
     Base addresses, sizes, and entry points are kept short (a handful of hex
     digits) so the Name/Base/Size/Entry Point columns have compact content
     widths, isolating the width comparison to the one column whose content
-    genuinely varies in length: Path.
+    varies in length: Path.
 
     Returns:
         list[ModuleInfo]: One module with a short path and one with a long,
@@ -192,7 +192,7 @@ class TestL5StatusLabelWordWrap:
     def test_l5_attach_error_sets_tooltip_matching_long_status_text(self, debugger_tab: DebuggerTab) -> None:
         """A real attach failure must mirror its full text into the label tooltip.
 
-        Drives the real ``_on_attach_error`` handler with a genuine
+        Drives the real ``_on_attach_error`` handler with an
         ``OSError`` whose ``str()`` is long, a realistic OS-level socket error. Without a tooltip mechanism on the label,
         ``toolTip()`` would remain the empty string instead of mirroring the status text.
 

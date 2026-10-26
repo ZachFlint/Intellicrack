@@ -13,7 +13,7 @@ contract of the real standalone named-pipe server in
 ``tests/_helpers/realcov_pipe_server.py``.
 
 Anything that talks to the plugin goes through that real Win32 named-pipe server
-(a child process hosting a genuine pipe). Anything that needs a "debugger process"
+(a child process hosting the pipe). Anything that needs a "debugger process"
 uses a real ``DesktopProcess`` running a Python sleeper on a hidden desktop.
 Memory-related checks run against real committed pages that the test allocates in
 its own address space with ``VirtualAlloc``. Lines that need a live x64dbg
@@ -1169,7 +1169,7 @@ async def test_disassemble_at_falls_back_to_capstone_on_a_non_list_reply() -> No
 @pytest.mark.spawns_process
 @pytest.mark.asyncio
 async def test_disassemble_at_propagates_a_remote_plugin_error() -> None:
-    """A genuine remote error is raised to the caller instead of silently using the local decoder."""
+    """A remote plugin error is raised to the caller instead of silently using the local decoder."""
     async with _served_bridge(srv.MODE_ECHO) as bridge:
         with pytest.raises(ToolError) as caught:
             await bridge.disassemble_at(0x1000, 1)

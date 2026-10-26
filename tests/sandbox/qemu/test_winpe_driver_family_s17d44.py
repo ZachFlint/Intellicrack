@@ -134,7 +134,7 @@ def test_select_winpe_driver_packages_prefers_the_guests_own_family_over_windows
 def test_select_winpe_driver_packages_still_falls_back_when_the_guests_own_family_is_absent() -> None:
     """A driver missing the guest's own family still resolves to a real one.
 
-    The medium carries a genuinely different set of families per driver, so a
+    The medium carries a different set of families per driver, so a
     Windows 10 guest whose own family is missing for one driver must still
     fall through the rest of :data:`WINPE_DRIVER_FAMILY_PREFERENCE` rather
     than being left with no package for that driver at all.

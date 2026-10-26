@@ -3,14 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Real-binary coverage for HexPat ``stdlib`` builtins.
+"""Compiled-binary coverage for HexPat ``stdlib`` builtins.
 
 These tests drive the real :class:`BuiltinFunctions` implementations against
-genuine compiled binaries (System32 PE DLLs/EXEs and the committed ELF corpus
+compiled binaries (System32 PE DLLs/EXEs and the committed ELF corpus
 fixture) and against deterministic byte sequences with externally verifiable
 results (``zlib.crc32``, hand-computed nibble extraction, hand-computed byte
-sums). No operation under test is mocked: every assertion validates a concrete
-computed value rather than that a call merely happened.
+sums). Every assertion validates a concrete computed value rather than that a call merely happened.
 
 The builtins are reached through the production :meth:`HexPatInterpreter.
 execute_bytes` pipeline (preprocessor -> lexer -> parser -> evaluator +
@@ -62,7 +61,7 @@ def _builtins_for(path: Path) -> tuple[BuiltinFunctions, bytes]:
     """Construct a real BuiltinFunctions over the full bytes of ``path``.
 
     Args:
-        path: Filesystem path to a real binary to read in full.
+        path: Filesystem path to a binary to read in full.
 
     Returns:
         tuple[BuiltinFunctions, bytes]: The builtins instance wrapping a
@@ -358,8 +357,7 @@ class TestStringParsingBuiltins:
         """parse_int with a base outside [2,36] raises a 'unsupported base' error.
 
         This explicitly distinguishes the base-validation error path from the
-        malformed-input error path, so that tests for each remain orthogonal
-        and independently falsifiable.
+        malformed-input error path, so that tests for each remain orthogonal.
         """
         reader = DataReader.from_bytes(bytes(4))
         builtins = BuiltinFunctions(reader)
@@ -449,7 +447,7 @@ class TestEnvironmentBuiltin:
         """std::env returns the live value of a real environment variable.
 
         ``monkeypatch`` only seeds the real process environment that the
-        builtin reads via ``os.environ``; the lookup itself is the genuine
+        builtin reads via ``os.environ``; the lookup itself is the
         operation under test.
 
         Args:

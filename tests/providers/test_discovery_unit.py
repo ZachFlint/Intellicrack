@@ -7,8 +7,8 @@
 
 These tests drive the real ModelDiscovery, DiscoveryCache, and DiscoveryFilter
 implementations with exact known-correct expected values derived independently
-of the production code. Every test is a genuine falsifiable gate: removing or
-corrupting the covered production code causes the test to go red.
+of the production code. Removing or corrupting the covered production code
+causes the test to go red.
 """
 
 from __future__ import annotations
@@ -543,7 +543,7 @@ class TestRealProviderConnectionContract:
     :class:`ModelDiscovery` logic through a configurable provider source
     (``_DiscoveryProvider``); the provider there is an input, not the thing
     under test. These tests drive the
-    pipeline through the genuine production :class:`OpenAIProvider` in its real,
+    pipeline through the production :class:`OpenAIProvider` in its
     unconnected state. They exercise the real base-class connection-state
     contract (``is_connected`` derived from ``connected``) and the real
     provider's ``list_models`` guard, neither of which a stub that hardcodes
@@ -598,7 +598,7 @@ class TestRealProviderConnectionContract:
         """The real base-class connection flag flips through connect/disconnect.
 
         ``discover_provider`` gates on ``is_connected``; that property must
-        reflect the real ``connected`` flag. Driving the genuine provider
+        reflect the real ``connected`` flag. Driving the ``OpenAIProvider``
         through ``disconnect`` proves the flag is honoured rather than pinned.
         """
         provider = OpenAIProvider()
@@ -673,8 +673,8 @@ class TestRealProviderDiscoveryErrorPropagation:
     message. Only the inner except path on the coroutine produces that event;
     if ``ProviderError`` were removed from the except clause the exception would
     propagate past the inner handler, be caught by ``asyncio.gather``, and no
-    ``DiscoveryEvent`` would be appended — making the event-message assertion the
-    falsifying gate.
+    ``DiscoveryEvent`` would be appended — so the event-message assertion would
+    fail.
     """
 
     @pytest.mark.asyncio

@@ -6,7 +6,7 @@
 
 Covers ``_StateTracker`` clearing ``BridgeState.last_error`` on success
             after a prior failure; the fail-then-succeed lifecycle is verified
-            without mocking any production code.
+            end to end.
   Operation error paths. These gates use real ``SandboxBridge`` methods
             against deterministic code paths that require no external sandbox.
 """
@@ -186,7 +186,7 @@ class TestStateTrackerClearsLastErrorOnSuccess:
 
 
 class TestSandboxBridgeManagerGates:
-    """Gate for SandboxBridge operation error paths without mocking.
+    """Gate for SandboxBridge operation error paths.
 
     All tests here drive the real ``SandboxBridge`` code without patching.
     """

@@ -846,7 +846,7 @@ class TestEncodeButtonSignalWiring:
     * The second gate emits ``clicked`` exclusively via the signal
       (never calling ``_on_encode_text`` directly) and checks that the
       encode output label is updated.  A missing ``connect`` call leaves
-      the label empty, falsifying this gate independently of the count.
+      the label empty, failing this test independently of the count.
     """
 
     @staticmethod
@@ -881,8 +881,8 @@ class TestEncodeButtonSignalWiring:
         ``_create_text_decode_group`` constructor, then the button is triggered
         by emitting the ``clicked`` signal.  The slot body is never called
         directly.  A missing ``connect`` in ``_create_text_decode_group`` leaves
-        the output label in its initial state (empty string), falsifying this
-        assertion and proving the signal wire-up is the controlling factor.
+        the output label in its initial state (empty string), failing this
+        assertion, so the signal wire-up is the controlling factor.
 
         The bridge is set to ``None`` so the path reaches the
         ``"Error: hex editor bridge not available"`` branch rather than an

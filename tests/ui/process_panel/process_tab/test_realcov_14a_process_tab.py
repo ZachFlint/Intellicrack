@@ -7,7 +7,7 @@
 Rendering is checked against the real ``ProcessBridge.list_processes_detailed``
 enumeration rather than a counter override of ``_refresh_tracked``. These tests wire a real
 :class:`ProcessBridge` and drive ``ProcessTab._on_refresh`` so the process
-table is populated from the genuine system process snapshot. Assertions check
+table is populated from the system process snapshot. Assertions check
 real, verifiable values: the running interpreter's own PID must appear, every
 PID is a positive integer, and the name filter must restrict the rendered rows
 to the requested image name enumerated from the real OS.
@@ -176,7 +176,7 @@ def test_process_table_renders_real_fields_for_running_interpreter(qapp: QApplic
     """The rendered row for this PID must match the real OS process fields.
 
     Beyond merely containing ``os.getpid()``, the row rendered for the running
-    interpreter must carry the genuine image name (the Python executable's own
+    interpreter must carry its image name (the Python executable's own
     file name, e.g. ``python.exe``) and a thread count that agrees with what an
     independent oracle (``psutil``) reports for the same live process. If the
     bridge returned a hardcoded or stale snapshot, the name or thread count
@@ -279,7 +279,7 @@ def test_rendered_pids_match_real_bridge_snapshot(
     integer (PID 0 is the Windows System Idle Process, which the real
     enumeration legitimately includes), which a fabricated ``str`` or ``None``
     payload cannot satisfy. The subset check proves the rendered set is derived
-    from the genuine ``list_processes_detailed`` enumeration and not from any
+    from the ``list_processes_detailed`` enumeration and not from any
     injected data.
 
     Args:

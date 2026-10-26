@@ -114,7 +114,7 @@ class TestEnableDllBreakpointButtonOmitsArgumentWhenNameIsEmpty:
     ) -> None:
         """An empty DLL name field must send the argument-less "enable all" command.
 
-        Falsifiable: an implementation that always appends ``""`` or the
+        An implementation that always appends ``""`` or the
         literal text ``"None"`` would send
         ``LibrarianEnableBreakpoint ""`` or
         ``LibrarianEnableBreakpoint None`` here instead of the bare,
@@ -177,7 +177,7 @@ class TestDisableDllBreakpointButtonOmitsArgumentWhenNameIsEmpty:
     ) -> None:
         """An empty DLL name field must send the argument-less "disable all" command.
 
-        Falsifiable: an implementation that always appends ``""`` or the
+        An implementation that always appends ``""`` or the
         literal text ``"None"`` would send
         ``LibrarianDisableBreakpoint ""`` or
         ``LibrarianDisableBreakpoint None`` here instead of the bare,

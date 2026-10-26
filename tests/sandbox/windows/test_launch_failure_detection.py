@@ -202,7 +202,7 @@ class TestCheckStartupHealth:
         The independent oracle for expected state is the SandboxState dataclass
         defaults declared in base.py: status='stopped', pid=None,
         started_at=None, last_error=None.  The detector-call spy proves the
-        None-guard caused an early return.  Static falsifiability proof: deleting
+        None-guard caused an early return.  Deleting
         the ``if self.process is None: return`` guard causes the method to call
         ``self.process.poll()`` on None, raising AttributeError before any
         assertion runs.

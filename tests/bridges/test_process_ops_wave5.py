@@ -9,8 +9,7 @@ verification; remove_privilege post-removal token inspection; pipe_write
 round-trip via pipe_read; stack_walk producing at least one frame with a
 non-zero pc; inject_dll success (skipped when admin is unavailable).
 
-All tests use real Win32 APIs against the current Python process.  No mocks
-of Win32 call sites.  The oracle for each assertion is the Win32 API itself
+All tests use real Win32 APIs against the current Python process.  The oracle for each assertion is the Win32 API itself
 (reading back the state the bridge just modified) or raw kernel32 arithmetic.
 """
 
@@ -302,8 +301,8 @@ class TestStackWalkSuccessPath:
     Each frame dict must contain an ``'address'`` key whose value is a non-zero
     integer (any valid code pointer).  The production code uses the key ``'address'`` for the program counter value.
 
-    Oracle: the first frame's ``'address'`` is compared against 0; any non-zero
-    value proves StackWalk64 returned a real return address.
+    Oracle: the first frame's ``'address'`` is compared against 0; a non-zero
+    value shows StackWalk64 filled in a return address.
 
     Mutation caught: if stack_walk silently returns an empty list (e.g. the
     StackWalk64 loop is deleted), ``len(result) >= 1`` fails.  If address

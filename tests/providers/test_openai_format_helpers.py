@@ -12,9 +12,8 @@ Covers these consolidated helpers:
 * ``_extract_system_messages``
 * ``_translate_openai_errors``
 
-Tests use real :class:`Message` objects, real :class:`UsageInfo`
-results, and real ``openai`` SDK exception types - no mocks, no
-stubs. Protected static methods are reached via ``getattr`` so the
+Tests use :class:`Message` objects, :class:`UsageInfo` results,
+and ``openai`` SDK exception types. Protected static methods are reached via ``getattr`` so the
 tests do not trip ``reportPrivateUsage``.
 """
 
@@ -662,7 +661,7 @@ def _make_real_chunk_with_usage(
 def test_build_usage_from_real_chat_completion_populated() -> None:
     """Real ``ChatCompletion`` SDK object yields exact token counts in ``UsageInfo``.
 
-    Constructs a genuine ``openai.types.chat.ChatCompletion`` via
+    Constructs an ``openai.types.chat.ChatCompletion`` via
     ``model_validate`` (the same path the SDK uses for live API responses)
     and passes it directly to the helper. Validates that the exact field
     values round-trip correctly through ``CompletionUsage`` and into

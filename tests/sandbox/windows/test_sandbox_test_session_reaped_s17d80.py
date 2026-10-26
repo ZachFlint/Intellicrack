@@ -24,9 +24,9 @@ These gates drive the **real** :class:`SandboxTestWorker` against a **real
 Windows Sandbox** and judge the outcome with ``Win32_Process``, an oracle
 outside the worker entirely: the session is matched by the exact ``.wsb``
 filename on its command line, so nothing else on the host can be mistaken for
-it. The control proves the environment is one where a session genuinely starts
+it. The control checks that the environment is one where a session starts
 - otherwise "no session survives" would pass on a host that can create no
-sandbox at all, which is the tautology this defect hid behind.
+sandbox at all, which is how this defect stayed hidden.
 
 Windows Sandbox needs a working Host Compute Service and cannot exist in the
 test container, so these run in the host-native pass and skip where a session
@@ -201,7 +201,7 @@ def _kill_sessions(pids: list[int]) -> None:
 
 @pytest.fixture
 def worker_run() -> Iterator[_WorkerRun]:
-    """Run the real Test Sandbox worker once and clean up whatever survives.
+    """Run the Test Sandbox worker once and clean up whatever survives.
 
     The cleanup is the fixture's own, not the worker's: it exists so a failing
     run - which by definition leaks - cannot leave a sandbox holding HCS for
@@ -229,7 +229,7 @@ def worker_run() -> Iterator[_WorkerRun]:
     worker.wait(int(_REAP_GRACE_S * 1000))
     app.processEvents()
 
-    assert verdict, "the real Test Sandbox worker never reported a verdict"
+    assert verdict, "the Test Sandbox worker never reported a verdict"
     success, message = verdict[0]
     wsb_name = worker.observed_wsb_name()
     observed = worker.captured_session_pid
@@ -245,7 +245,7 @@ class TestTheTestSandboxPathLeavesNoSessionRunning:
     """Test Sandbox must reap the sandbox it started."""
 
     def test_a_session_really_started(self, worker_run: _WorkerRun) -> None:
-        """The control: this host genuinely creates a sandbox session.
+        """The control: this host creates a sandbox session.
 
         Without this, the leak assertion below would pass on a host where no
         sandbox can be created at all - nothing started, so nothing survives -

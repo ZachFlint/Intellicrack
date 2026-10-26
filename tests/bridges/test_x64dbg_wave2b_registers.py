@@ -203,8 +203,8 @@ class TestGetRegisters:
 
         The SUT cannot reproduce ``_RAX_VALUE`` / ``_CS_VALUE`` etc.
         without correctly dispatching ``reg_all`` and parsing the
-        response, so these assertions are falsifiable by any parsing
-        regression.
+        response, so any parsing regression fails these
+        assertions.
 
         Args:
             bridge: Fresh bridge fixture.

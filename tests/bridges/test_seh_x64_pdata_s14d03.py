@@ -12,7 +12,7 @@ entries whose ``UNWIND_INFO`` carries a real ``EHANDLER``/``UHANDLER``.
 
 The target is the live 64-bit Python test-runner process itself (attached
 via ``os.getpid()``), so this exercises real ``ReadProcessMemory`` calls
-against real PE headers -- no mocking of the behavior under test. Because it
+against the loaded modules' PE headers. Because it
 needs a live x64 process and raw memory access, it is registered as
 ``host_native`` in ``tests/_helpers/host_native.py`` and only runs on the
 host, not inside the sandbox container.
@@ -102,10 +102,10 @@ async def test_seh_chain_x64_target_returns_nonempty_pdata_handlers(
 
     The bridge must not raise ``ToolError("SEH chain not
     applicable to x64 target")`` on native x64 targets; it must instead
-    return genuine handler-carrying ``RUNTIME_FUNCTION`` entries parsed from
+    return handler-carrying ``RUNTIME_FUNCTION`` entries parsed from
     the target's own loaded-module exception directories.
 
-    Falsifiability: a ``get_seh_chain`` that raises on x64 makes this ``await`` raise ``ToolError`` instead of
+    A ``get_seh_chain`` that raises on x64 makes this ``await`` raise ``ToolError`` instead of
     returning a list, failing immediately. Returning an empty list (for
     example from a broken data-directory index, or reading the wrong
     ``RUNTIME_FUNCTION`` field as the unwind-info RVA) fails the
@@ -147,14 +147,13 @@ async def test_seh_chain_x64_addresses_resolve_within_loaded_modules(
 ) -> None:
     """Every ``.pdata`` handler entry's addresses fall inside a real loaded module.
 
-    This proves the RVA-plus-module-base arithmetic is genuine rather than
-    garbage: both the function start address and the resolved handler
+    Checks the RVA-plus-module-base arithmetic: both the function start address and the resolved handler
     address must land inside some module's real ``[base, base + size)``
     range, and at least one entry must be attributed to ``ntdll.dll``
     (every modern Windows x64 build's ``ntdll.dll`` carries SEH-using
     routines with real ``.pdata`` handler entries).
 
-    Falsifiability: breaking the RVA-to-VA math (for example adding the
+    Breaking the RVA-to-VA math (for example adding the
     wrong module's base, or using a stale/incorrect exception-directory
     RVA) produces addresses outside every enumerated module's range,
     failing the bounds assertions. A raise-on-x64 implementation fails at the initial ``await`` before any assertion runs.

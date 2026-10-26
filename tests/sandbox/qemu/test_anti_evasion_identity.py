@@ -321,7 +321,7 @@ def _reg_value_for(argv: list[str]) -> str:
 
     Returns:
         str: The value following the ``/d`` flag. The lookup asserts the flag
-        and a following value are present so a malformed argv fails loudly.
+        and a following value are present so a malformed argv raises an AssertionError.
     """
     assert "/d" in argv, f"reg.exe argv {argv!r} has no /d data flag"
     idx = argv.index("/d")
@@ -343,7 +343,7 @@ def _smbios_type1_identity_from_launch_cmd(cmd: list[str]) -> tuple[str, str]:
     Returns:
         tuple[str, str]: ``(manufacturer, product)`` carried by the type-1
         SMBIOS entry. The parse asserts exactly one type-1 entry exists and it
-        carries both fields, so a malformed launch command fails loudly.
+        carries both fields, so a malformed launch command raises an AssertionError.
     """
     type1_values: list[str] = []
     for i, arg in enumerate(cmd):
@@ -364,7 +364,7 @@ def _make_disk_image(tmp_path: Path) -> Path:
 
     ``_build_qemu_command`` only requires the configured image path to exist on
     disk; it does not parse the image. A valid qcow2 v3 header is written so the
-    fixture is a genuine (if empty) qcow2 file rather than arbitrary bytes.
+    fixture is a valid (if empty) qcow2 file rather than arbitrary bytes.
 
     Args:
         tmp_path: Per-test temporary directory.
@@ -697,7 +697,7 @@ class TestF0022RegExeAllowlistSafe:
     def test_apply_anti_evasion_raises_when_agent_rejects_commands(self) -> None:
         """A rejecting agent makes the call fail rather than report a clean success.
 
-        Confirms the success test above is falsifiable and that guest-side
+        Confirms that guest-side
         failures are not silently dropped: an agent whose allowlist rejects
         every command returns ``-1`` for each dispatch, so no guest-side
         hardening actually ran. Reporting only the launch-time techniques as a

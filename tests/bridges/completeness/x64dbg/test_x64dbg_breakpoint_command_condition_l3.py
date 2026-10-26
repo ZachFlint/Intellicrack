@@ -66,7 +66,7 @@ class TestSetBreakpointCommandConditionButtonDrivesTypeBranchedRpc:
     ) -> None:
         """An address this bridge never recorded must default to the software command.
 
-        Falsifiable: if ``X64DbgBridge.set_breakpoint_command_condition``
+        If ``X64DbgBridge.set_breakpoint_command_condition``
         (``bridges/x64dbg.py``) did not resolve the breakpoint type via
         ``_resolve_breakpoint_type``, or the Advanced tab's
         ``_on_set_breakpoint_command_condition`` read a different
@@ -111,7 +111,7 @@ class TestSetBreakpointCommandConditionButtonDrivesTypeBranchedRpc:
     ) -> None:
         """An address this bridge recorded as memory must branch to the memory command.
 
-        Falsifiable: this is the case a hardcoded software-only command
+        This is the case a hardcoded software-only command
         cannot pass. If ``set_breakpoint_command_condition`` sent
         ``SetBreakpointCommandCondition`` regardless of ``bp_type``,
         the recorded command would not match

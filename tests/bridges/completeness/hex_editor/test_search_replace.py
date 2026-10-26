@@ -59,7 +59,7 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
 class TestReplaceBytesBridgeL1:
     """L1: ``HexEditorBridge.replace_bytes`` performs a real byte-pattern replace.
 
-    Falsifiable: deleting ``HexEditorBridge.replace_bytes`` or reverting it
+    Deleting ``HexEditorBridge.replace_bytes`` or reverting it
     to a no-op that returns ``0`` without calling
     ``self.document.replace_bytes`` makes every assertion below fail, since
     the post-replace read of the real document would still show the
@@ -112,7 +112,7 @@ class TestReplaceBytesBridgeL1:
     def test_no_document_raises_runtime_error(self, bridge: HexEditorBridge) -> None:
         """Calling ``replace_bytes`` with no open document raises ``RuntimeError``.
 
-        Falsifiable: removing the ``self.document is None`` guard would
+        Removing the ``self.document is None`` guard would
         instead raise ``AttributeError`` from ``self.document.replace_bytes``.
 
         Args:
@@ -140,7 +140,7 @@ class TestReplaceBytesDispatchL2:
     def test_execute_tool_call_dispatches_real_replace(tmp_path: Path) -> None:
         """Dispatching via ``ToolRegistry.execute_tool_call`` performs the real replace.
 
-        Falsifiable: if the tool-def's ``function_name`` did not match the
+        If the tool-def's ``function_name`` did not match the
         ``replace_bytes`` attribute (as with ``disassemble``/``disassemble_at``), ``getattr`` inside
         ``execute_tool_call`` would resolve to ``None`` and this call would
         raise ``ToolError`` for an unknown function instead of mutating the
@@ -180,7 +180,7 @@ class TestReplaceGuiControlsExistL3:
     def test_replace_input_and_buttons_exist(qapp: QApplication) -> None:
         """``_replace_input`` and both Replace buttons must exist on the panel.
 
-        Falsifiable: removing the Replace toolbar block from
+        Removing the Replace toolbar block from
         ``_populate_toolbar`` (``panel.py``) makes ``hasattr`` fail on
         ``_replace_input``.
 
@@ -200,7 +200,7 @@ class TestReplaceGuiControlsExistL3:
     def test_on_replace_and_on_replace_all_are_bound_handlers(qapp: QApplication) -> None:
         """``_on_replace``/``_on_replace_all`` must be real bound methods on the panel.
 
-        Falsifiable: if the toolbar buttons were wired to a different (or
+        If the toolbar buttons were wired to a different (or
         no-op) handler, these attributes would either not exist or would
         not be the ``SearchMixin`` methods that call ``replace_bytes``.
 
@@ -223,7 +223,7 @@ class TestReplaceAllGuiDispatchesRealBridgeL3:
     def test_replace_all_hex_mode_mutates_real_document(qapp: QApplication) -> None:
         """Hex-mode Replace All rewrites every occurrence in the real open document.
 
-        Falsifiable: if ``_on_replace_all`` called anything other than
+        If ``_on_replace_all`` called anything other than
         ``bridge.replace_bytes`` (e.g. reverted to a no-op or a client-side
         reimplementation), the post-call read of the real document would
         still contain the original pattern bytes. Broken production line:
@@ -305,7 +305,7 @@ class TestReplaceAllGuiDispatchesRealBridgeL3:
     def test_replace_all_without_bridge_shows_warning_and_does_not_raise(qapp: QApplication) -> None:
         """Replace All with no attached bridge must warn, not crash or silently mutate.
 
-        Falsifiable: if the ``bridge is None`` guard in ``_on_replace_all``
+        If the ``bridge is None`` guard in ``_on_replace_all``
         were removed, this call would raise ``AttributeError`` on
         ``bridge.replace_bytes`` instead of returning quietly after the
         warning dialog is shown.
@@ -347,7 +347,7 @@ class TestRunPythonScriptCapabilityGateRegression:
     def test_bridge_declares_static_analysis_capability(bridge: HexEditorBridge) -> None:
         """``HexEditorBridge`` must declare ``supports_static_analysis=True``.
 
-        Falsifiable: if this capability flag were reverted to its default
+        If this capability flag were reverted to its default
         (``False``), the dispatch test below would raise ``ToolError`` for a
         missing capability instead of reaching the disabled method's own
         ``ToolError``.
@@ -361,7 +361,7 @@ class TestRunPythonScriptCapabilityGateRegression:
     def test_execute_tool_call_reaches_disabled_method_not_capability_gate(tmp_path: Path) -> None:
         """Dispatching ``hex_editor.run_python_script`` raises the method's own disablement error.
 
-        Falsifiable: if the capability gate in ``ToolRegistry.execute_tool_call``
+        If the capability gate in ``ToolRegistry.execute_tool_call``
         rejected the call first, the raised message would contain
         ``missing capability`` rather than ``disabled: in-process Python``.
         Broken production line: ``supports_static_analysis=True`` in

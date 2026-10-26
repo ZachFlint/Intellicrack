@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from intellicrack.ui.panels.hex_editor.base import (
+    HASH_ALGORITHMS,
     compute_custom_crc,
     compute_hash,
     compute_streaming_custom_crc,
@@ -124,39 +125,30 @@ class TestChecksumsMatchReference:
         assert compute_custom_crc(check_vector, 8, 0x07, 0x00, ref_in=False, ref_out=False, xor_out=0x00) == catalogue_crc8
         assert compute_hash("CRC-8", check_vector) == f"{catalogue_crc8:02x}"
 
-    def test_crc16_engine_matches_production_dispatch(self) -> None:
-        """Verify the CRC-16 engine against the published catalogue check value.
+    def test_crc16_engines_match_their_catalogue_check_values(self) -> None:
+        """Verify both CRC-16 paths against the published catalogue check values.
 
-        The standard CRC-16/ARC algorithm (poly=0x8005, init=0x0000,
-        ref_in=True, ref_out=True, xor_out=0x0000) applied to the canonical
-        test vector ``b"123456789"`` must produce 0xBB3D.  This constant is
-        from the CRC Catalogue (CRC-16/ARC, also known as CRC-16/IBM) and
-        is derived independently of the production implementation.
-
-        ``compute_hash("CRC-16", ...)`` must produce the same formatted result,
-        proving the dispatcher wires the correct parameters to the engine.
+        The parametric engine with CRC-16/ARC parameters (poly=0x8005,
+        init=0x0000, ref_in=True, ref_out=True, xor_out=0x0000) must give
+        0xBB3D on ``b"123456789"``. The ``"CRC-16"`` label is the hex engine's
+        CRC-16/IBM-SDLC, whose catalogue check value is 0x906E, the value the
+        Hashing tab shows for that label. Both constants come from the CRC
+        RevEng catalogue, independently of the production code.
         """
         check_vector = b"123456789"
-        catalogue_crc16 = 0xBB3D
-        assert compute_custom_crc(check_vector, 16, 0x8005, 0x0000, ref_in=True, ref_out=True, xor_out=0x0000) == catalogue_crc16
-        assert compute_hash("CRC-16", check_vector) == f"{catalogue_crc16:04x}"
+        assert compute_custom_crc(check_vector, 16, 0x8005, 0x0000, ref_in=True, ref_out=True, xor_out=0x0000) == 0xBB3D
+        assert compute_hash("CRC-16", check_vector) == "906e"
 
-    def test_crc64_engine_matches_production_dispatch(self) -> None:
-        """Verify the CRC-64 engine against the published catalogue check value.
+    def test_crc64_engines_match_their_catalogue_check_values(self) -> None:
+        """Verify both CRC-64 paths against the published catalogue check values.
 
-        The CRC-64/ECMA-182 algorithm (poly=0x42F0E1EBA9EA3693,
-        init=0xFFFFFFFFFFFFFFFF, ref_in=False, ref_out=False,
-        xor_out=0xFFFFFFFFFFFFFFFF) applied to the canonical test vector
-        ``b"123456789"`` must produce 0x62EC59E3F1A4F00A.  This constant is
-        from the CRC Catalogue (CRC-64/ECMA-182 / CRC-64/WE) and is derived
-        independently of the production implementation by the CRC RevEng
-        project.
-
-        ``compute_hash("CRC-64", ...)`` must produce the same formatted result,
-        proving the dispatcher wires the correct parameters to the engine.
+        The parametric engine with CRC-64/WE parameters (poly=0x42F0E1EBA9EA3693,
+        init and xor_out all ones, unreflected) must give 0x62EC59E3F1A4F00A on
+        ``b"123456789"``. The ``"CRC-64"`` label is the hex engine's
+        CRC-64/ECMA-182 (init and xor_out zero), whose catalogue check value is
+        0x6C40DF5F0B497347, the value the Hashing tab shows for that label.
         """
         check_vector = b"123456789"
-        catalogue_crc64 = 0x62EC59E3F1A4F00A
         assert (
             compute_custom_crc(
                 check_vector,
@@ -167,9 +159,50 @@ class TestChecksumsMatchReference:
                 ref_out=False,
                 xor_out=0xFFFFFFFFFFFFFFFF,
             )
-            == catalogue_crc64
+            == 0x62EC59E3F1A4F00A
         )
-        assert compute_hash("CRC-64", check_vector) == f"{catalogue_crc64:016x}"
+        assert compute_hash("CRC-64", check_vector) == "6c40df5f0b497347"
+
+
+class TestEngineLabels:
+    """``compute_hash`` resolves every advertised label through the hex engine."""
+
+    @staticmethod
+    def test_every_advertised_label_produces_a_digest(real_pe_dll: Path) -> None:
+        """Verify no label in ``HASH_ALGORITHMS`` is rejected over a real PE body.
+
+        Args:
+            real_pe_dll: Real PE DLL fixture path.
+        """
+        data = _read_real_pe(real_pe_dll)
+        results = {algo: compute_hash(algo, data) for algo in HASH_ALGORITHMS}
+        assert {algo: digest for algo, digest in results.items() if digest.startswith("Error:")} == {}
+        assert all(int(digest, 16) >= 0 for digest in results.values())
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        ("algo", "data", "expected"),
+        [
+            ("SipHash64", b"test", "3d5124c4cd58914e"),
+            ("SipHash128", b"test", "1db83d391aa42131ee6b5493810c6370"),
+            ("XXHash32", b"abc", "32d153ff"),
+            ("XXHash64", b"abc", "44bc2cf5ad770999"),
+        ],
+    )
+    def test_keyed_and_xx_hashes_match_known_answers(algo: str, data: bytes, expected: str) -> None:
+        """Verify SipHash-2-4 (zero key) and xxHash (seed 0) against independently computed values.
+
+        Args:
+            algo: Algorithm label.
+            data: Input bytes.
+            expected: Known-answer digest.
+        """
+        assert compute_hash(algo, data) == expected
+
+    @staticmethod
+    def test_unknown_label_reports_the_engine_error() -> None:
+        """An unknown label returns the engine's rejection as an ``Error:`` string."""
+        assert compute_hash("NOPE-9", b"abc") == "Error: unsupported algorithm: nope-9"
 
     def test_unreflected_crc32_engine_matches_bit_serial(self, real_pe_dll: Path) -> None:
         """Verify the parametric engine produces the catalogue value for CRC-32/BZIP2-no-xor.

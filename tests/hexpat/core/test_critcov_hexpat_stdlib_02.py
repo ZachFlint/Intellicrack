@@ -958,7 +958,7 @@ class TestReflectionUnwired:
             ("set_pattern_comment", ("c",)),
         ],
     )
-    def test_unwired_pattern_builtins_fail_loudly(self, make_rig: Callable[..., _Rig], name: str, extra: tuple[object, ...]) -> None:
+    def test_unwired_pattern_builtins_raise_an_error(self, make_rig: Callable[..., _Rig], name: str, extra: tuple[object, ...]) -> None:
         """Without a provider every pattern-taking reflection builtin raises instead of answering.
 
         Args:
@@ -979,7 +979,7 @@ class TestReflectionUnwired:
             ("execute_function", ("f",)),
         ],
     )
-    def test_unwired_palette_and_dispatch_builtins_fail_loudly(
+    def test_unwired_palette_and_dispatch_builtins_raise_an_error(
         self,
         make_rig: Callable[..., _Rig],
         name: str,

@@ -4,8 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 r"""The tabs were read before the collectors had written.
 
-Measured live on a Windows Sandbox run that genuinely made registry changes and
-genuinely touched the clipboard: the Registry Changes and Clipboard tabs came
+Measured live on a Windows Sandbox run that made registry changes and
+touched the clipboard: the Registry Changes and Clipboard tabs came
 back empty. The host read them at ``14:47:29``. The surviving collectors' logs
 reached the host across a 21-second spread after that point - dll and file at
 +0s, kernel_object and process at +1s, resource and service at +2s, registry at

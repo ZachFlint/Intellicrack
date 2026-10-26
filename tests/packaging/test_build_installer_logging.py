@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable tests that the installer build captures a reviewable log.
+r"""Tests that the installer build captures a reviewable log.
 
 ``just build-installer`` must leave a reviewable record. Its steps write to a
 log file as well as the console, because once the terminal is cleared the build
@@ -16,12 +16,12 @@ each run) as well as the console. It runs no tests: a build must not depend on
 the test container being up, and an unrelated test failure must not fail a
 compile, so staging and verification stay separate operations.
 
-These gates hold that behavior honest by *executing* the script's real logging
+These tests check that behavior by *executing* the script's logging
 functions rather than restating them: ``Write-LogLine``, ``Write-Both`` and
 ``Split-CommandArgument`` are lifted verbatim out of the production script, run
 under ``pwsh`` against a temporary log, and their effects asserted. Deleting the
 ANSI strip, the file append or the empty-argument guard reddens a test here. A
-separate wiring gate holds that the recipe actually delegates to the script, so
+separate wiring test checks that the recipe delegates to the script, so
 the logging cannot be bypassed by a recipe edit.
 
 ``pwsh`` is a host utility, so these run in the host-native pass.

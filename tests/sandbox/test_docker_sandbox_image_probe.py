@@ -15,6 +15,14 @@ The driver therefore classifies a probe three ways (:class:`ImagePresence`) and
 only accepts Docker's explicit "No such image" text as proof of absence;
 ``build_image`` refuses to rebuild on an inconclusive probe.
 
+Every rebuild reuses the one ``intellicrack-sandbox:latest`` tag, so a rebuild
+that produces a new image leaves the old ~40 GB one dangling. ``build_image``
+removes that replaced image once the build succeeds, and must never remove the
+image the tag still points at. A failed legacy-builder build also leaves its last
+finished step behind as a dangling image; the next successful build removes
+those leftovers, but only ones built from the sandbox Dockerfile, and never
+while another build may still be using its own intermediate steps.
+
 These tests drive the real driver functions in a subprocess against a **stub**
 Docker CLI on ``PATH`` whose ``image inspect`` behaviour is controlled, so the
 tests observe genuine subprocess behaviour rather than a mocked return value.
@@ -25,6 +33,7 @@ daemon-error cases report ``ABSENT`` and those tests fail.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -207,7 +216,7 @@ def test_probe_retries_until_a_definitive_answer(tmp_path: Path) -> None:
     assert counter.exists(), "stub was never invoked; the probe did not run"
 
 
-def _build_body(tmp_path: Path) -> str:
+def _build_body(tmp_path: Path, *, rebuild: bool = False) -> str:
     """Build a driver snippet that calls ``build_image`` and reports the outcome.
 
     ``build_image`` rejects a missing Dockerfile before it probes the image
@@ -218,6 +227,7 @@ def _build_body(tmp_path: Path) -> str:
 
     Args:
         tmp_path: Directory the placeholder Dockerfile is written to.
+        rebuild: Value passed as ``build_image``'s ``rebuild`` argument.
 
     Returns:
         str: Python statements to execute in the driver subprocess.
@@ -230,7 +240,7 @@ def _build_body(tmp_path: Path) -> str:
         docker_sandbox._DOCKERFILE = Path(r"{dockerfile}")
         assert docker_sandbox._DOCKERFILE.exists(), "precondition: Dockerfile must exist"
         try:
-            tag = docker_sandbox.build_image("intellicrack-sandbox:latest")
+            tag = docker_sandbox.build_image("intellicrack-sandbox:latest", rebuild={rebuild})
             print("RESULT=built:" + tag)
         except docker_sandbox.SandboxError as exc:
             print("RESULT=raised")
@@ -274,4 +284,207 @@ def test_build_image_still_builds_when_image_is_genuinely_absent(tmp_path: Path)
     result = _run_driver(tmp_path, _build_body(tmp_path))
     assert "RESULT=built:intellicrack-sandbox:latest" in result.stdout, (
         f"a genuinely absent image must still build; stdout={result.stdout} stderr={result.stderr}"
+    )
+
+
+_OLD_IMAGE_ID = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+_NEW_IMAGE_ID = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+
+
+def _write_rebuild_stub(directory: Path, *, id_after_build: str, build_exit: int = 0) -> Path:
+    """Create a stub ``docker.cmd`` that models a tag moving across a rebuild.
+
+    ``image inspect`` reports :data:`_OLD_IMAGE_ID` until ``build`` has run and
+    ``id_after_build`` afterwards. ``build`` creates a marker file only when it
+    succeeds. ``image rm`` appends its argument to the returned log file.
+
+    Args:
+        directory: Directory the stub and its state files are written to.
+        id_after_build: Image ID the tag resolves to once a build has run.
+        build_exit: Exit code ``build`` returns.
+
+    Returns:
+        Path: The file every ``image rm`` argument is appended to.
+    """
+    built_marker = directory / "built.txt"
+    removed_log = directory / "removed.txt"
+    built_step = f'>"{built_marker}" echo built & exit /b 0' if build_exit == 0 else f"exit /b {build_exit}"
+    stub = textwrap.dedent(
+        f"""\
+        @echo off
+        if "%1"=="build" ( {built_step} )
+        if not "%1"=="image" exit /b 0
+        if "%2"=="rm" ( >>"{removed_log}" echo %~3& exit /b 0 )
+        if exist "{built_marker}" ( echo {id_after_build}& exit /b 0 )
+        echo {_OLD_IMAGE_ID}
+        exit /b 0
+        """,
+    )
+    (directory / "docker.cmd").write_text(stub, encoding="utf-8")
+    return removed_log
+
+
+def _removed_ids(removed_log: Path) -> list[str]:
+    """Read the image IDs the stub was asked to remove.
+
+    Args:
+        removed_log: Log file written by the stub's ``image rm`` branch.
+
+    Returns:
+        list[str]: Removed IDs in call order; empty when nothing was removed.
+    """
+    if not removed_log.exists():
+        return []
+    return [line.strip() for line in removed_log.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def test_rebuild_removes_the_image_it_replaced(tmp_path: Path) -> None:
+    """A rebuild that moves the tag must remove exactly the previous image.
+
+    Without the cleanup the previous image is left dangling and nothing is
+    removed; a cleanup that targeted the wrong ID would remove the new image.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory.
+    """
+    removed_log = _write_rebuild_stub(tmp_path, id_after_build=_NEW_IMAGE_ID)
+    result = _run_driver(tmp_path, _build_body(tmp_path, rebuild=True))
+    assert "RESULT=built:intellicrack-sandbox:latest" in result.stdout, f"stdout={result.stdout} stderr={result.stderr}"
+    assert _removed_ids(removed_log) == [_OLD_IMAGE_ID], (
+        f"only the replaced image may be removed; stdout={result.stdout} stderr={result.stderr}"
+    )
+
+
+def test_rebuild_keeps_the_image_when_the_tag_did_not_move(tmp_path: Path) -> None:
+    """A fully cached rebuild must not remove the image the tag still names.
+
+    When every layer comes from cache the build yields the same image ID. A
+    cleanup that skipped the ID comparison would delete the live sandbox image.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory.
+    """
+    removed_log = _write_rebuild_stub(tmp_path, id_after_build=_OLD_IMAGE_ID)
+    result = _run_driver(tmp_path, _build_body(tmp_path, rebuild=True))
+    assert "RESULT=built:intellicrack-sandbox:latest" in result.stdout, f"stdout={result.stdout} stderr={result.stderr}"
+    assert _removed_ids(removed_log) == [], f"the current image must never be removed; stdout={result.stdout} stderr={result.stderr}"
+
+
+def test_failed_rebuild_removes_nothing(tmp_path: Path) -> None:
+    """A failed build must leave the previous image in place.
+
+    The tag still points at the previous image after a failed build, so it is
+    the only working sandbox image and must survive.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory.
+    """
+    removed_log = _write_rebuild_stub(tmp_path, id_after_build=_NEW_IMAGE_ID, build_exit=1)
+    result = _run_driver(tmp_path, _build_body(tmp_path, rebuild=True))
+    assert "RESULT=raised" in result.stdout, f"stdout={result.stdout} stderr={result.stderr}"
+    assert "DETAIL=docker build failed" in result.stdout, f"stdout={result.stdout} stderr={result.stderr}"
+    assert _removed_ids(removed_log) == [], (
+        f"a failed build must not remove the working image; stdout={result.stdout} stderr={result.stderr}"
+    )
+
+
+_SHARED_STEP_ID = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+_BASE_IMAGE_ID = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+_LEFTOVER_ID = "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+_UNRELATED_ID = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+
+
+def _write_leftover_stub(directory: Path) -> Path:
+    """Create a stub ``docker.cmd`` whose cache holds a failed-build leftover.
+
+    The rebuild moves the tag from :data:`_OLD_IMAGE_ID` to :data:`_NEW_IMAGE_ID`.
+    Two dangling images exist: :data:`_LEFTOVER_ID`, whose chain shares the
+    locally built :data:`_SHARED_STEP_ID` with the sandbox image, and
+    :data:`_UNRELATED_ID`, which shares only the pulled :data:`_BASE_IMAGE_ID`.
+
+    Args:
+        directory: Directory the stub and its state files are written to.
+
+    Returns:
+        Path: The file every ``image rm`` argument is appended to.
+    """
+    built_marker = directory / "built.txt"
+    removed_log = directory / "removed.txt"
+    stub = textwrap.dedent(
+        f"""\
+        @echo off
+        if "%1"=="build" ( >"{built_marker}" echo built& exit /b 0 )
+        if "%1"=="history" goto history
+        if "%1"=="images" ( echo {_LEFTOVER_ID}& echo {_UNRELATED_ID}& exit /b 0 )
+        if not "%1"=="image" exit /b 0
+        if "%2"=="rm" ( >>"{removed_log}" echo %~3& exit /b 0 )
+        if exist "{built_marker}" ( echo {_NEW_IMAGE_ID}& exit /b 0 )
+        echo {_OLD_IMAGE_ID}
+        exit /b 0
+        :history
+        if "%~4"=="{_LEFTOVER_ID}" ( echo {_LEFTOVER_ID}& echo {_SHARED_STEP_ID}& echo {_BASE_IMAGE_ID}& echo ^<missing^>& exit /b 0 )
+        if "%~4"=="{_UNRELATED_ID}" ( echo {_UNRELATED_ID}& echo {_BASE_IMAGE_ID}& echo ^<missing^>& exit /b 0 )
+        echo {_NEW_IMAGE_ID}
+        echo {_SHARED_STEP_ID}
+        echo {_BASE_IMAGE_ID}
+        echo ^<missing^>
+        exit /b 0
+        """,
+    )
+    (directory / "docker.cmd").write_text(stub, encoding="utf-8")
+    return removed_log
+
+
+def test_rebuild_removes_failed_build_leftovers_only(tmp_path: Path) -> None:
+    """A successful rebuild must remove sandbox leftovers and nothing unrelated.
+
+    Without the sweep the leftover stays dangling. A sweep that matched on the
+    shared pulled base image would also remove the unrelated dangling image.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory.
+    """
+    removed_log = _write_leftover_stub(tmp_path)
+    result = _run_driver(tmp_path, _build_body(tmp_path, rebuild=True))
+    assert "RESULT=built:intellicrack-sandbox:latest" in result.stdout, f"stdout={result.stdout} stderr={result.stderr}"
+    assert _removed_ids(removed_log) == [_OLD_IMAGE_ID, _LEFTOVER_ID], (
+        f"exactly the replaced image and the sandbox leftover must be removed; stdout={result.stdout} stderr={result.stderr}"
+    )
+
+
+def test_leftover_sweep_waits_for_a_concurrent_build(tmp_path: Path) -> None:
+    """No leftover may be removed while another ``docker build`` is running.
+
+    A concurrent legacy-builder build keeps its latest finished step as a
+    dangling image between steps, so sweeping then would remove a step it is
+    about to build on. A real process named ``docker.exe`` with ``build`` on
+    its command line stands in for that build; the replaced image is still
+    removed because the tag has already moved away from it.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory.
+    """
+    stub_dir = tmp_path / "stub"
+    stub_dir.mkdir()
+    removed_log = _write_leftover_stub(stub_dir)
+    concurrent_dir = tmp_path / "concurrent"
+    concurrent_dir.mkdir()
+    concurrent_docker = concurrent_dir / "docker.exe"
+    shutil.copyfile(Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "System32" / "cmd.exe", concurrent_docker)
+    concurrent = subprocess.Popen(
+        [str(concurrent_docker), "/k", "build"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        assert concurrent.poll() is None, "precondition: the stand-in docker build must still be running"
+        result = _run_driver(stub_dir, _build_body(stub_dir, rebuild=True))
+        assert concurrent.poll() is None, "precondition: the stand-in docker build exited before the sweep ran"
+    finally:
+        concurrent.kill()
+        concurrent.wait(timeout=30)
+    assert "RESULT=built:intellicrack-sandbox:latest" in result.stdout, f"stdout={result.stdout} stderr={result.stderr}"
+    assert _removed_ids(removed_log) == [_OLD_IMAGE_ID], (
+        f"leftovers must be kept while another build runs; stdout={result.stdout} stderr={result.stderr}"
     )

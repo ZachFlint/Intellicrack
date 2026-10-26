@@ -8,7 +8,7 @@ Gates that assert against a budget have to assert against the budget production
 actually uses. Importing one would reach into another module's private
 namespace; restating it would leave the gate measuring a number nothing
 enforces. Parsing the declaration keeps the value derived, and a rename or a
-removal fails loudly here instead of silently.
+removal raises ``AssertionError`` here instead of passing silently.
 """
 
 from __future__ import annotations

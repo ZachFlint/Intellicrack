@@ -211,7 +211,7 @@ PLANTED: Final[Planted] = _build_planted()
 """The document every search in this module runs against."""
 
 _NUMERIC_BIG_ENDIAN_VALUE: Final = int.from_bytes(_NUMERIC_VALUE.to_bytes(_NUMERIC_SIZE, _LITTLE_ENDIAN), _BIG_ENDIAN)
-"""The planted bytes read the other way round, so the big-endian search has a real target."""
+"""The planted bytes read the other way round, so the big-endian search has a match to find."""
 
 
 def _scan_bytes(pattern: bytes) -> list[tuple[int, int]]:

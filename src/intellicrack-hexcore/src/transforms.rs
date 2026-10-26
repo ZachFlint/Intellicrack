@@ -3,6 +3,10 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Reversible and one-way byte transforms applied to a selection: XOR forms,
+//! ROT-N, bit shifts, rotations and inversion, byte swaps and reversal,
+//! masks, AES-ECB with selectable padding, Base64 and zlib.
+
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 use std::io::{Read, Write};
@@ -610,9 +614,9 @@ mod tests {
             .collect()
     }
 
-    /// A single-byte parameter given more than one byte must be rejected, not
-    /// silently truncated to its first byte (which would make `rot_n` with a
-    /// two-character "shift" apply the first byte's value instead).
+    /// A single-byte parameter given more than one byte is rejected with its
+    /// length, so a multi-byte `shift` or `count` is an error rather than its
+    /// first byte.
     #[test]
     fn test_single_byte_param_rejects_multi_byte_value() {
         let params = make_params(&[("shift", b"13")]);
@@ -787,17 +791,88 @@ mod tests {
         assert_eq!(decrypted, plaintext);
     }
 
+    /// A ciphertext whose decrypted padding is malformed is rejected with the
+    /// reason: a final byte of 0 or above 16 is a bad length, and a final
+    /// length whose bytes do not all equal it is bad padding bytes. The
+    /// plaintexts are encrypted with no padding, so the decrypted tail is
+    /// exactly the one under test.
     #[test]
-    fn test_aes_ecb_decrypt_pkcs7_bad_padding_errors() {
-        let key = [0u8; 16];
-        let mut tampered = {
-            let params = make_params(&[("key", &key), ("padding", b"pkcs7")]);
-            apply_transform("aes_ecb_encrypt", b"data", &params).unwrap()
-        };
-        *tampered.last_mut().unwrap() ^= 0x01;
-        let params = make_params(&[("key", &key), ("padding", b"pkcs7")]);
-        let result = apply_transform("aes_ecb_decrypt", &tampered, &params);
-        assert!(result.is_err());
+    fn test_padded_decrypt_rejects_each_malformed_padding() {
+        let key = [0x5Au8; 16];
+        let unpadded = make_params(&[("key", &key), ("padding", b"none")]);
+        let mut bad_bytes = [0x41u8; 16];
+        bad_bytes[13..].copy_from_slice(&[0x02, 0x03, 0x03]);
+        let cases: [(&[u8; 16], &[u8], &str); 5] = [
+            (
+                &[0; 16],
+                b"pkcs7",
+                "invalid parameter: invalid PKCS#7 padding length",
+            ),
+            (
+                &[0x11; 16],
+                b"pkcs7",
+                "invalid parameter: invalid PKCS#7 padding length",
+            ),
+            (
+                &bad_bytes,
+                b"pkcs7",
+                "invalid parameter: invalid PKCS#7 padding bytes",
+            ),
+            (
+                &[0; 16],
+                b"iso10126",
+                "invalid parameter: invalid ISO 10126 padding length",
+            ),
+            (
+                &[0x11; 16],
+                b"iso10126",
+                "invalid parameter: invalid ISO 10126 padding length",
+            ),
+        ];
+        for (plaintext, padding, expected) in cases {
+            let ciphertext = apply_transform("aes_ecb_encrypt", plaintext, &unpadded).unwrap();
+            let padded = make_params(&[("key", &key), ("padding", padding)]);
+            let err = apply_transform("aes_ecb_decrypt", &ciphertext, &padded).unwrap_err();
+            assert_eq!(err.to_string(), expected);
+        }
+    }
+
+    /// A plaintext that already fills whole blocks still gains a full block
+    /// of padding under PKCS#7 and ISO 10126, so its last byte is never
+    /// mistaken for a padding length, and it decrypts back exactly.
+    #[test]
+    fn test_padding_an_aligned_plaintext_adds_a_full_block() {
+        let key = [0x5Au8; 16];
+        let plaintext = [0x41u8; 16];
+        for padding in [&b"pkcs7"[..], b"iso10126"] {
+            let params = make_params(&[("key", &key), ("padding", padding)]);
+            let ciphertext = apply_transform("aes_ecb_encrypt", &plaintext, &params).unwrap();
+            assert_eq!(ciphertext.len(), 32);
+            let decrypted = apply_transform("aes_ecb_decrypt", &ciphertext, &params).unwrap();
+            assert_eq!(decrypted, plaintext.to_vec());
+        }
+    }
+
+    /// Single-byte transforms give their exact outputs, not merely outputs
+    /// that undo themselves: ROT13 of `Hello` is `Uryyb`, XOR with 0x20 flips
+    /// ASCII case, and inverting 0x0F gives 0xF0.
+    #[test]
+    fn test_single_byte_transforms_give_exact_outputs() {
+        let shift = make_params(&[("shift", &[13])]);
+        assert_eq!(
+            apply_transform("rot_n", b"Hello", &shift).unwrap(),
+            b"Uryyb".to_vec()
+        );
+        let key = make_params(&[("key", &[0x20])]);
+        assert_eq!(
+            apply_transform("xor_single", b"AB", &key).unwrap(),
+            b"ab".to_vec()
+        );
+        let empty = HashMap::new();
+        assert_eq!(
+            apply_transform("bit_invert", &[0x0F], &empty).unwrap(),
+            vec![0xF0]
+        );
     }
 
     #[test]
@@ -828,16 +903,22 @@ mod tests {
     fn test_aes_ecb_unknown_padding_errors() {
         let key = [0u8; 16];
         let params = make_params(&[("key", &key), ("padding", b"rot13")]);
-        let result = apply_transform("aes_ecb_encrypt", b"data", &params);
-        assert!(result.is_err());
+        let err = apply_transform("aes_ecb_encrypt", b"data", &params).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "invalid parameter: unknown padding mode: rot13"
+        );
     }
 
     #[test]
     fn test_aes_ecb_encrypt_none_misaligned_errors() {
         let key = [0u8; 16];
         let params = make_params(&[("key", &key), ("padding", b"none")]);
-        let result = apply_transform("aes_ecb_encrypt", b"nopad", &params);
-        assert!(result.is_err());
+        let err = apply_transform("aes_ecb_encrypt", b"nopad", &params).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "invalid parameter: data length must be multiple of 16 for AES encrypt"
+        );
     }
 
     #[test]

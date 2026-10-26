@@ -434,7 +434,7 @@ class TestRegionFilterFiltersTable:
           must update row visibility for *each* distinct value. The slot is
           never invoked directly. A sequence of three values whose matching row
           differs each time can only produce the expected visibility for every
-          step if the signal genuinely re-drives the slot on every change, so a
+          step if the signal re-drives the slot on every change, so a
           missing ``connect`` turns each transition red.
 
         Args:
@@ -767,8 +767,8 @@ class TestActionsDisabledHandlerNoDispatch:
         """_on_search shows the 'Not Attached' warning and skips dispatch when _attached_pid is None.
 
         The test patches the actual ``run_bridge_coroutine_logged`` function
-        (not ``run_bridge_coroutine_async``) so the assertion is a genuine gate
-        against guard removal.  Exact title and message are verified.
+        (not ``run_bridge_coroutine_async``) so removing the guard fails
+        the assertion.  Exact title and message are verified.
 
         Args:
             tab: MemoryTab fixture.

@@ -7,23 +7,23 @@
 The pre-existing QEMU sandbox tests validate the audit fixes against mocked
 subprocesses, fake QMP clients and synthetic sidecar strings. These tests close
 the audit's mock/fake-data findings by driving the QEMU sandbox's host-side
-capabilities against REAL binaries, a REAL ``cmd.exe`` guest-execution script,
-REAL YARA rules compiled by the real ``yara`` module, and the REAL QEMU binary
+capabilities against on-disk PE files, a ``cmd.exe`` guest-execution script,
+YARA rules compiled by the ``yara`` module, and the QEMU binary
 installed on the host:
 
 * ``_poll_for_result`` is exercised by running the exact OS-specific execution
   script that :meth:`QEMUSandbox._generate_execution_script` emits through a
   real ``cmd.exe`` so the polled exit code, stdout and stderr come from a real
   process, not hand-written strings.
-* ``copy_to_sandbox`` / ``copy_from_sandbox`` round-trip a REAL System32 PE DLL
+* ``copy_to_sandbox`` / ``copy_from_sandbox`` round-trip a System32 PE DLL
   and assert byte-for-byte SHA-256 equality (coverage gap).
-* ``extract_dropped_files`` collects a REAL PE binary from the host-side dropped
+* ``extract_dropped_files`` collects a PE binary from the host-side dropped
   mirror into a real ZIP and the archive is validated by content hash.
-* ``yara_scan`` compiles REAL YARA rules with the real ``yara`` module and scans
-  a REAL PE binary staged in a dropped-files ZIP, asserting on a real rule hit
-  driven by strings genuinely present in the binary.
-* ``is_available`` / ``_detect_accelerator`` probe the REAL QEMU binary on the
-  host and assert on a real, internally-consistent accelerator result
+* ``yara_scan`` compiles YARA rules with the ``yara`` module and scans
+  a PE binary staged in a dropped-files ZIP, asserting on a rule hit
+  driven by strings present in the binary.
+* ``is_available`` / ``_detect_accelerator`` probe the QEMU binary on the
+  host and assert on an internally consistent accelerator result
   (coverage gap; ``is_available`` mocked in the original suite).
 * ``_build_qemu_command`` produces a real argv from a real config and image; the
   argv is validated against the real accelerator-dependent ``-cpu`` contract.
@@ -344,7 +344,7 @@ def _stage_real_guest_script(sb: _RealOpsSandbox, work_dir: Path) -> tuple[Path,
 
 
 class TestPollForResultAgainstRealProcess:
-    """``_poll_for_result`` must read REAL exit code/stdout/stderr from a real run."""
+    """``_poll_for_result`` must read the exit code/stdout/stderr of a ``cmd.exe`` run."""
 
     @pytest.mark.spawns_process
     def test_real_cmd_script_drives_poll_result(self, tmp_path: Path) -> None:
@@ -352,7 +352,7 @@ class TestPollForResultAgainstRealProcess:
 
         This drives the exact guest-execution contract: the host writes the
         script that :meth:`QEMUSandbox._generate_execution_script` produces,
-        a REAL ``cmd.exe`` executes it (emulating the guest), and
+        ``cmd.exe`` executes it (emulating the guest), and
         ``_poll_for_result`` parses the real exit code and sidecar streams.
 
         Args:
@@ -424,7 +424,7 @@ class TestCopyRoundTripRealBinary:
 
 
 class TestExtractDroppedRealBinary:
-    """``extract_dropped_files`` must archive REAL collected binaries faithfully."""
+    """``extract_dropped_files`` must archive collected binaries with their bytes intact."""
 
     def test_real_pe_in_mirror_is_zipped_with_intact_bytes(
         self,
@@ -471,19 +471,19 @@ class TestExtractDroppedRealBinary:
 
         assert payload[:2] == b"MZ", "archived dropped file must retain the real PE MZ magic"
         assert hashlib.sha256(payload).hexdigest() == _sha256(real_pe_dll), (
-            "archived dropped file must be byte-identical to the real binary collected from the mirror"
+            "archived dropped file must be byte-identical to the PE file collected from the mirror"
         )
 
 
 class TestYaraScanRealRulesRealBinary:
-    """``yara_scan`` must match REAL rules against a REAL binary in a dropped ZIP."""
+    """``yara_scan`` must match compiled rules against a PE file in a dropped ZIP."""
 
     def test_real_pe_magic_rule_matches_real_binary(self, tmp_path: Path, real_pe_dll: Path) -> None:
         """A real YARA rule keyed on the real PE magic yields a real match.
 
         The rule condition reads the 16-bit little-endian value at offset 0 and
         requires it to equal ``0x5A4D`` (the ``MZ`` magic). The match is
-        therefore produced by the real ``yara`` engine over the real binary's
+        therefore produced by the real ``yara`` engine over the PE file's
         actual header bytes, not by a string injected into the test. A
         non-PE control file is included in the same scan set and must NOT match,
         proving the condition discriminates on real content.
@@ -509,7 +509,7 @@ class TestYaraScanRealRulesRealBinary:
             encoding="utf-8",
         )
 
-        # Confirm the rule genuinely matches the real binary via the real engine
+        # Confirm the rule matches the PE file via the real engine
         # before asserting that the sandbox surfaces the same match.
         compiled = yara.compile(filepath=str(rules_file))
         assert compiled.match(filepath=str(real_pe_dll)), "real PE fixture must satisfy the real MZ-magic rule"
@@ -559,19 +559,19 @@ def _qemu_is_findable() -> bool:
 
 
 class TestRealHostAcceleratorProbe:
-    """``is_available`` / ``_detect_accelerator`` must probe the REAL QEMU host."""
+    """``is_available`` / ``_detect_accelerator`` must probe the QEMU binary installed on the host."""
 
     @pytest.mark.spawns_process
     def test_is_available_detects_real_qemu_and_consistent_accelerator(self) -> None:
         """A real ``is_available`` probe resolves the real QEMU binary and accelerator.
 
-        When QEMU is genuinely absent the method must report ``False`` rather
+        When QEMU is absent the method must report ``False`` rather
         than fabricate availability; when present it must cache the correct
         accelerator for this host and ``_detect_accelerator`` must agree with
         an independent subprocess oracle.
 
         - ``assert available is True`` — fails if ``_find_qemu`` is broken to
-          return ``None`` despite a real binary being present.
+          return ``None`` despite a QEMU binary being present.
         - ``assert sb.get_accelerator_cached() is True`` — fails if
           ``self._accelerator_cached = True`` (line 1046 of qemu.py) is
           removed or the assignment is skipped.
@@ -579,14 +579,14 @@ class TestRealHostAcceleratorProbe:
           ``self._qemu_path = qemu_path`` (line 1042) is removed.
         - Accelerator selection is gated against the independent oracle, which
           runs ``qemu-system-x86_64 -accel help`` directly. The
-          claim splits on what the host genuinely offers:
+          claim splits on what the host actually offers:
 
           * Hardware-accel host (oracle is WHPX or KVM): ``detected`` must equal
             the oracle. Removing the WHPX/KVM probe logic and returning
             ``AcceleratorType.TCG`` makes this fail.
           * TCG-only host (oracle is TCG — e.g. the headless sandbox container,
             where the ``HypervisorPlatform`` prerequisite is not satisfiable):
-            the hardware-selection branch is genuinely unexercisable, so the
+            the hardware-selection branch is unexercisable, so the
             test instead asserts ``detected == TCG`` — production must fall back
             to TCG and must NOT fabricate an unusable WHPX/KVM result.
             Hard-coding ``return AcceleratorType.WHPX`` makes this fail.
@@ -637,7 +637,7 @@ class TestRealHostAcceleratorProbe:
                 f"the independent -accel-help oracle; got {detected.value!r}. "
                 "Removing all WHPX/KVM probe logic and returning AcceleratorType.TCG "
                 "unconditionally causes this assertion to fail on a host that "
-                "genuinely advertises hardware acceleration."
+                "advertises hardware acceleration."
             )
         else:
             assert detected == AcceleratorType.TCG, (

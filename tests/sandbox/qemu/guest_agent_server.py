@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Real TCP servers speaking QEMU's QMP and qemu-guest-agent wire protocols.
 
-These are genuine asyncio servers bound to loopback, not mocks: the client
+These are asyncio servers bound to loopback: the client
 under test opens a real socket, writes real JSON lines and parses real
 replies. They are shared by every QEMU guest-agent gate so the protocol
 fidelity lives in exactly one place.
@@ -89,8 +89,8 @@ AGENT_MESSAGE_RESULT: Final[str] = "result"
 class GuestAgentServerError(AssertionError):
     """Raised when a protocol server's connection handler failed.
 
-    The servers here are quality gates: a fault inside one must surface as a
-    loud test failure, never as a client-side timeout that reads like a
+    A fault inside one of these servers must surface as a
+    test failure, never as a client-side timeout that reads like a
     production defect.
     """
 
@@ -1058,7 +1058,7 @@ class IntellicrackAgentServer(_LoopbackServer):
     would have received it, because from the guest's side it did arrive. A
     client that answers a lost channel by simply sending the command again
     therefore shows up as a second entry in :attr:`requests`, which is the only
-    way to tell a genuine recovery from a re-execution.
+    way to tell a recovery from a re-execution.
 
     Attributes:
         requests: Every ``(command, args)`` pair received, in arrival order,

@@ -5,9 +5,9 @@
 """Real-data coverage for ``hex_editor.pattern_code_editor.PatternCodeEditor``.
 
 The HexPat identifier completer popup, completion matching, and insertion are exercised.
-These tests feed the editor the REAL HexPat built-in type names
+These tests feed the editor the HexPat built-in type names
 sourced from :class:`intellicrack.core.hexpat.completer.HexPatCompleter` and
-assert the completer offers the correct real completions for a type prefix and
+assert the completer offers the correct completions for a type prefix and
 that accepting a completion inserts exactly the missing suffix into the buffer.
 The pattern DSL completion is pure widget logic with no external dependency, so
 real type-name data drives the behavior under test directly.

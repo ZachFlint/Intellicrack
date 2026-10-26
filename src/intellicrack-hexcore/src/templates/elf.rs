@@ -3,6 +3,9 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Built-in templates for ELF: file, program and section headers, symbols,
+//! relocations and dynamic entries, in both classes and byte orders.
+
 use super::{Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry};
 
 /// Registers the built-in ELF structure templates into `registry`.

@@ -8,8 +8,8 @@
  * The first half is behavioural. dom.js touches no DOM at module scope, so a
  * `globalThis.document` stub assigned before the dynamic import is enough to
  * call `element`, `decorativeGlyph`, `iconButton`, `trapFocus`, the two tab
- * strip helpers and both announcement calls for real. The stub is a genuine
- * (small) node model rather than a set of recording spies: attributes are
+ * strip helpers and both announcement calls for real. The stub is a small
+ * node model rather than a set of recording spies: attributes are
  * stored verbatim so `element`'s own `String(value)` is what is being
  * observed, `focus()` really moves `document.activeElement`, `contains()` and
  * `closest()` really walk the parent chain, and `querySelectorAll` really

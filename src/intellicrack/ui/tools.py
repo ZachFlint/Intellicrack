@@ -578,7 +578,7 @@ class ToolTab(QFrame):
         self._splitter = QSplitter(Qt.Orientation.Vertical)
         self._splitter.setChildrenCollapsible(False)
 
-        self.code_display = CodeDisplay(self._language)
+        self.code_display: CodeDisplay = CodeDisplay(self._language)
         self._splitter.addWidget(self.code_display)
 
         self._info_panel = QFrame()
@@ -661,7 +661,7 @@ class FunctionListPanel(QFrame):
             not truncated to 32 bits by Qt's default ``int`` marshalling.
     """
 
-    function_selected = pyqtSignal(str, "qint64")
+    function_selected: pyqtSignal = pyqtSignal(str, "qint64")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the FunctionListPanel.
@@ -697,7 +697,7 @@ class FunctionListPanel(QFrame):
 
         layout.addWidget(header)
 
-        self.list_widget = QListWidget()
+        self.list_widget: QListWidget = QListWidget()
         self.list_widget.setFont(FontManager.get_instance().get_code_font(9))
         self.list_widget.setObjectName("function_list")
         self.list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
@@ -752,7 +752,7 @@ class XRefPanel(QFrame):
             addresses are not truncated when emitted.
     """
 
-    xref_selected = pyqtSignal("qint64")
+    xref_selected: pyqtSignal = pyqtSignal("qint64")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the XRefPanel.
@@ -783,7 +783,7 @@ class XRefPanel(QFrame):
 
         layout.addWidget(header)
 
-        self.xref_display = QTreeWidget()
+        self.xref_display: QTreeWidget = QTreeWidget()
         self.xref_display.setHeaderHidden(True)
         self.xref_display.setFont(FontManager.get_instance().get_code_font(9))
         self.xref_display.setObjectName("xref_display")
@@ -890,23 +890,23 @@ class _ToolOutputPanelBase(QFrame):
         header_layout.addWidget(title)
         header_layout.addStretch()
 
-        self.address_label = QLabel()
+        self.address_label: QLabel = QLabel()
         self.address_label.setFont(FontManager.get_instance().get_code_font(10))
         self.address_label.setObjectName("code_label")
         header_layout.addWidget(self.address_label)
 
         layout.addWidget(header)
 
-        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_splitter: QSplitter = QSplitter(Qt.Orientation.Horizontal)
         self.main_splitter.setChildrenCollapsible(False)
 
-        self.left_panel = QFrame()
+        self.left_panel: QFrame = QFrame()
         self.left_panel.setMinimumWidth(_LEFT_MIN_WIDTH)
         left_layout = QVBoxLayout(self.left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(0)
 
-        self.tab_widget = QTabWidget()
+        self.tab_widget: QTabWidget = QTabWidget()
         self.tab_widget.setObjectName("analysis_tabs")
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.setUsesScrollButtons(True)
@@ -929,17 +929,17 @@ class _ToolOutputPanelBase(QFrame):
         left_layout.addWidget(self.tab_widget)
         self.main_splitter.addWidget(self.left_panel)
 
-        self.right_panel = QFrame()
+        self.right_panel: QFrame = QFrame()
         self.right_panel.setMinimumWidth(_RIGHT_MIN_WIDTH)
         right_layout = QVBoxLayout(self.right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
 
-        self.func_list = FunctionListPanel()
+        self.func_list: FunctionListPanel = FunctionListPanel()
         self.func_list.function_selected.connect(self._on_function_selected)
         right_layout.addWidget(self.func_list)
 
-        self.xref_panel = XRefPanel()
+        self.xref_panel: XRefPanel = XRefPanel()
         self.xref_panel.xref_selected.connect(self._on_xref_selected)
         right_layout.addWidget(self.xref_panel)
 
@@ -1394,11 +1394,11 @@ class _ToolOutputPanelBase(QFrame):
         self._process_panel: ProcessPanelProtocol | None = None
         self.sandbox_panel: SandboxPanelProtocol | None = None
 
-        self.x64dbg_bridge: Any | None = None
-        self.ghidra_bridge: Any | None = None
-        self.cutter_bridge: Any | None = None
-        self.frida_bridge: Any | None = None
-        self.process_bridge: Any | None = None
+        self.x64dbg_bridge: X64DbgBridge | None = None
+        self.ghidra_bridge: GhidraBridge | None = None
+        self.cutter_bridge: CutterBridge | None = None
+        self.frida_bridge: FridaBridge | None = None
+        self.process_bridge: ProcessBridge | None = None
 
         self._tool_registry: Any | None = None
 
@@ -1832,7 +1832,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
 
         panel_module = importlib.import_module(".panels.analysis_panel", "intellicrack.ui")
         panel = cast("BridgeAnalysisPanel", panel_module.BridgeAnalysisPanel())
-        self.analysis_panel = panel
+        self.analysis_panel: BridgeAnalysisPanel | None = panel
         # Route a double-clicked Section/address VA through the shared address
         # chain so it scrolls the hex editor.
         _ = panel.address_navigate.connect(self.address_clicked)
@@ -1852,7 +1852,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
 
         panel_module = importlib.import_module(".panels.script_manager", "intellicrack.ui")
         raw_widget = panel_module.ScriptManagerPanel()
-        self.script_panel = cast("ScriptManagerPanel", raw_widget)
+        self.script_panel: ScriptManagerPanel | None = cast("ScriptManagerPanel", raw_widget)
         qwidget = cast("QWidget", raw_widget)
         self.tab_widget.addTab(qwidget, "Scripts")
         self.panels["scripts"] = qwidget
@@ -1880,7 +1880,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
 
         panel_module = importlib.import_module(".panels.stack_viewer", "intellicrack.ui")
         raw_widget = panel_module.StackViewerPanel()
-        self.stack_panel = cast("StackViewerPanel", raw_widget)
+        self.stack_panel: StackViewerPanel | None = cast("StackViewerPanel", raw_widget)
         qwidget = cast("QWidget", raw_widget)
         self.tab_widget.addTab(qwidget, "Stack")
         self.panels["stack"] = qwidget
@@ -1972,7 +1972,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
 
         if bridge is not None:
             self._x64dbg_widget.set_bridge(bridge)
-            self.x64dbg_bridge = bridge
+            self.x64dbg_bridge: X64DbgBridge | None = bridge
             self._wire_stack_viewer_bridges()
             _logger.info("x64dbg_bridge_set", bridge_type=type(bridge).__name__)
 
@@ -2039,7 +2039,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
 
         if bridge is not None:
             self._cutter_widget.set_bridge(bridge)
-            self.cutter_bridge = bridge
+            self.cutter_bridge: CutterBridge | None = bridge
             _logger.info("cutter_bridge_set", bridge_type=type(bridge).__name__)
 
         _logger.info("cutter_tab_added", tab="Cutter")
@@ -2105,7 +2105,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
 
         if bridge is not None:
             self._ghidra_widget.set_bridge(bridge)
-            self.ghidra_bridge = bridge
+            self.ghidra_bridge: GhidraBridge | None = bridge
             _logger.info("ghidra_bridge_set", bridge_type=type(bridge).__name__)
 
         _logger.info("ghidra_tab_added", tab="Ghidra")
@@ -2171,7 +2171,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
 
         if bridge is not None:
             self._frida_panel.set_bridge(bridge)
-            self.frida_bridge = bridge
+            self.frida_bridge: FridaBridge | None = bridge
             self._wire_stack_viewer_bridges()
             _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
 
@@ -2243,7 +2243,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
 
         if bridge is not None:
             self._process_panel.set_bridge(bridge)
-            self.process_bridge = bridge
+            self.process_bridge: ProcessBridge | None = bridge
             _logger.info("process_bridge_set", bridge_type=type(bridge).__name__)
 
         _logger.info("process_tab_added", tab="Processes")
@@ -2305,7 +2305,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
 
         panel_module = importlib.import_module(".panels.sandbox_panel", "intellicrack.ui")
         raw_widget = panel_module.SandboxPanel()
-        self.sandbox_panel = cast("SandboxPanelProtocol", raw_widget)
+        self.sandbox_panel: SandboxPanelProtocol | None = cast("SandboxPanelProtocol", raw_widget)
         qwidget = cast("QWidget", raw_widget)
         self.sandbox_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("sandbox"))
         self.sandbox_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("sandbox"))
@@ -2767,16 +2767,16 @@ class _ToolOutputPanelTabsMixin(_ToolOutputPanelOpenersMixin):
 
         if self.sandbox_panel is not None:
             self.sandbox_panel.stop_tool()
-            self.sandbox_panel = None
+            self.sandbox_panel: SandboxPanelProtocol | None = None
 
         if self.analysis_panel is not None:
-            self.analysis_panel = None
+            self.analysis_panel: BridgeAnalysisPanel | None = None
 
         if self.script_panel is not None:
-            self.script_panel = None
+            self.script_panel: ScriptManagerPanel | None = None
 
         if self.stack_panel is not None:
-            self.stack_panel = None
+            self.stack_panel: StackViewerPanel | None = None
 
         for attr_name in ("x64dbg_bridge", "ghidra_bridge", "cutter_bridge", "frida_bridge", "process_bridge"):
             bridge = getattr(self, attr_name, None)

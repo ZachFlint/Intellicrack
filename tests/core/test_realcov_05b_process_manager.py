@@ -18,7 +18,7 @@ This module adds the real-process coverage that the existing suites do not reach
   parent/child process tree;
 * :meth:`ProcessManager.run_tracked` driving a *real system PE*
   (``C:/Windows/System32/cmd.exe`` on Windows) rather than only the Python
-  interpreter, capturing its genuine stdout;
+  interpreter, capturing its stdout;
 * :meth:`ProcessManager.terminate_process` returning ``False`` for an unknown
   PID and reaping an already-exited tracked process;
 * :meth:`ProcessManager.get_tracked` round-tripping a registered real process.
@@ -168,7 +168,7 @@ class TestRunTrackedRealSystemBinary:
     def test_run_tracked_cmd_exe_captures_real_output(
         process_manager: ProcessManager,
     ) -> None:
-        """Running the real ``cmd.exe`` PE captures its genuine stdout.
+        """Running the real ``cmd.exe`` PE captures its stdout.
 
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the harness.

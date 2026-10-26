@@ -913,7 +913,7 @@ class TestValidateToolParameterArrayObjectsNoItemProperties:
 # if/elif/else chain whose final else calls _assert_never.  Because every
 # provider id enum value has a dedicated branch, the else clause is dead
 # code.  No legal caller can reach it without bypassing the exhaustive
-# dispatch.  No fake gate is written; this case is
+# dispatch.  No test is written; this case is
 # untestable.
 
 

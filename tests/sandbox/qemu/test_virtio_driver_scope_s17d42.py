@@ -234,7 +234,7 @@ class TestTheGeneratedInstallerScopesToThisGuest:
     ) -> None:
         """Every other edition on the medium is left alone.
 
-        This is the live discriminator behind the scoping gate. It first asks the
+        Companion check for the scoping gate. It first asks the
         installer which pair this guest needs, then rebuilds the medium with that
         pair and only that pair removed. A blind sweep would install the survivors;
         a correctly scoped installer must install none of them.
@@ -249,7 +249,7 @@ class TestTheGeneratedInstallerScopesToThisGuest:
         guest = guest_combination(selected_packages(lines))
 
         remaining = tuple(pair for pair in combinations() if pair != guest)
-        assert remaining, "the medium layout offers no pair other than this guest's, so the discriminator is empty"
+        assert remaining, "the medium layout offers no pair other than this guest's, so the decoy set is empty"
         decoys = build_medium(tmp_path / "decoys", remaining)
         assert any(decoys.rglob("*.inf")), f"the decoy medium holds no packages at all, so installing none of them proves nothing: {decoys}"
 
@@ -271,7 +271,7 @@ class TestTheGeneratedInstallerScopesToThisGuest:
         installer: Path,
         tmp_path: Path,
     ) -> None:
-        """A caller-supplied path that is not a virtio medium fails loudly.
+        """A caller-supplied path that is not a virtio medium makes the installer exit nonzero and log why.
 
         Args:
             powershell: Resolved PowerShell interpreter.

@@ -36,7 +36,7 @@ back and requires it to draw nothing but its boot logo.
 Coverage of the framebuffer is the reading, and the two states are an order of
 magnitude apart rather than marginally different: the boot logo is a small
 glyph on black, Windows Setup is a full dialog. The second test is a live
-discriminator, not a control constant - it re-proves on every run that this
+check, not a control constant - it verifies on every run that this
 medium really does hang without the in-hypervisor APIC.
 
 Host-native: the test container has no hypervisor. Registered in
@@ -103,7 +103,7 @@ def _with_userspace_irqchip(machine_argument: str) -> str:
 
     A value this rewrite cannot change fails the calling test. That covers both
     ways the launcher can regress: naming no interrupt chip at all, and already
-    naming the userspace one. Either way the discriminator cannot be built, and
+    naming the userspace one. Either way the comparison command cannot be built, and
     the launcher has stopped asking WHPX for the in-hypervisor APIC that this
     defect is about.
 
@@ -118,7 +118,7 @@ def _with_userspace_irqchip(machine_argument: str) -> str:
     assert rewritten != tokens, (
         f"the launcher's -machine value {machine_argument!r} is already what this rewrite produces, so it either "
         f"names no {_IRQCHIP_OPTION} or already routes interrupts through userspace, and the WHPX "
-        f"interrupt-delivery discriminator cannot be built (S17-D37)"
+        f"interrupt-delivery comparison cannot be built (S17-D37)"
     )
     return ",".join(rewritten)
 
@@ -208,8 +208,8 @@ class TestTheWhpxInterruptChipReachesAWindowsGuest:
     ) -> None:
         """The identical command with the userspace IRQ chip renders nothing.
 
-        This is the live discriminator behind the companion test: it proves on
-        every run that this medium genuinely hangs without the in-hypervisor
+        Companion check: verifies on
+        every run that this medium hangs without the in-hypervisor
         APIC, so rendering a UI is a real result and not something that would
         have happened under any interrupt configuration.
 

@@ -21,7 +21,7 @@ format would be read by the server with its leading bits-per-pixel value taken a
 type, mis-parsing every byte that followed.
 
 These tests drive the real :class:`~intellicrack.ui.panels.vnc_widget.VNCWidget`
-and its real ``RFBClient`` against a genuine asyncio TCP server speaking RFB 3.8
+and its real ``RFBClient`` against a loopback asyncio TCP server speaking RFB 3.8
 (version handshake, security type ``None``, ServerInit with a real pixel format,
 raw-encoded FramebufferUpdate). That server models a VNC server in front of a
 static screen: it parses the inbound FramebufferUpdateRequest messages and only
@@ -304,7 +304,7 @@ class _StaticScreenRFBServer:
         """Answer FramebufferUpdateRequest messages until the client goes away.
 
         The client stream is scanned with a sliding ten-byte window rather than a
-        fixed message-length table, so the parser locates every genuine
+        fixed message-length table, so the parser locates every
         FramebufferUpdateRequest (message type 3 whose rectangle matches the
         geometry this server advertised) regardless of what other client-to-server
         traffic precedes it.

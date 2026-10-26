@@ -13,7 +13,7 @@ DEFAULT_EVAL_DEPTH: int = 512
 
 Empirical tooling experience with common .hexpat patterns from the upstream vendor pattern collection shows that ``parent``-relative and
 mutually-recursive struct definitions routinely exceed a depth of 32 (the upstream default). For example, ``tiff.hexpat`` explicitly bumps
-the limit to 100 and several others configure it well into the thousands. A default of 512 leaves ample headroom for real-world patterns
+the limit to 100 and several others configure it well into the thousands. A default of 512 leaves ample headroom for published patterns
 while still terminating accidental unbounded recursion in finite time. Patterns that need a different limit can override it by adding
 ``#pragma eval_depth <n>`` to the source.
 """

@@ -6,9 +6,8 @@
 
 Covers three attach-time behaviors, all driven against a real, live
 ``ProcessBridge`` attached to the running test process itself
-(``os.getpid()``) so the assertions exercise genuine Win32 calls
-(``ReadProcessMemory``, ``CreateToolhelp32Snapshot``) rather than mocked
-bridge output:
+(``os.getpid()``) so the assertions exercise live Win32 calls
+(``ReadProcessMemory``, ``CreateToolhelp32Snapshot``):
 
 * Memory content read: ``MemoryTab.set_attached_pid`` prefills the Read sub-tab's
   address field with the attached process's main-module base address (always a
@@ -152,7 +151,7 @@ class TestMemoryDefaultReadAddressIsReadable:
 
         Drives the real ``_on_read`` path (real ``ReadProcessMemory`` via
         the live bridge) against whatever address ``set_attached_pid``
-        prefilled, proving the default is genuinely readable rather than
+        prefilled, proving the default is readable rather than
         merely non-empty.
 
         Args:

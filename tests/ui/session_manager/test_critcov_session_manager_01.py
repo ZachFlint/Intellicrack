@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Coverage for the tag chips, the sidecar-store paths and the manager flows of the session manager dialog.
 
-Every test drives the production widgets with real objects: a genuine ``TagChipsWidget`` and its flow layout, a real ``SessionManagerDialog``
+Every test drives the production widgets with real objects: a ``TagChipsWidget`` and its flow layout, a real ``SessionManagerDialog``
 backed either by sidecar JSON files written under ``tmp_path`` or by a real ``SessionManager`` over a SQLite ``SessionStore``, a real
 ``ChatPanel`` as the restore target and the real asynchronous bridge worker behind the manager-backed flows. Qt's static dialog functions are
 replaced by plain functions that record what the user would have seen and return a chosen answer. Expected values come from the file

@@ -85,7 +85,7 @@ _DISPATCHER_POLL_INTERVAL = 0.5
 # starts with the normal-speed boot budget, but extends itself every time real
 # evidence of guest progress appears (the logon command having actually run,
 # or a monitor having produced its first log), up to a hard ceiling that
-# covers a genuinely slow Windows Sandbox cold boot, observed live on this
+# covers a slow Windows Sandbox cold boot, observed live on this
 # host to outlast a fixed 120s budget.
 _DISPATCHER_READY_MAX_CEILING_S: Final[float] = 600.0
 _DISPATCHER_READY_PROGRESS_EXTENSION_S: Final[float] = 90.0
@@ -1123,7 +1123,7 @@ class WindowsSandbox(SandboxBase):
 
         The launcher exits as soon as it has handed off, so the session host
         process is what actually owns the running VM and its window. Resolving
-        it here gives teardown and health checks a real target instead of an
+        it here gives teardown and health checks a live process instead of an
         already-dead launcher PID.
 
         Raises:
@@ -1714,7 +1714,7 @@ class WindowsSandbox(SandboxBase):
         boot), but every time real evidence of guest progress newly appears
         (see :meth:`_dispatcher_progress_markers`) the deadline is pushed out
         by :data:`_DISPATCHER_READY_PROGRESS_EXTENSION_S`, capped at
-        :data:`_DISPATCHER_READY_MAX_CEILING_S`. A guest that is genuinely
+        :data:`_DISPATCHER_READY_MAX_CEILING_S`. A guest that is
         still cold-booting therefore keeps being given more time as long as
         it keeps proving it is alive, while a guest that never gets anywhere
         still fails at the original budget.
@@ -2470,13 +2470,13 @@ class WindowsSandbox(SandboxBase):
         contributes zero bytes and reads as perfectly stable. Waiting for the
         aggregate to hold still would therefore return almost immediately,
         before four of the collectors had written a single byte, leaving their
-        tabs empty for a run that had genuinely made those changes.
+        tabs empty for a run that had made those changes.
 
         What is waited on instead is the set of collectors that have produced a
         log. It stops as soon as every survivor the launcher recorded has one,
         because there is then nothing left to arrive; failing that, it stops
         once no further log has appeared for a settle window, which is how a
-        collector with genuinely nothing to report is accommodated without
+        collector with nothing to report is accommodated without
         waiting for a file that is never coming. The ceiling bounds both.
         """
         if self._shared_folder is None:

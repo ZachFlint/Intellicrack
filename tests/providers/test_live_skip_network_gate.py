@@ -10,7 +10,7 @@ When a run has no outbound network (for example the offline Docker sandbox with
 rather than exercising the provider. ``conftest._network_unavailable_reason``
 classifies that specific, environment-driven failure so the ``pytest_runtest_call``
 wrapper can turn it into a skip instead of a false negative, while every other
-failure - including a genuine product connection bug against a reachable host -
+failure - including a product connection bug against a reachable host -
 still propagates. These tests pin that classifier to real exception chains.
 """
 
@@ -91,7 +91,7 @@ def test_connection_reset_is_not_classified_as_network_down() -> None:
     """A mid-stream connection reset is a real transport fault, not a missing network.
 
     ``connection reset`` deliberately is not in the signal set: it indicates the
-    host was reachable and then dropped the stream, which can expose a genuine
+    host was reachable and then dropped the stream, which can expose a
     product defect and must not be silently skipped.
     """
     exc = httpx.ReadError("[Errno 104] Connection reset by peer")

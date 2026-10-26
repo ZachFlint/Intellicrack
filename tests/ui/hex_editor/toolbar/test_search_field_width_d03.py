@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the hex toolbar Search field.
+"""Tests for the hex toolbar Search field.
 
 The Search ``QLineEdit`` in the hex editor toolbar must not clip glyph
 bottoms. The general vertical-clipping mechanism is handled system-wide
@@ -91,7 +91,7 @@ class TestSearchFieldWidthFitsRepresentativeQuery:
     def test_max_width_fits_representative_byte_pattern_query(qapp: QApplication) -> None:
         """The field's configured max width must fit the representative query plus chrome.
 
-        Falsifiable: a max width of 180 makes the required pixel width
+        A max width of 180 makes the required pixel width
         (measured against the field's own real font) exceed the configured
         maximum, so this assertion fails.
 

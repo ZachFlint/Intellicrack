@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for Preferences persistence targeting the load path.
+"""Gates for Preferences persistence targeting the load path.
 
 ``main.py`` loads configuration from ``get_config_dir() / "config.toml"`` at
 startup. The Preferences dialog therefore has to be pointed at that exact file;

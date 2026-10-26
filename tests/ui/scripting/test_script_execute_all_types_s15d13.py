@@ -5,18 +5,18 @@
 
 """Live-drive gates for the Scripts panel Execute button, all five script types.
 
-The executor is wired on both routes. These gates prove that pressing Execute
-actually reaches
+The executor is wired on both routes. These tests check that pressing Execute
+reaches
 ``ToolOutputPanel._execute_script`` for **every** script type, and that a tool
 which is not connected produces a surfaced diagnostic rather than a silent
 nothing, a hang, or a fabricated success.
 
-Every test drives the real ``ToolOutputPanel`` and ``ScriptManagerPanel``
-widgets under the offscreen Qt platform with a real ``ScriptManager`` backend.
-Nothing about the execution path is stubbed: the ``python`` type runs a genuine
-subprocess, the four bridge types construct their real bridges, and the live
-class drives a real rizin/radare2 backend over a real PE file and asserts on
-values only the real engine can produce.
+Every test drives the ``ToolOutputPanel`` and ``ScriptManagerPanel``
+widgets under the offscreen Qt platform with a ``ScriptManager`` backend.
+The ``python`` type runs a
+subprocess, the four bridge types construct their bridges, and the live
+class drives a rizin/radare2 backend over a PE file and asserts on
+values only the engine can produce.
 """
 
 from __future__ import annotations
@@ -332,7 +332,7 @@ class TestExecuteReachesTheExecutorForEveryScriptType:
 
 @pytest.mark.spawns_process
 class TestExecuteAgainstARealRizinBackend:
-    """Execute against a genuinely connected tool must surface the tool's own output."""
+    """Execute against a connected tool must surface the tool's own output."""
 
     @staticmethod
     def _loaded_cutter_bridge(binary: Path) -> CutterBridge:

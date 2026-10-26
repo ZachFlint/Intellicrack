@@ -68,7 +68,7 @@ class TestSingleshotAndSilentButtonsDriveTypeBranchedBareIntegerRpc:
     ) -> None:
         """A checked Singleshot box on a default breakpoint must send ``SetBreakpointSingleshoot 0x401000, 1``.
 
-        Falsifiable: if ``X64DbgBridge.set_breakpoint_singleshot``
+        If ``X64DbgBridge.set_breakpoint_singleshot``
         (``bridges/x64dbg.py``) sent the flag as a quoted string or as
         ``true``/``false`` instead of a bare ``0``/``1``, or the
         Advanced tab's ``_on_set_breakpoint_singleshot`` ignored the
@@ -111,7 +111,7 @@ class TestSingleshotAndSilentButtonsDriveTypeBranchedBareIntegerRpc:
     ) -> None:
         """A checked Singleshot box on a recorded hardware breakpoint must branch to the hardware command.
 
-        Falsifiable: this is the case a hardcoded software-only command
+        This is the case a hardcoded software-only command
         cannot pass. If ``set_breakpoint_singleshot`` sent
         ``SetBreakpointSingleshoot`` regardless of ``bp_type``, the
         recorded command would not match
@@ -164,7 +164,7 @@ class TestSingleshotAndSilentButtonsDriveTypeBranchedBareIntegerRpc:
     ) -> None:
         """An unchecked Silent box on a default breakpoint must send ``SetBreakpointSilent 0x401000, 0``.
 
-        Falsifiable: if the handler always forced ``enabled=True``
+        If the handler always forced ``enabled=True``
         regardless of the checkbox, or the bridge always sent ``1``
         regardless of ``enabled``, the recorded command would carry
         ``1`` instead of the expected ``0``.

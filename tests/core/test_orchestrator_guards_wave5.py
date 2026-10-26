@@ -11,7 +11,7 @@ Covers:
            ``time.monotonic()`` deadline each iteration in addition to the
            ``asyncio.wait_for`` wrapper around the whole turn; assert
            ``asyncio.TimeoutError`` propagates for a workload whose measured
-           wall-clock cost genuinely crosses the configured budget.
+           wall-clock cost crosses the configured budget.
   Confirmation gate: ``ConfirmationLevel.DESTRUCTIVE`` + callback
            returns False → bridge never executed → ``stats.total_tool_calls == 0``.
 """
@@ -583,7 +583,7 @@ class TestTimeoutGuard:
     :meth:`Orchestrator._run_user_turn` applies around the whole loop
     coroutine. Both layers are required: a bare ``asyncio.wait_for`` wrapper does
     *not* enforce the timeout when every provider/bridge call in the loop resolves
-    without ever suspending on a genuine asyncio primitive (no real socket I/O, no
+    without ever suspending on an asyncio primitive (no real socket I/O, no
     ``asyncio.sleep``), because the whole coroutine chain runs as one uninterruptible
     step of the event loop and the ``call_later`` timeout callback never gets to run.
     The explicit in-loop deadline check closes that gap.
@@ -591,7 +591,7 @@ class TestTimeoutGuard:
     This gate asserts the contract: ``process_user_input`` must raise
     ``asyncio.TimeoutError`` when elapsed time exceeds ``timeout_seconds``.
     ``max_iterations=5000`` is required (not a smaller value) so the
-    zero-latency probe workload's genuine, measured wall-clock cost actually
+    zero-latency probe workload's measured wall-clock cost actually
     crosses the 1-second budget before it would otherwise be capped by
     ``max_iterations``; the growing per-turn message history makes later
     iterations more expensive than earlier ones (each iteration re-scans the

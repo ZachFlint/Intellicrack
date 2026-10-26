@@ -951,7 +951,7 @@ class Orchestrator:
         self._on_message: Callable[[Message], None] | None = None
         self._on_tool_call: Callable[[ToolCall], None] | None = None
         self._on_tool_result: Callable[[ToolResult], None] | None = None
-        self.tool_calls = RunningToolCalls()
+        self.tool_calls: RunningToolCalls = RunningToolCalls()
         """The tool calls running now; the operator can cancel one and see each one's progress."""
         self._on_stream_chunk: Callable[[str], None] | None = None
         self._on_bridge_analysis: Callable[[BridgeAnalysisSummary], None] | None = None
@@ -1475,7 +1475,7 @@ class Orchestrator:
         iteration. This is required in addition to the ``asyncio.wait_for``
         wrapper :meth:`_run_user_turn` applies around this coroutine: when
         every provider/bridge call in an iteration resolves without ever
-        suspending on a genuine asyncio primitive (no real socket I/O, no
+        suspending on an asyncio primitive (no real socket I/O, no
         ``asyncio.sleep``), the whole multi-iteration loop can run as a
         single uninterruptible step of the event loop, so ``wait_for``'s
         ``call_later`` timeout callback never gets scheduled until after the
@@ -1603,7 +1603,7 @@ class Orchestrator:
         ``ToolResult`` handed to callers via the tool-result callback or
         persisted to the session store -- keep the real, structured result
         object untouched, so a large tool payload (e.g. a full import table)
-        remains a genuine ``dict``/``list`` for downstream consumers while
+        remains a ``dict``/``list`` for downstream consumers while
         the model-facing context still stays bounded.
 
         Returns:

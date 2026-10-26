@@ -81,7 +81,7 @@ _CODE_SPLIT_RATIO_BOTTOM: Final[int] = 300
 _MAIN_SPLIT_RATIO_LEFT: Final[int] = 600
 _MAIN_SPLIT_RATIO_RIGHT: Final[int] = 250
 
-# Genuine floor for the bottom data-tabs pane: a floor smaller than any real
+# Minimum-height floor for the bottom data-tabs pane: a floor smaller than any real
 # tab page could use lets QSplitter's qSmartMinSize() (which lets an explicit
 # minimumSize override a widget's computed layout minimum outright) crush
 # whichever data tab is active into overlapping, unusable slivers. Every
@@ -274,7 +274,7 @@ class GhidraPanel(AnalysisPanelBase):
         self._diff_btn = import_actions[self.tr("Diff...")]
         self._headless_batch_btn = import_actions[self.tr("Headless Batch...")]
 
-        self.status_label = self._add_toolbar_label(toolbar, self.tr("Not connected"))
+        self.status_label: QLabel | None = self._add_toolbar_label(toolbar, self.tr("Not connected"))
 
     @override
     def _create_content(self) -> QWidget:

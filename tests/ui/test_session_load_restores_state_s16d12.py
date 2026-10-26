@@ -16,10 +16,9 @@ saves it, then drives a fresh ``SessionManagerDialog`` -- wired to a fake
 ``_orchestrator`` / ``_on_binary_loaded`` surface the real ``MainWindow``
 exposes -- through the real "Load Session" flow and asserts the restored
 state actually lands in the live ``ChatPanel`` widget and the fake window's
-binary-activation hook. No mocks stand in for the behaviour under test: the
-chat panel is a real ``ChatPanel``, the binary hook is a small real method
-(not a recording stub), and persistence goes through the real SQLite-backed
-store.
+binary-activation hook. The
+chat panel is a ``ChatPanel``, the binary hook is a small method, and
+persistence goes through the SQLite-backed store.
 """
 
 from __future__ import annotations
@@ -260,7 +259,7 @@ def test_load_session_surfaces_error_for_stale_selection(
     dialog was constructed but is no longer present in ``self._sessions``
     by the time "Load Session" is confirmed (for example, a concurrent
     delete that has not yet been reflected by a table refresh) -- the same
-    "not found" case a genuinely malformed/missing session file would hit.
+    "not found" case a malformed/missing session file would hit.
     ``_load_session_via_manager`` guards against this synchronously, before
     dispatching anything to the bridge event loop, so the warning must
     already be present the instant ``_load_selected_session`` returns --

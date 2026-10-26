@@ -18,8 +18,8 @@ slots that Qt marshals back onto the GUI thread.
 Each test below drives the real ``HashingMixin`` slot through a small
 ``QWidget`` harness backed by a document double whose hash/checksum methods
 sleep for a fixed duration and record the identity of the OS thread that
-executed them. This lets the tests assert, without mocking Qt or the mixin
-itself:
+executed them. This lets the tests assert, with Qt and the mixin itself
+unpatched:
 
 * the GUI-thread call returns almost immediately even though the document
   method sleeps far longer than the return budget (proves the call is not
@@ -28,7 +28,7 @@ itself:
   visible immediately after the call returns (proves a worker was
   dispatched before the slot returned);
 * the document method actually executed on a different OS thread than the
-  GUI thread (proves real offloading, not just an async-looking API);
+  GUI thread (the work leaves the GUI thread, not just an async-looking API);
 * the result-formatting callback that mutates the label ran back on the GUI
   thread (proves the worker's ``pyqtSignal`` marshalled the result instead
   of the label being touched from the background thread).

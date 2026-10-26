@@ -75,7 +75,7 @@ def test_a_worker_killed_by_a_qt_fatal_message_is_reported_with_the_message_and_
     Runs a real pytest session with one xdist worker over a probe that raises
     a Qt fatal message, from the test body or from a fixture's teardown.
 
-    Falsifiable: with no handler recording fatal messages, the message dies
+    With no handler recording fatal messages, the message dies
     with the worker and the output holds only "node down: Not properly
     terminated".
 
@@ -96,7 +96,7 @@ def test_a_worker_killed_by_a_qt_fatal_message_is_reported_with_the_message_and_
 def test_a_long_session_keeps_one_recorder_and_pytest_qts_capture(pytestconfig: pytest.Config) -> None:
     """More tests than the recursion limit has frames all pass, and a warning at the end still reaches pytest-qt's capture.
 
-    Falsifiable: a recorder installed and restored around each phase leaves
+    A recorder installed and restored around each phase leaves
     one behind per test, so the warning at the end overflows the stack on its
     way down the chain; and it replaces pytest-qt's handler before the test
     body runs, so the capture the last probe reads is empty.

@@ -14,9 +14,9 @@ processes). The Process panel's Tracked tab is populated from that store via
 into a single list of ``TrackedEntry`` objects. These tests spawn real child
 processes, register one via each store, and assert both appear with correct
 identity and live running state -- and that killing the external PID's
-backing process flips its reported running state to False. Each assertion is
-falsifiable against ``get_all_tracked()``, which would either omit the
-external entry or fail to provide ``TrackedEntry``.
+backing process flips its reported running state to False. Each assertion
+fails if ``get_all_tracked()`` omits the
+external entry or fails to provide ``TrackedEntry``.
 """
 
 from __future__ import annotations

@@ -64,11 +64,11 @@ _IMAGE_PADDED_SIZE = 0x600
 def _build_real_pe(machine: int) -> bytes:
     r"""Build a minimal but spec-valid PE image with the given machine type.
 
-    The resulting bytes parse cleanly under ``pefile`` and carry a genuine
+    The resulting bytes parse cleanly under ``pefile`` and carry a
     DOS header, ``PE\0\0`` signature, COFF file header (with the requested
     ``IMAGE_FILE_MACHINE``), optional header, and a single ``.text`` section.
-    This is a real binary, not a stub MZ prefix, so it exercises the real
-    deployment path the way an actual ``.dp64``/``.dp32`` plugin would.
+    Because the image is a complete PE rather than a bare MZ prefix, it exercises
+    the deployment path the way an actual ``.dp64``/``.dp32`` plugin would.
 
     Args:
         machine: ``IMAGE_FILE_MACHINE`` value (AMD64 or I386).

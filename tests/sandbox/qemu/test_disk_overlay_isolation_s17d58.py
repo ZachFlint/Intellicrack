@@ -222,7 +222,7 @@ class TestTwoSandboxesNeverOpenTheSameWritableDisk:
                 info = _run_qemu_img("info", disk)
                 assert info.returncode == _SUCCESS, f"qemu-img info failed: {info.stderr}"
 
-                # The backing-file line is the discriminator: a disk that IS the
+                # The backing-file line tells the two apart: a disk that IS the
                 # configured image names itself under "image:" but has no
                 # backing file at all.
                 backing = [line for line in info.stdout.splitlines() if line.startswith(_BACKING_FILE_FIELD)]

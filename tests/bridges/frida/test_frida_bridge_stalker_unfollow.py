@@ -127,7 +127,7 @@ def test_unfollow_raises_instead_of_returning_an_empty_trace_when_the_agent_does
 
     The trace is registered by hand with no acknowledgement, then the agent is made to stop answering.
 
-    Falsifiable: the old code waited out Frida's timeout, swallowed it and returned an empty
+    The old code waited out Frida's timeout, swallowed it and returned an empty
     ``StalkerTrace`` as success, so ``pytest.raises`` fails.
 
     Args:
@@ -157,7 +157,7 @@ def test_unfollow_after_the_script_stopped_itself_returns_its_trace_without_wait
     bridge's own batch parser in the wire format the Stalker script sends. The registered script ignores
     any further request, as the real one does once it has stopped.
 
-    Falsifiable: a bridge that always waited for a fresh acknowledgement would wait out the whole
+    A bridge that always waited for a fresh acknowledgement would wait out the whole
     limit here.
 
     Args:
@@ -182,9 +182,9 @@ def test_unfollow_raises_with_the_reason_the_script_gave_when_its_own_unfollow_f
     """A script that reports its unfollow failed makes ``stalker_unfollow`` raise with that reason.
 
     The registration is made by hand around a real loaded script, with a real event already set and
-    the script's error recorded, because no real target makes ``Stalker.unfollow`` throw.
+    the script's error recorded, because no live target makes ``Stalker.unfollow`` throw.
 
-    Falsifiable: a bridge that looked only at the event and not at the recorded error would return an
+    A bridge that looked only at the event and not at the recorded error would return an
     empty trace for a failed unfollow.
 
     Args:
@@ -207,7 +207,7 @@ def test_unfollow_raises_when_the_unfollow_was_acknowledged_but_the_script_canno
     was the signature of every residual wedge: a followed thread that produced no event, an
     acknowledgement, and an unload that never came back, reported as an empty trace.
 
-    Falsifiable: the first version of ``stalker_unfollow`` swallowed the unload timeout and returned
+    The first version of ``stalker_unfollow`` swallowed the unload timeout and returned
     the trace, so ``pytest.raises`` fails.
 
     Args:
@@ -235,7 +235,7 @@ def test_an_acknowledged_unfollow_that_unloads_cleanly_returns_its_trace_even_wi
 
     The registration is made by hand around a real loaded script with a real, already set event.
 
-    Falsifiable: a bridge that treated every empty trace as a failure would raise here.
+    A bridge that treated every empty trace as a failure would raise here.
 
     Args:
         notepad_bridge: Bridge attached to a private notepad.
@@ -252,7 +252,7 @@ def test_an_acknowledged_unfollow_that_unloads_cleanly_returns_its_trace_even_wi
 def test_unfollow_of_a_registration_whose_script_is_gone_returns_an_empty_trace(notepad_bridge: FridaBridge) -> None:
     """A registration with no script left has nothing to unfollow, which is an empty trace and not an error.
 
-    Falsifiable: dereferencing the missing script would raise instead of returning.
+    Dereferencing the missing script would raise instead of returning.
 
     Args:
         notepad_bridge: Bridge attached to a private notepad.
@@ -268,7 +268,7 @@ def test_unfollow_of_a_registration_whose_script_is_gone_returns_an_empty_trace(
 def test_the_unfollow_message_recorder_marks_acknowledgements_and_errors() -> None:
     """The recorder sets the reply on ``stalker_unfollowed`` and on ``stalker_unfollow_error`` (keeping the error), and ignores other types.
 
-    Falsifiable: a recorder that ignored the error type would leave the reply unset on a failed
+    A recorder that ignored the error type would leave the reply unset on a failed
     unfollow, so the caller would wait out the whole limit.
     """
     record = cast(

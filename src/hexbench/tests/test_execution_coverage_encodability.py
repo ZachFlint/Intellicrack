@@ -7,7 +7,7 @@
 
 A bare check of ``bool(json.dumps(result.value))`` could never turn red: ``json.dumps`` never returns a falsy string for a value
 it *can* encode, and raises rather than returning anything for a value it
-*cannot*. The condition would be true whenever it was reached, and a genuinely
+*cannot*. The condition would be true whenever it was reached, and an
 unencodable value would escape as a bare, unattributed ``TypeError``. These tests drive ``require_encodable`` with a
 real unencodable Python object and check that the failure it produces is an
 ``AssertionError`` naming both the operation and the offending type, not a raw

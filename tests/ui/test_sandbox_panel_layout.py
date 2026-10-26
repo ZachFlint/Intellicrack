@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the sandbox panel layout hardening.
+"""Gates for the sandbox panel layout hardening.
 
 Guards the layout that stops the sandbox panel from smashing its controls when
 docked narrow: the execution-control cluster is wrapped in a scroll area, the
@@ -31,7 +31,7 @@ _MIN_FIELD_WIDTH = 160
 
 @pytest.mark.usefixtures("qapp")
 class TestSandboxContentSplitter:
-    """The controls/output divider must be a genuinely resizable vertical splitter."""
+    """The controls/output divider must be a user-resizable vertical splitter."""
 
     @staticmethod
     def test_content_is_two_pane_non_collapsible_vertical_splitter() -> None:

@@ -391,7 +391,7 @@ def _hydrate_dataclass_arguments(method: _BridgeMethod, arguments: dict[str, Any
     a bridge method annotates with a dataclass type (bare, or as
     ``SomeDataclass | None``) is supplied by an AI/orchestrator caller as a
     plain mapping rather than a real instance. Bridge methods perform
-    genuine attribute access on such parameters, so passing the mapping
+    attribute access on such parameters, so passing the mapping
     straight through fails deep inside the call instead of at the dispatch
     boundary. This inspects ``method``'s resolved parameter types and
     converts any mapping bound to a dataclass-typed parameter into a real

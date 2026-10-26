@@ -104,6 +104,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Changed
 
+- Harden hexcore concurrency, diff engine, and test suites (`04be5a9`)
+
 - Apply small Python modernizations across MCP, providers and tests (`11103d2`)
 
 - **ui:** Take every Qt surface's colours, icons and styles from the theme system (`35c4353`)
@@ -112,7 +114,7 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 - **mcp:** Remove every suppression and the type errors behind them (`5835d3c`)
 
-- Harden hexcore concurrency, diff engine, and test suites (``)
+- **hexcore:** Optimize document operations and clean typings (``)
 
 
 ### Documentation

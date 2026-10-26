@@ -6,7 +6,7 @@
 
 ``widgets.py`` has no dedicated test coverage for the entropy graph, byte-distribution
 histogram, digram heatmap coloring, and large-file settings dialog. These tests feed the widgets with
-REAL statistics computed from a genuine Windows PE binary (via the real
+statistics computed from a Windows PE binary (via the real
 ``intellicrack_hexcore`` backend and :func:`compute_statistics`) and assert
 both the public interaction contract (block-click offset mapping) and that the
 widgets render non-trivial painted output for that real data.

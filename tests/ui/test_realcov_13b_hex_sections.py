@@ -6,11 +6,11 @@
 
 ``sections.py`` has no dedicated test coverage for section/import/export/string parsing.
 The mixin's UI dispatch routes through the bridge, but the pure data path it relies on,
-:func:`execute_strings_extraction`, can be driven directly against a REAL
-``intellicrack_hexcore.HexDocument`` opened on a genuine Windows PE binary.
-These tests assert that real, recognizable ASCII strings (the DOS stub banner
+:func:`execute_strings_extraction`, can be driven directly against an
+``intellicrack_hexcore.HexDocument`` opened on a System32 Windows PE binary.
+These tests assert that recognizable ASCII strings (the DOS stub banner
 that every PE carries) are extracted at their true file offsets, and that the
-format detection that drives template auto-selection identifies real PE/ELF
+format detection that drives template auto-selection identifies PE/ELF
 binaries correctly.
 
 The ``test_min_length_is_enforced`` test asserts the EXACT minimum-length threshold, not a
@@ -82,7 +82,7 @@ def _extract_with_min(path: Path, min_length: int, max_results: int = _MAX_RESUL
     """Run the real string extraction helper with a given minimum length.
 
     Args:
-        path: Path to a real binary file.
+        path: Path to an on-disk binary file.
         min_length: Minimum printable-character run length to include.
         max_results: Upper bound on returned entries.
 
@@ -239,7 +239,7 @@ class TestStringExtractionRealPe:
 
 
 class TestFormatDetectionDrivesTemplates:
-    """detect_format must classify real binaries for template auto-selection."""
+    """detect_format must classify on-disk PE/ELF/Mach-O fixtures for template auto-selection."""
 
     def test_real_pe_detected(self, real_pe_dll: Path) -> None:
         """Verify a real PE's leading bytes are classified as ``pe``.

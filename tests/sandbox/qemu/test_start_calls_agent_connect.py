@@ -17,10 +17,8 @@ Findings addressed
 
     For 19-F1, the integration test drives ``QEMUSandbox._attach_qemu_agents``
     directly using a subclass that overrides only the QEMU-hardware methods
-    (``_connect_and_verify_qmp`` and ``_bootstrap_guest_agent``) with genuine
-    no-op implementations via Python subclassing.  No ``unittest.mock``,
-    ``MagicMock``, ``patch``, or any stubbing mechanism is used anywhere in
-    this file.
+    (``_connect_and_verify_qmp`` and ``_bootstrap_guest_agent``) with
+    no-op implementations via Python subclassing.
 """
 
 from __future__ import annotations
@@ -52,7 +50,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
-# Long enough that the first connect attempts are genuinely refused, short
+# Long enough that the first connect attempts are refused, short
 # enough to stay well inside the 3 s budget the retry test allows.
 _AGENT_LISTEN_DELAY_S: Final[float] = 0.15
 
@@ -138,7 +136,7 @@ class TestGuestAgentClientConnectRealSocket:
 
         With a very short ``time_limit`` and no server on the port, the retry
         loop exhausts without success and returns ``False``.  This validates
-        the real loop logic in ``GuestAgentClient.connect``, not a stub.
+        the loop logic in ``GuestAgentClient.connect``.
         """
         port = _free_port()
         client = GuestAgentClient(host="127.0.0.1", port=port)
@@ -207,7 +205,7 @@ class TestGuestAgentClientConnectRealSocket:
         is used by the integration test to prove that ``agent_connect_timeout``
         is passed through — if production code substituted any positive hardcoded
         timeout, this test would go green (connect succeeds) and the integration
-        discriminator would fail instead.
+        test would fail instead.
         """
         client = GuestAgentClient(host="127.0.0.1", port=listening_server)
         result = await client.connect(time_limit=0.0, retry_interval=0.5)
@@ -231,7 +229,7 @@ class TestEnsureAgentConnectedRealClient:
     The prior tests injected a ``_RecordingAgent`` whose ``connect`` method
     returned a pre-configured boolean.  These tests use real
     ``GuestAgentClient`` instances against real sockets so that the bridge
-    between ``QEMUSandbox`` and ``GuestAgentClient`` is genuinely exercised.
+    between ``QEMUSandbox`` and ``GuestAgentClient`` is exercised.
     """
 
     @pytest.mark.asyncio
@@ -314,15 +312,14 @@ class TestEnsureAgentConnectedRealClient:
 # ---------------------------------------------------------------------------
 # Integration: _attach_qemu_agents with real GuestAgentClient (19-F1)
 #
-# Design rationale (no mocks):
+# Design rationale:
 #   ``QEMUSandbox._attach_qemu_agents`` calls three things in order:
 #     1. ``_connect_and_verify_qmp()``  - requires real QEMU hardware
 #     2. ``_bootstrap_guest_agent()``   - requires real QEMU hardware
 #     3. Creates a GuestAgentClient and calls ``_ensure_agent_connected``
 #
 #   Rather than patching (1) and (2), we subclass ``QEMUSandbox`` and
-#   override them with genuine no-op coroutines — standard Python OOP, not
-#   mocking.  The real ``GuestAgentClient`` and ``_ensure_agent_connected``
+#   override them with no-op coroutines.  The real ``GuestAgentClient`` and ``_ensure_agent_connected``
 #   are left entirely unmodified so the real connect path is exercised.
 # ---------------------------------------------------------------------------
 
@@ -331,7 +328,7 @@ class _AttachTestSandbox(QEMUSandbox):
     """``QEMUSandbox`` subclass that skips the QEMU-hardware steps.
 
     ``_connect_and_verify_qmp`` and ``_bootstrap_guest_agent`` are overridden
-    with genuine no-op coroutines - Python subclassing, not mock patching.
+    with no-op coroutines via Python subclassing.
     The real ``GuestAgentClient`` and ``_ensure_agent_connected`` are intact.
 
     Public wrappers expose the protected members that tests must access so
@@ -376,8 +373,8 @@ class TestAgentConnectInvokedDuringStart:
     """``_attach_qemu_agents`` must invoke the real ``GuestAgentClient.connect``.
 
     This class restores the removed ``test_agent_connect_invoked_during_start``
-    test (19-F1) using a real TCP server.  The real ``GuestAgentClient.connect``
-    is exercised end-to-end through ``_attach_qemu_agents`` without any mocking.
+    test (19-F1) using a real TCP server.  ``GuestAgentClient.connect``
+    is exercised end-to-end through ``_attach_qemu_agents``.
     """
 
     @pytest.mark.asyncio
@@ -442,7 +439,7 @@ class TestAgentConnectInvokedDuringStart:
     ) -> None:
         """``_attach_qemu_agents`` passes ``agent_connect_timeout`` to ``connect()``.
 
-        The discriminator: ``GuestAgentClient.connect(time_limit=0.0)`` returns
+        ``GuestAgentClient.connect(time_limit=0.0)`` returns
         ``False`` even with a live server (the ``while time.time() - start <
         time_limit`` guard exits immediately).  If the production code ignores
         ``agent_connect_timeout`` and uses any positive hardcoded timeout instead,

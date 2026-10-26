@@ -8,8 +8,8 @@ Source-inspection tests verify behaviours by scanning ``inspect.getsource``
 text for identifier fragments. Source-text assertions cannot detect wrong
 logic, wrong argument order, missing-attribute errors, or broken signal/slot
 wiring. These tests instead drive the *real* :class:`MainWindow` methods over
-real registries, real binaries, and real Qt dialogs (with only the blocking
-modal ``exec`` isolated), asserting on genuine runtime outcomes.
+real registries, on-disk executables, and real Qt dialogs (with only the
+blocking modal ``exec`` isolated), asserting on runtime outcomes.
 
 Behaviours covered:
 
@@ -170,8 +170,8 @@ def window_factory(
 class _RealHexSaveWidget(QWidget):
     """Real embedded hex-editor collaborator that writes loaded bytes on save.
 
-    This is a genuine in-process widget (not a stub of the method under test):
-    it holds real binary bytes and, on :meth:`save_as`, writes them to a path
+    This is an in-process widget, separate from the method under test:
+    it holds the loaded executable's bytes and, on :meth:`save_as`, writes them to a path
     chosen through the real ``QFileDialog.getSaveFileName`` Qt API, exactly as
     a hex editor's "save as" would. The slot under test
     (:meth:`MainWindow._on_save_patched_binary`) discovers it through the real
@@ -182,7 +182,7 @@ class _RealHexSaveWidget(QWidget):
         """Initialize the widget with the bytes to persist.
 
         Args:
-            data: Real binary bytes to write on save.
+            data: Executable bytes to write on save.
             parent: Parent widget.
         """
         super().__init__(parent)
@@ -525,7 +525,7 @@ def test_session_dialog_deleted_signal_reaches_slot(
     Captures the real :class:`SessionManagerDialog` constructed inside
     ``_on_load_session`` (with the modal ``exec`` isolated), then emits the
     real ``session_deleted`` signal and asserts the MainWindow slot ran by
-    observing the genuine ``status_update`` emission.
+    observing the resulting ``status_update`` emission.
 
     Args:
         window_factory: Factory yielding a real, auto-closed MainWindow.

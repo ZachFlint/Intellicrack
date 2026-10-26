@@ -20,7 +20,7 @@ which runs inside ``threading._shutdown`` and wakes those parked workers so they
 exit before they are joined. Tests that drive coroutines through a throwaway
 ``asyncio.new_event_loop()`` (closed without ``shutdown_default_executor``) leave
 exactly such idle workers behind, so they are deliberately excluded here; only a
-worker still *executing* a task (blocked in user code) is a genuine hang.
+worker still *executing* a task (blocked in user code) is a hang.
 """
 
 from __future__ import annotations

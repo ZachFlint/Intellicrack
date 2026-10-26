@@ -17,10 +17,10 @@ while any other extension (``.ips``, ``.ips32``, or unrecognised) still goes
 through the generic ``import_patches`` dispatcher, which already picks the
 right handler by magic bytes.
 
-Every test drives the REAL, unmodified ``HexEditorPanel`` and
-``HexEditorBridge`` against real ``intellicrack_hexcore.HexDocument``
-instances and genuine patch payloads (BPS/UPS blobs produced by the bridge's
-own real ``export_patches_bps`` / ``export_patches_ups``, and a hand-built
+Every test drives the ``HexEditorPanel`` and
+``HexEditorBridge`` against ``intellicrack_hexcore.HexDocument``
+instances and patch payloads (BPS/UPS blobs produced by the bridge's
+own ``export_patches_bps`` / ``export_patches_ups``, and a hand-built
 minimal valid IPS record); the only test double is a ``HexEditorBridge``
 subclass that appends to a call ledger before delegating to the real
 implementation via ``super()``.
@@ -136,7 +136,7 @@ class _PatchesRecordingBridge(HexEditorBridge):
     """``HexEditorBridge`` subclass recording every patch-import dispatch target.
 
     Every override delegates to the real implementation via ``super()`` after
-    recording, so the resulting document bytes reflect a genuine patch
+    recording, so the resulting document bytes reflect an actual patch
     application rather than a canned response.
     """
 
@@ -255,7 +255,7 @@ class TestBpsUpsImportUsesNativeAwareBridgeMethod:
     ) -> None:
         """A ``.bps`` file must route to ``import_patches_bps``, never the generic dispatcher.
 
-        Falsifiable: if ``_on_import_patches`` were reverted to always call
+        If ``_on_import_patches`` were reverted to always call
         ``bridge.import_patches(patch_b64, original_path)`` regardless of
         suffix (the unrouted behaviour), ``bridge.import_patches_bps_calls``
         would stay empty and ``import_patches_calls`` would carry the entry
@@ -311,7 +311,7 @@ class TestBpsUpsImportUsesNativeAwareBridgeMethod:
     ) -> None:
         """A ``.ups`` file must route to ``import_patches_ups``, never the generic dispatcher.
 
-        Falsifiable: if ``_on_import_patches`` were reverted to always call
+        If ``_on_import_patches`` were reverted to always call
         ``bridge.import_patches(patch_b64, original_path)`` regardless of
         suffix, ``bridge.import_patches_ups_calls`` would stay empty and
         ``import_patches_calls`` would carry the entry instead.
@@ -371,7 +371,7 @@ class TestBpsUpsImportUsesNativeAwareBridgeMethod:
         must recognise this shape and report it as one applied patch record
         instead of treating it as an unexpected payload type.
 
-        Falsifiable: if ``_on_import_patches_success`` only accepted
+        If ``_on_import_patches_success`` only accepted
         ``isinstance(result, int)`` (the unrouted behaviour), it would call
         ``show_warning`` with "Bridge returned an unexpected payload type."
         instead of ``show_info``.
@@ -423,7 +423,7 @@ class TestOtherFormatsStillUseGenericImportPatches:
     ) -> None:
         """A ``.ips`` file must route to the generic ``import_patches``, not the BPS/UPS methods.
 
-        Falsifiable: if ``_on_import_patches`` were changed to route every
+        If ``_on_import_patches`` were changed to route every
         format through ``import_patches_bps``/``import_patches_ups``,
         ``bridge.import_patches_calls`` would stay empty for this ``.ips``
         payload.

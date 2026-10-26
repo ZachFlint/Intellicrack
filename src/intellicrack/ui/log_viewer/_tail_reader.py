@@ -175,8 +175,8 @@ class LogFileTailReader(QObject):
             tailing resumes) once the historical load finishes.
     """
 
-    record_emitted = pyqtSignal(dict)
-    initial_load_complete = pyqtSignal(int)
+    record_emitted: pyqtSignal = pyqtSignal(dict)
+    initial_load_complete: pyqtSignal = pyqtSignal(int)
 
     def __init__(
         self,

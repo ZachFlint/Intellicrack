@@ -14,8 +14,8 @@
 
 All tests drive a real :class:`SearchTab` widget and real
 ``_apply_addresses``/``_apply_dict_results`` calls under an offscreen
-``QApplication`` -- no mocks stand in for the Qt header-resize machinery or
-the result-population logic being verified.
+``QApplication``, so the Qt header-resize machinery and the
+result-population logic being verified run unmodified.
 """
 
 from __future__ import annotations

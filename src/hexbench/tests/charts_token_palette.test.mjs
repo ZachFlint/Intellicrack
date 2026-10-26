@@ -58,7 +58,7 @@ check(
   `parsed ${declared.size} tokens out of the :root block, which means the block was not found and every expectation below would pass vacuously`,
 );
 
-/* ------------------------------------------------------ the table is honest */
+/* ------------------------------------------------ the table matches app.css */
 
 for (const [token, fallback] of CHART_TOKEN_FALLBACKS) {
   check(

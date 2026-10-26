@@ -1421,7 +1421,7 @@ def test_failed_refresh_on_a_dead_pipe_clears_the_register_view(qtbot: QtBot, ri
 
 @pytest.mark.spawns_process
 def test_view_refresh_failure_with_a_live_pipe_keeps_the_view(qtbot: QtBot, piped_rig: ChildRig) -> None:
-    """With the bridge pipe genuinely connected a failed refresh is only logged and the view is kept.
+    """With the bridge pipe connected a failed refresh is only logged and the view is kept.
 
     Args:
         qtbot: The pytest-qt helper.

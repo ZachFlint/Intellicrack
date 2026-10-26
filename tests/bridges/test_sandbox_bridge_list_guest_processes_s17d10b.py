@@ -153,7 +153,7 @@ class TestListGuestProcessesBackendFailure:
     def test_backend_sandbox_error_is_wrapped_as_tool_error(self) -> None:
         """``SandboxError`` from ``list_processes`` becomes a ``ToolError`` naming the failure.
 
-        Falsified by: swallowing the backend's ``SandboxError`` (returning an
+        Swallowing the backend's ``SandboxError`` (returning an
         empty list instead of propagating it) would make ``pytest.raises``
         find nothing to catch.
         """
@@ -186,7 +186,7 @@ class TestListGuestProcessesTypeGating:
     def test_qemu_instance_rejection_never_calls_the_backend(self) -> None:
         """The type gate must fire before the backend's ``list_processes`` is ever invoked.
 
-        Falsified by: removing the ``sandbox_type != "windows"`` guard (or
+        Removing the ``sandbox_type != "windows"`` guard (or
         checking it after the backend call) would make
         ``backend.list_processes_call_count`` end up at 1 instead of 0.
         """

@@ -2,4 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Quality gates for the Model Context Protocol client."""
+"""Tests for the Model Context Protocol client."""

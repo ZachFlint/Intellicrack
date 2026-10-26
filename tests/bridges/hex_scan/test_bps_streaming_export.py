@@ -6,25 +6,26 @@
 """Regression tests for streaming BPS/UPS patch export.
 
 These tests verify that ``HexEditorBridge.export_patches_bps`` and
-``HexEditorBridge.export_patches_ups`` never materialise the full
-source file as a Python ``bytes`` value on the Python heap, regardless
-of which underlying code path is taken:
+``HexEditorBridge.export_patches_ups`` do not materialise the full
+source file as a Python ``bytes`` value on the path-based and
+pure-Python code paths, and that the legacy byte-slice path still
+produces a correct patch:
 
 1. The native Rust path-based exporter (``export_patches_bps_from_path``
    / ``export_patches_ups_from_path``) memory-maps the source inside
    Rust and hands the slice straight to the encoder; the Python heap
    sees only the returned patch bytes.
-2. The legacy byte-slice Rust path (``export_patches_bps`` /
-   ``export_patches_ups``) receives an :class:`mmap.mmap` object via
-   the buffer protocol, so the source pages flow through Rust without
-   first being copied to a Python ``bytes`` value.
+2. The legacy byte-slice Rust path (``export_patches_bps``) accepts
+   only a ``bytes`` source, so the bridge copies the memory-mapped
+   source into ``bytes`` before calling it. That branch runs only when
+   the path-based binding is missing.
 3. The pure-Python fallback exposed via
    :meth:`HexEditorBridge._export_patches_bps_pyfallback` (and the UPS
    sibling) walks the source through an :class:`mmap.mmap` view and
    never calls ``bytes(mm)``.
 
-The principal load-bearing assertion is that the source object handed
-to the encoder is an :class:`mmap.mmap` view rather than a
+The principal load-bearing assertion is that the source object the
+pure-Python fallback hands to the encoder is an :class:`mmap.mmap` view rather than a
 :class:`bytes` materialisation of the source file. This invariant is
 verified end-to-end against a multi-gigabyte sparse source file: the
 file size is large enough that the previous ``bytes(self._load_source_via_mmap(...))``
@@ -45,7 +46,7 @@ import asyncio
 import base64
 import mmap
 import tracemalloc
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, cast
 
 import intellicrack_hexcore
 import pytest
@@ -478,7 +479,7 @@ class TestUpsStreamingPyfallback:
 
 
 class TestBpsStreamingBackend:
-    """The native Rust BPS exporters consume the source without copy."""
+    """The native Rust BPS/UPS exporters produce correct patches; the path-based ones read the source without a copy."""
 
     def test_path_based_backend_binding_is_present(self) -> None:
         """The Rust ``HexDocument`` exposes the path-based exporter.
@@ -545,79 +546,68 @@ class TestBpsStreamingBackend:
         finally:
             source_path.unlink(missing_ok=True)
 
-    def test_legacy_byte_slice_path_accepts_mmap(self, tmp_path: Path) -> None:
-        """The legacy byte-slice fallback receives an mmap, not bytes.
+    def test_legacy_byte_slice_fallback_exports_through_backend(self, tmp_path: Path) -> None:
+        """The legacy byte-slice fallback hands the Rust exporter ``bytes`` and returns the path-based patch.
 
-        Forces the fallback within
-        :meth:`HexEditorBridge._export_patches_bps_via_backend` by
-        wrapping the document in a shim that hides the path-based
-        entrypoint and intercepts the byte-slice call so the test can
-        confirm the source object's runtime type. The bridge must
-        hand the inner backend an :class:`mmap.mmap` view rather than
-        a :class:`bytes` materialisation of the source.
+        Wraps the document in a shim that hides ``export_patches_bps_from_path``, so
+        :meth:`HexEditorBridge._export_patches_bps_via_backend` takes the byte-slice
+        branch, and forwards ``export_patches_bps`` to the Rust document, which accepts
+        only a ``bytes`` source. The exporter must receive exactly one ``bytes`` source,
+        the returned patch must equal the path-based export of the same source, and
+        applying it to the source must reproduce the target.
 
         Args:
             tmp_path: Pytest-provided temp directory.
         """
+        source = b"".join(bytes((i & 0xFF,)) for i in range(8192))
+        target = bytearray(source)
+        target[200:204] = b"\xff\xfe\xfd\xfc"
         source_path = tmp_path / "rust_legacy_bps_source.bin"
-        _make_sparse_source(source_path, _SMALL_SOURCE_BYTES)
-        bridge = _open_bridge_with_target(_TARGET_PAYLOAD)
-        captured: list[type] = []
+        source_path.write_bytes(source)
+        bridge = _open_bridge_with_target(bytes(target))
+        wrapped_document = bridge.document
+        assert wrapped_document is not None
+        expected_patch = bytes(wrapped_document.export_patches_bps_from_path(str(source_path)))
+        received: list[type] = []
 
         class _LegacyDoc:
-            """Shim that hides the path-based BPS exporter.
+            """Shim exposing only the byte-slice BPS exporter of a Rust document."""
 
-            Forwards the legacy byte-slice ``export_patches_bps``
-            call to the real Rust document but deliberately omits
-            ``export_patches_bps_from_path`` so
-            :meth:`HexEditorBridge._export_patches_bps_via_backend`
-            falls through to the mmap pass-through branch.
-            """
-
-            def __init__(self, inner: object) -> None:
-                """Capture the wrapped backend document.
+            def __init__(self, inner: intellicrack_hexcore.HexDocument) -> None:
+                """Hold the Rust document the shim forwards to.
 
                 Args:
-                    inner: The real Rust ``HexDocument`` instance.
+                    inner: The Rust ``HexDocument`` holding the target bytes.
                 """
                 self._inner = inner
 
-            def export_patches_bps(self, source: object) -> bytes:
-                """Record the runtime type of ``source`` and emit a stub patch.
+            def export_patches_bps(self, source_data: bytes) -> bytes:
+                """Record the source type and run the Rust byte-slice exporter.
 
                 Args:
-                    source: Buffer-protocol source data the encoder
-                        would normally read.
+                    source_data: Source handed over by the bridge.
 
                 Returns:
-                    bytes: Minimal valid-magic BPS patch with all-zero
-                    payload so the bridge's logging path treats it as
-                    a successful export.
+                    bytes: The BPS patch produced by the Rust exporter.
                 """
-                captured.append(type(source))
-                return b"BPS1" + b"\x00" * 32
+                received.append(type(source_data))
+                return self._inner.export_patches_bps(source_data)
 
             def length(self) -> int:
-                """Forward the document length to the inner backend.
+                """Return the wrapped document's length.
 
                 Returns:
                     int: Number of bytes in the document.
                 """
-                fn = getattr(self._inner, "length")
-                if not callable(fn):
-                    pytest.fail("inner backend lacks length")
-                result = fn()
-                if not isinstance(result, int):
-                    pytest.fail("inner backend length returned non-int")
-                return result
+                return self._inner.length()
 
-        bridge.document = _LegacyDoc(bridge.document)
+        bridge.document = cast("intellicrack_hexcore.HexDocument", _LegacyDoc(wrapped_document))
         assert not hasattr(bridge.document, "export_patches_bps_from_path")
         try:
-            _run(bridge.export_patches_bps(str(source_path)))
+            encoded_patch = _run(bridge.export_patches_bps(str(source_path)))
         finally:
             source_path.unlink(missing_ok=True)
-        assert captured, "legacy byte-slice path was not exercised"
-        assert captured[-1] is mmap.mmap, (
-            f"Legacy byte-slice backend received source of type {captured[-1]}; expected mmap.mmap (F-0042 regression)"
-        )
+        assert received == [bytes], f"Legacy byte-slice exporter received sources of type {received}; expected one bytes source"
+        patch = base64.b64decode(encoded_patch)
+        assert patch == expected_patch, "Byte-slice export differs from the path-based export of the same source"
+        assert _call_apply(bridge, "_apply_bps_patch", patch, source) == bytes(target)

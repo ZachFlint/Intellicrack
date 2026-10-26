@@ -507,7 +507,7 @@ class TestTheGeneratedWindowsAgentListensWhereTheForwardDelivers:
         closed here before the client connects, which is what such an attempt
         looks like from the agent's side.
 
-        Falsifiable: a peer that serves only its first connection has stopped
+        A peer that serves only its first connection has stopped
         listening by the time the client connects, so the client is refused
         until its time runs out, which is how this gate's neighbour failed on
         a loaded runner whenever the first handshake took over half a second.

@@ -71,7 +71,7 @@ class BridgeAnalysisPanel(QWidget):
             argument types differ.
     """
 
-    address_navigate = pyqtSignal("qint64")
+    address_navigate: pyqtSignal = pyqtSignal("qint64")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the AnalysisPanel widget.
@@ -131,7 +131,7 @@ class BridgeAnalysisPanel(QWidget):
 
         layout.addWidget(header)
 
-        self.tab_widget = QTabWidget()
+        self.tab_widget: QTabWidget = QTabWidget()
         self.tab_widget.setObjectName("analysis_tabs")
         self.tab_widget.setUsesScrollButtons(True)
         tab_bar = self.tab_widget.tabBar()

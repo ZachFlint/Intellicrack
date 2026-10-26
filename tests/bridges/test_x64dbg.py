@@ -14,7 +14,7 @@ Tests validate:
 - Memory operations and disassembly integration
 - Error handling for edge cases
 
-All tests use real Windows APIs and state management without mocking.
+All tests use real Windows APIs and state management.
 """
 
 from __future__ import annotations
@@ -485,7 +485,7 @@ def x64dbg_bridge_64bit() -> X64DbgBridge:
 async def test_disassemble_real_exported_function(x64dbg_bridge_64bit: X64DbgBridge) -> None:
     """Disassemble a real exported kernel32 function and verify real mnemonics.
 
-    Resolves the address of ``kernel32!Sleep`` (a genuine block of x86-64
+    Resolves the address of ``kernel32!Sleep`` (a block of x86-64
     machine code), disassembles it through the bridge, and verifies the
     decoded instructions are real: every line has a non-empty mnemonic, the
     decoded raw bytes match the bytes actually present in process memory, and
@@ -634,7 +634,7 @@ async def test_assemble_with_keystone(x64dbg_bridge_64bit: X64DbgBridge) -> None
     """Assemble a real instruction and verify ``assemble_at`` stays preview-only.
 
     Assembles ``nop`` with keystone against a real writable buffer in the
-    current process and confirms the returned bytes are the genuine
+    current process and confirms the returned bytes are the
     encoded opcode, while the buffer itself - poisoned with a sentinel
     byte before the call - is left completely untouched: ``assemble_at``
     is preview-only, and ``patch_instruction`` is the dedicated write

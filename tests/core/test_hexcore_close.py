@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for ``HexDocument.close()`` map-release semantics.
+"""Tests for ``HexDocument.close()`` map-release semantics.
 
 ``open`` / ``save`` / ``save_as`` keep the backing file memory-mapped for
 zero-copy reads, which on Windows leaves the file locked against deletion or a

@@ -17,8 +17,8 @@ Every one of those operations is routed through the corresponding bridge
 coroutine via ``run_bridge_coroutine`` whenever a bridge is attached, falling
 back to the document-direct implementation otherwise.
 
-Every test drives the REAL, unmodified hashing mixin against a real
-``HexEditorBridge`` and real ``intellicrack_hexcore.HexDocument`` instances;
+Every test drives the hashing mixin against ``HexEditorBridge`` and
+``intellicrack_hexcore.HexDocument`` instances;
 the only test doubles are a ``HexEditorBridge`` subclass that appends to a
 call ledger before delegating to the real implementation via ``super()``, and
 a fake dialog class used solely to capture the constructor kwargs
@@ -74,7 +74,7 @@ class _HashingRecordingBridge(HexEditorBridge):
     """``HexEditorBridge`` subclass recording every hashing/PE-checksum accessor call.
 
     Every override delegates to the real implementation via ``super()`` after
-    recording, so the returned values are genuine hexcore computations.
+    recording, so the returned values are hexcore computations.
     """
 
     def __init__(self) -> None:
@@ -168,7 +168,7 @@ class TestHashRoutesThroughBridge:
     def test_calculate_hash_routes_through_bridge(qapp: QApplication, tmp_path: Path) -> None:
         """Clicking Calculate must dispatch to ``HexEditorBridge.calculate_hash``.
 
-        Falsifiable: if ``_on_calculate_hash`` were reverted to pass only
+        If ``_on_calculate_hash`` were reverted to pass only
         ``(self.document, algo)`` to ``_format_hash_result`` (the signature without the bridge),
         ``bridge.calculate_hash_calls`` would stay empty even
         though a hash result is still displayed (from the document-direct
@@ -203,7 +203,7 @@ class TestHashRoutesThroughBridge:
     def test_hash_selection_routes_through_bridge(qapp: QApplication, tmp_path: Path) -> None:
         """Hashing a selection must dispatch to ``HexEditorBridge.calculate_hash_range``.
 
-        Falsifiable: if ``_on_hash_selection`` were reverted to pass only
+        If ``_on_hash_selection`` were reverted to pass only
         ``(self.document, sel_start, sel_end, algo)`` (the signature without the bridge),
         ``bridge.calculate_hash_range_calls`` would stay empty.
 
@@ -239,7 +239,7 @@ class TestPeChecksumRoutesThroughBridge:
     def test_verify_pe_checksum_routes_through_bridge(qapp: QApplication, real_pe_dll: Path) -> None:
         """Clicking Verify must dispatch to ``HexEditorBridge.verify_pe_checksum``.
 
-        Falsifiable: if ``_on_verify_pe_checksum`` were reverted to pass
+        If ``_on_verify_pe_checksum`` were reverted to pass
         ``self.document.verify_pe_checksum`` directly to the worker,
         ``bridge.verify_pe_checksum_calls`` would stay ``0``.
 
@@ -271,7 +271,7 @@ class TestPeChecksumRoutesThroughBridge:
         The confirmation ``QMessageBox`` is auto-accepted by this package's
         autouse ``guard_modal_dialogs`` fixture.
 
-        Falsifiable: if ``_repair_pe_checksum_and_notify`` were reverted to
+        If ``_repair_pe_checksum_and_notify`` were reverted to
         call ``document.repair_pe_checksum()`` directly,
         ``bridge.repair_pe_checksum_calls`` would stay ``0`` even though the
         file is still repaired (via the document-direct fallback instead).
@@ -338,7 +338,7 @@ class TestCustomCrcWiring:
     ) -> None:
         """``_on_custom_crc`` must forward the attached bridge to ``CustomCrcDialog``.
 
-        Falsifiable: if ``_on_custom_crc`` were reverted to omit the
+        If ``_on_custom_crc`` were reverted to omit the
         ``bridge=`` keyword, the recorded call's ``"bridge"`` entry would be
         ``None`` (the dialog's default) instead of the attached bridge
         instance.
@@ -370,7 +370,7 @@ class TestCustomCrcWiring:
     def test_custom_crc_worker_routes_through_bridge_and_matches_reference(tmp_path: Path) -> None:
         """The CRC worker function must call the bridge and return the correct CRC-32 value.
 
-        Falsifiable: if ``_compute_custom_crc_for_worker`` ignored the
+        If ``_compute_custom_crc_for_worker`` ignored the
         attached bridge, ``bridge.calculate_hash_custom_crc_calls`` would
         stay empty even though the returned CRC value happens to be correct
         (computed via the local streaming fallback instead).

@@ -58,7 +58,7 @@ never freezes the Qt event loop. Most patterns applied through this panel finish
 caller that immediately re-applies (or inspects the freshly cached interpreter) observe a finished, reusable worker instead of racing the
 background thread's startup. When the join succeeds the worker's already-queued completion signal is flushed immediately (see
 ``_apply_via_interpreter``) so the decoded fields, the notifications, and the buffered print output are all visible by the time this method
-returns. A pattern that genuinely takes longer simply outlives this short join and keeps running fully asynchronously,
+returns. A pattern that takes longer simply outlives this short join and keeps running fully asynchronously,
 delivering its result via the worker's queued signals whenever the GUI event loop next pumps.
 """
 
@@ -443,7 +443,7 @@ class PatternEditorMixin:
         ``QCoreApplication.processEvents()`` so an ordinarily fast pattern is
         fully applied -- decoded fields, notifications, buffered print output,
         and the cached interpreter's reinstalled print sink -- by the time this
-        method returns. A pattern that genuinely takes longer simply outlives
+        method returns. A pattern that takes longer simply outlives
         that window and keeps running fully asynchronously, with its
         result delivered whenever the GUI event loop next pumps.
 

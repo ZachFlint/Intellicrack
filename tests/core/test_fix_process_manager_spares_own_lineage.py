@@ -28,7 +28,7 @@ _CHILD_TIMEOUT_S: Final[float] = 120.0
 def test_a_shutdown_sweep_spares_the_process_that_runs_it_and_still_ends_the_others() -> None:
     """With its own PID tracked beside a real child's, a sweep ends the child and the process lives to say so.
 
-    Falsifiable: an unguarded sweep terminates its own process, so the child
+    An unguarded sweep terminates its own process, so the child
     interpreter exits before printing its report.
     """
     report = run_child_json(
@@ -63,7 +63,7 @@ def test_a_shutdown_sweep_spares_the_process_that_runs_it_and_still_ends_the_oth
 def test_terminating_its_own_tracked_pid_leaves_the_process_running() -> None:
     """Asking for the tracked entry that names this process to be terminated does not end the process.
 
-    Falsifiable: an unguarded tree kill ends the child interpreter before it
+    An unguarded tree kill ends the child interpreter before it
     prints its report.
     """
     report = run_child_json(
@@ -92,7 +92,7 @@ def test_a_shutdown_sweep_spares_an_ancestor_of_the_process_that_runs_it() -> No
     sweeps. A tracked PID is terminated with its descendants, so an unguarded
     sweep ends the child and the grandchild together.
 
-    Falsifiable: without the guard the child is terminated by its own
+    Without the guard the child is terminated by its own
     grandchild and never prints the grandchild's report.
     """
     report = run_child_json(

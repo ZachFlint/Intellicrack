@@ -5,7 +5,7 @@
 """Integration tests for ProcessBridge against real Windows APIs.
 
 Uses the Python interpreter process (os.getpid()) as the target.
-All async, all Windows-only. No mocks for Win32 calls.
+All async, all Windows-only.
 """
 
 from __future__ import annotations

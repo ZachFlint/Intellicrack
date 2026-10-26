@@ -55,7 +55,7 @@ def _fixture(path: Path) -> Path:
 def test_a_sparse_fixture_has_its_full_size_and_stores_almost_nothing(tmp_path: Path) -> None:
     """The fixture reports the size it was extended to while occupying next to no disk.
 
-    Falsifiable: extended with a bare ``truncate``, the same file occupies its
+    Extended with a bare ``truncate``, the same file occupies its
     whole size on NTFS, which fills the runner's disk.
 
     Args:

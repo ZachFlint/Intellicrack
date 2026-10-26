@@ -7,7 +7,7 @@
 Every test drives a real ``GhidraPanel`` by calling the slots its buttons trigger. Where a handler needs a connected bridge, the panel holds
 ``ScriptedGhidraBridge``, a subclass of the real ``GhidraBridge`` that replaces only the remote-execution transport: the Jython source the
 production code builds is recorded and answered from a script, while every method above the transport (argument validation, payload parsing,
-error wrapping, state handling) is the production code. The bridge is attached to a genuine, never-connected ``ghidra_bridge`` RPC client
+error wrapping, state handling) is the production code. The bridge is attached to a never-connected ``ghidra_bridge`` RPC client
 through the bridge's own ``attach_remote_bridge`` seam. Failures the real bridge raises by itself (a missing file, a missing Ghidra
 installation, a malformed hex token) travel through the real worker thread back to the panel. Result handlers are fed the real result types
 (``DataTypeInfo``, ``DisassemblyLine``, ``FunctionInfo``) and the payload dictionaries the bridge returns, and the expected widget text is
@@ -459,7 +459,7 @@ def panel(qtbot: QtBot) -> Generator[GhidraPanel]:
 
 @pytest.fixture
 def rpc_client() -> Generator[object]:
-    """Provide a genuine ``ghidra_bridge`` RPC client that never connects.
+    """Provide an upstream ``ghidra_bridge`` RPC client that never connects.
 
     The upstream client is lazy: building it with no namespace never touches the network, and the scripted bridge never sends through it.
 
@@ -480,7 +480,7 @@ def bridge(rpc_client: object) -> Generator[ScriptedGhidraBridge]:
     """Provide a scripted bridge that is attached to the RPC client and therefore ready.
 
     Args:
-        rpc_client: Genuine RPC client that never connects.
+        rpc_client: Upstream RPC client that never connects.
 
     Yields:
         ScriptedGhidraBridge: A ready bridge with no scripted replies.

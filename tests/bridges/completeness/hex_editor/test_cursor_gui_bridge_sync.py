@@ -26,10 +26,10 @@ signal; without the guard that re-emission would call back into
 ``_on_cursor_moved`` and publish a second, redundant GUI-sourced update for
 a move that already came from the bridge.
 
-Every test here drives the REAL, unmodified ``HexEditorPanel`` /
-``HexEditorBridge`` / ``HexDocumentState`` against a real
-``intellicrack_hexcore.HexDocument`` opened on a real temp file, moving the
-cursor through the actual ``HexEditorWidget.goto_offset`` entry point (the
+Every test here drives ``HexEditorPanel`` /
+``HexEditorBridge`` / ``HexDocumentState`` against an
+``intellicrack_hexcore.HexDocument`` opened on a temp file, moving the
+cursor through the ``HexEditorWidget.goto_offset`` entry point (the
 same call the widget's own mouse/keyboard handlers use) rather than invoking
 any private panel handler directly.
 """
@@ -72,7 +72,7 @@ class TestGuiCursorMovePushesToBridgeAndStateHolder:
     def test_real_widget_goto_offset_updates_bridge_and_state_holder(qapp: QApplication) -> None:
         """Moving the caret via the real widget must update both sync targets.
 
-        Falsifiable: if ``_on_cursor_moved`` lost its bridge and state-holder push, leaving only the side-panel updates,
+        If ``_on_cursor_moved`` lost its bridge and state-holder push, leaving only the side-panel updates,
         ``bridge.get_cursor_position()`` would stay ``0`` and
         ``state_holder.cursor_offset`` would stay ``0`` even though the
         widget's own caret moved to byte 256. Broken production line:
@@ -114,7 +114,7 @@ class TestAiIssuedCursorMoveDoesNotBounceBack:
     def test_bridge_goto_offset_moves_widget_without_a_second_cursor_moved_publish(qapp: QApplication) -> None:
         """An AI-issued ``goto_offset`` must move the widget but publish CURSOR_MOVED exactly once.
 
-        Falsifiable: if the ``_suppress_cursor_echo`` guard (or the
+        If the ``_suppress_cursor_echo`` guard (or the
         ``try``/``finally`` around it in ``_on_state_event``) were
         removed while keeping the forward sync, the widget's own
         ``cursor_moved`` signal -- re-emitted synchronously by

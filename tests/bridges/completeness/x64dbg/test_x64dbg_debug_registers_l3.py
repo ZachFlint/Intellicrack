@@ -91,7 +91,7 @@ class TestGetDebugRegistersParsesHexValues:
     def test_dr7_value_parsed_from_hex_string() -> None:
         """A ``reg_get`` response of ``"0x1"`` for dr7 must surface as the int ``1``.
 
-        Falsifiable: if ``get_debug_registers`` hardcoded ``0`` instead of
+        If ``get_debug_registers`` hardcoded ``0`` instead of
         parsing the plugin's response (or read the wrong key), ``dr7``
         would not equal ``1``.
         """
@@ -116,7 +116,7 @@ class TestGetDebugRegistersParsesHexValues:
     def test_arming_dr0_writes_both_dr0_and_dr7_enable_bit_in_order() -> None:
         """Arming a DR0 breakpoint must write DR0 then the DR7 enable bit, in that order.
 
-        Falsifiable: if only the DR0 write were issued (the hazard this
+        If only the DR0 write were issued (the hazard this
         order calls out - DR0 will not round-trip without the matching
         DR7 enable bit), the recorded ``reg_set`` sequence would not
         contain both writes, or would contain them out of order.
@@ -167,7 +167,7 @@ class TestDebugRegisterTableWiring:
     ) -> None:
         """``_refresh_state()`` must render the real ``dr0``..``dr7`` values, not placeholders.
 
-        Falsifiable: if ``_refresh_debug_registers`` were never wired into
+        If ``_refresh_debug_registers`` were never wired into
         ``_refresh_state`` (an unwired table), the Debug Registers
         table would stay empty forever and this assertion would time out.
 
@@ -222,7 +222,7 @@ class TestDebugRegisterTableWiring:
         dispatch ``set_register("rax", ...)`` instead of ``"dr0"`` -
         silently corrupting the wrong register.
 
-        Falsifiable: reverting the shared edit handler to always read
+        Reverting the shared edit handler to always read
         ``self._reg_table`` makes the recorded ``reg_set`` carry
         ``"rax"`` instead of ``"dr0"``, failing this assertion.
 

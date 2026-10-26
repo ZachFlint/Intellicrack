@@ -3,6 +3,12 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Text in named encodings: decoding and encoding for UTF-8, UTF-16 in both
+//! byte orders, strict ASCII, EBCDIC code page 037 and every `encoding_rs`
+//! code page, and searching a buffer for text in any of them.
+
+use std::ops::ControlFlow;
+
 use thiserror::Error;
 
 /// Errors raised while resolving, encoding or decoding text.
@@ -249,53 +255,169 @@ impl Codec {
     /// Returns `true` when `window` decodes cleanly to text equal to
     /// `needle_lower` after lowercasing.
     ///
-    /// Against an ASCII needle the common encodings compare code units with
-    /// ASCII case folding and allocate nothing, stopping at the first unit that
-    /// differs, which is what keeps a per-offset scan linear. Any code unit
-    /// that is not itself printable-range ASCII (for example the multi-byte
-    /// U+212A, which lowercases to `'k'`) falls through to the decode path, so
-    /// it is still matched.
+    /// The window is decoded one character at a time and compared as it goes,
+    /// so a window that differs early costs a few characters rather than a
+    /// full decode; only a window whose characters fold onto the whole needle
+    /// is decoded in full to confirm the match exactly.
     #[must_use]
     pub fn window_matches_ignore_case(self, window: &[u8], needle_lower: &str) -> bool {
-        if needle_lower.is_ascii() {
-            match self {
-                Self::Ascii | Self::Utf8 if window.len() == needle_lower.len() => {
-                    return window.eq_ignore_ascii_case(needle_lower.as_bytes());
-                }
-                Self::Utf16Le | Self::Utf16Be if window.len() == needle_lower.len() * 2 => {
-                    if let Some(matched) = self.utf16_ascii_window_matches(window, needle_lower) {
-                        return matched;
-                    }
-                }
-                _ => {}
-            }
-        }
-        let (decoded, had_errors) = self.decode(window);
+        self.folded_prefix_end(window, needle_lower).is_some()
+            && self.lowercases_to(window, needle_lower)
+    }
+
+    /// The length of the text at the start of `data` that decodes cleanly and
+    /// lowercases to `needle_lower`, or `None` when no prefix of `data` does.
+    ///
+    /// The match may be longer or shorter than the needle's own encoding: the
+    /// case variant of a character can take a different number of bytes, as
+    /// `Ⱥ` (two UTF-8 bytes) and its lowercase `ⱥ` (three) do, or the Kelvin
+    /// sign (three) and `k` (one). The shortest such prefix is reported.
+    #[must_use]
+    pub fn match_len_ignore_case(self, data: &[u8], needle_lower: &str) -> Option<usize> {
+        let end = self.folded_prefix_end(data, needle_lower)?;
+        self.lowercases_to(&data[..end], needle_lower)
+            .then_some(end)
+    }
+
+    /// Whether `bytes` decode cleanly to text whose lowercase is
+    /// `needle_lower`, by a full decode.
+    fn lowercases_to(self, bytes: &[u8], needle_lower: &str) -> bool {
+        let (decoded, had_errors) = self.decode(bytes);
         !had_errors && decoded.to_lowercase() == needle_lower
     }
 
-    /// Compares a UTF-16 `window` to an ASCII `needle_lower`, one code unit at
-    /// a time, ASCII-folded, stopping at the first that differs.
+    /// Decodes `data` a character at a time, folding each to lowercase against
+    /// the rest of `needle_lower`, and returns the end of the character that
+    /// completes the needle.
     ///
-    /// Returns `Some(matched)` when every code unit is printable-range ASCII (a
-    /// zero high byte and a low byte below `0x80`), and `None` when any unit is
-    /// not — such a unit can still case-fold to an ASCII letter, so only a full
-    /// decode can decide and the caller falls back to it.
-    fn utf16_ascii_window_matches(self, window: &[u8], needle_lower: &str) -> Option<bool> {
-        let (low, high) = match self {
-            Self::Utf16Le => (0usize, 1usize),
-            Self::Utf16Be => (1, 0),
-            _ => return None,
-        };
-        for (unit, needle_byte) in window.as_chunks::<2>().0.iter().zip(needle_lower.bytes()) {
-            if unit[high] != 0 || unit[low] >= 0x80 {
-                return None;
+    /// Decoding stops at the first character that cannot continue the needle
+    /// and at malformed input. Characters fold one at a time, which agrees with
+    /// `str::to_lowercase` except for a capital sigma, lowercased by context to
+    /// `σ` or `ς`; it accepts either here, so this never rejects a true match,
+    /// and callers confirm a candidate with a full decode.
+    fn folded_prefix_end(self, data: &[u8], needle_lower: &str) -> Option<usize> {
+        let mut expected = needle_lower.chars();
+        let mut found = None;
+        self.each_char(data, |ch, end| {
+            let folded = if ch == 'Σ' {
+                matches!(expected.next(), Some('σ' | 'ς'))
+            } else {
+                ch.to_lowercase()
+                    .all(|lower| expected.next() == Some(lower))
+            };
+            if !folded {
+                return ControlFlow::Break(());
             }
-            if !unit[low].eq_ignore_ascii_case(&needle_byte) {
-                return Some(false);
+            if expected.as_str().is_empty() {
+                found = Some(end);
+                return ControlFlow::Break(());
+            }
+            ControlFlow::Continue(())
+        });
+        found
+    }
+
+    /// Calls `visit` with each character `data` decodes to and the offset just
+    /// past its last byte, in order, until `visit` breaks or the input is
+    /// malformed or exhausted.
+    ///
+    /// Only as much of `data` is decoded as `visit` consumes, so a caller that
+    /// stops early pays for the characters it saw and no more.
+    fn each_char(self, data: &[u8], mut visit: impl FnMut(char, usize) -> ControlFlow<()>) {
+        match self {
+            Self::Ascii => {
+                for (index, &byte) in data.iter().enumerate() {
+                    if !byte.is_ascii() || visit(char::from(byte), index + 1).is_break() {
+                        return;
+                    }
+                }
+            }
+            Self::Ebcdic => {
+                for (index, &byte) in data.iter().enumerate() {
+                    if visit(EBCDIC_TO_UNICODE[usize::from(byte)], index + 1).is_break() {
+                        return;
+                    }
+                }
+            }
+            Self::Utf8 => {
+                let mut pos = 0;
+                while let Some(&lead) = data.get(pos) {
+                    let width = match lead {
+                        0x00..=0x7F => 1,
+                        0xC2..=0xDF => 2,
+                        0xE0..=0xEF => 3,
+                        0xF0..=0xF4 => 4,
+                        _ => return,
+                    };
+                    let Some(ch) = data
+                        .get(pos..pos + width)
+                        .and_then(|bytes| std::str::from_utf8(bytes).ok())
+                        .and_then(|text| text.chars().next())
+                    else {
+                        return;
+                    };
+                    pos += width;
+                    if visit(ch, pos).is_break() {
+                        return;
+                    }
+                }
+            }
+            Self::Utf16Le | Self::Utf16Be => {
+                let big_endian = matches!(self, Self::Utf16Be);
+                let units = data.as_chunks::<2>().0.iter().map(|&pair| {
+                    if big_endian {
+                        u16::from_be_bytes(pair)
+                    } else {
+                        u16::from_le_bytes(pair)
+                    }
+                });
+                let mut pos = 0;
+                for decoded in char::decode_utf16(units) {
+                    let Ok(ch) = decoded else {
+                        return;
+                    };
+                    pos += ch.len_utf16() * 2;
+                    if visit(ch, pos).is_break() {
+                        return;
+                    }
+                }
+            }
+            Self::Other(enc) => each_char_streaming(enc, data, visit),
+        }
+    }
+}
+
+/// [`Codec::each_char`] for an `encoding_rs` encoding: the decoder is fed one
+/// byte at a time, so every character it emits ends at the byte just fed.
+fn each_char_streaming(
+    encoding: &'static encoding_rs::Encoding,
+    data: &[u8],
+    mut visit: impl FnMut(char, usize) -> ControlFlow<()>,
+) {
+    let mut decoder = encoding.new_decoder_without_bom_handling();
+    let mut storage = [0u8; 32];
+    let Ok(out) = std::str::from_utf8_mut(&mut storage) else {
+        return;
+    };
+    for (index, byte) in data.iter().enumerate() {
+        let mut input = std::slice::from_ref(byte);
+        let last = index + 1 == data.len();
+        loop {
+            let (result, read, written) =
+                decoder.decode_to_str_without_replacement(input, out, last);
+            if matches!(result, encoding_rs::DecoderResult::Malformed(..)) {
+                return;
+            }
+            for ch in out[..written].chars() {
+                if visit(ch, index + 1).is_break() {
+                    return;
+                }
+            }
+            input = &input[read..];
+            if matches!(result, encoding_rs::DecoderResult::InputEmpty) {
+                break;
             }
         }
-        Some(true)
     }
 }
 
@@ -328,11 +450,16 @@ pub fn encode_text(text: &str, encoding_name: &str) -> Result<Vec<u8>, EncodingE
 /// Matches may start at any byte offset, including odd offsets for UTF-16,
 /// and may overlap, as byte and hex searches do: `aa` occurs at 0, 1 and 2
 /// in `aaaa`. Returns at most `max_results` `(offset, length)` pairs in
-/// ascending order. Text that cannot be represented in the encoding matches
-/// nothing. This is the one text-search engine; `search::search_text` reports
-/// the same matches. A case-sensitive search costs time linear in `data`
-/// plus the bytes of the matches it reports, whatever the pattern, so a long
-/// pattern over repetitive data costs no more than a short one.
+/// ascending order. This is the one text-search engine; `search::search_text`
+/// reports the same matches.
+///
+/// A case-sensitive search matches the exact encoding of `text`, so text the
+/// encoding cannot represent matches nothing, and it costs time linear in
+/// `data` plus the bytes of the matches it reports, whatever the pattern. A
+/// case-insensitive search matches any text whose lowercase equals that of
+/// `text`, even where a case variant encodes to a different number of bytes,
+/// so each match carries its own length; each offset decodes only until the
+/// first character that cannot continue the match.
 ///
 /// # Errors
 ///
@@ -349,41 +476,41 @@ pub fn search_text_encoded(
     if text.is_empty() || max_results == 0 {
         return Ok(Vec::new());
     }
+    let mut results: Vec<(usize, usize)> = Vec::new();
+
+    if !case_sensitive {
+        let needle_lower = text.to_lowercase();
+        results.extend(
+            (0..data.len())
+                .filter_map(|offset| {
+                    codec
+                        .match_len_ignore_case(&data[offset..], &needle_lower)
+                        .map(|length| (offset, length))
+                })
+                .take(max_results),
+        );
+        return Ok(results);
+    }
+
     let Ok(search_bytes) = codec.encode(text) else {
         return Ok(Vec::new());
     };
     if search_bytes.is_empty() || search_bytes.len() > data.len() {
         return Ok(Vec::new());
     }
-
-    let window_len = search_bytes.len();
-    let mut results: Vec<(usize, usize)> = Vec::new();
-    if case_sensitive {
-        // `find_iter` resumes after each match and so skips overlapping ones;
-        // resuming one byte past each match start keeps them, and the finder's
-        // two-way search stays linear on the bytes it scans.
-        let finder = memchr::memmem::Finder::new(&search_bytes);
-        let mut start = 0;
-        while results.len() < max_results {
-            let Some(found) = finder.find(&data[start..]) else {
-                break;
-            };
-            let offset = start + found;
-            results.push((offset, window_len));
-            start = offset + 1;
-        }
-        return Ok(results);
+    // `find_iter` resumes after each match and so skips overlapping ones;
+    // resuming one byte past each match start keeps them, and the finder's
+    // two-way search stays linear on the bytes it scans.
+    let finder = memchr::memmem::Finder::new(&search_bytes);
+    let mut start = 0;
+    while results.len() < max_results {
+        let Some(found) = finder.find(&data[start..]) else {
+            break;
+        };
+        let offset = start + found;
+        results.push((offset, search_bytes.len()));
+        start = offset + 1;
     }
-
-    let needle_lower = text.to_lowercase();
-    results.extend(
-        (0..=data.len() - window_len)
-            .filter(|&offset| {
-                codec.window_matches_ignore_case(&data[offset..offset + window_len], &needle_lower)
-            })
-            .take(max_results)
-            .map(|offset| (offset, window_len)),
-    );
     Ok(results)
 }
 
@@ -808,13 +935,13 @@ mod tests {
     /// still matches. Folding the raw bytes would miss it.
     #[test]
     fn test_utf16_case_insensitive_folds_ascii_and_defers_non_ascii() {
-        let as_le = |s: &str| -> Vec<u8> { s.encode_utf16().flat_map(u16::to_le_bytes).collect() };
-        let as_be = |s: &str| -> Vec<u8> { s.encode_utf16().flat_map(u16::to_be_bytes).collect() };
-        assert!(Codec::Utf16Le.window_matches_ignore_case(&as_le("HeLLo"), "hello"));
-        assert!(Codec::Utf16Be.window_matches_ignore_case(&as_be("HeLLo"), "hello"));
-        assert!(!Codec::Utf16Le.window_matches_ignore_case(&as_le("World"), "hello"));
-        assert!(Codec::Utf16Le.window_matches_ignore_case(&as_le("\u{212A}"), "k"));
-        assert!(Codec::Utf16Be.window_matches_ignore_case(&as_be("\u{212A}"), "k"));
+        let little = |s: &str| -> Vec<u8> { s.encode_utf16().flat_map(u16::to_le_bytes).collect() };
+        let big = |s: &str| -> Vec<u8> { s.encode_utf16().flat_map(u16::to_be_bytes).collect() };
+        assert!(Codec::Utf16Le.window_matches_ignore_case(&little("HeLLo"), "hello"));
+        assert!(Codec::Utf16Be.window_matches_ignore_case(&big("HeLLo"), "hello"));
+        assert!(!Codec::Utf16Le.window_matches_ignore_case(&little("World"), "hello"));
+        assert!(Codec::Utf16Le.window_matches_ignore_case(&little("\u{212A}"), "k"));
+        assert!(Codec::Utf16Be.window_matches_ignore_case(&big("\u{212A}"), "k"));
     }
 
     /// "us-ascii" and a space-padded "ascii" must resolve to the strict ASCII
@@ -940,11 +1067,64 @@ mod tests {
             "koi8-u",
         ];
         for n in names {
-            assert!(
-                decode_text(&[0x41], n).is_ok(),
-                "encoding {n} should resolve"
+            let ascii_a: &[u8] = match n {
+                "utf-16le" => &[0x41, 0x00],
+                "utf-16be" => &[0x00, 0x41],
+                _ => b"A",
+            };
+            assert_eq!(
+                decode_text(ascii_a, n).unwrap(),
+                ("A".to_string(), false),
+                "encoding {n}"
             );
         }
+    }
+
+    /// Each code-page name resolves to its own code page: a byte that differs
+    /// between them decodes to that code page's character, as Python's codecs
+    /// decode it.
+    #[test]
+    fn test_code_page_names_decode_their_own_characters() {
+        let cases: [(&str, &[u8], char); 17] = [
+            ("windows-1252", &[0x80], '\u{20AC}'),
+            ("iso-8859-2", &[0xB1], '\u{0105}'),
+            ("iso-8859-5", &[0xE9], '\u{0449}'),
+            ("windows-1251", &[0xE9], '\u{0439}'),
+            ("koi8-r", &[0xA4], '\u{2553}'),
+            ("koi8-u", &[0xA4], '\u{0454}'),
+            ("windows-1253", &[0xE9], '\u{03B9}'),
+            ("iso-8859-7", &[0xE9], '\u{03B9}'),
+            ("windows-1255", &[0xE9], '\u{05D9}'),
+            ("iso-8859-15", &[0xA4], '\u{20AC}'),
+            ("windows-1250", &[0xB9], '\u{0105}'),
+            ("shift_jis", &[0x82, 0xA0], '\u{3042}'),
+            ("euc-jp", &[0xA4, 0xA2], '\u{3042}'),
+            ("euc-kr", &[0xB0, 0xA1], '\u{AC00}'),
+            ("gb2312", &[0xB0, 0xA1], '\u{554A}'),
+            ("big5", &[0xA4, 0x40], '\u{4E00}'),
+            ("gb18030", &[0xB0, 0xA1], '\u{554A}'),
+        ];
+        for (name, bytes, expected) in cases {
+            assert_eq!(
+                decode_text(bytes, name).unwrap(),
+                (expected.to_string(), false),
+                "{name}"
+            );
+        }
+    }
+
+    /// A UTF-16 buffer with a dangling odd byte decodes the complete units and
+    /// a replacement character for the dangling byte, and reports the loss.
+    #[test]
+    fn test_utf16le_odd_trailing_byte_is_lossy() {
+        assert_eq!(
+            decode_text(&[0x41, 0x00, 0x42], "utf-16le").unwrap(),
+            ("A\u{FFFD}".to_string(), true)
+        );
+        assert_eq!(
+            decode_text(&[0x00, 0x41, 0x00], "utf-16be").unwrap(),
+            ("A\u{FFFD}".to_string(), true)
+        );
     }
 
     /// A case-sensitive search reports every occurrence, overlapping ones
@@ -1031,6 +1211,78 @@ mod tests {
         assert!(
             elapsed < std::time::Duration::from_secs(5),
             "64 MiB near-miss search took {elapsed:?}"
+        );
+    }
+
+    /// A case-insensitive search reports each match at its own width when a
+    /// case variant encodes to a different number of bytes than the needle:
+    /// `ⱥ` is three UTF-8 bytes and its uppercase `Ⱥ` two, the Kelvin sign is
+    /// three bytes and lowercases to the one-byte `k`, and a needle the
+    /// encoding cannot represent still finds its case variants that it can.
+    #[test]
+    fn test_case_insensitive_matches_case_variants_of_another_width() {
+        assert_eq!(
+            search_text_encoded("\u{2C65}".as_bytes(), "\u{023A}", "utf-8", false, 10).unwrap(),
+            vec![(0, 3)]
+        );
+        assert_eq!(
+            search_text_encoded("x\u{023A}y".as_bytes(), "\u{2C65}", "utf-8", false, 10).unwrap(),
+            vec![(1, 2)]
+        );
+        assert_eq!(
+            search_text_encoded("a\u{212A}b".as_bytes(), "K", "utf-8", false, 10).unwrap(),
+            vec![(1, 3)]
+        );
+        assert_eq!(
+            search_text_encoded(b"okay", "\u{212A}", "ascii", false, 10).unwrap(),
+            vec![(1, 1)]
+        );
+        assert_eq!(
+            search_text_encoded(b"okay", "\u{212A}", "ascii", true, 10).unwrap(),
+            Vec::<(usize, usize)>::new()
+        );
+    }
+
+    /// A case-insensitive search through a streaming `encoding_rs` codec or the
+    /// EBCDIC table decodes each offset only until its first character fails
+    /// to match, so a 1 KiB needle over 1 MiB that never matches past its first
+    /// character costs one character per offset, not a 1 KiB decode.
+    #[test]
+    fn test_case_insensitive_search_is_linear_on_near_misses() {
+        let needle = "a".repeat(1024);
+        let data = vec![0u8; 1 << 20];
+        for encoding in ["windows-1252", "shift_jis", "ebcdic", "utf-16le", "utf-8"] {
+            let started = std::time::Instant::now();
+            let found = search_text_encoded(&data, &needle, encoding, false, 10).unwrap();
+            let elapsed = started.elapsed();
+            assert_eq!(found, Vec::<(usize, usize)>::new(), "{encoding}");
+            assert!(
+                elapsed < std::time::Duration::from_secs(5),
+                "{encoding}: 1 MiB near-miss case-insensitive search took {elapsed:?}"
+            );
+        }
+    }
+
+    /// A capital sigma lowercases to `ς` at the end of a word and to `σ`
+    /// elsewhere, so the case-insensitive match agrees with
+    /// `str::to_lowercase` on both.
+    #[test]
+    fn test_case_insensitive_sigma_follows_word_final_lowercasing() {
+        let upper_final = "\u{039F}\u{0394}\u{039F}\u{03A3}".as_bytes();
+        let medial = "\u{03BF}\u{03B4}\u{03BF}\u{03C3}";
+        let word_final = "\u{03BF}\u{03B4}\u{03BF}\u{03C2}";
+        assert_eq!(
+            search_text_encoded(upper_final, medial, "utf-8", false, 10).unwrap(),
+            Vec::<(usize, usize)>::new()
+        );
+        assert_eq!(
+            search_text_encoded(upper_final, word_final, "utf-8", false, 10).unwrap(),
+            vec![(0, 8)]
+        );
+        let upper_initial = "\u{03A3}\u{0391}".as_bytes();
+        assert_eq!(
+            search_text_encoded(upper_initial, "\u{03C3}\u{03B1}", "utf-8", false, 10).unwrap(),
+            vec![(0, 4)]
         );
     }
 }

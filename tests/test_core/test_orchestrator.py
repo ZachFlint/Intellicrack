@@ -190,7 +190,7 @@ async def test_cancel_resolves_in_flight_confirmation(tmp_path: Path) -> None:
     """Verify cancel actually cancels an outstanding confirmation future.
 
     Drives a real destructive tool call through ``request_confirmation`` so a
-    confirmation future is genuinely pending, then asserts ``cancel()`` marshals
+    confirmation future is pending, then asserts ``cancel()`` marshals
     it: the awaiting coroutine resolves to ``False`` and the underlying future
     is cancelled rather than left dangling.
 
@@ -229,7 +229,7 @@ def test_orchestrator_custom_config(tmp_path: Path) -> None:
        original ``config`` object proving the orchestrator holds the same
        reference rather than a copy.
     2. Asserting that the injected ``config.confirmation_level`` differs from
-       the ``OrchestratorConfig()`` default, so the test is not a tautology.
+       the ``OrchestratorConfig()`` default.
     3. Asserting ``config.max_iterations == _CUSTOM_MAX_ITER`` which is
        distinct from the default ``_MAX_ITER`` (20), so a regression that
        ignores the ``max_iterations`` kwarg and stores the default fails.

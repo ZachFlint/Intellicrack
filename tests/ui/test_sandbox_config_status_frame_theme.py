@@ -6,8 +6,8 @@
 """Rendered-pixel gates for the ``SandboxConfigDialog`` availability status frame.
 
 The status frame is styled purely by the ``toolResult`` dynamic property, so
-the only honest check is to apply a real theme, drive the dialog into each
-state and read pixels back from the painted frame:
+these tests apply a theme, drive the dialog into each state and read pixels
+back from the painted frame:
 
 * the neutral state (probe still running) must paint the base fill, a 1px
   border on every edge and rounded corners;

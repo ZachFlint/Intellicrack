@@ -6,11 +6,10 @@
 
 The calculator is a pure-logic unit: it parses a number in an auto-detected base
 and renders every integer/float representation through :mod:`struct`. These
-tests drive the real :class:`CalculatorMixin` UI (a genuine
+tests drive the real :class:`CalculatorMixin` UI (the
 ``QTreeWidget``/``QLineEdit`` built by ``_create_calculator_tab``) end to end
-and assert the actual computed base conversions, signed-width wrapping, and
-IEEE-754 bit layouts against independent ``struct`` references — no fakes
-stand in for the conversion logic under test.
+and assert the computed base conversions, signed-width wrapping, and
+IEEE-754 bit layouts against independent ``struct`` references.
 """
 
 from __future__ import annotations

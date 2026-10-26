@@ -403,12 +403,12 @@ class TestOpenAIChatModelFilterExcludesMediaModels:
         ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "o3", "o4-mini"],
     )
     def test_real_chat_models_are_retained(self, model_id: str) -> None:
-        """Genuine chat-completions models remain in the catalog.
+        """Chat-completions models remain in the catalog.
 
         Args:
             model_id: A real OpenAI chat-completions model identifier.
         """
-        assert _openai_is_chat_model(model_id) is True, f"{model_id!r} is a genuine chat model and must not be filtered out"
+        assert _openai_is_chat_model(model_id) is True, f"{model_id!r} is a chat model and must not be filtered out"
 
     def test_reverse_sorted_catalog_no_longer_defaults_to_sora(self) -> None:
         """Reproduces the exact toolbar default-selection bug end to end.
@@ -449,12 +449,12 @@ class TestGrokChatModelFilterExcludesMediaModels:
         ["grok-4-latest", "grok-3", "grok-2-vision-1212", "grok-4-fast"],
     )
     def test_real_chat_models_are_retained(self, model_id: str) -> None:
-        """Genuine chat-completions models remain in the catalog.
+        """Chat-completions models remain in the catalog.
 
         Args:
             model_id: A real Grok chat-completions model identifier.
         """
-        assert _grok_is_chat_model(model_id) is True, f"{model_id!r} is a genuine chat model and must not be filtered out"
+        assert _grok_is_chat_model(model_id) is True, f"{model_id!r} is a chat model and must not be filtered out"
 
     def test_reverse_sorted_catalog_no_longer_defaults_to_imagine_video(self) -> None:
         """Reproduces the exact toolbar default-selection bug end to end.

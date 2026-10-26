@@ -6,10 +6,10 @@
 
 Exercises ``ProcessBridge`` against real Win32 section objects and the
 current process's own memory through live ``CreateFileMappingW`` /
-``MapViewOfFile`` / ``UnmapViewOfFile`` and ``ReadProcessMemory`` calls. No
-mocks: every assertion is derived from live kernel state (residual-mapping
+``MapViewOfFile`` / ``UnmapViewOfFile`` and ``ReadProcessMemory`` calls. Every
+assertion is derived from live kernel state (residual-mapping
 queries via ``VirtualQuery``) or from wall-clock timing and byte counts of a
-live memory scan, so a regression in either behaviour causes a genuine test
+live memory scan, so a regression in either behavior causes a test
 failure.
 """
 

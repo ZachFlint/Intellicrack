@@ -14,7 +14,7 @@
   literal string ``"socket"`` instead of looking the already-known device up
   by identity. Any combo entry carrying an enumerated ``id`` is routed
   through an ``"enumerated"`` device type that resolves via
-  ``frida.get_device(id)``, and a genuine "Add Remote Device" dialog
+  ``frida.get_device(id)``, and a dedicated "Add Remote Device" dialog
   (``FridaPanel._on_add_remote_device``) is the only path that calls
   ``connect_device("remote", host_port)`` to add a *brand-new* endpoint.
 
@@ -41,10 +41,9 @@
 Every test drives the real ``FridaPanel`` widget and (where a defect is
 bridge-shaped) a real ``FridaBridge`` against the local machine's real Frida
 runtime -- the local device's process list, and the real Local Socket /
-loopback-TCP remote device objects Frida itself resolves. Nothing here fakes
-Frida device or process results; the only substitution is swapping the
-*QThread scheduling* of ``run_bridge_coroutine_async`` for a synchronous,
-same-thread drain in the device-routing tests (an established pattern in this suite,
+loopback-TCP remote device objects Frida itself resolves. The device-routing
+tests swap the *QThread scheduling* of ``run_bridge_coroutine_async`` for a
+synchronous, same-thread drain (an established pattern in this suite,
 see ``synchronous_dispatch`` below) so routing assertions are deterministic.
 The process-refresh gate keeps the real background ``QThread`` dispatch, because that
 is exactly the escape path the defect describes.
@@ -215,7 +214,7 @@ class TestD22ResolveDeviceSelection:
     def test_enumerated_local_socket_entry_maps_to_enumerated_device_type() -> None:
         """An enumerated combo entry must resolve to ``"enumerated"``, never ``"remote"``.
 
-        Falsifiable: if ``_resolve_device_selection`` returned
+        If ``_resolve_device_selection`` returned
         ``("remote", "socket")`` for this exact user data (Frida reports the
         Local Socket provider's own ``type`` as ``"remote"``), which is the
         root cause of the mis-resolution -- this assertion fails against that behavior.
@@ -231,7 +230,7 @@ class TestD22ResolveDeviceSelection:
     def test_manual_remote_text_entry_still_maps_to_remote_device_type() -> None:
         """A manually added ``remote:<host>`` combo entry (no dict userData) must still resolve to ``"remote"``.
 
-        Falsifiable: if the enumerated-id branch were broadened to also
+        If the enumerated-id branch were broadened to also
         swallow plain-text fallback entries, a manually typed remote host
         would stop reaching ``add_remote_device`` at all.
         """
@@ -255,7 +254,7 @@ class TestD22EnumeratedDeviceConnectsThroughDeviceHandle:
         ``currentTextChanged`` -> ``_on_device_changed`` wiring), and lets the
         real ``FridaBridge.connect_device`` coroutine run to completion.
 
-        Falsifiable: ``frida.get_device("socket")`` and
+        ``frida.get_device("socket")`` and
         ``DeviceManager.add_remote_device("socket")`` are observably
         different Frida devices -- the former resolves to
         ``id="socket", name="Local Socket"``, the latter (DNS-resolving the
@@ -289,7 +288,7 @@ class TestD22EnumeratedDeviceConnectsThroughDeviceHandle:
             panel.close()
 
     @staticmethod
-    def test_add_remote_device_dialog_creates_a_genuinely_new_remote_device(
+    def test_add_remote_device_dialog_creates_a_new_remote_device(
         synchronous_dispatch: list[Coroutine[object, object, object]],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -300,7 +299,7 @@ class TestD22EnumeratedDeviceConnectsThroughDeviceHandle:
         established dialog-stubbing pattern in this suite), letting the real
         ``connect_device("remote", host_port)`` coroutine run.
 
-        Falsifiable: without this handler there is no way to reach
+        Without this handler there is no way to reach
         ``connect_device`` with a type of ``"remote"`` and a freshly typed
         host at all -- ``FridaPanel`` lacks ``_on_add_remote_device`` as an
         attribute and this call raises ``AttributeError``.
@@ -348,7 +347,7 @@ class TestD23ProcessesRefreshFailureStaysInPanel:
         is monkeypatched to a recorder so nothing else in the process can
         answer for it.
 
-        Falsifiable: if ``enumerate_processes`` lets
+        Failure mode: ``enumerate_processes`` lets
         ``frida.ServerNotRunningError``/``frida.TransportError`` propagate
         out of the coroutine uncaught. That exception is not a member of
         ``BridgeCallWorker``'s caught exception tuple, so it escapes
@@ -407,8 +406,8 @@ class TestD20ProcessTableNameColumnReadable:
         ``FridaProcessEntry`` rows carrying ordinary process names, then reads
         the real header's post-layout column widths.
 
-        Falsifiable: if PID used ``ResizeToContents`` with no
-        floor and Name used ``Stretch`` with nothing constraining PID, so a
+        Failure mode: PID uses ``ResizeToContents`` with no
+        floor and Name uses ``Stretch`` with nothing constraining PID, so a
         table this narrow could leave Name a sliver comparable to (or
         narrower than) PID -- the reported "clipped to ~2 chars" symptom.
         This test's strict-inequality and minimum-width assertions fail
@@ -466,7 +465,7 @@ class TestD21RunButtonDisabledCarriesHint:
         Drives the real ``_on_run_script_success`` success callback exactly
         as a completed ``execute_persistent_script`` dispatch would.
 
-        Falsifiable: if Run was disabled with no tooltip set
+        Failure mode: Run is disabled with no tooltip set
         (``toolTip()`` stays empty), so this assertion on non-empty,
         recovery-explaining text fails against that behavior.
 
@@ -492,7 +491,7 @@ class TestD21RunButtonDisabledCarriesHint:
     def test_stop_is_a_directly_visible_toolbar_button_not_a_hidden_menu_action(qapp: QApplication) -> None:
         """Stop must be its own toolbar ``QPushButton``, not an action buried in a dropdown menu.
 
-        Falsifiable: if ``panel._stop_btn`` were a ``QAction``
+        Failure mode: ``panel._stop_btn`` is a ``QAction``
         exposed only through the "Scripts" dropdown button's popup menu, so
         this ``isinstance`` check against a real, directly-clickable
         ``QPushButton`` fails against that shape, and the button must also be

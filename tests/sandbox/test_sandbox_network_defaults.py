@@ -59,7 +59,7 @@ def test_selection_never_returns_a_network_the_engine_lacks() -> None:
         assert chosen in available, f"selected {chosen!r}, absent from {sorted(available)}"
 
 
-def test_no_connected_network_fails_loudly() -> None:
+def test_no_connected_network_raises_sandbox_error() -> None:
     """An engine with only isolated networks must raise, not silently pick one."""
     with pytest.raises(SandboxError, match="needs a connected network"):
         select_connected_network(frozenset({"none"}), "e2e")

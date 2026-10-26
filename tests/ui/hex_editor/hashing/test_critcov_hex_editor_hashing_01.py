@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Coverage for the hashing and PE checksum mixin of the hex editor panel.
 
-Every test drives the production code with real objects: genuine ``intellicrack_hexcore.HexDocument`` instances holding known bytes, the
+Every test drives the production code with real objects: ``intellicrack_hexcore.HexDocument`` instances holding known bytes, the
 real ``HexEditorBridge``, a real ``HexDocumentState``, a real ``HexEditorWidget``, the Qt controls built by
 ``HashingMixin._create_pe_checksum_group`` and the asynchronous worker used by the panel buttons. Expected digests come from ``hashlib``,
 expected PE checksums from the ``pefile`` package on a real System32 DLL or from the published checksum algorithm applied to bytes the test

@@ -20,7 +20,7 @@ picker.
 Each test patches ``run_bridge_coroutine_logged`` in the ``sandbox_panel`` module (not the
 bridge) and asserts the coroutine handed to it is the exact coroutine object the mocked
 bridge method returned, called with the exact arguments the handler under test computed.
-This is a genuine gate on the handler's wiring logic, matching the convention in
+This checks the handler's wiring logic, matching the convention in
 ``tests/bridges/completeness/sandbox_process/test_sandbox_panel_l3.py``.
 """
 
@@ -199,7 +199,7 @@ class TestNonWindowsMemoryDumpUnchanged:
     ) -> None:
         """Clicking Memory Dump on QEMU calls ``bridge.memory_dump(instance_id)`` directly.
 
-        Falsified by: routing the QEMU path through the picker too (e.g.
+        Routing the QEMU path through the picker too (e.g.
         removing the ``_effective_sandbox_type() == "windows"`` branch) would
         make ``bridge.list_guest_processes_calls`` non-empty.
 
@@ -234,7 +234,7 @@ class TestWindowsMemoryDumpUsesPicker:
     ) -> None:
         """Clicking Memory Dump on Windows Sandbox calls ``list_guest_processes`` first.
 
-        Falsified by: a bare ``self._bridge.memory_dump(self.sandbox_id)`` dispatched for every
+        A bare ``self._bridge.memory_dump(self.sandbox_id)`` dispatched for every
         backend would leave ``bridge.list_guest_processes_calls`` empty and instead call
         ``bridge.memory_dump`` with no ``target_pid``.
 
@@ -331,7 +331,7 @@ class TestWindowsMemoryDumpUsesPicker:
     ) -> None:
         """Rejecting the picker must not call ``bridge.memory_dump`` at all.
 
-        Falsified by: dispatching the dump unconditionally after opening the
+        Dispatching the dump unconditionally after opening the
         picker (ignoring the ``exec()`` result) would make
         ``bridge.memory_dump_calls`` non-empty.
 

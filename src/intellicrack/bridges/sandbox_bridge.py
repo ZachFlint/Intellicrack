@@ -554,7 +554,7 @@ class SandboxBridge(ToolBridgeBase):
                             description=(
                                 "Additional host folders to share with the sandbox, beyond its private work share. Each is read-only "
                                 "by default; a writable QEMU share can abort the VM (see hazards), so leave read_only true unless the "
-                                "target genuinely needs to write back to the host."
+                                "target needs to write back to the host."
                             ),
                             required=False,
                             default=[],
@@ -688,7 +688,7 @@ class SandboxBridge(ToolBridgeBase):
                             description=(
                                 "Additional host folders to share with the sandbox, beyond its private work share. Each is read-only "
                                 "by default; a writable QEMU share can abort the VM (see hazards), so leave read_only true unless the "
-                                "target genuinely needs to write back to the host."
+                                "target needs to write back to the host."
                             ),
                             required=False,
                             default=[],

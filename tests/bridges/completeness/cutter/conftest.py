@@ -65,7 +65,7 @@ def qapp() -> Generator[QApplication]:
 class CommandRecorder:
     """r2pipe stand-in that records issued commands and returns configurable JSON.
 
-    This is the genuine external boundary these tests cannot cross in the
+    This is the external boundary these tests cannot cross in the
     sandbox (a live rizin/radare2 child process communicating over its
     r2pipe protocol). Everything downstream of this object -- the real
     ``CutterBridge`` method bodies, the real tool-definition dispatch

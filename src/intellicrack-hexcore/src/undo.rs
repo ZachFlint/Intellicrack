@@ -3,6 +3,10 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Undo and redo history: every byte edit is recorded as one [`undo::Operation`]
+//! that holds what is needed to reverse and replay it, and the history knows
+//! which entry matches the last save.
+
 use crate::mmap_io::MmapDocument;
 
 /// One reversible edit, recorded with everything needed to undo and redo it.
@@ -41,11 +45,9 @@ pub enum Operation {
     },
     /// Move of `moved_data.len()` bytes from `src_offset` to `dst_offset`.
     ///
-    /// Records both regions touched by the move so undo restores the
-    /// original source bytes (which the move zeroed) *and* the original
-    /// destination bytes (which the move overwrote). A single
-    /// [`Operation::Overwrite`] record could only undo one of the two,
-    /// leaving the document inconsistent.
+    /// Records both regions the move touches in one entry, so one `undo()`
+    /// restores the source bytes the move zeroed and the destination bytes it
+    /// overwrote together.
     MoveBlock {
         /// Source block start (zeroed by the move).
         src_offset: usize,
@@ -58,10 +60,8 @@ pub enum Operation {
     },
     /// Atomic swap of `data_a.len()` bytes between `offset_a` and `offset_b`.
     ///
-    /// Records the pre-swap bytes of both regions in a single entry so one
-    /// `undo()` call restores both sides. Recording a swap as two separate
-    /// [`Operation::Overwrite`] entries let a single undo revert only the
-    /// second half, leaving the same bytes duplicated at both offsets.
+    /// Records the pre-swap bytes of both regions in one entry, so one
+    /// `undo()` restores both sides together.
     SwapBlocks {
         /// First block start.
         offset_a: usize,
@@ -75,18 +75,63 @@ pub enum Operation {
     /// Whole-document replacement recorded by `replace_bytes`.
     ///
     /// `replace_bytes` rebuilds the entire document, so `old_data` and
-    /// `new_data` can differ in length. A length-preserving
-    /// [`Operation::Overwrite`] cannot undo that: its clamping overwrite at
-    /// offset 0 would leave the post-replace length in place and strand bytes
-    /// the replacement added or dropped, so undo would not restore the exact
-    /// original bytes and length. Recording both whole buffers lets undo/redo
-    /// rebuild the document by replacing every byte.
+    /// `new_data` can differ in length, so both whole buffers are stored and
+    /// undo and redo rebuild the document by replacing every byte, restoring
+    /// the exact length each side had.
     Replace {
         /// The whole document before the replacement.
         old_data: Vec<u8>,
         /// The whole document after the replacement.
         new_data: Vec<u8>,
     },
+    /// A `replace_bytes` whose replacement is as long as its pattern.
+    ///
+    /// No byte moves, so the edit is fully described by where the matches
+    /// start: undo writes `pattern` back at each offset and redo writes
+    /// `replacement`. That costs eight bytes per match instead of the two
+    /// whole-document copies [`Operation::Replace`] keeps.
+    ReplaceMatches {
+        /// Start of each replaced match, ascending and non-overlapping.
+        offsets: Vec<usize>,
+        /// The bytes each match held before the replacement.
+        pattern: Vec<u8>,
+        /// The bytes each match holds after it, as long as `pattern`.
+        replacement: Vec<u8>,
+    },
+}
+
+/// Most spans [`rewrite_spans`] writes one by one; beyond it the document is
+/// rebuilt in a single pass instead.
+///
+/// Each overwrite has to locate its piece, so a long run of them on a
+/// fragmented table costs the span count times the piece count, while the
+/// rebuild costs one pass over the document whatever its layout.
+pub const SPAN_REWRITE_LIMIT: usize = 4096;
+
+/// Writes `bytes` at every offset in `offsets`, which must be ascending,
+/// non-overlapping and inside the document.
+///
+/// Up to [`SPAN_REWRITE_LIMIT`] spans are overwritten in place, which leaves
+/// the rest of the document untouched; more than that rebuild the document
+/// once from a patched copy. A span that would run past the end is clamped,
+/// as every overwrite is.
+pub fn rewrite_spans(doc: &mut MmapDocument, offsets: &[usize], bytes: &[u8]) {
+    if offsets.len() <= SPAN_REWRITE_LIMIT {
+        for &offset in offsets {
+            doc.apply_overwrite(offset, bytes);
+        }
+        return;
+    }
+    let mut data = doc.read_all();
+    for &offset in offsets {
+        let end = offset.saturating_add(bytes.len()).min(data.len());
+        if let Some(span) = data.get_mut(offset..end) {
+            span.copy_from_slice(&bytes[..span.len()]);
+        }
+    }
+    let len = doc.document_size();
+    doc.apply_delete(0, len);
+    doc.apply_insert(0, &data);
 }
 
 impl Operation {
@@ -115,6 +160,11 @@ impl Operation {
                 writes.iter().any(|(_, old, new)| old != new)
                     || truncated.as_ref().is_some_and(|(_, tail)| !tail.is_empty())
             }
+            Self::ReplaceMatches {
+                offsets,
+                pattern,
+                replacement,
+            } => !offsets.is_empty() && pattern != replacement,
         }
     }
 
@@ -123,7 +173,10 @@ impl Operation {
     #[must_use]
     pub fn preserves_offsets(&self) -> bool {
         match self {
-            Self::Overwrite { .. } | Self::MoveBlock { .. } | Self::SwapBlocks { .. } => true,
+            Self::Overwrite { .. }
+            | Self::MoveBlock { .. }
+            | Self::SwapBlocks { .. }
+            | Self::ReplaceMatches { .. } => true,
             Self::Replace { old_data, new_data } => old_data.len() == new_data.len(),
             Self::PatchImport { truncated, .. } => truncated.is_none(),
             Self::Insert { .. } | Self::Delete { .. } => false,
@@ -248,6 +301,9 @@ impl UndoManager {
                     doc.apply_overwrite(*offset, old);
                 }
             }
+            Operation::ReplaceMatches {
+                offsets, pattern, ..
+            } => rewrite_spans(doc, offsets, pattern),
         }
 
         self.redo_stack.push(op);
@@ -321,6 +377,11 @@ impl UndoManager {
                     doc.apply_delete(*new_len, tail.len());
                 }
             }
+            Operation::ReplaceMatches {
+                offsets,
+                replacement,
+                ..
+            } => rewrite_spans(doc, offsets, replacement),
         }
 
         self.undo_stack.push(op);
@@ -410,6 +471,13 @@ impl UndoManager {
                 }
                 Operation::PatchImport { writes, .. } => {
                     patches.extend(writes.iter().map(|(offset, _, new)| (*offset, new.clone())));
+                }
+                Operation::ReplaceMatches {
+                    offsets,
+                    replacement,
+                    ..
+                } => {
+                    patches.extend(offsets.iter().map(|&offset| (offset, replacement.clone())));
                 }
                 Operation::Insert { .. } | Operation::Delete { .. } => {}
             }
@@ -533,9 +601,8 @@ mod tests {
         assert!(!um.can_redo());
     }
 
-    /// Redo of an Overwrite must re-apply the new bytes, not the old ones.
-    /// The redo path reads `new_data`; a mutant that redoes `old_data` would
-    /// restore "Hello" instead of "Jello", which only a read-back catches.
+    /// Redo of an Overwrite re-applies the new bytes: after undo then redo,
+    /// `Hello` overwritten to `Jello` reads back as `Jello`.
     #[test]
     fn test_redo_overwrite_reapplies_the_new_bytes() {
         let mut doc = MmapDocument::from_bytes(b"Hello");
@@ -554,9 +621,8 @@ mod tests {
         assert_eq!(doc.read(0, 5), b"Jello".to_vec());
     }
 
-    /// Redo of a Delete must remove exactly the recorded length. A mutant that
-    /// redoes a one-byte delete would leave "HelloWorld"; reading the bytes and
-    /// the size back catches it.
+    /// Redo of a Delete removes exactly the recorded length, checked by
+    /// reading the bytes and the document size back after undo then redo.
     #[test]
     fn test_redo_delete_removes_the_recorded_length() {
         let mut doc = MmapDocument::from_bytes(b"Hello World");
@@ -573,6 +639,113 @@ mod tests {
         assert!(um.redo(&mut doc));
         assert_eq!(doc.document_size(), 5);
         assert_eq!(doc.read(0, 5), b"Hello".to_vec());
+    }
+
+    /// Each operation that leaves every byte as it was reports no change, and
+    /// the same operation with one differing byte reports one, for swaps,
+    /// moves, whole replacements, match replacements and patch imports.
+    #[test]
+    fn test_changes_bytes_is_false_exactly_for_content_identical_operations() {
+        let swap = |a: &[u8], b: &[u8]| Operation::SwapBlocks {
+            offset_a: 0,
+            offset_b: 4,
+            data_a: a.to_vec(),
+            data_b: b.to_vec(),
+        };
+        let moved = |src: &[u8], dst: &[u8]| Operation::MoveBlock {
+            src_offset: 0,
+            dst_offset: 8,
+            moved_data: src.to_vec(),
+            old_dst_data: dst.to_vec(),
+        };
+        let replace = |old: &[u8], new: &[u8]| Operation::Replace {
+            old_data: old.to_vec(),
+            new_data: new.to_vec(),
+        };
+        let matches =
+            |offsets: Vec<usize>, pattern: &[u8], replacement: &[u8]| Operation::ReplaceMatches {
+                offsets,
+                pattern: pattern.to_vec(),
+                replacement: replacement.to_vec(),
+            };
+        let import = |old: &[u8], new: &[u8]| Operation::PatchImport {
+            writes: vec![(0, old.to_vec(), new.to_vec())],
+            truncated: None,
+        };
+        let unchanged = [
+            swap(b"AAAA", b"AAAA"),
+            moved(&[0; 4], &[0; 4]),
+            replace(b"ab", b"ab"),
+            matches(vec![0, 4], b"AB", b"AB"),
+            matches(Vec::new(), b"AB", b"XY"),
+            import(b"A", b"A"),
+        ];
+        let changed = [
+            swap(b"AAAA", b"AAAB"),
+            moved(&[0, 0, 0, 1], &[0, 0, 0, 1]),
+            moved(&[0; 4], &[0, 0, 0, 1]),
+            replace(b"ab", b"abc"),
+            matches(vec![0], b"AB", b"XY"),
+            import(b"A", b"B"),
+        ];
+        for (index, op) in unchanged.iter().enumerate() {
+            assert!(!op.changes_bytes(), "unchanged[{index}]: {op:?}");
+        }
+        for (index, op) in changed.iter().enumerate() {
+            assert!(op.changes_bytes(), "changed[{index}]: {op:?}");
+        }
+    }
+
+    /// `rewrite_spans` gives the same bytes whether it overwrites span by span
+    /// (up to `SPAN_REWRITE_LIMIT` spans) or rebuilds the document once (past
+    /// it), including a final span that runs off the end and is clamped.
+    #[test]
+    fn test_rewrite_spans_matches_a_patched_copy_on_both_paths() {
+        for count in [SPAN_REWRITE_LIMIT, SPAN_REWRITE_LIMIT + 1] {
+            let len = count * 8;
+            let original: Vec<u8> = (0..len).map(|i| u8::try_from(i % 7).unwrap()).collect();
+            let offsets: Vec<usize> = (0..count).map(|i| i * 8 + 3).chain([len - 1]).collect();
+            let mut expected = original.clone();
+            for &offset in &offsets {
+                let end = (offset + 2).min(len);
+                expected[offset..end].copy_from_slice(&b"XY"[..end - offset]);
+            }
+
+            let mut doc = MmapDocument::from_bytes(&original);
+            rewrite_spans(&mut doc, &offsets, b"XY");
+            assert_eq!(doc.document_size(), len, "{count} spans");
+            assert!(doc.read_all() == expected, "{count} spans");
+            assert_eq!(doc.read(len - 2, 2), vec![original[len - 2], b'X']);
+        }
+    }
+
+    /// Undo of `ReplaceMatches` writes the pattern back at every recorded
+    /// offset and redo writes the replacement, leaving the bytes between the
+    /// matches alone.
+    #[test]
+    fn test_replace_matches_undo_and_redo_rewrite_only_the_matches() {
+        let mut doc = MmapDocument::from_bytes(b"ABCDABCDAB");
+        let mut um = UndoManager::new();
+        rewrite_spans(&mut doc, &[0, 4, 8], b"XY");
+        um.record(Operation::ReplaceMatches {
+            offsets: vec![0, 4, 8],
+            pattern: b"AB".to_vec(),
+            replacement: b"XY".to_vec(),
+        });
+        assert_eq!(doc.read_all(), b"XYCDXYCDXY".to_vec());
+        assert!(um.undo(&mut doc));
+        assert_eq!(doc.read_all(), b"ABCDABCDAB".to_vec());
+        assert!(um.redo(&mut doc));
+        assert_eq!(doc.read_all(), b"XYCDXYCDXY".to_vec());
+        assert_eq!(
+            um.get_overwrite_patches(),
+            vec![
+                (0, b"XY".to_vec()),
+                (4, b"XY".to_vec()),
+                (8, b"XY".to_vec())
+            ]
+        );
+        assert!(um.is_overwrite_only());
     }
 
     #[test]
@@ -668,10 +841,8 @@ mod tests {
         assert_eq!(doc.read_all(), b"ABC".to_vec());
     }
 
-    /// Undoing a `MoveBlock` must restore both
-    /// the source bytes (zeroed by the move) and the destination bytes
-    /// (overwritten by the move). Recording only the destination overwrite
-    /// would leave the source clear in place.
+    /// Undoing a `MoveBlock` restores both the source bytes the move zeroed
+    /// and the destination bytes it overwrote.
     #[test]
     fn test_undo_move_block_restores_source_and_destination() {
         let mut doc = MmapDocument::from_bytes(b"AAAABBBB____");
@@ -727,7 +898,7 @@ mod tests {
 
     /// `get_overwrite_patches` flattens `MoveBlock` into the source-zero
     /// and destination-write pair so external patch consumers see the
-    /// same byte mutation set as the in-memory document.
+    /// same byte changes as the in-memory document.
     #[test]
     fn test_get_overwrite_patches_includes_move_block_pair() {
         let mut um = UndoManager::new();

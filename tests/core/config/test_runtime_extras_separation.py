@@ -18,7 +18,7 @@ only the packages the code actually imports at runtime.
 
 These tests parse the canonical ``pyproject.toml`` directly and assert:
 - known dev/test tools are NOT in ``[project].dependencies``
-- the runtime list is small and contains only the genuine runtime deps
+- the runtime list is small and contains only the runtime deps
 - known dev tools are present in ``optional-dependencies.dev``
 """
 

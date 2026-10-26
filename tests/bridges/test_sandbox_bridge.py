@@ -51,7 +51,7 @@ def _make_execution_report() -> ExecutionReport:
     The production ``run_binary`` serialises the report it receives from the
     manager through ``dataclass_to_dict``, which (correctly) rejects anything
     that is not a real dataclass instance. Tests that exercise the success path
-    therefore need a genuine :class:`ExecutionReport`, not a mock stand-in.
+    therefore build an :class:`ExecutionReport` dataclass instance.
 
     Returns:
         ExecutionReport: A successful report with empty activity lists.
@@ -183,8 +183,8 @@ class _ScriptedAgent:
 class _ScriptedSandbox(InMemorySandbox):
     """Real ``InMemorySandbox`` whose boundary methods can be scripted to fail.
 
-    Every method that is not explicitly scripted keeps the genuine
-    ``InMemorySandbox`` behaviour, so a single scripted failure exercises
+    Every method that is not explicitly scripted keeps the inherited
+    ``InMemorySandbox`` behavior, so a single scripted failure exercises
     the bridge's error-wrapping path while every other call runs for real.
     Also records ``yara_scan`` call arguments and allows overriding
     ``vnc_port``.
@@ -627,10 +627,10 @@ class TestF0001ContBroadException:
 class TestF0002NarrowExceptionHandling:
     """Verify exception handling sites wrap unexpected exceptions as ToolError.
 
-    These tests use real ``ExecutionReport`` objects with malformed fields that
-    cause genuine ``KeyError`` or ``TypeError`` exceptions inside the real
-    analysis functions. No mocking of the analysis module is performed, so the
-    bridge error-wrapping path is exercised against real failure signals.
+    These tests use ``ExecutionReport`` objects with malformed fields that
+    raise ``KeyError`` or ``TypeError`` inside the analysis functions, so the
+    bridge error-wrapping path is exercised against the exceptions those
+    functions raise.
     """
 
     def test_extract_iocs_wraps_real_keyerror_from_bad_network_activity(self) -> None:
@@ -784,10 +784,10 @@ class TestF0002NarrowExceptionHandling:
 
         The real ``analysis.match_behaviors`` reads ``proc["name"]`` for every
         ``process_activity`` entry (in ``_match_persistence``). A dict missing
-        the ``name`` key causes a genuine ``KeyError('name')`` inside production
+        the ``name`` key raises ``KeyError('name')`` inside production
         code. The bridge must re-raise it as ``ToolError`` with prefix
-        "Failed to detect behaviors" and embed the missing key name. No analysis
-        module is mocked, so the exception originates in the real rule engine.
+        "Failed to detect behaviors" and embed the missing key name. The
+        exception originates in the rule engine.
 
         ``bridge.state.last_error`` must be populated.
         """
@@ -900,10 +900,10 @@ class TestF0003DetectBehaviorsYAML:
         assert "expected a list" in bridge.state.last_error or "dict" in bridge.state.last_error
 
     def test_valid_yaml_list_rules_applied_to_real_report(self, tmp_path: Path) -> None:
-        """detect_behaviors passes parsed YAML rules to real match_behaviors and returns exact field values.
+        """detect_behaviors passes parsed YAML rules to match_behaviors and returns exact field values.
 
-        This test drives the full path: YAML file -> parse -> real match_behaviors ->
-        _match_custom_rules.  No part of the analysis pipeline is mocked.  The custom
+        This test drives the full path: YAML file -> parse -> match_behaviors ->
+        _match_custom_rules.  The custom
         rule fires when ``process_activity`` contains an entry whose name matches
         ``conditions.process_names``.
 
@@ -1988,10 +1988,9 @@ class TestF0010LastErrorLifecycleSymmetric:
     def test_extract_iocs_clears_last_error_on_success(self) -> None:
         """Extract_iocs clears last_error after success following a failure.
 
-        The failure is a genuine ``KeyError`` raised by the real
+        The failure is a ``KeyError`` raised by the real
         ``analysis.extract_iocs`` when ``network_activity`` lacks
-        ``remote_address`` (as in :class:`TestF0002NarrowExceptionHandling`),
-        not a mocked analysis function.
+        ``remote_address`` (as in :class:`TestF0002NarrowExceptionHandling`).
         """
         bridge = SandboxBridge()
 
@@ -2026,7 +2025,7 @@ class TestF0010LastErrorLifecycleSymmetric:
     def test_timeline_clears_last_error_on_success(self) -> None:
         """Timeline clears last_error after success following a failure.
 
-        The failure is a genuine ``KeyError`` raised by the real
+        The failure is a ``KeyError`` raised by the real
         ``analysis.generate_timeline`` when ``file_changes`` lacks
         ``operation``, matching :class:`TestF0002NarrowExceptionHandling`.
         """
@@ -2063,7 +2062,7 @@ class TestF0010LastErrorLifecycleSymmetric:
     def test_detect_behaviors_clears_last_error_on_success(self) -> None:
         """Detect_behaviors clears last_error after success following a failure.
 
-        The failure is a genuine ``KeyError`` raised by the real
+        The failure is a ``KeyError`` raised by the real
         ``analysis.match_behaviors`` when ``process_activity`` lacks
         ``name``, matching :class:`TestF0002NarrowExceptionHandling`.
         """
@@ -2100,7 +2099,7 @@ class TestF0010LastErrorLifecycleSymmetric:
     def test_detect_c2_clears_last_error_on_success(self) -> None:
         """Detect_c2 clears last_error after success following a failure.
 
-        The failure is a genuine ``KeyError`` raised by the real
+        The failure is a ``KeyError`` raised by the real
         ``analysis.detect_c2_patterns`` when ``network_activity`` lacks
         ``remote_address``, matching :class:`TestF0002NarrowExceptionHandling`.
         """
@@ -2137,7 +2136,7 @@ class TestF0010LastErrorLifecycleSymmetric:
     def test_diff_clears_last_error_on_success(self) -> None:
         """Diff clears last_error after success following a failure.
 
-        The failure is a genuine ``AttributeError`` raised by the real
+        The failure is an ``AttributeError`` raised by the real
         ``analysis.diff_reports`` when ``process_activity`` holds a bare
         ``str`` instead of a dict, matching
         :class:`TestF0002NarrowExceptionHandling`.

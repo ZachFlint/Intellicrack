@@ -104,7 +104,7 @@ class _RunningInstallWorker(ToolInstallWorker):
     """A ToolInstallWorker that reports itself as perpetually running.
 
     The override lets the running-worker guard be exercised deterministically
-    without starting a real OS thread. It is a genuine subclass, not a mock:
+    without starting a real OS thread. It is a subclass:
     the base constructor runs and the object is a real ``ToolInstallWorker``.
     """
 

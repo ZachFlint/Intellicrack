@@ -6,16 +6,15 @@
 
 Real-binary coverage for ``disassembler.py``:
 
-* ``auto_detect_arch`` runs the REAL detection chain on REAL PE / ELF / Mach-O
-  binaries and asserts the resulting capstone ``(arch, mode)`` pair, rather than a
-  mocked ``detect_format_and_arch`` return tuple.
+* ``auto_detect_arch`` runs the detection chain on PE / ELF / Mach-O binaries and
+  asserts the resulting capstone ``(arch, mode)`` pair.
 * ``disassemble()`` decodes real machine code: the ``.text`` section of a real PE
-  and a real ELF is disassembled with capstone, and genuine x86-64 mnemonics are
+  and a real ELF is disassembled with capstone, and the expected x86-64 mnemonics are
   asserted.
 * ``get_disassembler()`` singleton reuse, RISC-V conditional availability, and
   ``get_supported_architectures()`` are checked against the real installed capstone build.
 
-No mocks are used: every assertion is driven by a real binary and the real
+Every assertion is driven by an on-disk executable and the installed
 capstone engine.
 """
 
@@ -147,7 +146,7 @@ class TestAutoDetectArchRealBinaries:
         disasm: HexDisassembler,
         real_pe_dll: Path,
     ) -> None:
-        """Detect x86-64 from a real System32 DLL with no mocking.
+        """Detect x86-64 from a System32 DLL.
 
         Args:
             disasm: Live disassembler.
@@ -199,7 +198,7 @@ class TestAutoDetectArchRealBinaries:
         Args:
             disasm: Live disassembler.
 
-        Drives the real detector (no mock); ``detect_format_and_arch``
+        Drives the real detector; ``detect_format_and_arch``
         classifies a random non-magic buffer as ``unknown``, which has no
         capstone mapping and must raise rather than silently fall back.
         """

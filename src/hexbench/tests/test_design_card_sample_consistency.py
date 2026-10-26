@@ -178,7 +178,7 @@ class StatusBarEntropyMatchesTheSampleTests(Assertions, unittest.TestCase):
         self.equal(match.group(1), expected, "status bar entropy")
 
     def test_entropy_reading_is_not_the_selection_slice_by_coincidence(self) -> None:
-        """The whole-document and selection entropy figures must genuinely differ for this sample.
+        """The whole-document and selection entropy figures must differ for this sample.
 
         Without this control, a status bar value that happened to match both
         candidates would not tell us which one the generator actually used.

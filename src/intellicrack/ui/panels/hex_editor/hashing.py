@@ -49,7 +49,7 @@ _PE_CHECKSUM_REPAIR_SYNC_WAIT_MS: Final[int] = 100
 The repair worker still runs ``document.repair_pe_checksum`` on a background ``GenericCallableWorker`` thread so a multi-gigabyte image
 never blocks the Qt event loop. For the vast majority of PE images the repair (a header write plus a checksum scan) completes in well under
 this budget, so joining briefly lets the caller observe the finished write and the fired notification immediately instead of only after the
-GUI thread's event loop happens to process the worker's queued completion signal. Genuinely large images simply time out this short join and
+GUI thread's event loop happens to process the worker's queued completion signal. Larger images simply time out this short join and
 continue asynchronously.
 """
 
@@ -545,7 +545,7 @@ class HashingMixin:
         The repair runs on a background worker thread so recomputing the checksum of a large image never blocks the Qt event loop. After
         dispatch this joins the worker for a short, bounded window (``_PE_CHECKSUM_REPAIR_SYNC_WAIT_MS``) so ordinarily fast repairs are
         already complete, written, and have fired their document-modified notification by the time this method returns; a repair on a
-        genuinely large image simply outlives that window and continues to completion asynchronously.
+        larger image simply outlives that window and continues to completion asynchronously.
         """
         if self.document is None:
             return

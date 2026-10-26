@@ -527,7 +527,7 @@ def _resolve_save_target(path: str) -> str:
     directory names, and the ``~`` in them is rizin's grep operator, so a raw
     short path cannot be forwarded on a command line. Resolving the path
     expands every short component to its long form while leaving a literal
-    ``~`` that is part of a real name in place, so genuine injection attempts
+    ``~`` that is part of a real name in place, so injection attempts
     are still refused downstream. The result is rendered with forward slashes,
     which rizin accepts on every platform and which carry no backslash-escaping
     hazard, so a configured ``C:/out.bin`` is forwarded unchanged.
@@ -2334,7 +2334,7 @@ class CutterAnalysisMixin(_CutterBridgeBase):
         """Run analysis on the loaded binary.
 
         Full-binary analysis (``aa``/``aaa``/``aaaa``) routinely runs for
-        minutes on real-world targets, far past the module-default
+        minutes on large binaries, far past the module-default
         :data:`R2_COMMAND_TIMEOUT` used for ordinary rizin commands. The
         command is therefore dispatched with an explicit, level-scaled
         ``command_timeout`` drawn from :data:`_ANALYSIS_TIMEOUT` -- the same
@@ -2680,7 +2680,7 @@ class CutterAnalysisMixin(_CutterBridgeBase):
 
         Uses rz-ghidra's ``pdg`` command by default -- rizin 0.9.1 ships no
         native ``pdc`` decompiler, so a prior fallback to it always failed
-        and masked genuine ``pdg`` failures. The SLEIGH specifications
+        and masked ``pdg`` failures. The SLEIGH specifications
         ``pdg`` depends on are loaded lazily on first use within a session,
         which can exceed the default per-command timeout, so this call uses
         an extended timeout specific to ``pdg``. Passing ``backend="pdd"``
@@ -3739,7 +3739,7 @@ class CutterMetadataMixin(CutterCommandMixin):
         Errors raised by the underlying command (timeouts, JSON parse
         failures, missing-binary checks) are propagated to the caller
         as ``ToolError`` rather than being swallowed and reported as
-        an empty list, so genuine failures are not silently hidden
+        an empty list, so failures are not silently hidden
         behind a ``no resources`` outcome.
 
         Returns:

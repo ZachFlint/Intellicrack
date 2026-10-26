@@ -156,9 +156,8 @@ def redirect_hub_catalog_to(monkeypatch: pytest.MonkeyPatch) -> Callable[[int], 
     catalog at a hardcoded ``https://huggingface.co/api/models`` URL that
     takes no override parameter -- unlike the router served-model query,
     which already accepts a base URL. Redirecting at the ``httpx.Client.get``
-    boundary (rather than mocking the fallback's return value) keeps the
-    test exercising the real HTTP request/response/JSON-decode path end to
-    end against a real local server, for the one call site whose target
+    boundary keeps the test exercising the HTTP request/response/JSON-decode
+    path end to end against a local server, for the one call site whose target
     host is not independently configurable.
 
     Args:

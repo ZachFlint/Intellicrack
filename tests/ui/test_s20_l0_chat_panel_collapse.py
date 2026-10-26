@@ -9,7 +9,7 @@ un-collapsible, so it would keep its minimum width even while empty and crush ev
 embedded tool panel into the remaining splitter space with no way to reclaim that width.
 This test drives the real ``MainWindow`` splitter and asserts that toggling the Chat pane
 collapses it to zero width, hands that freed width to the tool panel, and that toggling
-again restores a nonzero Chat width, proving the pane is genuinely recoverable and not a
+again restores a nonzero Chat width, so the pane is recoverable and not a
 one-way collapse.
 """
 
@@ -110,7 +110,7 @@ def test_toggle_chat_panel_is_restorable_after_collapse(shell_window: MainWindow
     """A second toggle after collapsing must restore a nonzero Chat pane width.
 
     A pane the user can collapse but never get back is a regression in its own right. This
-    asserts the toggle is genuinely a two-way control, not a one-shot collapse.
+    asserts the toggle is a two-way control, not a one-shot collapse.
 
     Args:
         shell_window: A real, shown ``MainWindow``.

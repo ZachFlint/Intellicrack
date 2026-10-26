@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the per-user writable state relocation.
+"""Gates for the per-user writable state relocation.
 
 The installed application is spawned as ``pythonw -m intellicrack`` (not frozen),
 so ``get_project_root()`` resolves to the read-only, world-readable install

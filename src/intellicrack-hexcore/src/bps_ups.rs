@@ -1862,7 +1862,7 @@ mod tests {
         );
     }
 
-    /// When actions genuinely require the declared size, the lazy
+    /// When actions require the declared size, the lazy
     /// growth still fails fallibly instead of aborting the process.
     #[test]
     fn test_grow_target_huge_request_returns_oom_not_abort() {

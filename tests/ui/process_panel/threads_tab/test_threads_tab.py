@@ -344,7 +344,7 @@ class TestF0011TlsUsesOwnSelector:
         ``_on_tls`` to read from ``_fiber_combo`` will cause bridge.tls_calls[0] == 777,
         failing the assertion.
 
-        Documented falsifying mutation: in ``threads_tab.py`` ``_on_tls()``, change
+        Breaking mutation: in ``threads_tab.py`` ``_on_tls()``, change
         ``tid = self._tls_thread_combo.currentData()`` to
         ``tid = self._fiber_combo.currentData()`` — bridge.tls_calls[0] becomes 777,
         not 888, and the ``!= 777`` assertion fails.

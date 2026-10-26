@@ -14,9 +14,9 @@ by the host-native pass (:mod:`scripts.host_native_tests`).
 
 This module is the single source of truth for that set. It is data-driven
 rather than decorator-based so the ~100 entries stay in one auditable place and
-a falsifiable gate can prove every entry still resolves to a real test. The
+a registry check can confirm every entry still resolves to a collected test. The
 conftest collection hook consults :func:`is_host_native_nodeid` to apply the
-``host_native`` marker, and the falsifiable gate consults
+``host_native`` marker, and the registry check consults
 :func:`iter_registry_entries` to detect drift.
 
 Cloud-provider tests that need paid API keys are intentionally excluded: they
@@ -311,7 +311,7 @@ def is_host_native_nodeid(nodeid: str) -> bool:
 def iter_registry_entries() -> list[str]:
     """Return a human-readable list of every registry entry.
 
-    Used by the falsifiable gate to confirm each entry still resolves to a real
+    Used by the registry check to confirm each entry still resolves to a
     collected test (i.e. the registry has not drifted from the suite).
 
     Returns:

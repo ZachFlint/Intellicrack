@@ -2,19 +2,18 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Falsifiable gates for the ``packaging/stage.ps1`` hardening pass.
+r"""Tests for the ``packaging/stage.ps1`` hardening pass.
 
 Running the stager is a multi-hour, 205 MB-download, ~100 GB build, so none of
 these gates run it. They pin the parts of it that can be checked without one, and
-they avoid grep-style assertions wherever a real check is available:
+they avoid grep-style assertions wherever a behavioral check is available:
 
-* The **core-runtime gate** ``stage.ps1`` emits is real Python, embedded in a
+* The **core-runtime gate** ``stage.ps1`` emits is Python, embedded in a
   here-string. It is extracted and executed here, and its two load-bearing
-  behaviours are exercised against real files on disk: a ``try``/``except``-guarded
+  behaviors are exercised against files on disk: a ``try``/``except``-guarded
   import must not be demanded of the core runtime (this is what keeps ``torch``
   out), an unguarded one must be, and a missing module must be reported as a
-  failure rather than swallowed. This is the production code, lifted, not a
-  restatement of it.
+  failure rather than swallowed.
 * The **wizard-freshness preflight** parses ``generate_banners.ps1`` at build
   time. The regexes it uses are extracted from ``stage.ps1`` itself and run
   against the real generator here, so this reddens exactly when that parse would
@@ -331,9 +330,9 @@ def core_runtime_gate(tmp_path_factory: pytest.TempPathFactory) -> ModuleType:
 
 
 def test_stage_script_declares_the_documented_parameter_surface() -> None:
-    """Real gate: every skip switch, the profile and the retry count are declared.
+    """Every skip switch, the profile and the retry count are declared.
 
-    Falsifiable by removing a parameter or renaming one: a caller's
+    Fails if a parameter is removed or renamed: a caller's
     ``-SkipJdkDownload`` would then bind to nothing and be silently ignored,
     because a plain script accepts unbound arguments without complaint.
     """
@@ -346,7 +345,7 @@ def test_stage_script_declares_the_documented_parameter_surface() -> None:
 
 
 def test_stage_script_defaults_reproduce_the_previous_behaviour() -> None:
-    r"""Real gate: running the stager with no arguments builds what it always built.
+    r"""Running the stager with no arguments builds what it always built.
 
     A switch defaults to false, so the skips are inert. The two valued parameters
     must carry the literals the default run uses -- a
@@ -385,7 +384,7 @@ def test_release_profile_still_builds_hexcore_with_release() -> None:
 
 
 def test_destructive_and_generating_steps_are_wrapped_in_shouldprocess() -> None:
-    """Real gate: ``-WhatIf`` previews the stage wipe and every generated file.
+    """``-WhatIf`` previews the stage wipe and every generated file.
 
     ``SupportsShouldProcess`` on its own changes nothing: each destructive or
     file-writing statement has to ask. Unwrapping any of them makes ``-WhatIf``
@@ -411,7 +410,7 @@ def test_destructive_and_generating_steps_are_wrapped_in_shouldprocess() -> None
 
 
 def test_launchers_are_built_from_a_clean_pyinstaller_cache() -> None:
-    """Real gate: a stale PyInstaller cache cannot mask a launcher or spec change.
+    """A stale PyInstaller cache cannot mask a launcher or spec change.
 
     Without ``--clean`` a changed spec (the version resource, for one) can be
     served from a cached analysis, so the shipped exe silently predates the spec change.
@@ -427,7 +426,7 @@ def test_launchers_are_built_from_a_clean_pyinstaller_cache() -> None:
 
 
 def test_checksum_manifest_is_written_outside_the_staged_tree() -> None:
-    """Real gate: the manifest is a sibling of ``build/stage``, never a member of it.
+    """The manifest is a sibling of ``build/stage``, never a member of it.
 
     Both paths are resolved through the script's own assignment chain rather than
     matched as strings, so moving the manifest inside the stage reddens this even
@@ -470,7 +469,7 @@ def test_checksum_manifest_is_reproducible_and_bom_free() -> None:
 
 
 def test_wizard_preflight_still_parses_the_real_generator() -> None:
-    """Real gate: the preflight's parse of ``generate_banners.ps1`` still succeeds.
+    """The preflight's parse of ``generate_banners.ps1`` still succeeds.
 
     The patterns are extracted from ``stage.ps1`` and run against the real
     generator, so this is the same question the stager asks at build time. It
@@ -505,7 +504,7 @@ def test_wizard_preflight_still_parses_the_real_generator() -> None:
 
 
 def test_wizard_preflight_covers_every_image_the_installer_ships() -> None:
-    """Real gate: every wizard image the ``.iss`` uses is one the preflight checks.
+    """Every wizard image the ``.iss`` uses is one the preflight checks.
 
     The freshness gate is only worth having if it covers the images that actually
     ship. An image added to the ``.iss`` but not produced by the generator would
@@ -551,14 +550,14 @@ def test_wizard_preflight_fails_the_build_rather_than_warning() -> None:
 
 
 def test_core_runtime_gate_demands_only_unconditional_imports(core_runtime_gate: ModuleType, tmp_path: Path) -> None:
-    """Real gate: the embedded gate ignores guarded imports and catches plain ones.
+    """The embedded gate ignores guarded imports and catches plain ones.
 
     This is the property the whole split depends on. ``torch`` and
     ``transformers`` are imported behind ``try``/``except ImportError`` and move
     to ``ml_overlay``; ``structlog`` is imported unconditionally and must stay in
     the core runtime. If the gate stopped distinguishing them it would either
     demand the relocated ML stack of a core-only install (failing every build) or
-    stop noticing a genuinely missing core dependency.
+    stop noticing a missing core dependency.
 
     Args:
         core_runtime_gate: The gate module extracted from ``stage.ps1``.
@@ -598,7 +597,7 @@ def test_core_runtime_gate_demands_only_unconditional_imports(core_runtime_gate:
 
 
 def test_core_runtime_gate_reports_an_unimportable_module(core_runtime_gate: ModuleType) -> None:
-    """Real gate: a relocated dependency is reported, not swallowed.
+    """A relocated dependency is reported, not swallowed.
 
     ``import_all`` is what turns a missing package into a build failure. If it
     ever stopped collecting failures the gate would pass on a runtime that cannot
@@ -615,7 +614,7 @@ def test_core_runtime_gate_reports_an_unimportable_module(core_runtime_gate: Mod
 
 
 def test_core_runtime_gate_refuses_to_pass_vacuously(core_runtime_gate: ModuleType, tmp_path: Path) -> None:
-    """Real gate: an empty import surface fails instead of reporting success.
+    """An empty import surface fails instead of reporting success.
 
     A staged tree the gate cannot read - a moved ``app/src``, a renamed package -
     would otherwise produce an empty surface, import nothing, and declare the
@@ -666,7 +665,7 @@ def test_embedded_core_runtime_gate_is_valid_python() -> None:
     assert source.startswith("# SPDX-License-Identifier"), "the emitted gate script carries no licence header"
 
 
-def test_here_string_extraction_is_falsifiable() -> None:
+def test_here_string_extraction_finds_one_and_rejects_an_absent_one() -> None:
     """The extraction helper finds a real here-string and refuses an absent one.
 
     Guards every gate above that depends on it: a helper that quietly returned an
@@ -681,7 +680,7 @@ def test_here_string_extraction_is_falsifiable() -> None:
 
 
 def test_conda_owned_entries_are_vetoed_before_the_move() -> None:
-    """Real gate: the split cannot relocate a package conda installed.
+    """The split cannot relocate a package conda installed.
 
     ``ml_split.py`` reasons over pip metadata alone and returns conda-owned base
     packages (setuptools, jinja2, markupsafe, pygments) as ML-only. Moving those

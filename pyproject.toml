@@ -360,7 +360,7 @@ extend-exclude = '''/(
 [tool.codespell]
 skip = """\
   .git,.github,.pixi,.claude,.serena,build,dist,tools,vendor,target,node_modules,CLI \
-  Coding,Screenshots,typings,stubs,*.lock,reports,*.egg-info,*.hta,*.hpp,*.graphml\
+  Coding,Screenshots,typings,*.lock,reports,*.egg-info,*.hta,*.hpp,*.graphml\
   """
 ignore-words-list = "lief,crossreference,thirdparty,nd,lod,connin,regist"
 count = true
@@ -549,7 +549,6 @@ extend_exclude = [
   "node_modules",
   "Screenshots",
   "typings",
-  "stubs",
 ]
 per_rule_ignores = { DEP002 = [
   "accelerate",
@@ -582,7 +581,6 @@ exclude = [
   "tools",
   "vendor",
   "typings",
-  "stubs",
 ]
 
 [tool.flake8]
@@ -608,7 +606,6 @@ exclude = [
   "vendor",
   "Screenshots",
   "typings",
-  "stubs",
 ]
 extend-ignore = [
   "E203",
@@ -686,12 +683,11 @@ exclude = [
   "vendor",
   "Screenshots",
   "typings",
-  "stubs",
 ]
 
 [tool.mypy]
 python_version = "3.13"
-mypy_path = [".", "stubs"]
+mypy_path = [".", "typings"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -1036,7 +1032,6 @@ main.ignore-paths = [
   ".*/build/.*",
   ".*/dist/.*",
   ".*/node_modules/.*",
-  ".*/stubs/.*",
   ".*/target/.*",
   ".*/tools/.*",
   ".*/typings/.*",
@@ -1160,7 +1155,6 @@ exclude = [
   "notebooks/",
   "node_modules/",
   "Screenshots/",
-  "stubs/",
   "tools/",
   "typings/",
   "vendor/",
@@ -1257,6 +1251,7 @@ lint.per-file-ignores."scripts/**" = [
   "start-process-with-partial-path",
   "print"
 ]
+lint.per-file-ignores."src/intellicrack-hexcore/intellicrack_hexcore.pyi" = ["docstring-in-stub"]
 lint.per-file-ignores."src/intellicrack/bridges/win32_types.py" = ["invalid-class-name"]
 lint.per-file-ignores."src/intellicrack/bridges/process.py" = ["invalid-class-name"]
 lint.per-file-ignores."src/intellicrack/core/hexpat/evaluator.py" = [
@@ -1277,7 +1272,9 @@ lint.per-file-ignores."src/intellicrack/core/hexpat/stdlib.py" = [
   "raise-vanilla-args"
 ]
 lint.per-file-ignores."src/intellicrack/core/orchestrator.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/core/subprocess_compat.pyi" = ["docstring-in-stub"]
 lint.per-file-ignores."src/intellicrack/core/tools.py" = ["import-outside-top-level"]
+lint.per-file-ignores."src/intellicrack/core/xml_gen.pyi" = ["docstring-in-stub", "invalid-function-name"]
 lint.per-file-ignores."src/intellicrack/main.py" = ["import-outside-top-level"]
 lint.per-file-ignores."src/intellicrack/ui/app.py" = ["import-outside-top-level"]
 lint.per-file-ignores."src/intellicrack/ui/panels/frida_panel.py" = ["too-many-locals"]
@@ -1401,5 +1398,4 @@ exclude = [
   "vendor/",
   "Screenshots/",
   "typings/",
-  "stubs/",
 ]

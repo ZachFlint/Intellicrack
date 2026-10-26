@@ -5,10 +5,10 @@
 
 """Real-data coverage for :mod:`intellicrack.ui.panels.cutter_tabs`.
 
-The Cutter analysis tabs render symbols, headers, sections, and hexdumps from real binary
-analysis; these tests exercise them against real data.
+The Cutter analysis tabs render symbols, headers, sections, and hexdumps from binary
+analysis; these tests exercise them against data parsed from a System32 PE.
 
-A live Cutter/Rizin server is genuine external infrastructure and is absent in
+A live Cutter/Rizin server is external infrastructure and is absent in
 the container, so these tests do not stand up a server. Instead they build the
 exact domain objects a real :class:`CutterBridge` query returns
 (:class:`SymbolInfo`, :class:`HeaderInfo`, :class:`SectionInfo`,
@@ -270,7 +270,7 @@ class TestAllStringsTabRealData:
 
 @pytest.mark.usefixtures("qapp")
 class TestHexdumpTabRealData:
-    """The hexdump tab must render real bytes and parse real input."""
+    """The hexdump tab must render file bytes and parse user-entered input."""
 
     @staticmethod
     def test_apply_real_hexdump_text(real_pe_dll: Path) -> None:

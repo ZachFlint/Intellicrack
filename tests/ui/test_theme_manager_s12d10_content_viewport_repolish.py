@@ -133,12 +133,12 @@ class TestContentViewportRuntimeRepolish:
         """A runtime dark->light toggle unpolishes and repolishes content viewports.
 
         Builds a real disassembly-shaped ``QTableWidget`` and a real
-        ``ChatPanel`` (with one message added, so a genuine message-bubble
+        ``ChatPanel`` (with one message added, so a message-bubble
         ``QFrame`` and its ``QTextBrowser`` exist), applies the dark theme
         to establish an initial polish, then toggles to the light theme
         while a recording stand-in is installed as ``QApplication.style()``.
 
-        Falsifiable: reverting ``ThemeManager._repolish_chrome`` to only
+        Reverting ``ThemeManager._repolish_chrome`` to only
         handle ``QMenuBar``/``QToolBar`` (i.e. dropping the
         ``QAbstractScrollArea`` and role-propertied ``QFrame`` handling,
         along with the per-widget ``viewport()`` repolish) leaves every

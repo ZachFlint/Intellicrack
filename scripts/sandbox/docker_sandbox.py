@@ -116,6 +116,10 @@ _IMAGE_ABSENT_MARKER = "no such image"
 _IMAGE_PROBE_ATTEMPTS = 3
 _IMAGE_PROBE_RETRY_DELAY = 2.0
 
+# Removing a ~40 GB Windows image deletes its windowsfilter layers on disk,
+# which can take several minutes on the USB-attached project drive.
+_IMAGE_REMOVE_TIMEOUT_SECONDS = 900.0
+
 # The built-in connected network carries a different name per engine: the
 # Windows container engine creates "nat", the Linux engine creates "bridge".
 # Ordered most-specific-first for this host, which runs Windows containers.
@@ -702,8 +706,167 @@ def _probe_image_presence(
     return presence
 
 
+def _image_id(tag: str) -> str | None:
+    """Return the content ID ``tag`` currently points at.
+
+    Args:
+        tag: Image reference to resolve.
+
+    Returns:
+        str | None: The ``sha256:`` image ID, or ``None`` when the tag does not
+            exist or Docker could not answer.
+    """
+    proc = _run_docker(
+        ["image", "inspect", "--format", "{{.Id}}", tag],
+        check=False,
+        timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
+    )
+    image_id = proc.stdout.strip()
+    if proc.returncode != 0 or not image_id:
+        return None
+    return image_id
+
+
+def _remove_replaced_image(tag: str, previous_id: str | None) -> None:
+    """Remove the image a rebuild moved ``tag`` away from.
+
+    The sandbox always builds the same tag, so every rebuild that produces a
+    new image leaves the previous one untagged (dangling) at roughly 40 GB.
+    The previous image is removed by ID without ``--force``: Docker then
+    refuses when a container still uses it or another tag still names it, and
+    that refusal is logged and left alone rather than overridden.
+
+    Args:
+        tag: Tag the rebuild just produced.
+        previous_id: Image ID ``tag`` pointed at before the rebuild, or
+            ``None`` when there was no previous image.
+    """
+    if previous_id is None:
+        return
+    current_id = _image_id(tag)
+    if current_id is None:
+        _LOGGER.warning("sandbox_replaced_image_kept", tag=tag, image_id=previous_id, reason="new image id unresolved")
+        return
+    if current_id == previous_id:
+        _LOGGER.info("sandbox_image_unchanged", tag=tag, image_id=current_id)
+        return
+    proc = _run_docker(["image", "rm", previous_id], check=False, timeout=_IMAGE_REMOVE_TIMEOUT_SECONDS)
+    if proc.returncode != 0:
+        _LOGGER.warning(
+            "sandbox_replaced_image_kept",
+            tag=tag,
+            image_id=previous_id,
+            exit_code=proc.returncode,
+            reason=proc.stderr.strip()[:300],
+        )
+        print(
+            f"[sandbox] Could not remove the replaced image {previous_id}: {proc.stderr.strip()}",
+            file=sys.stderr,
+        )
+        return
+    _LOGGER.info("sandbox_replaced_image_removed", tag=tag, image_id=previous_id, new_image_id=current_id)
+    print(f"[sandbox] Removed the replaced image {previous_id}", file=sys.stderr)
+
+
+def _image_ancestry(image_ref: str) -> tuple[str, ...] | None:
+    """Return the locally known image IDs in ``image_ref``'s build chain.
+
+    Args:
+        image_ref: Image ID or tag to walk.
+
+    Returns:
+        tuple[str, ...] | None: IDs from ``image_ref`` itself down to the base
+            image it was built from, newest first, or ``None`` when Docker
+            could not answer. Layers of a pulled base image have no local ID
+            and are omitted.
+    """
+    proc = _run_docker(["history", "-q", "--no-trunc", image_ref], check=False, timeout=_DOCKER_PROBE_TIMEOUT_SECONDS)
+    if proc.returncode != 0:
+        return None
+    return tuple(line.strip() for line in proc.stdout.splitlines() if line.strip().startswith("sha256:"))
+
+
+def _other_docker_build_running() -> bool:
+    """Report whether another ``docker build`` is in flight on this host.
+
+    The legacy builder keeps each finished step as an untagged image with no
+    container until the next step starts, so a concurrent build's latest step
+    is indistinguishable from a failed build's leftover.
+
+    Any ``build`` token in a Docker CLI command line counts, so global flags or
+    the ``image build`` / ``buildx build`` spellings are covered; a false match
+    only skips one cleanup pass.
+
+    Returns:
+        bool: ``True`` when any process other than this one runs ``docker build``.
+    """
+    own_pid = os.getpid()
+    for process in psutil.process_iter():
+        try:
+            if process.pid == own_pid or process.name().lower().removesuffix(".exe") != "docker":
+                continue
+            argv = process.cmdline()
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+        if "build" in argv[1:]:
+            return True
+    return False
+
+
+def _remove_failed_build_leftovers(tag: str) -> None:
+    """Remove dangling images left behind by earlier failed sandbox builds.
+
+    When a legacy-builder build fails, the last step that succeeded stays as an
+    untagged image so a retry can resume from it. Once a later build succeeds
+    from different inputs nothing references that chain again, and it remains
+    as a dangling image of up to ~40 GB. A dangling image is treated as a
+    sandbox leftover only when its build chain shares a locally built step with
+    ``tag``; a shared pulled base image alone does not qualify, so dangling
+    images from unrelated builds are never touched. Each is removed without
+    ``--force``, which also releases its now-unreferenced parent steps.
+
+    Args:
+        tag: Tag of the sandbox image that was just built.
+    """
+    if _other_docker_build_running():
+        _LOGGER.info("sandbox_leftover_sweep_skipped", reason="another docker build is running")
+        return
+    chain = _image_ancestry(tag)
+    if not chain:
+        _LOGGER.warning("sandbox_leftover_sweep_skipped", reason=f"history of {tag} unavailable")
+        return
+    sandbox_steps = frozenset(chain[:-1])
+    listing = _run_docker(
+        ["images", "-q", "--no-trunc", "--filter", "dangling=true"],
+        check=False,
+        timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
+    )
+    if listing.returncode != 0:
+        _LOGGER.warning("sandbox_leftover_sweep_skipped", reason=listing.stderr.strip()[:300])
+        return
+    for image_id in dict.fromkeys(line.strip() for line in listing.stdout.splitlines() if line.strip()):
+        ancestry = _image_ancestry(image_id)
+        if ancestry is None or sandbox_steps.isdisjoint(ancestry):
+            continue
+        proc = _run_docker(["image", "rm", image_id], check=False, timeout=_IMAGE_REMOVE_TIMEOUT_SECONDS)
+        if proc.returncode != 0:
+            _LOGGER.warning(
+                "sandbox_leftover_image_kept",
+                image_id=image_id,
+                exit_code=proc.returncode,
+                reason=proc.stderr.strip()[:300],
+            )
+            continue
+        _LOGGER.info("sandbox_leftover_image_removed", image_id=image_id)
+        print(f"[sandbox] Removed the failed-build leftover image {image_id}", file=sys.stderr)
+
+
 def build_image(tag: str, *, rebuild: bool = False) -> str:
     """Ensure the sandbox image is present locally, building it when missing.
+
+    A successful build that moves ``tag`` to a new image removes the image it
+    replaced, along with any steps earlier failed sandbox builds left behind,
+    so repeated rebuilds do not accumulate dangling images.
 
     Args:
         tag: Target image tag.
@@ -737,6 +900,7 @@ def build_image(tag: str, *, rebuild: bool = False) -> str:
 
     docker = _docker_binary()
     pixi_version = _pixi_version()
+    previous_id = _image_id(tag)
     argv = [
         docker,
         "build",
@@ -766,6 +930,8 @@ def build_image(tag: str, *, rebuild: bool = False) -> str:
         raise SandboxError(message)
     _LOGGER.info("sandbox_image_built", tag=tag, duration_seconds=round(duration, 1))
     print(f"[sandbox] Image ready: {tag} (built in {duration:.1f}s)", file=sys.stderr)
+    _remove_replaced_image(tag, previous_id)
+    _remove_failed_build_leftovers(tag)
     return tag
 
 

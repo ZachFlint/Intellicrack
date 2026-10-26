@@ -10,7 +10,7 @@ before any connection or network work. The guard lives in
 every provider's ``chat``/``chat_stream``.
 
 These gates are credential-free: the rejection happens before the connection
-check, so a fresh unconnected provider is enough. To stay falsifiable they
+check, so a fresh unconnected provider is enough. They
 assert on the *empty-messages* error text specifically — an unconnected
 provider would otherwise raise the ``not connected`` :class:`ProviderError`,
 which must NOT satisfy the gate if the guard is ever removed.

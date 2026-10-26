@@ -183,7 +183,7 @@ class _BootstrapTestSandbox(QEMUSandbox):
 def _make_sandbox(guest_os: GuestOS) -> _BootstrapTestSandbox:
     """Build a minimal sandbox with no QEMU process attached.
 
-    The configured ``agent_port`` is derived from a genuinely free port so
+    The configured ``agent_port`` is derived from a free port so
     that a bootstrap attempted without an attached fake runs against a closed
     socket instead of hitting an unrelated listener, and the guest-agent
     readiness budget is shortened so the retry loop finishes inside a test.

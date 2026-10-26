@@ -98,7 +98,7 @@ class ToolActivityPanel(QFrame):
     Emits ``cancel_requested(call_id)`` when the operator cancels a call.
     """
 
-    cancel_requested = pyqtSignal(str)
+    cancel_requested: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Build an empty, hidden panel.

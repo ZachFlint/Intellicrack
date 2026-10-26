@@ -18,7 +18,7 @@ Two things fix it, and both are exercised here against a real PowerShell:
   ``InvocationInfo`` - the offending source line and its number - into the
   detail, and the ``trace_session_failed`` catch passes ``-ErrorRecord $_``.
   The first two tests lift that function and that very catch statement out of
-  the script and drive them with a genuine null-receiver error, so the bytes
+  the script and drive them with a null-receiver error, so the bytes
   under test are the guest's own and the diagnostic really does name the
   statement. The control proves the locator is added only when an error record
   is supplied, so the located assertion is not trivially true of every line.

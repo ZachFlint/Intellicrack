@@ -8,7 +8,7 @@ Three situations are driven with real objects only:
 
 * The module's torch handle set to ``None`` (the state of an installation without PyTorch), which
   every public entry point must degrade from gracefully.
-* The genuine PyTorch XPU build running on a machine with no XPU device.
+* The installed PyTorch XPU build running on a machine with no XPU device.
 * The Windows GPU probe, either with ``pwsh`` unreachable on ``PATH`` or with the module's
   PowerShell script constant replaced by a script that prints a chosen JSON payload, so the real
   subprocess machinery and the real JSON parser run end to end.
@@ -265,7 +265,7 @@ class TestWithoutTorch:
 
 
 class TestRealTorchWithoutDevice:
-    """The genuine PyTorch XPU build on a machine that has no XPU device."""
+    """The installed PyTorch XPU build on a machine that has no XPU device."""
 
     @staticmethod
     def test_initialize_xpu_reports_no_devices() -> None:

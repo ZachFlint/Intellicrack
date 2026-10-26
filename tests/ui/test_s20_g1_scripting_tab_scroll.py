@@ -118,13 +118,13 @@ class TestScriptingTabIsScrollable:
     def test_short_viewport_scrolls_instead_of_crushing_rows(panel: GhidraPanel) -> None:
         """Forced shorter than its content floor, the tab must scroll rather than crush its rows.
 
-        The panel is genuinely shown and the Scripting tab made current
+        The panel is shown and the Scripting tab made current
         before any geometry is measured or resized: a ``QScrollArea`` that
         is still hidden inside a background (non-current) tab page of an
         unshown top-level widget does not reliably update its viewport size
         or scrollbar range when resized, which makes geometry read off it
         meaningless regardless of what the underlying implementation does.
-        Once genuinely visible and current, resizing the scroll area itself
+        Once visible and current, resizing the scroll area itself
         (rather than the panel) exercises exactly the squeeze a docked pane
         applies without tripping Qt's top-level-window auto-clamp to the
         layout's minimum size.

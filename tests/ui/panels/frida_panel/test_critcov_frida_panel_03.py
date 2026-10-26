@@ -5,7 +5,7 @@
 """Coverage for the memory-protection, symbol, function-call, child-gating and crash handlers of the Frida panel.
 
 Every test drives a real ``FridaPanel``. Button handlers that reach the bridge run through the real asynchronous dispatch against a
-genuine, unattached ``FridaBridge``: the bridge itself refuses the request with its own ``ToolError`` ("not attached to a process" or "no
+an unattached ``FridaBridge``: the bridge itself refuses the request with its own ``ToolError`` ("not attached to a process" or "no
 Frida device available"), which travels through the real worker thread and comes back to the panel's error handler as a console line.
 Result handlers are fed the real dataclasses (``MemoryRegion``, ``SymbolInfo``, ``ApiResolverMatch``, ``ChildProcessInfo``,
 ``CrashInfo``) that ``FridaBridge`` returns, and the expected table cells are written out by hand. No test attaches to a process.

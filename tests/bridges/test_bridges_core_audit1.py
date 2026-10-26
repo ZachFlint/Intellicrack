@@ -140,7 +140,7 @@ def test_f0002_validate_tool_parameter_flags_unknown_type() -> None:
     ``VALID_JSON_SCHEMA_TYPES`` -- the post-normalisation value is
     always either a valid type or ``"string"``, so the branch is
     unreachable. ``is_recognized_type`` must be consulted
-    against the *raw* input so genuinely malformed types produce a
+    against the *raw* input so malformed types produce a
     diagnostic.
     """
     param = ToolParameter(
@@ -325,7 +325,7 @@ def test_f0004_bridges_unknown_attribute_raises() -> None:
 
 
 def test_f0004_bridges_public_unknown_attribute_warns() -> None:
-    """A genuine public typo still emits the ``lazy_resolve_unknown_attribute`` warning."""
+    """A typo in a public name still emits the ``lazy_resolve_unknown_attribute`` warning."""
     scratch_globals: dict[str, object] = {}
     with structlog.testing.capture_logs() as captured, pytest.raises(AttributeError, match="NotARealBridge"):
         resolve_lazy("NotARealBridge", scratch_globals)

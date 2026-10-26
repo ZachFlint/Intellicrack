@@ -596,7 +596,7 @@ class TestMenuBarToolbarRuntimeRepolish:
     def test_runtime_toggle_repolishes_menubar_and_toolbar(theme_manager: ThemeManager) -> None:
         """A runtime dark->light toggle unpolishes and repolishes a live QMenuBar and QToolBar.
 
-        Falsifiable: removing the ``self._repolish_chrome(app_instance)`` call
+        Removing the ``self._repolish_chrome(app_instance)`` call
         from ``ThemeManager.apply_theme`` leaves ``unpolished`` (and
         ``polished``) empty for both widgets -- the stand-in style is never
         consulted at all without that call, since Qt's own stylesheet

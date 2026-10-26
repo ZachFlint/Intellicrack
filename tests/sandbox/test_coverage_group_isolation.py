@@ -20,7 +20,7 @@ make that isolation correct:
 * the natively fragile ``test_bridge_completeness`` suite is split into its
   per-tool subdirectories.
 
-The gate fails loudly if the enumeration logic regresses to a coarser grouping
+The test fails if the enumeration logic regresses to a coarser grouping
 (which is exactly what reintroduces cross-test native contamination).
 """
 

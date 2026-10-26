@@ -53,9 +53,9 @@ class HighlightRule:
                 keyword rules such as ``def\s+(name)`` use so the format
                 lands on the captured name rather than the keyword itself.
         """
-        self.pattern = QRegularExpression(pattern)
-        self.format = text_format
-        self.group = group
+        self.pattern: QRegularExpression = QRegularExpression(pattern)
+        self.format: QTextCharFormat = text_format
+        self.group: int = group
 
 
 class _ThemedSyntaxHighlighter(QSyntaxHighlighter):

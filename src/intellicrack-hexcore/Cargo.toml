@@ -51,6 +51,9 @@ windows-sys = {
   ]
 }
 
+[target."cfg(windows)".dev-dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Security", "Win32_System_Memory"] }
+
 [profile.release]
 opt-level = 3
 strip = "symbols"

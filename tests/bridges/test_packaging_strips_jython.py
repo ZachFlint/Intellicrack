@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable gates that installer staging never ships the Jython extension.
+r"""Tests that installer staging never ships the Jython extension.
 
 The bridge drives Ghidra through the CPython (PyGhidra/jfx_bridge) server, not the legacy Jython interpreter. ``packaging/stage.ps1`` Step 8 excludes ``Ghidra/Features/Jython`` from the ``Invoke-Robocopy`` mirror into the stage, and asserts (as a hard build failure, not a warning) that no ``Ghidra/Features/Jython/lib`` jar survives in the staged tree. The stage is rebuilt from scratch on every run, so the exclusion has to live in the script rather than in a manual rename of the checked-out Jython directory.
 
@@ -161,7 +161,7 @@ def _make_fixture_ghidra_source(repo_root: Path) -> None:
 
 
 def test_ghidra_copy_step_excludes_jython_from_the_staged_tree(tmp_path: Path) -> None:
-    """Real gate: the production copy statements never mirror Jython into the stage.
+    """The production copy statements never mirror Jython into the stage.
 
     Lifts ``$GhidraJythonSrc``, the real ``Invoke-Robocopy`` call (with its
     ``-ExcludeDirs``) and the ``analyzeHeadless.bat`` payload check verbatim out
@@ -169,7 +169,7 @@ def test_ghidra_copy_step_excludes_jython_from_the_staged_tree(tmp_path: Path) -
     against a fixture Ghidra tree that carries a fake
     ``Ghidra/Features/Jython/lib/Jython.jar``. Dropping the ``-ExcludeDirs``
     argument (or retargeting it) leaves that jar in the staged tree and reddens
-    the absence assertion below, while a genuine sibling payload
+    the absence assertion below, while a non-Jython sibling payload
     (``PyGhidra.jar``) must still survive the mirror.
 
     Args:
@@ -201,14 +201,14 @@ def test_ghidra_copy_step_excludes_jython_from_the_staged_tree(tmp_path: Path) -
     assert not (ghidra_dest / "Ghidra" / "Features" / "Jython").exists(), (
         "Ghidra/Features/Jython was mirrored into the staged tree; the Invoke-Robocopy -ExcludeDirs no longer excludes it"
     )
-    assert (ghidra_dest / "support" / "analyzeHeadless.bat").is_file(), "a genuine Ghidra payload file was wrongly excluded from the stage"
+    assert (ghidra_dest / "support" / "analyzeHeadless.bat").is_file(), "a Ghidra support payload file was wrongly excluded from the stage"
     assert (ghidra_dest / "Ghidra" / "Features" / "PyGhidra" / "lib" / "PyGhidra.jar").is_file(), (
-        "a genuine sibling extension (PyGhidra) was wrongly excluded from the stage"
+        "a sibling extension (PyGhidra) was wrongly excluded from the stage"
     )
 
 
 def test_ghidra_stage_guard_raises_when_a_jython_jar_survives(tmp_path: Path) -> None:
-    """Real gate: the build-time guard fails the build when Jython reaches the stage.
+    """The build-time guard fails the build when Jython reaches the stage.
 
     Lifts the literal post-copy guard statements out of ``packaging/stage.ps1``
     Step 8 and runs them against a *destination* tree built independently of the

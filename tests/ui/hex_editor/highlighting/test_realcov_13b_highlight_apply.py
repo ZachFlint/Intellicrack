@@ -10,7 +10,7 @@ ordering, condition parameters, or pattern hit offsets.
 
 These tests drive the real
 :meth:`HighlightingMixin._apply_bridge_highlight_rule_added` and
-:meth:`seed_highlights_from_bridge` event-confirmation path against a genuine
+:meth:`seed_highlights_from_bridge` event-confirmation path against a live
 :class:`HexEditorWidget`. They assert the exact ``HighlightRule`` objects the
 widget ends up holding (colour, condition params, priority) and that the
 list-widget label encodes the right pattern hit count, rather than merely that

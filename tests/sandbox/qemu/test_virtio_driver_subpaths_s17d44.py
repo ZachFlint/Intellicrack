@@ -9,7 +9,7 @@ only thing that gets ``viostor`` into WinPE, and WinPE searches exactly the
 directories it names, before any in-guest script exists to correct it. The
 provisioner must not name one hardwired family and architecture per driver -
 ``viostor\w11\amd64`` and three siblings - while a virtio-win medium lays its
-packages out as ``<driver>\<family>\<arch>`` with a genuinely different set of
+packages out as ``<driver>\<family>\<arch>`` with a different set of
 architectures per family: on 0.1.285 ``viostor`` carries fifteen families,
 ``w11`` has no ``x86`` at all, and most server families are ``amd64`` only. For
 any guest that is not Windows 11 amd64 every emitted path therefore resolved to

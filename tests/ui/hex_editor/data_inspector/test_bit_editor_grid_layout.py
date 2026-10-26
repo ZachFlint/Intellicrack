@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate for the bit-editor 2x4 grid layout.
+"""Test for the bit-editor 2x4 grid layout.
 
 ``DataInspectorMixin._create_bit_editor_group`` lays its 8 bit-toggle
 buttons out in a 2-row by 4-column ``QGridLayout`` (MSB to LSB, left to right,

@@ -297,7 +297,7 @@ class TestTheRealVirtioMediumYieldsTheSpawnHelpers:
     """Unpack the real medium and check what comes out is actually runnable."""
 
     def test_the_real_medium_produces_real_executables(self, tmp_path: Path) -> None:
-        """The staged helpers are genuine PE images from the real package.
+        """The staged helpers are PE images from the real package.
 
         The bundled tools tree is deliberately empty so the medium is the only
         possible source, which is exactly the situation on this host: QEMU's

@@ -9,7 +9,7 @@
 that it started, that it stopped, and that it failed, so it writes all
 three into ``api_trace.log`` as records carrying the marker ``tracer`` in
 the process-name field. :func:`parse_api_trace_log` handed those rows to
-the report as genuine API calls. Live on the Windows 11 QEMU guest that
+the report as captured API calls. Live on the Windows 11 QEMU guest that
 turned a collector which had captured nothing at all - its trace session
 died before processing a single event - into an API Calls tab reporting
 two calls, named ``ERROR`` and ``STOP``.

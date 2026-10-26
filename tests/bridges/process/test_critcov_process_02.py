@@ -855,7 +855,7 @@ def test_uninitialized_bridge_helpers_return_neutral_values(
     make_args: Callable[[], tuple[object, ...]],
     expected: object,
 ) -> None:
-    """Helpers that cannot fail loudly return their documented empty value on a bridge with no DLLs.
+    """Helpers that do not raise return their documented empty value on a bridge with no DLLs.
 
     Mutation: changing the ``return ""`` of ``_resolve_module`` at process.py:6438 to ``return "?"``
     makes the matching case fail.

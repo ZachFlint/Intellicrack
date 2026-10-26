@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 #
-"""Falsifiable gates for the host-native pass runner (scripts.host_native_tests).
+"""Tests for the host-native pass runner (scripts.host_native_tests).
 
 These exercise the runner's deterministic pieces against real values: the
 symbol-path builder, the pytest argument vector, and the environment
 configuration that flips the process out of sandbox mode and into a host-native
 collection. The capability probes are checked to return real booleans without
-raising in the container (where the daemon/hardware are genuinely absent).
+raising in the container (where the daemon/hardware are absent).
 """
 
 from __future__ import annotations
@@ -177,7 +177,7 @@ def test_installed_ollama_models_returns_list_without_raising() -> None:
     ],
 )
 def test_is_local_model_name_excludes_cloud_suffix(model_name: str, *, expected_local: bool) -> None:
-    """Only non-empty, non ``-cloud`` tags count as genuinely-local models.
+    """Only non-empty, non ``-cloud`` tags count as local models.
 
     Args:
         model_name: The Ollama tag to classify.

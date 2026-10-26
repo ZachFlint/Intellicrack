@@ -17,12 +17,12 @@ and stopping there: nothing ever opened a replacement, so every command for
 the rest of the session failed on a channel that was never coming back, the
 same terminal outcome that was fixed for the forwarded-port agent channel.
 
-The server below is a genuine local asyncio TCP listener, not a mock: it
+The server below is a local asyncio TCP listener: it
 speaks the real ``guest-sync-delimited`` handshake, including the leading
 ``0xFF`` parser-flush sentinel ``qga/main.c`` prepends to that one reply, and
 answers ``guest-ping`` the way a live agent does. After answering a configured
 number of pings on its first accepted connection it closes that socket
-outright - a genuine TCP teardown, standing in for the reset the defect
+outright - a TCP teardown, standing in for the reset the defect
 describes - and then keeps listening and accepts a second connection exactly
 as it did the first. Whether a real QEMU chardev really re-listens like this is
 not assumed either way: :class:`OneShotGuestAgentChannelServer` still gates the
@@ -238,7 +238,7 @@ async def reset_channel() -> AsyncIterator[_ResetAndReacceptChannel]:
 
 @pytest.mark.asyncio
 class TestAHardChannelResetRecoversWithoutRestartingTheSession:
-    """A genuinely reset QGA socket must be replaced, not abandoned."""
+    """A reset QGA socket must be replaced, not abandoned."""
 
     async def test_the_command_after_the_reset_reaches_the_agent(self, reset_channel: _ResetAndReacceptChannel) -> None:
         """The command that follows a hard reset must succeed on the same client.
@@ -273,7 +273,7 @@ class TestAHardChannelResetRecoversWithoutRestartingTheSession:
                 f"(server saw connections={reset_channel.connections}, sync_ids={reset_channel.sync_ids})"
             )
             assert reset_channel.connections == _TWO_CONNECTIONS, (
-                f"recovery did not open a genuine second connection to the server; connections={reset_channel.connections}"
+                f"recovery did not open a second connection to the server; connections={reset_channel.connections}"
             )
             assert len(reset_channel.sync_ids) >= _TWO_CONNECTIONS, (
                 f"the reopened channel was used without resynchronising it first; sync_ids={reset_channel.sync_ids!r}"

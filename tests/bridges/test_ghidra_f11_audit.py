@@ -36,8 +36,8 @@ _FUNC_ADDR: int = 0x401000
 class _FailingBridgeClient:
     """A ``ghidra_bridge`` RPC double whose ``remote_exec`` always raises.
 
-    This is not a mock of the operation under test: it stands in for the
-    upstream ``jfx_bridge`` client and faithfully reproduces the contract
+    It stands in for the
+    upstream ``jfx_bridge`` client and reproduces the contract
     (``remote_exec`` / ``remote_eval``). The bridge's own error handling is
     what is being validated.
     """

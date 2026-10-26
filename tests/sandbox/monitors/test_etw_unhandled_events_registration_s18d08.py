@@ -27,7 +27,7 @@ in ``dll_monitor.log`` comes from the WMI fallback.
 The gates below execute the collectors' own ``$source`` statements, lifted verbatim
 from the production scripts and in source order, against a real
 ``TraceEventDispatcher`` fed by a real event stream, and require events to actually
-arrive. The stream is a genuine ``.nettrace`` captured from a child ``pwsh`` through
+arrive. The stream is a ``.nettrace`` captured from a child ``pwsh`` through
 EventPipe, which needs no elevation and no ETW session, so the gates exercise the
 real member surface of the real TraceEvent assembly the collectors load in the guest.
 
@@ -104,7 +104,7 @@ def _stage_trace_event_assembly(tmp_path: Path) -> Path:
     dependencies. The vendored directory also carries the netstandard2.0
     compatibility facades the guest's Windows PowerShell needs, and those
     are rejected by the .NET runtime ``pwsh`` runs on, so the assembly is
-    staged on its own together with the serializer it genuinely needs.
+    staged on its own together with the serializer it needs.
 
     Args:
         tmp_path: Pytest-provided temp directory.
@@ -130,7 +130,7 @@ def _capture_event_stream(tmp_path: Path, pwsh: str) -> Path:
 
     EventPipe is driven entirely through the runtime's own environment
     variables, so the capture needs neither elevation nor an ETW session
-    while still producing a genuine event stream that
+    while still producing an event stream that
     ``EventPipeEventSource`` - a real ``TraceEventDispatcher`` - replays.
 
     Args:

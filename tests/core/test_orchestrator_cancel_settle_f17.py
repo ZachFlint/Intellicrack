@@ -59,7 +59,7 @@ class _BlockingProvider(LLMProviderBase):
     """Real provider whose ``chat`` suspends until explicitly released.
 
     Lets a test hold a ``process_user_input`` turn open inside the provider
-    call, so the turn can be cancelled while genuinely in flight (state
+    call, so the turn can be cancelled while in flight (state
     ``"processing"``) rather than racing an instant completion.
 
     Attributes:
@@ -281,7 +281,7 @@ async def test_cancelled_turn_settles_state_and_clears_flag(tmp_path: Path) -> N
     """A cancelled in-flight turn must settle to idle with the flag cleared.
 
     Holds a real ``process_user_input`` turn open inside the provider, cancels
-    the turn while it is genuinely ``"processing"``, then asserts the request
+    the turn while it is still ``"processing"``, then asserts the request
     ``finally`` returned the orchestrator to ``"idle"`` with the cancel flag
     clear -- so a subsequently started operation cannot be aborted by a stale
     flag. Keeping ``"cancelled"`` in the ``finally`` fails the state

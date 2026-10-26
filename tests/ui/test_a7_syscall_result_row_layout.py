@@ -58,7 +58,7 @@ _MIN_READABLE_GAP_PX: Final[int] = 10
 """Minimum acceptable horizontal gap between a value label and the next caption.
 
 Set above the ~6px default ``QHBoxLayout`` inter-widget spacing so the check
-is falsifiable against a row that never adds spacing beyond that
+fails for a row that never adds spacing beyond that
 Qt default regardless of content or width.
 """
 
@@ -223,7 +223,7 @@ class TestSystemFunctionCallResultRowLayout:
         ``make_control_row`` must not freeze the result row's minimum width from the
         *empty* value labels at construction time. Once real call-result text lands,
         later layout passes would otherwise compress the value labels below their
-        ``sizeHint``, clipping the text outright with no ellipsis. Falsifiable: removing
+        ``sizeHint``, clipping the text outright with no ellipsis. Removing
         the reserved-width reservation reproduces exactly that compression.
 
         Args:
@@ -252,7 +252,7 @@ class TestSystemFunctionCallResultRowLayout:
         The three caption+value groups in ``result_row`` must not rely on the ~6px
         default ``QHBoxLayout`` inter-widget gap alone, or a compressed value label's
         clipped text runs directly into the next caption with no visible separation.
-        Falsifiable: removing the explicit ``addSpacing()`` calls between groups leaves
+        Removing the explicit ``addSpacing()`` calls between groups leaves
         every value-label-to-next-caption gap at the bare ~6px default, below
         ``_MIN_READABLE_GAP_PX``.
 

@@ -30,8 +30,8 @@ against real code rather than a description of it:
 * the host collects a log out of the guest over a real guest-agent channel, in
   as many reads as the file needs, and parses it into real records;
 * a read of a sandbox file prefers what is in the guest over what is on the
-  host side of the share, which is the sharp discriminator between the two
-  transports - the two carry deliberately different bytes here.
+  host side of the share, which is what tells the two
+  transports apart - the two carry deliberately different bytes here.
 
 The guest-agent halves drive the real :class:`QemuGuestAgentClient` over a real
 loopback socket against :class:`GuestAgentProtocolServer`, which models the
@@ -674,7 +674,7 @@ class TestASandboxReadPrefersTheGuestOverTheShare:
         Both locations are populated with deliberately different bytes. vvfat
         froze the share at boot, so the host-side copy is exactly the stale
         content a read of the share would hand back - which makes the returned
-        bytes a sharp discriminator between the two transports.
+        bytes tell the two transports apart.
 
         Args:
             tmp_path: Per-test directory the sandbox uses as its workspace.

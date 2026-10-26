@@ -229,14 +229,14 @@ class MainWindow(QMainWindow):
         confirmation_requested: Qt signal for tool-confirmation dialog request.
     """
 
-    message_received = pyqtSignal(Message)
-    tool_call_received = pyqtSignal(ToolCall)
-    tool_result_received = pyqtSignal(ToolResult)
-    tool_progress_received = pyqtSignal(object)
-    stream_chunk_received = pyqtSignal(str)
-    status_update = pyqtSignal(str)
-    bridge_analysis_received = pyqtSignal(object)
-    confirmation_requested = pyqtSignal(object)
+    message_received: pyqtSignal = pyqtSignal(Message)
+    tool_call_received: pyqtSignal = pyqtSignal(ToolCall)
+    tool_result_received: pyqtSignal = pyqtSignal(ToolResult)
+    tool_progress_received: pyqtSignal = pyqtSignal(object)
+    stream_chunk_received: pyqtSignal = pyqtSignal(str)
+    status_update: pyqtSignal = pyqtSignal(str)
+    bridge_analysis_received: pyqtSignal = pyqtSignal(object)
+    confirmation_requested: pyqtSignal = pyqtSignal(object)
 
     def __init__(
         self,
@@ -793,7 +793,7 @@ class MainWindow(QMainWindow):
         self._chat_panel.setMinimumWidth(_CHAT_PANEL_MIN_WIDTH)
         self._splitter.addWidget(self._chat_panel)
 
-        self.tool_panel = ToolOutputPanel()
+        self.tool_panel: ToolOutputPanel = ToolOutputPanel()
         self.tool_panel.setMinimumWidth(_TOOL_PANEL_MIN_WIDTH)
         self._splitter.addWidget(self.tool_panel)
 
@@ -1096,7 +1096,7 @@ class MainWindow(QMainWindow):
         model_label.setObjectName("toolbar_label")
         toolbar.addWidget(model_label)
 
-        self.model_combo = QComboBox()
+        self.model_combo: QComboBox = QComboBox()
         self.model_combo.setMinimumWidth(250)
         self.model_combo.setMinimumHeight(compute_control_min_height(self))
         self.model_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
@@ -1136,7 +1136,7 @@ class MainWindow(QMainWindow):
         tools_label.setObjectName("toolbar_label")
         toolbar.addWidget(tools_label)
 
-        self.x64dbg_btn = QPushButton("x64dbg")
+        self.x64dbg_btn: QPushButton = QPushButton("x64dbg")
         self.x64dbg_btn.setObjectName("tool_button")
         self.x64dbg_btn.setToolTip("Open x64dbg Debugger")
         self.x64dbg_btn.clicked.connect(self._on_open_x64dbg)
@@ -1144,7 +1144,7 @@ class MainWindow(QMainWindow):
         self._binary_dependent_buttons.append(self.x64dbg_btn)
         toolbar.addWidget(self.x64dbg_btn)
 
-        self.cutter_btn = QPushButton("Cutter")
+        self.cutter_btn: QPushButton = QPushButton("Cutter")
         self.cutter_btn.setObjectName("tool_button")
         self.cutter_btn.setToolTip("Open Cutter Analysis")
         self.cutter_btn.clicked.connect(self._on_open_cutter)
@@ -1176,7 +1176,7 @@ class MainWindow(QMainWindow):
         self._binary_dependent_buttons.append(self._frida_btn)
         toolbar.addWidget(self._frida_btn)
 
-        self.process_btn = QPushButton("Process")
+        self.process_btn: QPushButton = QPushButton("Process")
         self.process_btn.setObjectName("tool_button")
         self.process_btn.setToolTip("Open Process Manager")
         self.process_btn.clicked.connect(self._on_open_process)
@@ -1240,7 +1240,7 @@ class MainWindow(QMainWindow):
         self._statusbar = QStatusBar()
         self.setStatusBar(self._statusbar)
 
-        self.status_label = QLabel("Ready")
+        self.status_label: QLabel = QLabel("Ready")
         self._statusbar.addWidget(self.status_label)
 
         self._binary_label = QLabel("")
@@ -1249,7 +1249,7 @@ class MainWindow(QMainWindow):
         self._memory_label = QLabel("")
         self._statusbar.addPermanentWidget(self._memory_label)
 
-        self.model_status_label = QLabel("")
+        self.model_status_label: QLabel = QLabel("")
         self._statusbar.addPermanentWidget(self.model_status_label)
 
         self._token_label = QLabel("")
@@ -3531,7 +3531,7 @@ class MainWindow(QMainWindow):
             total_instances: Total number of prior instances that existed
                 before teardown was requested.
         """
-        self.sandbox_manager = SandboxManager(default_config=new_config)
+        self.sandbox_manager: SandboxManager = SandboxManager(default_config=new_config)
         _logger.info(
             "sandbox_manager_rebuilt",
             timeout_seconds=new_config.timeout_seconds,

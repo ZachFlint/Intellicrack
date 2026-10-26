@@ -77,7 +77,7 @@ def test_non_int_stored_or_calculated_renders_unavailable_without_crashing(info:
     """A non-int ``stored`` or ``calculated`` must not reach the ``:08X`` format spec.
 
     Args:
-        info: A malformed verification result missing a genuine int on
+        info: A malformed verification result missing an ``int`` value on
             one or both sides.
     """
     harness = _PeChecksumHarness()

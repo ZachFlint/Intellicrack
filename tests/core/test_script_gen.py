@@ -710,7 +710,7 @@ def test_validator_validate_method_empty_content_rejected() -> None:
 
     An empty string parses cleanly as Python (and JavaScript), so the
     language validators alone would report success when no script is
-    present. ``validate`` must guard against this and fail loudly.
+    present. ``validate`` must guard against this and return ``(False, "Script is empty")``.
     """
     validator = ScriptValidator()
     script = _make_script(content="")

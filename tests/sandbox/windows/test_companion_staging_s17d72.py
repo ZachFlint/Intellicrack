@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 r"""A target that needs a file beside it must get it.
 
-``run_binary`` staged exactly one file. That is not what a real target looks
+``run_binary`` staged exactly one file. That is not what a typical target looks
 like - a DLL sits next to the executable, a resource or locale subtree under
 it, a config file beside it - and a target staged without those does not fail.
 It launches, exits ``0``, and does nothing, which the sandbox reports as a
@@ -250,7 +250,7 @@ class TestCompanionFilesReachTheTarget:
         )
 
     async def test_a_companion_that_does_not_exist_stops_the_run(self, tmp_path: Path) -> None:
-        """A companion that cannot be placed must fail loudly, not silently.
+        """A companion that cannot be placed must raise ``SandboxError``, not run anyway.
 
         Running anyway is the false green this defect is a member of: the
         target would launch, exit ``0``, and report success over an analysis

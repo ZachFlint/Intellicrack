@@ -6,7 +6,7 @@
 """Tests for the shared streaming JSON parse-skip helper on LLMProviderBase.
 
 The tests exercise :meth:`LLMProviderBase._safe_parse_stream_json` against
-real ``structlog`` loggers (no mocks) and assert the behaviour every
+``structlog`` loggers and assert the behavior every
 provider depends on: parsing succeeds for valid JSON objects, malformed
 lines and empty lines are skipped without raising, JSON values that decode
 to non-objects (numbers, lists, bare strings, null, booleans) are also

@@ -13,7 +13,7 @@ guards of the read and edit accessors.
 
 Three kinds of real object stand in for a running Ghidra:
 
-* a genuine ``ghidra_bridge.GhidraBridge`` RPC client pointed at a closed
+* a ``ghidra_bridge.GhidraBridge`` RPC client pointed at a closed
   loopback port, attached through ``attach_remote_bridge``, so every remote
   call fails the way a vanished Ghidra peer does;
 * real temporary directory trees, real pipes and real child processes for the

@@ -93,7 +93,7 @@ def no_leaked_autosave_threads() -> Generator[None]:
     teardown. This module-scoped guard snapshots the threads alive when the
     module begins and, after its tests finish, asserts that no ``session-autosave``
     worker started here is still running, so removing the fixture's
-    ``await session_manager.close()`` fails loudly instead of silently leaking a
+    ``await session_manager.close()`` fails the module instead of silently leaking a
     daemon thread. The worker is a daemon and does not block interpreter
     shutdown, so the session-wide non-daemon guard in ``tests/conftest.py`` does
     not catch it; scoping to this module keeps the check from flagging auto-save
@@ -202,9 +202,9 @@ class TestSessionManagerInitialization:
 
         This distinguishes it from TestSessionDataIntegrity.test_session_roundtrip
         (which calls store directly): this test verifies the SessionManager.store
-        reference is wired to the same real backend, not a stub.
+        reference is wired to the same SQLite-backed store.
 
-        Falsifiability mutation (documented, not executed):
+        Example regression (documented, not executed):
             In src/intellicrack/core/session.py SessionStore._save_session_transaction(),
             replace ``session.provider.value`` with ``"openai"`` in the INSERT VALUES
             tuple. The direct SQL oracle query ``SELECT provider FROM sessions WHERE id=?``

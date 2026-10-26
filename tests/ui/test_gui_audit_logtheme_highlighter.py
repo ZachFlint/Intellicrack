@@ -182,7 +182,7 @@ def test_line_comment_hides_block_comment_open(
 
 
 def test_real_block_comment_still_spans_lines(theme_manager: ThemeManager) -> None:
-    """A genuine unterminated ``/*`` still opens a multi-line block comment.
+    """An unterminated ``/*`` outside a line comment still opens a multi-line block comment.
 
     Confirms the line-comment guard does not suppress real block comments.
 

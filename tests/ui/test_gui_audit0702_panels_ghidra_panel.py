@@ -45,7 +45,7 @@ class _HangingShutdownBridge:
 
     ``_cleanup`` only reads ``state.is_ready()`` and awaits ``shutdown()``, so
     this stand-in provides nothing beyond that contract. ``shutdown`` performs
-    a genuine ``asyncio.sleep`` far longer than the (patched) cleanup timeout,
+    an ``asyncio.sleep`` far longer than the (patched) cleanup timeout,
     reproducing the "stalled headless RPC socket" scenario.
     without needing a real Ghidra process.
     """
@@ -114,9 +114,9 @@ class TestH3CleanupHonorsShutdownTimeout:
         ``run_bridge_coroutine(self._bridge.shutdown())`` with no ``timeout_s``,
         which blocks the GUI thread on ``future.result(timeout=None)`` for as
         long as the bridge's real ``shutdown()`` coroutine takes -- unbounded.
-        With a stand-in bridge whose ``shutdown()`` genuinely sleeps for 2
-        seconds (a real ``asyncio.sleep``, not a mock of the timeout
-        mechanism), an unbounded call would block for the full 2s; a bounded call
+        With a stand-in bridge whose ``shutdown()`` sleeps for 2
+        seconds (an ``asyncio.sleep``; the timeout mechanism itself is
+        left unpatched), an unbounded call would block for the full 2s; a bounded call
         must return in well under 2s once ``timeout_s`` is honoured, and the
         hung coroutine must still be mid-flight (not completed) when it does.
 
@@ -176,7 +176,7 @@ class TestM46LabelsBookmarksSplitterNotCollapsible:
         Drives the real Qt splitter layout: with ``childrenCollapsible(False)``,
         ``setSizes([0, big])`` clamps the first pane to its minimum size hint;
         with the default (``True``), the same call drives it to exactly
-        zero. This exercises genuine Qt layout behaviour, not just the flag.
+        zero. This exercises Qt layout behavior, not just the flag.
         """
         panel = GhidraPanel()
         try:

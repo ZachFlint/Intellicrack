@@ -73,7 +73,7 @@ class TestWhileLoops:
         """While loop with a false initial condition skips its body but lets execution continue.
 
         The guard ``run != 0`` is false from the start, so the in-loop field
-        ``inside`` must never be placed. To prove the loop was truly skipped
+        ``inside`` must never be placed. To show the loop was skipped
         rather than execution aborting, a post-loop field ``after`` is placed
         and must read the distinctive sentinel byte 0x42 at offset 0. The
         oracle is the input layout: a single 0x42 byte means exactly one field

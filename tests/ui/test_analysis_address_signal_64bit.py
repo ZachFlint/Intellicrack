@@ -15,9 +15,9 @@ leaving a panel object with no tab. The application then logs
 ``analysis_summary_dropped reason=no_analysis_panel`` and discards real analysis results.
 
 Both halves are gated here against real widgets: that constructing the panel
-genuinely registers its tab, and that a >32-bit address emitted by either
-address-carrying panel arrives at the receiver unmodified. Nothing is mocked;
-the signals are the production signals and the assertion is on the value a real
+registers its tab, and that a >32-bit address emitted by either
+address-carrying panel arrives at the receiver unmodified. The signals are
+the production signals and the assertion is on the value a real
 connected slot received.
 """
 

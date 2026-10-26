@@ -22,8 +22,8 @@ through a real ``HexEditorPanel`` against a real
 ``intellicrack_hexcore.HexDocument``; the only test double is a
 recording ``HexEditorBridge`` subclass (``RecordingHexEditorBridge`` in
 ``conftest.py``) that delegates to the real ``toggle_bit`` after
-appending to its call ledger, so the resulting byte value reflects a
-genuine end-to-end bit flip rather than a canned response.
+appending to its call ledger, so the resulting byte value reflects an
+end-to-end bit flip rather than a canned response.
 """
 
 from __future__ import annotations
@@ -50,10 +50,10 @@ class TestToggleBitRoutesThroughBridge:
         checked, so the document's current bit (0) differs from the
         requested state (1) -- the normal case ``toggle_bit`` handles.
 
-        Falsifiable: if ``_on_bit_toggled``/``_toggle_bit_via_bridge``
+        If ``_on_bit_toggled``/``_toggle_bit_via_bridge``
         were reverted to call ``document.set_bit`` directly (the
-        unrouted behaviour), ``toggle_bit_calls`` would stay
-        empty even though a bridge was attached and the bit genuinely
+        unrouted behavior), ``toggle_bit_calls`` would stay
+        empty even though a bridge was attached and the bit
         changed. Broken production line:
         ``run_bridge_coroutine(bridge.toggle_bit(offset, bit_index))``
         in ``DataInspectorMixin._toggle_bit_via_bridge``

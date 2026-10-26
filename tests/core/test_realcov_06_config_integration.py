@@ -5,13 +5,12 @@
 
 """Real-data integration coverage for :mod:`intellicrack.core.config`.
 
-These tests exercise the genuine save/load/round-trip pipeline against real
-on-disk TOML and real filesystem directory creation, then feed the reloaded
-config into real application components: the :class:`Config` directory creation
-contract, the actual project ``ToolRegistry`` (so a reloaded config drives real
-tool wiring), and the real ``get_project_root`` / ``get_config_dir`` filesystem
-layout. Nothing is mocked; assertions are over real serialised values and real
-directories.
+These tests exercise the save/load/round-trip pipeline against
+on-disk TOML and filesystem directory creation, then feed the reloaded
+config into application components: the :class:`Config` directory creation
+contract, the project ``ToolRegistry`` (so a reloaded config drives
+tool wiring), and the ``get_project_root`` / ``get_config_dir`` filesystem
+layout. Assertions are over serialized values and created directories.
 """
 
 from __future__ import annotations
@@ -162,7 +161,7 @@ def test_reloaded_config_drives_real_tool_registry(tmp_path: Path) -> None:
     Asserts ``get_available_tools`` returns exactly the config-enabled set and
     never includes the disabled tools.
 
-    Falsifiability: if ``Config._to_dict`` omits the ``enabled=False`` field for
+    If ``Config._to_dict`` omits the ``enabled=False`` field for
     any disabled tool, ``Config.parse_tools`` will reload that tool with its
     default ``enabled=True``, causing ``is_tool_enabled`` to return ``True`` for
     that tool.  The loop below will then register a bridge for it, so

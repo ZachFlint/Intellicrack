@@ -18,7 +18,7 @@ Every test drives the real ``HexEditorBridge.auto_detect_pattern`` (real
 ``intellicrack_hexcore.HexDocument``). A real, minimal ``.hexpat`` file
 (written to a temp directory, in the dialect the registry's own pragma
 parser accepts: ``#pragma magic [ 0xOFFSET, "HEXBYTES" ]``) is injected as
-the bridge's pattern registry so the match is genuine and deterministic,
+the bridge's pattern registry so the match is deterministic,
 rather than depending on whichever vendored community patterns happen to
 match arbitrary binary content.
 """
@@ -101,7 +101,7 @@ class TestAutoDetectPatternBridgeL1:
     def test_non_matching_document_returns_empty_list() -> None:
         """A document without the magic bytes must not match.
 
-        Falsifiable: if the offset/byte comparison in
+        If the offset/byte comparison in
         ``PatternRegistry.match_file`` were broken (e.g. comparing against
         the wrong slice), this negative-control document could spuriously
         match.
@@ -123,7 +123,7 @@ class TestPatternAutoDetectGuiRoutesThroughBridge:
     def test_matching_open_populates_status_label_from_real_bridge_result(qapp: QApplication) -> None:
         """Triggering auto-detect on a matching document must render the bridge's real match name.
 
-        Falsifiable: if ``_try_pattern_registry_match`` were reverted to
+        If ``_try_pattern_registry_match`` were reverted to
         instantiate its own local ``PatternRegistry``/``DataReader`` pair
         (the unrouted behaviour) instead of calling
         ``bridge.auto_detect_pattern()``, the panel's own
@@ -157,7 +157,7 @@ class TestPatternAutoDetectGuiRoutesThroughBridge:
     def test_result_matches_direct_bridge_call_exactly(qapp: QApplication) -> None:
         """The GUI path and a direct ``bridge.auto_detect_pattern()`` call must agree exactly.
 
-        Proves the GUI is genuinely dispatching to the SAME bridge/registry
+        Checks that the GUI dispatches to the SAME bridge/registry
         state rather than any independent matcher: this test opens the
         document on a shared bridge, calls the bridge directly first to
         capture the oracle result, then drives the GUI's own

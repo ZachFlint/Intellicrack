@@ -6,7 +6,7 @@
 
 Covers orchestrator tail operations (shutdown, list_sessions, delete_session,
 mid-pipeline error propagation, JSON export/import round-trip) and ScriptManager
-tail operations (list_scripts, delete_script) with real falsifiable gates.
+tail operations (list_scripts, delete_script).
 Every assertion is verified against an independent oracle, never against a value
 recomputed by the same production code.
 """

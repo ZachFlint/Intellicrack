@@ -165,7 +165,7 @@ class TestInstructionDisassembleControlsAgainstRealProcess:
         address, next address, size, mnemonic, operands, and full string --
         matches that ground truth exactly.
 
-        Falsifiable: without a GUI control there is no path to
+        Without a GUI control there is no path to
         ``disassemble_instruction``; a regression that leaves the
         button unwired, drops the address parse, or renders only the
         mnemonic (leaving the other fields blank or stale) fails one of the
@@ -255,10 +255,10 @@ class TestInstructionDisassembleControlsErrorPaths:
     ) -> None:
         """A real ``ToolError`` from a not-attached bridge must be shown, not swallowed.
 
-        Uses a genuine, unattached ``FridaBridge`` (no process interaction
+        Uses an unattached ``FridaBridge`` (no process interaction
         required): ``disassemble_instruction`` synchronously raises a real
-        ``ToolError`` because ``_session`` is ``None``, exercising the real
-        error path rather than a mocked one.
+        ``ToolError`` because ``_session`` is ``None``, exercising the bridge's
+        own error path.
 
         Args:
             synchronous_dispatch: Captures and drains dispatched coroutines.

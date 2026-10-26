@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Frida panel layout in :mod:`intellicrack.ui.panels.frida_panel`.
+"""Tests for the Frida panel layout in :mod:`intellicrack.ui.panels.frida_panel`.
 
 The Frida panel's Modules/Stalker sub-tab strip must not clip. The right-hand
 ``QTabWidget`` reports a combined minimum width driven by its widest page (the
@@ -20,9 +20,9 @@ font-derived minimum height, and ``[error]`` script messages are mirrored into t
 structured application log so an agent-side script exception is never silent even if
 the console itself is scrolled out of view.
 
-Each test targets one concrete behavioural property: real reported minimum sizes, a
-real wrapped-widget type, real post-layout geometry under a squeeze, and a real
-captured log record, never a stubbed return value.
+Each test targets one concrete behavioral property: reported minimum sizes, a
+wrapped-widget type, post-layout geometry under a squeeze, and a captured log
+record.
 """
 
 from __future__ import annotations

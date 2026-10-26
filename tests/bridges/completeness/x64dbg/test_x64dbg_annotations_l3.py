@@ -132,7 +132,7 @@ class TestLabelsTableRefresh:
     ) -> None:
         """Clicking the Labels Refresh button must render the exact ``lbl_list`` entries.
 
-        Falsifiable: if ``_on_refresh_labels`` were never wired (the unwired state), the table would remain empty
+        If ``_on_refresh_labels`` were never wired (the unwired state), the table would remain empty
         forever and this test would time out with zero rows. Broken
         production line: ``self._bridge.get_labels(0, end)`` in
         ``_on_refresh_labels`` and the field mapping in ``_apply_labels``
@@ -175,7 +175,7 @@ class TestLabelsTableRefresh:
     ) -> None:
         """A successful ``set_label`` must trigger an automatic ``get_labels`` refresh.
 
-        Falsifiable: if ``_on_label_set`` did not call ``_on_refresh_labels``
+        If ``_on_label_set`` did not call ``_on_refresh_labels``
         (reverting to the old bare console-append success callback), the
         table would stay empty after ``set_label`` succeeds. Broken
         production line: ``self._on_refresh_labels()`` inside
@@ -223,7 +223,7 @@ class TestLabelsTableRefresh:
     ) -> None:
         """Clicking a populated label row must copy its address/text into the edit inputs.
 
-        Falsifiable: if ``_on_label_row_selected`` were removed (or never
+        If ``_on_label_row_selected`` were removed (or never
         connected to ``cellClicked``), the edit fields would remain empty
         after the click. Broken production line:
         ``self._lbl_table.cellClicked.connect(self._on_label_row_selected)``
@@ -272,7 +272,7 @@ class TestCommentsTableRefresh:
     ) -> None:
         """Clicking the Comments Refresh button must render the exact ``cmt_list`` entries.
 
-        Falsifiable: if ``_on_refresh_comments`` were never wired (the unwired state), the table would remain empty
+        If ``_on_refresh_comments`` were never wired (the unwired state), the table would remain empty
         forever. Broken production line: ``self._bridge.get_comments(0,
         end)`` in ``_on_refresh_comments`` and the field mapping in
         ``_apply_comments`` (``ui/panels/x64dbg_panel.py``).
@@ -314,7 +314,7 @@ class TestCommentsTableRefresh:
     ) -> None:
         """A successful ``set_comment`` must trigger an automatic ``get_comments`` refresh.
 
-        Falsifiable: if ``_on_comment_set`` did not call
+        If ``_on_comment_set`` did not call
         ``_on_refresh_comments``, the table would stay empty after
         ``set_comment`` succeeds. Broken production line:
         ``self._on_refresh_comments()`` inside ``_on_comment_set``
@@ -373,7 +373,7 @@ class TestConditionalBreakpointGuiWiring:
     ) -> None:
         """The Add-BP toolbar must expose a dedicated condition ``QLineEdit``.
 
-        Falsifiable: if ``_bp_cond_input`` were removed from
+        If ``_bp_cond_input`` were removed from
         ``_build_bp_tab``, ``hasattr`` would fail.
 
         Args:
@@ -392,7 +392,7 @@ class TestConditionalBreakpointGuiWiring:
     ) -> None:
         """``_on_add_breakpoint`` must forward the exact entered condition text.
 
-        Falsifiable: if ``_on_add_breakpoint`` stopped reading
+        If ``_on_add_breakpoint`` stopped reading
         ``_bp_cond_input`` (or hardcoded ``condition=None``), the recorded
         ``bp_set`` params would not carry the entered condition string.
         Broken production line: ``condition =
@@ -456,7 +456,7 @@ class TestConditionalBreakpointGuiWiring:
     ) -> None:
         """An empty condition field must forward ``condition=None`` and skip ``bpcond``.
 
-        Falsifiable: if ``_on_add_breakpoint`` forwarded the raw (possibly
+        If ``_on_add_breakpoint`` forwarded the raw (possibly
         whitespace-only) field text instead of ``.strip() or None``, the
         recorded ``bp_set`` params would carry an empty string rather than
         ``None``, and a spurious ``bpcond`` command would be sent. Broken

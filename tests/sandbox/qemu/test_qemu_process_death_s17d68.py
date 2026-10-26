@@ -34,9 +34,9 @@ Four properties are gated, each against a real process or a real socket:
   the machine's death rather than reconnecting to a socket that answers, and
   must not deliver the command to the guest model on the other side.
 
-Nothing here is simulated. The flood, the exit statuses and the machine whose
-death drives the liveness probe are all real child processes; the agent channel
-is a real loopback socket carrying the production readiness handshake.
+The flood, the exit statuses and the machine whose
+death drives the liveness probe are all child processes; the agent channel
+is a loopback socket carrying the production readiness handshake.
 """
 
 from __future__ import annotations

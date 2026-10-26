@@ -213,7 +213,7 @@ class GoogleProvider(LLMProviderBase):
         _ = next(iter(models_iter), None)
 
         self._credentials = credentials
-        self.connected = True
+        self.connected: bool = True
         self._logger.info(
             "google_connected",
             has_custom_base=credentials.api_base is not None,

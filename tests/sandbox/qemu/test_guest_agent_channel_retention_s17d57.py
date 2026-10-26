@@ -24,7 +24,7 @@ expected sync failures while the guest booted, then from 10:47:59 every attempt
 answered ``[WinError 1225] The remote computer refused the network connection``
 once every three seconds until the budget ran out. QEMU was alive and still
 listening on that port with no peer attached, and an independent client outside
-the application was refused three times in a row - so the channel was genuinely
+the application was refused three times in a row - so the channel was
 gone, not merely unreachable from the app.
 
 :class:`OneShotGuestAgentChannelServer` reproduces that contract exactly: it
@@ -71,7 +71,7 @@ _SILENT_SYNCS: Final[int] = 3
 _ONE_CONNECTION: Final[int] = 1
 _STALL_COMMAND: Final[str] = "guest-ping"
 # Longer than the ping deadline plus the resync deadline the recovery path
-# spends, so the resync goes unanswered too and the recovery genuinely fails.
+# spends, so the resync goes unanswered too and the recovery fails.
 _STALL_SECONDS: Final[float] = 8.0
 _PING_TIMEOUT_S: Final[float] = 0.5
 # An unanswered sync attempt costs the client its own per-attempt deadline, so a

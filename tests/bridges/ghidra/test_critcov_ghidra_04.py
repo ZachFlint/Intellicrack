@@ -11,7 +11,7 @@ bookmark, label and overlay accessors, and their error handling.
 
 Three kinds of real object drive it:
 
-* a genuine ``ghidra_bridge.GhidraBridge`` RPC client pointed at a closed
+* a ``ghidra_bridge.GhidraBridge`` RPC client pointed at a closed
   loopback port, so every remote call fails the way a vanished Ghidra peer does;
 * real ``GhidraBridge`` subclasses that script only the remote script exchange
   (one payload, or one failure) so the handlers that inspect a payload or wrap an

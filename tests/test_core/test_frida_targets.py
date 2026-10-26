@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Frida target helpers in :mod:`tests._helpers.frida_targets`.
+"""Tests for the Frida target helpers in :mod:`tests._helpers.frida_targets`.
 
 A deadline helper that never fires, or a readiness wait that returns before the
 child has said it is ready, would silently put the hang or the startup race back
@@ -149,7 +149,7 @@ class _FakeBridge:
 def test_run_bounded_fails_a_call_that_never_returns_and_refuses_that_bridge_afterwards() -> None:
     """A call stuck in a thread fails at its deadline and later calls on the same bridge are refused unrun.
 
-    Falsifiable: without the deadline the first call waits for the released
+    Without the deadline the first call waits for the released
     thread forever, and without the record the second call would run and count
     a ping instead of being refused with the first call's name.
     """
@@ -174,7 +174,7 @@ def test_run_bounded_gives_up_on_a_coroutine_that_cannot_be_cancelled(method_nam
     The call runs on its own thread, so neither behavior can keep the caller
     waiting past ``timeout``, and the abandoned call leaves the bridge marked stuck.
 
-    Falsifiable: a bound that ran the coroutine on the calling thread and relied
+    A bound that ran the coroutine on the calling thread and relied
     on cancelling it would never return for the first case and would wait out the
     coroutine for the second, so the elapsed-time assertion (or the whole run)
     fails.
@@ -202,7 +202,7 @@ def test_run_bounded_gives_up_on_a_coroutine_that_cannot_be_cancelled(method_nam
 def test_a_stuck_bridge_does_not_stop_another_bridge_or_unowned_calls() -> None:
     """Only the bridge whose call missed its deadline is refused; a second bridge and a free coroutine still run.
 
-    Falsifiable: a record that covered the whole process would refuse the second
+    A record that covered the whole process would refuse the second
     bridge's ping and the free coroutine, which is the cascade this scoping removed.
     """
     release = threading.Event()
@@ -233,7 +233,7 @@ def test_a_stuck_bridge_does_not_stop_another_bridge_or_unowned_calls() -> None:
 def test_end_target_then_shutdown_kills_the_target_and_shuts_a_stuck_bridge_down() -> None:
     """Teardown ends the target process and still shuts a bridge down after that bridge was marked stuck.
 
-    Falsifiable: a teardown that obeyed the stuck record would raise instead of
+    A teardown that obeyed the stuck record would raise instead of
     shutting the bridge down, and one that skipped the kill would leave the
     target running.
     """
@@ -283,7 +283,7 @@ def test_wait_for_gui_process_ready_returns_for_a_live_notepad() -> None:
 def test_wait_for_gui_process_ready_fails_for_a_process_that_already_exited() -> None:
     """A process that is gone is reported as exited, not waited on until the deadline.
 
-    Falsifiable: a wait that ignored the process state would either return as
+    A wait that ignored the process state would either return as
     though the dead process were ready or sit out the 30 s deadline.
     """
     notepad = Popen([_notepad_path()], stdout=DEVNULL, stderr=DEVNULL)
@@ -308,7 +308,7 @@ def test_wait_for_stdout_line_returns_once_the_child_reports_ready() -> None:
 def test_wait_for_stdout_line_fails_and_stops_a_child_that_never_reports() -> None:
     """A child that stays silent fails the wait at its deadline and is terminated.
 
-    Falsifiable: a wait that returned without a line, or one that left the silent
+    A wait that returned without a line, or one that left the silent
     child running, fails the first or the last assertion.
     """
     child = _spawn(_SILENT_SOURCE)

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate: every ``intellicrack`` import in the repository resolves.
+"""Every ``intellicrack`` import in the repository resolves.
 
 A test module that imports a name its target no longer defines is not one failing test: collection stops with an error, so no tests run and no coverage is written. Names that a module merely re-exports by accident are the usual casualties of a refactor.
 

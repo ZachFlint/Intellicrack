@@ -18,9 +18,9 @@ Covers:
   the shared address chain.
 * **Single analysis tab** -- exactly one "Analysis" tab per binary.
 
-Every test drives real widgets (``ToolOutputPanel`` / ``BridgeAnalysisPanel`` /
-``MainWindow``) with real ``BridgeAnalysisSummary`` data; modal dialogs are
-recorded (not mocked away silently) to keep the offscreen event loop from
+Every test drives widgets (``ToolOutputPanel`` / ``BridgeAnalysisPanel`` /
+``MainWindow``) with ``BridgeAnalysisSummary`` data; modal dialogs are
+recorded to keep the offscreen event loop from
 blocking.
 """
 

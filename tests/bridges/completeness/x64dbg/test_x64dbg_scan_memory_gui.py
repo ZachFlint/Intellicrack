@@ -21,17 +21,17 @@ calls ``self._bridge.scan_memory(pattern)`` directly, and ``_on_search_complete`
 matched-byte and surrounding-context data instead of staying permanently
 empty.
 
-This module proves, against the real production code:
+This module checks:
 
 * ``TestByteModeDispatch`` -- selecting "Byte" mode calls
   ``bridge.scan_memory`` and never calls ``bridge.find_pattern``; selecting
   "Hex" mode still calls ``bridge.find_pattern`` (regression guard for the
   wildcard-search workflow).
-* ``TestSearchResultsRendering`` -- ``_on_search_complete`` renders genuine
+* ``TestSearchResultsRendering`` -- ``_on_search_complete`` renders
   ``MemorySearchResult`` instances into the Address/Match/Context columns
-  with the real field values, and continues to render dict-shaped results
+  with the result's field values, and continues to render dict-shaped results
   (the ``find_pattern``/``yara_scan`` shape) without regression.
-* ``TestScanMemoryErrorSurfacing`` -- the real, unmodified
+* ``TestScanMemoryErrorSurfacing`` --
   ``X64DbgBridge.scan_memory`` raising ``ToolError`` for a pattern shorter
   than ``MIN_PATTERN_LENGTH`` reaches the console as a clear message (not a
   silent no-op), through the same ``_on_generic_error`` convention used by
@@ -87,7 +87,7 @@ class TestByteModeDispatch:
     def test_byte_mode_click_calls_scan_memory_and_never_find_pattern(qapp: QApplication) -> None:
         """Clicking Search in "Byte" mode must invoke ``bridge.scan_memory`` directly.
 
-        Falsifiable: reverting ``_on_search`` to a two-way split
+        Reverting ``_on_search`` to a two-way split
         (only ``"YARA"`` vs. an ``else`` branch calling ``find_pattern``)
         makes ``scan_calls`` stay empty and ``find_calls`` receive the
         pattern instead, failing both assertions below. Broken production
@@ -201,7 +201,7 @@ class TestSearchResultsRendering:
     def test_memory_search_result_rows_populate_address_match_and_context(qapp: QApplication) -> None:
         """A real ``MemorySearchResult`` list must populate all three data columns with real field values.
 
-        Falsifiable: reverting ``_on_search_complete`` to only branch on
+        Reverting ``_on_search_complete`` to only branch on
         ``isinstance(match, dict)`` (the dict-only form) makes every
         column past "#" stay empty for these rows, failing every assertion
         below. Broken production line: the
@@ -308,7 +308,7 @@ class TestScanMemoryErrorSurfacing:
         method substitution. ``scan_memory`` validates pattern length before
         touching any Windows API, so this raises deterministically.
 
-        Falsifiable: if the "Byte" branch omitted its ``on_error=`` callback
+        If the "Byte" branch omitted its ``on_error=`` callback
         (or called a bridge method that does not validate pattern length),
         the console would never receive a "failed" line and ``pump_until``
         would time out, failing the assertions below.

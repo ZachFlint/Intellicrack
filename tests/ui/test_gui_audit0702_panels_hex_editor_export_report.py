@@ -183,7 +183,7 @@ class _ExportHost(ExportReportMixin, QWidget):
     end-to-end dispatch test: the mixin's success/error callbacks are bound
     methods of this host, and Qt only queues a signal emission back onto the
     receiver's own thread when the receiver is a real ``QObject`` -- so this
-    class must be a genuine widget for the cross-thread marshalling gate to
+    class must be a widget for the cross-thread marshalling gate to
     be meaningful.
     """
 
@@ -400,8 +400,8 @@ def test_h4_export_html_call_site_returns_before_slow_bridge_completes(
 ) -> None:
     """The GUI-thread call returns immediately even while the bridge is still rendering.
 
-    This is a direct end-to-end check, using the real
-    (unmocked) ``run_bridge_coroutine_logged`` dispatcher and a genuine
+    This is a direct end-to-end check, using the
+    ``run_bridge_coroutine_logged`` dispatcher and a
     background ``BridgeCallWorker`` thread. The fake bridge sleeps for
     ``_BRIDGE_DELAY_S`` inside its coroutine to simulate rendering a large
     annotated range. ``_on_export_annotated_html`` must not block on
@@ -455,7 +455,7 @@ def test_h4_export_html_success_callback_writes_real_bridge_output(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The async success callback writes the bridge's genuine rendered HTML.
+    """The async success callback writes the bridge's rendered HTML.
 
     Drives the coroutine handed to ``run_bridge_coroutine_logged`` to real
     completion and asserts the HTML string produced by actually executing

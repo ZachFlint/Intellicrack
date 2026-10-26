@@ -2,12 +2,12 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates for the installer's theme-aware wizard imagery.
+"""Tests for the installer's theme-aware wizard imagery.
 
 The Inno Setup ``.iss`` advertises a theme-aware wizard: ``WizardImageFile`` is
 the light banner and ``WizardImageFileDynamicDark`` the dark one, and Setup
 swaps between them with the system theme. For that claim to be true the two
-banners must be genuinely different images with the light one visibly lighter --
+banners must be different images with the light one visibly lighter --
 not the same dark composite shipped twice. The small wizard image must also use
 Inno's small-image aspect (55x58 base, 165x174 at 3x) so it reads as a logo
 rather than a clipped square.
@@ -133,8 +133,8 @@ def _defilter_scanline(line: bytearray, prior: bytearray, bpp: int, filter_type:
 def _decode_rgb(data: bytes) -> tuple[int, int, bytearray, int]:
     """Decode an 8-bit truecolour PNG into reconstructed pixel bytes.
 
-    Only the 8-bit RGB/RGBA colour types produced by ``System.Drawing`` are
-    supported; anything else is rejected loudly rather than mis-decoded.
+    Only the 8-bit RGB/RGBA color types produced by ``System.Drawing`` are
+    supported; anything else raises ``ValueError`` rather than being mis-decoded.
 
     Args:
         data: The full byte content of a PNG file.
@@ -198,7 +198,7 @@ def mean_luma(path: Path) -> float:
 
 
 def test_light_and_dark_banners_are_distinct_and_correctly_toned() -> None:
-    """Real gate: the two banners are distinct and the light one is genuinely lighter.
+    """The two banners are distinct and the light one is measurably lighter.
 
     The theme-aware wizard needs two real banners. This asserts they are not the
     same bytes, share one canvas size, and that the light banner's mean luma sits
@@ -223,7 +223,7 @@ def test_light_and_dark_banners_are_distinct_and_correctly_toned() -> None:
 
 
 def test_small_wizard_image_uses_the_small_aspect() -> None:
-    """Real gate: the small wizard image is 165x174 (Inno 55x58 base at 3x).
+    """The small wizard image is 165x174 (Inno 55x58 base at 3x).
 
     A full-bleed square would not carry this logo aspect;
     pinning the exact dimensions catches a regression to the wrong ratio.
@@ -235,7 +235,7 @@ def test_small_wizard_image_uses_the_small_aspect() -> None:
 
 
 def _encode_solid_rgb(width: int, height: int, colour: tuple[int, int, int]) -> bytes:
-    """Encode a solid-colour 8-bit RGB PNG for the decoder falsifiability proof.
+    """Encode a solid-color 8-bit RGB PNG for the decoder self-check.
 
     Args:
         width: Image width in pixels.
@@ -278,10 +278,10 @@ def _mean_luma_bytes(png: bytes) -> float:
     return total / count
 
 
-def test_luma_decoder_is_falsifiable() -> None:
+def test_luma_decoder_ranks_a_light_image_above_a_dark_one() -> None:
     """The luma reader ranks a synthetic light image above a dark one.
 
-    Proves the decode path genuinely reads pixel content: a near-white PNG must
+    Checks that the decode path reads pixel content: a near-white PNG must
     score far higher than a near-black one. A decoder that returned a constant
     (and so could not tell the banners apart) fails this.
     """

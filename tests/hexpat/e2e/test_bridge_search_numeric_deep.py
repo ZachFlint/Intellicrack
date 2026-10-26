@@ -314,3 +314,33 @@ class TestSearchNumericDeep:
         assert len(results) == 1, f"the 4-byte buffer is exactly the target, so search must find one match, got {results}"
         assert results[0]["offset"] == 0, f"the only match must be at offset 0, got {results[0]['offset']}"
         assert results[0]["length"] == 4, f"a size=4 match must report length 4, got {results[0]['length']}"
+
+    def test_search_uint_accepts_whole_number_float(self, bridge: HexEditorBridge, tmp_path: Path, pattern_data: bytes) -> None:
+        """Verify a uint search given 0xDEADBEEF as a float returns the same matches as the int value.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+            pattern_data: The 512-byte structured test buffer fixture.
+        """
+        self._open_pattern_data(bridge, tmp_path, pattern_data)
+        float_value = float(_PATTERN_U32_VALUE)
+        assert float_value.is_integer(), f"oracle mismatch: {float_value!r} must be a whole number"
+        float_results: list[dict[str, int]] = _run(bridge.search_numeric(float_value, size=4, value_type="uint", endianness="little"))
+        int_results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_U32_VALUE, size=4, value_type="uint", endianness="little"))
+        assert _PATTERN_U32_OFFSET in [r["offset"] for r in float_results], (
+            f"0xDEADBEEF as a float must match at offset 2, got {float_results}"
+        )
+        assert float_results == int_results, f"float search {float_results} must equal int search {int_results}"
+
+    def test_search_int_rejects_fractional_value(self, bridge: HexEditorBridge, tmp_path: Path, pattern_data: bytes) -> None:
+        """Verify an int search given 2.5 raises ValueError naming the whole-number requirement.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+            pattern_data: The 512-byte structured test buffer fixture.
+        """
+        self._open_pattern_data(bridge, tmp_path, pattern_data)
+        with pytest.raises(ValueError, match="whole number"):
+            _run(bridge.search_numeric(2.5, size=4, value_type="int", endianness="little"))

@@ -3,13 +3,13 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate for the Cutter heavy-listing command timeout.
+"""Tests for the Cutter heavy-listing command timeout.
 
 The whole-binary listing scans exposed by the bridge -- ROP gadget search
 (``/Rj``), vtable recovery (``avj``), syscall resolution (``asj``), and the
 type/struct enumerations (``tj``/``tsj``) -- used to run through ``_cmd_json``
 with no ``command_timeout``, so they inherited the bare 5 s
-:data:`intellicrack.bridges.cutter.R2_COMMAND_TIMEOUT`. On any real-world
+:data:`intellicrack.bridges.cutter.R2_COMMAND_TIMEOUT`. On any non-trivial
 binary these scans routinely need longer than 5 s, so the panel's best-effort
 tab auto-refresh made them time out. Worse, a timed-out ``_r2_cmd`` abandons
 its ``asyncio.to_thread`` worker without being able to stop the underlying OS
@@ -20,7 +20,7 @@ mirroring the existing ``pdg`` (``_PDG_DECOMPILE_TIMEOUT``) precedent, so they
 complete instead of spuriously timing out.
 
 These gates drive the real bridge methods and the real ``_r2_cmd`` /
-``_cmd_json`` timeout machinery against a genuine slow-I/O pipe double (a real
+``_cmd_json`` timeout machinery against a slow-I/O pipe double (an
 object whose blocking ``cmd`` sleeps like a heavy rizin scan). The module
 default is monkeypatched down to a tiny value; a fixed bridge lets the heavy
 listing outlive that tiny default because it passes the larger dedicated

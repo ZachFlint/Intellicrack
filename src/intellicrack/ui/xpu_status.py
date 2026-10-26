@@ -185,7 +185,7 @@ class XPUStatusDialog(QDialog):
         self.setWindowTitle("XPU Status")
         self.resize(_DIALOG_WIDTH, _DIALOG_HEIGHT)
 
-        self.refresh_timer = QTimer(self)
+        self.refresh_timer: QTimer = QTimer(self)
         self.refresh_timer.timeout.connect(self._refresh_live_data)
 
         self._requirements_worker: _RequirementsCheckWorker | None = None
@@ -223,19 +223,19 @@ class XPUStatusDialog(QDialog):
         group = QGroupBox("Device Status")
         form = QFormLayout()
 
-        self.status_label = QLabel("Checking...")
+        self.status_label: QLabel = QLabel("Checking...")
         form.addRow("Status:", self.status_label)
 
-        self.device_name_label = QLabel("--")
+        self.device_name_label: QLabel = QLabel("--")
         form.addRow("Device:", self.device_name_label)
 
-        self.driver_label = QLabel("--")
+        self.driver_label: QLabel = QLabel("--")
         form.addRow("Driver:", self.driver_label)
 
         self._dtype_label = QLabel("--")
         form.addRow("Optimal Dtype:", self._dtype_label)
 
-        self.caps_label = QLabel("--")
+        self.caps_label: QLabel = QLabel("--")
         form.addRow("Capabilities:", self.caps_label)
 
         group.setLayout(form)
@@ -250,12 +250,12 @@ class XPUStatusDialog(QDialog):
         group = QGroupBox("Memory Usage")
         layout = QVBoxLayout()
 
-        self.memory_bar = QProgressBar()
+        self.memory_bar: QProgressBar = QProgressBar()
         self.memory_bar.setRange(0, 100)
         self.memory_bar.setValue(0)
         layout.addWidget(self.memory_bar)
 
-        self.memory_text = QLabel("--")
+        self.memory_text: QLabel = QLabel("--")
         layout.addWidget(self.memory_text)
 
         group.setLayout(layout)
@@ -270,10 +270,10 @@ class XPUStatusDialog(QDialog):
         group = QGroupBox("Model Cache")
         form = QFormLayout()
 
-        self.cache_usage_label = QLabel("--")
+        self.cache_usage_label: QLabel = QLabel("--")
         form.addRow("Current Usage:", self.cache_usage_label)
 
-        self.cache_limit_label = QLabel("--")
+        self.cache_limit_label: QLabel = QLabel("--")
         form.addRow("Limit:", self.cache_limit_label)
 
         group.setLayout(form)
@@ -288,7 +288,7 @@ class XPUStatusDialog(QDialog):
         group = QGroupBox("System Requirements")
         layout = QVBoxLayout()
 
-        self.requirements_text = QTextEdit()
+        self.requirements_text: QTextEdit = QTextEdit()
         self.requirements_text.setReadOnly(True)
         self.requirements_text.setMaximumHeight(_WARNINGS_MAX_HEIGHT)
         layout.addWidget(self.requirements_text)

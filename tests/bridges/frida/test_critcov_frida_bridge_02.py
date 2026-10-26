@@ -8,7 +8,7 @@
 Every test that needs a live session drives the real Frida runtime against a child
 process that the test itself starts (a Python interpreter blocked on stdin), never
 against the pytest process. The tests cover argument validation, not-attached and
-no-device guards, failures that a real target produces (unmapped addresses, missing
+no-device guards, failures that a live target process produces (unmapped addresses, missing
 modules, destroyed scripts, uncompilable script source), the cancellation-token
 lookup, and the pure helpers that build and parse the JavaScript the bridge sends
 to the agent.

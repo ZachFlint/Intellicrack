@@ -3,6 +3,11 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! Digests and checksums: MD5, the SHA-1, SHA-2 and SHA-3 families, BLAKE2,
+//! `xxHash`, `SipHash`, CRC-8/16/32/64, Adler-32, FNV, a streaming hasher that
+//! gives the same results chunk by chunk, parametric CRCs, and the PE image
+//! checksum the Windows loader verifies.
+
 use blake2::digest::consts::U32;
 use blake2::Blake2s256;
 
@@ -32,8 +37,11 @@ pub enum HashError {
     /// The requested range does not lie inside the data.
     #[error("invalid range: start={start}, end={end}, data_len={data_len}")]
     InvalidRange {
+        /// First byte of the requested range.
         start: usize,
+        /// One past the last byte of the requested range.
         end: usize,
+        /// Length of the data the range was checked against.
         data_len: usize,
     },
     /// A custom CRC width other than 8, 16, 32 or 64 bits.
@@ -712,8 +720,28 @@ mod tests {
     #[test]
     fn test_xxh3() {
         let result = compute_hash(b"test", "xxh3").unwrap();
-        // xxh3-64 with seed=0 on b"test" — pinned from xxhash-rust crate output
+        // xxh3-64 with seed 0 on b"test", as the reference Python xxhash package computes it.
         assert_eq!(result.hex_digest, "9ec9f7918d7dfc40");
+    }
+
+    /// Known answers for `b"abc"` in the families whose other vector is the
+    /// empty input. BLAKE2 values are Python `hashlib` with a 32-byte digest
+    /// (the BLAKE2s one is the RFC 7693 vector); xxHash values are the
+    /// reference Python `xxhash` package with seed 0.
+    #[test]
+    fn test_abc_known_answers_for_blake2_and_xxhash() {
+        let digest = |algorithm| compute_hash(b"abc", algorithm).unwrap().hex_digest;
+        assert_eq!(
+            digest("blake2b"),
+            "bddd813c634239723171ef3fee98579b94964e3bb1cb3e427262c8c068d52319"
+        );
+        assert_eq!(
+            digest("blake2s"),
+            "508c5e8c327c14e2e1a72ba34eeb452f37458b209ed63a294d999b4c86675982"
+        );
+        assert_eq!(digest("xxhash32"), "32d153ff");
+        assert_eq!(digest("xxhash64"), "44bc2cf5ad770999");
+        assert_eq!(digest("xxh3"), "78af5f94892f3950");
     }
 
     #[test]
@@ -796,7 +824,10 @@ mod tests {
     #[test]
     fn test_unsupported_algorithm() {
         let result = compute_hash(b"test", "nonexistent");
-        assert!(result.is_err());
+        assert!(
+            matches!(result, Err(HashError::UnsupportedAlgorithm(ref name)) if name == "nonexistent"),
+            "{result:?}"
+        );
     }
 
     #[test]
@@ -810,7 +841,17 @@ mod tests {
     #[test]
     fn test_hash_range_invalid() {
         let result = compute_hash_range(b"ABC", 2, 5, "md5");
-        assert!(result.is_err());
+        assert!(
+            matches!(
+                result,
+                Err(HashError::InvalidRange {
+                    start: 2,
+                    end: 5,
+                    data_len: 3
+                })
+            ),
+            "{result:?}"
+        );
     }
 
     #[test]
@@ -838,7 +879,10 @@ mod tests {
     #[test]
     fn test_custom_crc_invalid_width() {
         let result = compute_crc_custom(b"test", 12, 0, 0, false, false, 0);
-        assert!(result.is_err());
+        assert!(
+            matches!(result, Err(HashError::InvalidCrcWidth(12))),
+            "{result:?}"
+        );
     }
 
     #[test]
@@ -1132,6 +1176,25 @@ mod tests {
 
     /// A 512-byte PE whose bytes outside the headers follow `i * 7 + 3`, with
     /// the NT headers at `e_lfanew`.
+    /// Linker-built system DLLs carry a nonzero `CheckSum` that the loader
+    /// verifies, so each must check out as valid with the stored value
+    /// recomputed exactly, at the `CheckSum` field the PE headers locate.
+    #[cfg(windows)]
+    #[test]
+    fn test_verify_pe_checksum_accepts_genuine_system_dlls() {
+        for name in ["kernel32.dll", "ntdll.dll", "user32.dll"] {
+            let path = std::path::Path::new(r"C:\Windows\System32").join(name);
+            let data = std::fs::read(&path).unwrap();
+            let e_lfanew =
+                usize::try_from(u32::from_le_bytes(data[0x3C..0x40].try_into().unwrap())).unwrap();
+            let result = verify_pe_checksum(&data).unwrap();
+            assert_ne!(result.stored, 0, "{name}");
+            assert_eq!(result.calculated, result.stored, "{name}");
+            assert!(result.valid, "{name}");
+            assert_eq!(result.offset, e_lfanew + 0x58, "{name}");
+        }
+    }
+
     fn synthetic_pe(e_lfanew: usize) -> Vec<u8> {
         let mut buf: Vec<u8> = (0..0x200usize)
             .map(|i| (i * 7 + 3).to_le_bytes()[0])

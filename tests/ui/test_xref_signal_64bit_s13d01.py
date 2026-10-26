@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from PyQt6.QtCore import QCoreApplication
 
 
-# A genuine x64 user-mode virtual address. Its low 32 bits (0x12345678)
+# A valid x64 user-mode virtual address. Its low 32 bits (0x12345678)
 # differ from the full value, so any truncation to a 32-bit C++ int is
 # directly observable in the received value.
 _REAL_X64_VA: Final[int] = 0x7FF6_1234_5678
@@ -56,7 +56,7 @@ class TestS13D01XRefPanelSignal64Bit:
         """Clicking a real xref tree item must emit the full 64-bit VA.
 
         Drives the real production path (``set_xrefs`` populates the tree,
-        a genuine ``QTreeWidgetItem`` click fires ``itemClicked``, which is
+        a ``QTreeWidgetItem`` click fires ``itemClicked``, which is
         wired to ``_on_item_clicked`` -> ``xref_selected.emit``) rather than
         emitting the signal directly, so the test also exercises the
         address parsing and click-handling code that feeds the signal.

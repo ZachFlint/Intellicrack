@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the Ghidra bridge response-timeout and polled analyze path.
+"""Tests for the Ghidra bridge response-timeout and polled analyze path.
 
 These tests pin the two invariants that keep ``Analyze`` / ``get_functions``
 from silently timing out into an empty view:
@@ -271,8 +271,8 @@ async def test_wait_for_bridge_port_raises_after_polling_closed_port() -> None:
 
     Binds and immediately releases an ephemeral port so nothing listens on it,
     points the bridge at that dead port with no live child process, and drives
-    the real poll loop with a short timeout. The gate proves the method
-    genuinely polls the port (it does not return early against a dead port) and
+    the real poll loop with a short timeout. The gate checks that the method
+    polls the port (it does not return early against a dead port) and
     raises ``ToolError`` once the bounded deadline passes, rather than hanging
     or reporting the bridge ready. A regression that dropped the timeout raise
     or returned success would fail here.

@@ -2,14 +2,14 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable tests for launching processes on a hidden Windows desktop.
+"""Tests for launching processes on a hidden Windows desktop.
 
-These exercise the real Win32 desktop-isolation path Intellicrack uses to keep
-x64dbg's Qt windows off the user's screen: a genuine ``CreateDesktopW`` desktop,
-a genuine ``CreateProcessW`` child bound to it, and the property that makes the
+These exercise the Win32 desktop-isolation path Intellicrack uses to keep
+x64dbg's Qt windows off the user's screen: a ``CreateDesktopW`` desktop,
+a ``CreateProcessW`` child bound to it, and the property that makes the
 child invisible - its threads run on a desktop that is never the input desktop.
-No mocks: every assertion is backed by a live OS object and fails loudly if the
-isolation regresses.
+Every assertion is backed by a live OS object and fails if the isolation
+regresses.
 """
 
 from __future__ import annotations

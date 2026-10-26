@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 import os
 import struct
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -25,6 +25,8 @@ from intellicrack.bridges.hex_editor import HexEditorBridge
 if TYPE_CHECKING:
     from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack_hexcore import HexDocument
 
 
 hexcore_mod: Any = pytest.importorskip(
@@ -533,8 +535,7 @@ class TestSearchTextEncodedPreference:
 
         The stub has only a legacy search_text method (no search_text_encoded),
         simulating a native document built before encoding-aware search was added.
-        It is the input that exercises the guard branch in the bridge, not a mock
-        of the thing under test.
+        It is the input that exercises the guard branch in the bridge.
         """
 
         class _LegacyDocument:
@@ -551,7 +552,7 @@ class TestSearchTextEncodedPreference:
 
         b = HexEditorBridge()
         _run(b.initialize())
-        b.document = _LegacyDocument()
+        b.document = cast("HexDocument", _LegacyDocument())
 
         with pytest.raises(RuntimeError, match="search_text_encoded"):
             _run(b.search_text("hello", "ascii"))

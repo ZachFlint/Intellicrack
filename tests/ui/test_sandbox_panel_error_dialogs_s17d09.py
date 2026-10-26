@@ -10,7 +10,7 @@ command execution is otherwise invisible unless the user happens to be looking a
 Console tab at that moment.
 
 These tests drive the real panel handlers with real exceptions and let the
-genuine blocking ``QMessageBox`` that ``dialogs_helpers.show_error`` creates
+blocking ``QMessageBox`` that ``dialogs_helpers.show_error`` creates
 open for real. A repeating ``QTimer`` finds the live modal, records its actual
 ``windowTitle()``/``text()``, and dismisses it so the blocking static call
 returns - the same technique the SystemTab warning harness uses. Nothing about
@@ -110,7 +110,7 @@ def test_create_failure_raises_a_real_error_dialog(modal_recorder: ModalRecorder
     """A failed Create must raise a real dialog carrying the backend error text.
 
     Args:
-        modal_recorder: Recorder that dismisses the genuine modal.
+        modal_recorder: Recorder that dismisses the live modal.
     """
     panel = SandboxPanel()
     failure = RuntimeError("Windows Sandbox is not installed on this host")
@@ -128,7 +128,7 @@ def test_create_failure_still_logs_to_the_console(modal_recorder: ModalRecorder)
     """The dialog must be added to the console line, not replace it.
 
     Args:
-        modal_recorder: Recorder that dismisses the genuine modal.
+        modal_recorder: Recorder that dismisses the live modal.
     """
     panel = SandboxPanel()
 
@@ -165,7 +165,7 @@ def test_every_user_initiated_failure_path_raises_a_dialog(
     """Each toolbar action's error handler must surface a dialog and a console line.
 
     Args:
-        modal_recorder: Recorder that dismisses the genuine modal.
+        modal_recorder: Recorder that dismisses the live modal.
         handler_name: Name of the real panel error handler to drive.
         expected_title: Exact dialog window title the handler must use.
         expected_console: Exact console line the handler must still write.

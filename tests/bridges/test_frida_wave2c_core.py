@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Real, falsifiable gates for FridaBridge core instrumentation operations.
+"""Tests for FridaBridge core instrumentation operations.
 
 Covers spawn, resume, attach_by_name, rpc_call, patch_code, intercept_return,
 write_code, and allocate_string. Every test drives the real production method

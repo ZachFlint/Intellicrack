@@ -13,7 +13,7 @@ harness had no mirror of that check: a container started while a VM was live
 was the same collision approached from the other side, and nothing stopped it.
 
 The processes here are real. A copy of ``cmd.exe`` under a QEMU process name is
-a genuine running process that the production enumerator sees exactly as it
+a running process that the production enumerator sees exactly as it
 sees a real ``qemu-system-x86_64.exe``, because the enumerator matches on the
 process name and nothing else. Nothing is patched, and the interlock under test
 is the one ``DockerSandbox.ensure_image`` calls.

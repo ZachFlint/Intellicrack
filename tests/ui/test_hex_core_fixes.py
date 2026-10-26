@@ -103,7 +103,7 @@ def _pump_until(qapp: QApplication, predicate: Callable[[], bool], timeout_s: fl
 def _resolve_numeric_search_target(tmp_path: Path) -> tuple[Path, int, int]:
     """Resolve a file, a uint32-LE value, and its offset for the numeric search test.
 
-    Prefers the real target (``ida_9.4.exe``) when present on
+    Prefers the ``ida_9.4.exe`` target when present on
     disk, deriving the expected offset directly from the file's own bytes
     (never hardcoding an offset for real data). Falls back to a
     deterministically generated fixture -- never an unconditional skip --

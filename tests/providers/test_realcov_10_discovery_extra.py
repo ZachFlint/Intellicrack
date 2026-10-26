@@ -5,7 +5,7 @@
 
 """Real-logic coverage for DiscoveryCache TTL and ModelDiscovery query helpers.
 
-These tests exercise the genuine cache-expiry, lookup, and aggregation logic
+These tests exercise the cache-expiry, lookup, and aggregation logic
 of :class:`~intellicrack.providers.discovery.DiscoveryCache` and
 :class:`~intellicrack.providers.discovery.ModelDiscovery` without any network
 access. The cache and query helpers are pure in-memory logic units with no
@@ -110,7 +110,7 @@ class TestDiscoveryCacheTtlExpiry:
 
 
 class TestModelDiscoveryQueryHelpers:
-    """Search, lookup, and aggregation read genuine cached model data."""
+    """Search, lookup, and aggregation read cached model data."""
 
     @staticmethod
     def _populate() -> ModelDiscovery:

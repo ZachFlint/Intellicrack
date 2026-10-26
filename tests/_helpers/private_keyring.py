@@ -7,7 +7,7 @@
 The backend is ``keyrings.alt``'s plaintext file keyring, declared as a dependency of the pixi ``test`` feature. Left to itself it writes
 to one file under the user's data directory, shared by every test and every xdist worker; these helpers point it at a file the test owns,
 install it as the process keyring for the test's duration, and restore the previous backend afterwards, so a test that stores a secret
-never touches the operating system's own keyring. Nothing is simulated: reads and writes go through the real backend to a real file.
+never touches the operating system's own keyring. Reads and writes go through the file backend to the test's own file.
 """
 
 from __future__ import annotations

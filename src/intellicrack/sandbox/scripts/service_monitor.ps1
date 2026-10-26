@@ -297,7 +297,7 @@ $registered = (Register-ServiceWmiSubscription -Query $deletionQuery -EventKind 
 # reject event registration. Rather than exit and stop monitoring entirely
 # - which would silently drop every subsequent service transition - fall
 # back to a bounded polling sweep over Win32_Service so the monitor keeps
-# producing genuine lifecycle data. The fallback is explicitly diagnosed so
+# producing service lifecycle data. The fallback is explicitly diagnosed so
 # a caller can distinguish it from the preferred event-driven mode.
 $script:PollingFallbackActive = $false
 

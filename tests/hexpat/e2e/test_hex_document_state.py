@@ -37,18 +37,18 @@ class _DummyDoc:
     no real document operations are performed.
     """
 
-    def read(self, offset: int, length: int) -> list[int]:
-        """Return an empty byte list (stub).
+    def read(self, offset: int, length: int) -> bytes:
+        """Return no bytes (stub).
 
         Args:
             offset: Byte offset to start reading from.
             length: Number of bytes to read.
 
         Returns:
-            list[int]: Empty list.
+            bytes: Empty bytes.
         """
         _ = (self, offset, length)
-        return []
+        return b""
 
     def length(self) -> int:
         """Return zero length (stub).
@@ -59,15 +59,6 @@ class _DummyDoc:
         _ = self
         return 0
 
-    def write(self, offset: int, data: bytes) -> None:
-        """No-op write (stub).
-
-        Args:
-            offset: Byte offset to write at.
-            data: Bytes to write.
-        """
-        _ = (self, offset, data)
-
     def list_templates(self) -> list[tuple[str, str]]:
         """Return an empty template list (stub).
 
@@ -77,31 +68,38 @@ class _DummyDoc:
         _ = self
         return []
 
-    def list_templates_detailed(self) -> list[object]:
+    def list_templates_detailed(self) -> list[tuple[str, str, str, int]]:
         """Return an empty detailed template list (stub).
 
         Returns:
-            list[object]: Empty list.
+            list[tuple[str, str, str, int]]: Empty list.
         """
         _ = self
         return []
 
-    def register_json_template(self, name: str, json_str: str) -> None:
+    def register_json_template(self, json_str: str) -> str:
         """No-op register (stub).
 
         Args:
-            name: Template name.
             json_str: JSON string.
-        """
-        _ = (self, name, json_str)
 
-    def remove_template(self, name: str) -> None:
+        Returns:
+            str: Empty string, as no template is registered.
+        """
+        _ = (self, json_str)
+        return ""
+
+    def remove_template(self, name: str) -> bool:
         """No-op remove (stub).
 
         Args:
             name: Template name.
+
+        Returns:
+            bool: False, as no template is ever registered.
         """
         _ = (self, name)
+        return False
 
     def export_template_json(self, name: str) -> str:
         """Return an empty JSON string (stub).
@@ -115,14 +113,14 @@ class _DummyDoc:
         _ = (self, name)
         return ""
 
-    def inspect_at(self, offset: int) -> dict[str, object]:
+    def inspect_at(self, offset: int) -> dict[str, str]:
         """Return an empty inspection dict (stub).
 
         Args:
             offset: Byte offset to inspect.
 
         Returns:
-            dict[str, object]: Empty dict.
+            dict[str, str]: Empty dict.
         """
         _ = (self, offset)
         return {}
@@ -857,7 +855,7 @@ class TestCallbackErrorPaths:
         mutating_cb receives SELECTION_CHANGED. Because event_type is
         SELECTION_CHANGED (not CURSOR_MOVED), it does not call set_selection
         again. The test asserts the total call count of mutating_cb is exactly
-        two: one for CURSOR_MOVED, one for SELECTION_CHANGED. This falsifies
+        two: one for CURSOR_MOVED, one for SELECTION_CHANGED. This catches
         any regression where the guard fails to queue the reentrant event and
         instead dispatches it immediately (which would allow unbounded
         recursion through mutating_cb).
@@ -914,7 +912,7 @@ class TestCallbackErrorPaths:
 
         _dispatch_one guards only RuntimeError, TypeError, ValueError, and
         OSError. A ZeroDivisionError is not in that set and must propagate
-        through _notify / set_cursor to the caller. This test falsifies any
+        through _notify / set_cursor to the caller. This test catches any
         regression that widens the guard to catch all exceptions.
         """
         state = HexDocumentState()
@@ -932,7 +930,7 @@ class TestCallbackErrorPaths:
         Exercises RuntimeError, TypeError, ValueError, and OSError in four
         separate states. For each, an observer registered after the raising
         callback must receive exactly one CURSOR_MOVED with the correct
-        offset. This falsifies any regression that removes one type from the
+        offset. This catches any regression that removes one type from the
         guard tuple.
         """
         guarded_msg = "guarded"
@@ -967,7 +965,7 @@ class TestCallbackErrorPaths:
         Registers cb_a (RuntimeError), cb_b (ValueError), cb_c (OSError), then
         cb_d (records event). All three raising callbacks fire before cb_d.
         cb_d must still receive exactly one CURSOR_MOVED with offset=88.
-        This falsifies any implementation that aborts the callback list on
+        This catches any implementation that aborts the callback list on
         first exception rather than continuing per-callback.
         """
         state = HexDocumentState()
@@ -1075,7 +1073,7 @@ class TestCallbackErrorPaths:
         queues all three. After the outer CURSOR_MOVED completes, the guard
         drains SELECTION_CHANGED, DATA_MODIFIED, then DISPLAY_MODE_CHANGED
         in causal order. The observer must receive exactly four events in order
-        with correct payloads, falsifying any partial-drain or wrong-order
+        with correct payloads, catching any partial-drain or wrong-order
         regression.
         """
         state = HexDocumentState()
@@ -1208,7 +1206,7 @@ class TestClearAll:
         Two rules ("r-alpha", "r-beta") are stored via set_highlight_rule before
         clear_all is called. The observer must receive exactly two
         HIGHLIGHT_RULE_REMOVED events, one per rule id, before any
-        DOCUMENT_CLOSED. Falsifies any regression that skips the per-rule
+        DOCUMENT_CLOSED. Catches any regression that skips the per-rule
         removal notification.
         """
         state = HexDocumentState()
@@ -1229,7 +1227,7 @@ class TestClearAll:
         """clear_all emits DOCUMENT_CLOSED exactly once when a document is open.
 
         An open document followed by clear_all must produce exactly one
-        DOCUMENT_CLOSED event. Falsifies a regression that omits the
+        DOCUMENT_CLOSED event. Catches a regression that omits the
         DOCUMENT_CLOSED notification from clear_all.
         """
         state = HexDocumentState()
@@ -1246,7 +1244,7 @@ class TestClearAll:
         """clear_all emits no DOCUMENT_CLOSED when no document was attached.
 
         Calling clear_all on a fresh state (no document) must not emit any
-        DOCUMENT_CLOSED event. Falsifies a regression that emits the event
+        DOCUMENT_CLOSED event. Catches a regression that emits the event
         unconditionally.
         """
         state = HexDocumentState()
@@ -1266,7 +1264,7 @@ class TestClearAll:
         - file_path == None
         - cursor_offset == 0
         - selection == None
-        This falsifies any regression that forgets to reset one of the fields.
+        This catches any regression that forgets to reset one of the fields.
         """
         state = HexDocumentState()
         p = Path("/nonexistent/clear_test.bin")
@@ -1285,7 +1283,7 @@ class TestClearAll:
         """clear_all empties the highlight rules dict.
 
         After adding two highlight rules and calling clear_all, get_highlight_rules
-        must return an empty dict. Falsifies any regression that leaves stale
+        must return an empty dict. Catches any regression that leaves stale
         entries in the rule map.
         """
         state = HexDocumentState()
@@ -1302,7 +1300,7 @@ class TestClearAll:
         The production clear_all loop fires HIGHLIGHT_RULE_REMOVED for each
         rule, then conditionally fires DOCUMENT_CLOSED. This test asserts that
         the last event is DOCUMENT_CLOSED and all preceding events are
-        HIGHLIGHT_RULE_REMOVED. Falsifies any regression that changes the
+        HIGHLIGHT_RULE_REMOVED. Catches any regression that changes the
         ordering contract.
         """
         state = HexDocumentState()
@@ -1326,7 +1324,7 @@ class TestCurrentStateSnapshot:
         """get_current_state on a fresh instance returns correct defaults.
 
         The exact expected dict is known independently from the __init__
-        docstring and property contracts. Falsifies any regression that changes
+        docstring and property contracts. Catches any regression that changes
         a default field value or omits a key.
         """
         state = HexDocumentState()
@@ -1344,7 +1342,7 @@ class TestCurrentStateSnapshot:
 
         After set_cursor(256), set_selection(10, 20), set_display_mode_state,
         and set_highlight_rule, the snapshot must reflect each exact value.
-        Falsifies a regression where the snapshot returns stale pre-mutation
+        Catches a regression where the snapshot returns stale pre-mutation
         values.
         """
         state = HexDocumentState()
@@ -1371,7 +1369,7 @@ class TestCurrentStateSnapshot:
 
         get_current_state documents that highlight_rules is a copy. Modifying
         the returned dict must not change what a subsequent snapshot returns.
-        Falsifies any regression that returns a direct reference to the
+        Catches any regression that returns a direct reference to the
         internal dict.
         """
         state = HexDocumentState()

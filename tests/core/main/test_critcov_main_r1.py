@@ -419,7 +419,7 @@ def test_cleanup_all_async_logs_an_external_pid_when_the_executor_refuses_work(p
     a worker thread raises ``RuntimeError('Executor shutdown has been called')``
     (``asyncio/base_events.py`` ``_check_default_executor``).
 
-    Falsifiable: removing ``RuntimeError`` from the ``except`` tuple on
+    Removing ``RuntimeError`` from the ``except`` tuple on
     process_manager.py line 993 lets the error escape ``cleanup_all_async``.
 
     Args:
@@ -451,7 +451,7 @@ def test_final_cleanup_gives_up_on_a_process_cleanup_that_never_finishes(process
 
     A tracked child whose cleanup callback never returns stalls the real cleanup.
 
-    Falsifiable: removing the ``except TimeoutError`` clause on main.py line 1044
+    Removing the ``except TimeoutError`` clause on main.py line 1044
     lets the timeout escape ``_finalize_shutdown``.
 
     Args:
@@ -484,7 +484,7 @@ async def test_shutdown_tolerates_a_model_discovery_without_a_cache_writer(tmp_p
     The parameter is declared as a plain ``object`` and documents that the cache
     is saved only if the object exposes ``save_cache``.
 
-    Falsifiable: deleting the ``if callable(save_cache):`` guard on main.py line 1544
+    Deleting the ``if callable(save_cache):`` guard on main.py line 1544
     makes the shutdown call ``None`` and raise ``TypeError``.
 
     Args:
@@ -517,7 +517,7 @@ async def test_shutdown_tolerates_a_model_discovery_without_a_cache_writer(tmp_p
 async def test_shutdown_abandons_a_process_cleanup_that_never_finishes(tmp_path: Path, process_manager: ProcessManager) -> None:
     """A stalled process cleanup costs its timeout, is reported, and the bridge loop is still stopped.
 
-    Falsifiable: removing the ``except TimeoutError`` clause on main.py line 1572
+    Removing the ``except TimeoutError`` clause on main.py line 1572
     lets the timeout escape ``_shutdown_application``.
 
     Args:
@@ -559,7 +559,7 @@ def test_a_process_never_terminates_itself_through_either_cleanup_path(tmp_path:
     process named; if the guard were missing it would end itself, which fails the
     run instead of touching the pytest process.
 
-    Falsifiable: deleting the ``if pid in spared`` branch on process_manager.py
+    Deleting the ``if pid in spared`` branch on process_manager.py
     line 546 (``sync``) or the ``if pid in _own_lineage()`` branch on line 658
     (``tree``) makes the driver terminate itself.
 
@@ -592,7 +592,7 @@ def test_a_process_that_refuses_termination_is_reported_and_left_running(
     the wait right, so psutil's wait raises and ``terminate_external_pid`` reports
     the error and returns False, leaving the PID registered.
 
-    Falsifiable: removing the ``except psutil.AccessDenied`` clause on
+    Removing the ``except psutil.AccessDenied`` clause on
     process_manager.py line 686 (or 697) lets the refusal escape, and removing
     ``psutil.Error`` from the tuple on line 1368 does the same for the wait refusal.
 
@@ -616,7 +616,7 @@ def test_a_process_that_refuses_termination_is_reported_and_left_running(
 def test_a_process_whose_query_right_is_denied_still_counts_as_running(tmp_path: Path) -> None:
     """A live process that the system refuses to open for querying is reported as existing.
 
-    Falsifiable: returning ``False`` instead of ``True`` on process_manager.py line
+    Returning ``False`` instead of ``True`` on process_manager.py line
     163 reports the live process as gone.
 
     Args:
@@ -636,7 +636,7 @@ def test_a_launch_whose_startup_fails_reports_the_failure_and_exits_with_status_
     creating it raises ``FileExistsError`` after the providers and the tool
     registry have started and before any window exists.
 
-    Falsifiable: removing ``OSError`` from the ``except`` tuple on main.py line 1127
+    Removing ``OSError`` from the ``except`` tuple on main.py line 1127
     lets the error escape ``main()`` and the child dies without reporting a status.
 
     Args:

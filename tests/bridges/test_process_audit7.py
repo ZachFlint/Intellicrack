@@ -298,8 +298,7 @@ class TestF0035SearchPatternNonBlocking:
         address list must contain ``ctypes.addressof(marker)`` computed before
         the call, an oracle entirely independent of the production scanning
         code. The real ``asyncio.to_thread`` machinery executes the real
-        ``_scan_region_pattern`` worker against the real process-memory range;
-        no mocking is involved.
+        ``_scan_region_pattern`` worker against the real process-memory range.
 
         Args:
             attached_bridge_audit7: ProcessBridge attached to the test

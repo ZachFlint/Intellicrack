@@ -4,10 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates that drive a real MCP server over a real stdio subprocess.
 
-Nothing here is mocked. Each gate launches
+Each gate launches
 ``tests/_helpers/mcp_server_main.py`` as a child process, speaks the protocol
-to it through the SDK's own client, and asserts on what actually came back or
-on what actually happened to the process tree.
+to it through the SDK's own client, and asserts on what came back or
+on what happened to the process tree.
 """
 
 from __future__ import annotations

@@ -196,7 +196,7 @@ def test_resolve_env_api_key_openai_unaffected_by_grok_fix(
 
     Guards the providers that already worked (OpenAI, Anthropic, Google, OpenRouter, HuggingFace, Local Transformers) against a regression in the shared mapping.
 
-    This is a non-regression guard rather than a falsifiable gate for the Grok change: the Grok revert recipe above does not touch OpenAI's mapping.
+    This is a non-regression guard rather than a check of the Grok change: the Grok revert recipe above does not touch OpenAI's mapping.
     """
     env_path = _write_env_file(tmp_path, f"OPENAI_API_KEY={_FAKE_OPENAI_TOKEN}\n")
     monkeypatch.setattr(

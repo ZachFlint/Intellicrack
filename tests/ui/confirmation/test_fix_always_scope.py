@@ -4,10 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates for which tool-call answers may be kept across restarts.
 
-An answer kept "always" is only honest when something invalidates it once the
+An answer kept "always" stays accurate only when something invalidates it once the
 tool it was about changes. MCP tools carry a tool-listing generation that does
 exactly that; built-in bridge tools carry none, so an "always" answer about
-one would outlive any change to it. The real dialog and a real approval file
+one would outlive any change to it. The dialog and an approval file on disk
 are used throughout.
 """
 

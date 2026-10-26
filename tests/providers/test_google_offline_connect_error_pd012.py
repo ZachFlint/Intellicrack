@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Offline falsifiable gate: ``connect()`` must convert a real ``httpx.ConnectError``.
+"""Offline check: ``connect()`` must convert a real ``httpx.ConnectError``.
 
 ``GoogleProvider.connect`` builds a real ``google.genai.Client`` and probes it
 with ``models.list()``.  When the probe cannot reach a listener at all, the
@@ -11,7 +11,7 @@ underlying transport raises ``httpx.ConnectError`` -- whose MRO
 -> ``HTTPError`` -> ``Exception``) shares no base with any of the builtin
 exceptions ``connect()`` originally caught (``ConnectionError``,
 ``TimeoutError``, ``OSError``, ``ValueError``, ``RuntimeError``).  This test
-forces a genuine (unmocked) connection failure by pointing the real ``genai``
+forces a connection failure by pointing the real ``genai``
 client at a local TCP port with no listener, so the transport itself raises
 ``httpx.ConnectError``, and asserts ``connect()`` surfaces the contracted
 ``ProviderError("Connection failed")`` instead of letting the raw transport
@@ -55,8 +55,8 @@ def _unroutable_genai_client(*, api_key: str | None = None) -> GenaiClient:
     """Build a real ``genai.Client`` forced onto a listener-less local port.
 
     Installed in place of the plain ``genai.Client`` constructor inside
-    ``GoogleProvider._connect_impl`` so the ``models.list()`` probe issues a
-    genuine outbound TCP connection attempt -- to a port this test reserved
+    ``GoogleProvider._connect_impl`` so the ``models.list()`` probe issues an
+    outbound TCP connection attempt -- to a port this test reserved
     and released -- and lets the real ``httpx`` transport raise
     ``httpx.ConnectError`` on its own, without any exception being mocked.
 
@@ -124,7 +124,7 @@ async def test_connect_real_connect_error_leaves_env_restored(
     """The ``GEMINI_API_KEY`` restoration contract also holds for a real transport failure.
 
     Mirrors ``test_connect_gemini_api_key_restored_after_failure`` but drives
-    the failure through a genuine ``httpx.ConnectError`` instead of an
+    the failure through a transport-raised ``httpx.ConnectError`` instead of an
     injected ``OSError``, proving the env-var restoration ``finally`` block
     is reached regardless of which exception type the probe raises.
 

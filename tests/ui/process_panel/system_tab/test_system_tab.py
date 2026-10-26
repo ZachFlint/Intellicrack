@@ -722,21 +722,21 @@ class TestQueryErrorSurfacesToUser:
 
 @pytest.mark.usefixtures("qapp")
 class TestUserVisibleWarningDialogIsShown:
-    """Production code must display the real ``QMessageBox.warning`` modal.
+    """Production code must display the ``QMessageBox.warning`` modal.
 
-    These tests intentionally use no bridge double: every warning here is raised
-    entirely by production code in ``SystemTab`` and rendered by the genuine
+    Every warning here is raised
+    entirely by production code in ``SystemTab`` and rendered by the
     static ``QMessageBox.warning`` method. The autouse ``warning_recorder``
-    fixture in this package's conftest captures the real modal dialog Qt creates,
-    records its actual ``windowTitle()`` and ``text()``, and dismisses it. Asserting
-    on the recorded title/text therefore proves the real warning mechanism fired
+    fixture in this package's conftest captures the modal dialog Qt creates,
+    records its ``windowTitle()`` and ``text()``, and dismisses it. Asserting
+    on the recorded title/text therefore checks that the warning fired
     with the exact, independently-known content the production code specifies. If
     the ``QMessageBox.warning`` call were removed, mis-titled, or its message
     changed, these assertions go red.
     """
 
     def test_pid_gate_shows_real_not_attached_warning(self, warning_recorder: WarningRecorder) -> None:
-        """An unattached privileges query renders the genuine not-attached warning dialog.
+        """An unattached privileges query renders the not-attached warning dialog.
 
         Args:
             warning_recorder: Autouse recorder capturing real ``QMessageBox.warning`` dialogs.
@@ -758,7 +758,7 @@ class TestUserVisibleWarningDialogIsShown:
         assert _raw_output_text(tab) == _NOT_ATTACHED_MSG
 
     def test_read_teb_without_selection_shows_real_warning(self, warning_recorder: WarningRecorder) -> None:
-        """Reading TEB with no selected thread renders the genuine warning dialog.
+        """Reading TEB with no selected thread renders the warning dialog.
 
         Args:
             warning_recorder: Autouse recorder capturing real ``QMessageBox.warning`` dialogs.

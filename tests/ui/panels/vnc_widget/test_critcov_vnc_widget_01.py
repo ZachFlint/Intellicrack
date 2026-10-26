@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Coverage for the RFB handshake, message framing and rectangle decoders of the VNC viewer client.
 
-Every test drives a real ``RFBClient``. Server bytes are written into one end of a genuine loopback ``socket`` pair while the client reads
+Every test drives a real ``RFBClient``. Server bytes are written into one end of a loopback ``socket`` pair while the client reads
 them through asyncio streams wrapped around the other end, so the client frames, consumes and answers real bytes; the bytes the client
 sends back are read from the peer socket. The expected values come from the RFB protocol definition (RFC 6143 and the Tight encoding
 description), from published DES known-answer vectors, from a decrypt with a hand-written key, from ``zlib`` and from plain pixel

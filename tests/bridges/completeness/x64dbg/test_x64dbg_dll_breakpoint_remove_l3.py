@@ -63,7 +63,7 @@ class TestRemoveDllBreakpointButtonSendsExactLibrarianCommand:
     ) -> None:
         """Clicking Remove DLL BP with a DLL name must send the exact quoted command.
 
-        Falsifiable: if ``X64DbgBridge.remove_dll_breakpoint``
+        If ``X64DbgBridge.remove_dll_breakpoint``
         (``bridges/x64dbg.py``) omitted the quotes around the DLL name,
         or the Advanced tab's ``_on_remove_dll_breakpoint`` read a
         different input widget, the recorded ``exec`` command would

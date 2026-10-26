@@ -11,7 +11,7 @@ calls ``splitter.setChildrenCollapsible(False)`` and both panes get ``setMinimum
 shrink either pane below its minimum size regardless of how far the handle is dragged.
 
 Each test drives a real, shown :class:`ProcessTab` and a real
-:class:`QSplitter` (no mocks/stubs) and calls ``QSplitter.moveSplitter`` --
+:class:`QSplitter` and calls ``QSplitter.moveSplitter`` --
 the same primitive Qt uses internally when the user drags the handle or
 double-clicks it to snap a pane to zero -- to verify the panes cannot be
 collapsed.

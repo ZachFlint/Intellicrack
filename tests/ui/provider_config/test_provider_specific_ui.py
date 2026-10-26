@@ -220,7 +220,7 @@ def test_resource_button_click_routes_exact_url_once_to_browser(
 ) -> None:
     """Each Resources button is wired 1:1 to its own URL via the system browser hook.
 
-    Clicking the *real* button (driving the genuine ``clicked`` signal/slot
+    Clicking the *real* button (driving the ``clicked`` signal/slot
     connection) must invoke ``QDesktopServices.openUrl`` exactly once with a
     ``QUrl`` whose text equals the configured link for that exact label. Asserting
     the call count is exactly one proves the connection is neither missing (zero
@@ -311,7 +311,7 @@ def test_open_resource_url_surfaces_exact_failure_dialog(
     browser), the handler must escalate to the user via ``show_warning`` with the
     title "Open Link Failed" and a body that interpolates the failing link's label
     and URL exactly as ``f"Could not open {label} ({url})."``. This proves the
-    real button is wired to a handler that genuinely inspects the return value and
+    real button is wired to a handler that inspects the return value and
     surfaces failure rather than swallowing it. The expected message is built from
     the resource table (an independent source of truth), not from the handler's
     own output.

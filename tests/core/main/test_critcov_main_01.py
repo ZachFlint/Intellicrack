@@ -14,7 +14,7 @@ environment is redirected into ``tmp_path`` and stripped of provider credentials
 the GUI launch is ended by a watcher thread that asks the application to quit once
 its event loop is running.
 
-Paths that cannot be driven honestly are left out: the UAC relaunch branch, the early
+Paths that cannot be driven this way are left out: the UAC relaunch branch, the early
 splash failure branches (Qt aborts the process instead of raising), the defensive
 guards around modules that always import, and the stage timeouts that would need a
 tracked process stalled for ten seconds.
@@ -588,7 +588,7 @@ def restored_application_look(qapp: QApplication) -> Generator[None]:
 def test_cli_log_level_replaces_the_configured_level() -> None:
     """An explicit log level wins over the configured one and leaves both sinks on.
 
-    Falsifiable: replacing ``cli.log_level`` with ``"INFO"`` on main.py line 232
+    Replacing ``cli.log_level`` with ``"INFO"`` on main.py line 232
     leaves the configured level in place.
     """
     config = Config.default()
@@ -622,7 +622,7 @@ def test_cli_flags_switch_off_exactly_the_sinks_they_name(
 ) -> None:
     """Each disable flag turns off its own sink only, and a warning marks the case with no sink left.
 
-    Falsifiable: assigning ``False`` to ``config.log.file_enabled`` on main.py line
+    Assigning ``False`` to ``config.log.file_enabled`` on main.py line
     234 (the console branch) turns the file sink off for ``--no-console-log``.
 
     Args:
@@ -648,7 +648,7 @@ def test_cli_flags_switch_off_exactly_the_sinks_they_name(
 def test_configured_sinks_that_are_already_off_still_warn() -> None:
     """A configuration that turns both sinks off warns even when no flag is given.
 
-    Falsifiable: changing ``and`` to ``or`` on main.py line 237 stops the warning
+    Changing ``and`` to ``or`` on main.py line 237 stops the warning
     unless both sinks are off, and ``not`` removal on either operand changes the
     case this test sets up.
     """
@@ -666,7 +666,7 @@ def test_configured_sinks_that_are_already_off_still_warn() -> None:
 def test_each_lazy_importer_returns_the_real_class(name: str) -> None:
     """Every lazy import helper resolves to the class or function defined in its own module.
 
-    Falsifiable: returning ``mod.OrchestratorConfig`` instead of ``mod.Orchestrator``
+    Returning ``mod.OrchestratorConfig`` instead of ``mod.Orchestrator``
     on main.py line 318 breaks the orchestrator case; the other helpers fail the same
     way when their attribute is swapped.
 
@@ -701,7 +701,7 @@ def test_each_lazy_importer_returns_the_real_class(name: str) -> None:
 def test_the_provider_registry_helper_returns_the_process_wide_singleton() -> None:
     """The registry helper hands out the same registry every other caller sees.
 
-    Falsifiable: returning ``ProviderRegistry()`` instead of ``get_registry()`` on
+    Returning ``ProviderRegistry()`` instead of ``get_registry()`` on
     main.py line 389 returns a registry nobody else shares.
     """
     registry = _get_provider_registry()
@@ -714,7 +714,7 @@ def test_the_provider_registry_helper_returns_the_process_wide_singleton() -> No
 def test_import_timing_is_logged_at_debug_with_milliseconds_rounded() -> None:
     """The import timing record names the module and carries the elapsed time to three decimals.
 
-    Falsifiable: rounding to two decimals on main.py line 410 logs 1.23.
+    Rounding to two decimals on main.py line 410 logs 1.23.
     """
     logger = get_logger("critcov.timing")
 
@@ -731,7 +731,7 @@ def test_import_timing_is_logged_at_debug_with_milliseconds_rounded() -> None:
 def test_early_dpi_scale_is_the_primary_screens_device_pixel_ratio(qapp: QApplication) -> None:
     """The early splash scale is the primary screen's device pixel ratio as a float.
 
-    Falsifiable: reading ``screen.logicalDotsPerInch()`` instead of
+    Reading ``screen.logicalDotsPerInch()`` instead of
     ``screen.devicePixelRatio()`` on main.py line 424 returns 96.0 or similar.
 
     Args:
@@ -751,7 +751,7 @@ def test_early_dpi_scale_is_the_primary_screens_device_pixel_ratio(qapp: QApplic
 def test_a_missing_or_undecodable_splash_asset_leaves_the_flat_background(qapp: QApplication, tmp_path: Path, kind: str) -> None:
     """With no usable splash image the pixmap is still the requested size, filled with the background colour.
 
-    Falsifiable: returning ``QPixmap()`` instead of ``pixmap`` on main.py line 449
+    Returning ``QPixmap()`` instead of ``pixmap`` on main.py line 449
     (missing) or line 453 (undecodable) returns a null pixmap.
 
     Args:
@@ -781,7 +781,7 @@ def test_per_monitor_awareness_is_requested_or_already_in_force() -> None:
     reports before and after: a refusal must leave the context unchanged, and no
     refusal must leave the thread in the per-monitor-v2 context.
 
-    Falsifiable: passing ``-3`` instead of ``-4`` as the context on main.py line 501
+    Passing ``-3`` instead of ``-4`` as the context on main.py line 501
     leaves the thread in the version-one context when the request is not refused.
     """
     user32 = ctypes.WinDLL("user32")
@@ -803,7 +803,7 @@ def test_per_monitor_awareness_is_requested_or_already_in_force() -> None:
 def test_full_splash_replaces_the_early_splash_and_applies_the_theme(qapp: QApplication) -> None:
     """The upgrade closes the early splash, themes the application and shows the animated splash.
 
-    Falsifiable: deleting ``early_splash.close()`` on main.py line 606 leaves the
+    Deleting ``early_splash.close()`` on main.py line 606 leaves the
     early splash visible; deleting ``theme_manager.apply_theme(theme)`` on line 600
     leaves the requested theme unchanged.
 
@@ -839,7 +839,7 @@ def test_full_splash_upgrade_reports_a_destroyed_early_splash_and_returns_none(q
     The early splash's C++ object is destroyed first, so closing it raises the
     ``RuntimeError`` that Qt raises for a deleted wrapper.
 
-    Falsifiable: removing ``RuntimeError`` from the ``except`` tuple on main.py line
+    Removing ``RuntimeError`` from the ``except`` tuple on main.py line
     637 lets the error escape.
 
     Args:
@@ -865,7 +865,7 @@ def test_early_splash_builds_the_application_and_the_upgrade_runs_in_a_fresh_pro
     The child then upgrades to the full splash and repeats the upgrade with a
     destroyed early splash, which must come back as ``None`` with a warning.
 
-    Falsifiable: calling ``app.setStyle("Fusion")`` with another style on main.py
+    Calling ``app.setStyle("Fusion")`` with another style on main.py
     line 533 changes the reported style, and changing ``_EARLY_SPLASH_WIDTH`` changes
     the pixmap size.
 
@@ -906,7 +906,7 @@ def test_early_splash_builds_the_application_and_the_upgrade_runs_in_a_fresh_pro
 def test_saved_capability_overrides_and_summary_mode_are_applied_to_the_provider() -> None:
     """Per-model overrides and the reasoning-summary mode saved for a provider reach the provider.
 
-    Falsifiable: deleting the ``set_capability_override`` call on main.py line 720
+    Deleting the ``set_capability_override`` call on main.py line 720
     leaves the provider with no overrides.
     """
     _write_json(
@@ -941,7 +941,7 @@ async def test_a_provider_connect_that_never_completes_is_abandoned_after_the_st
     The provider stays unconnected and the call returns normally, so the caller can
     still register it for a later reconnect.
 
-    Falsifiable: passing ``timeout=0`` to ``asyncio.wait_for`` on main.py line 793
+    Passing ``timeout=0`` to ``asyncio.wait_for`` on main.py line 793
     makes the call return at once, which the elapsed-time assertion rejects.
     """
     _ = get_env_file().write_text("", encoding="utf-8")
@@ -968,7 +968,7 @@ async def test_a_provider_connect_that_never_completes_is_abandoned_after_the_st
 def test_a_saved_instance_record_without_an_id_is_skipped_with_a_warning() -> None:
     """A stored record that names no instance id is dropped and the valid ones are still loaded.
 
-    Falsifiable: replacing ``continue`` with ``pass`` on main.py line 936 appends a
+    Replacing ``continue`` with ``pass`` on main.py line 936 appends a
     ``None`` instance to the result.
     """
     valid = ProviderInstance(instance_id="gw-valid", api_base="http://127.0.0.1:9", requires_api_key=False)
@@ -996,7 +996,7 @@ def test_a_saved_instance_record_without_an_id_is_skipped_with_a_warning() -> No
 def test_an_explicit_config_path_that_does_not_exist_is_refused_and_logged() -> None:
     """A missing ``--config`` file resolves to nothing and is reported as an error.
 
-    Falsifiable: returning ``config_path`` instead of ``None`` on main.py line 1025
+    Returning ``config_path`` instead of ``None`` on main.py line 1025
     hands the missing path to the loader.
     """
     missing = get_config_dir() / "absent" / "config.toml"
@@ -1015,7 +1015,7 @@ def test_an_explicit_config_path_that_does_not_exist_is_refused_and_logged() -> 
 def test_an_existing_explicit_config_path_is_used_as_given(tmp_path: Path) -> None:
     """An explicit ``--config`` file that exists is the file used, whatever the default directory holds.
 
-    Falsifiable: returning ``get_config_dir() / "config.toml"`` on main.py line 1026
+    Returning ``get_config_dir() / "config.toml"`` on main.py line 1026
     regardless of the option returns the default location.
 
     Args:
@@ -1031,7 +1031,7 @@ def test_an_existing_explicit_config_path_is_used_as_given(tmp_path: Path) -> No
 def test_without_an_option_the_config_path_is_the_state_root_default() -> None:
     """With no explicit path the configuration file is ``config.toml`` in the state root's config directory.
 
-    Falsifiable: using ``"settings.toml"`` as the file name on main.py line 1022
+    Using ``"settings.toml"`` as the file name on main.py line 1022
     changes the resolved name.
     """
     resolved = _resolve_config_path(_CLIOptions(), get_config_dir)
@@ -1046,7 +1046,7 @@ def test_startup_with_a_missing_explicit_config_returns_none_and_installs_nothin
 ) -> None:
     """A bad ``--config`` ends startup before logging is set up or any handler is installed.
 
-    Falsifiable: removing the ``if config_path is None: return None`` check on main.py
+    Removing the ``if config_path is None: return None`` check on main.py
     lines 1067-1068 makes the next line load the missing file and raise.
 
     Args:
@@ -1078,7 +1078,7 @@ def test_startup_loads_the_config_applies_overrides_and_starts_logging_and_the_p
     overridden level and one rotating file handler in the configured log directory,
     and the process manager singleton has its handlers installed.
 
-    Falsifiable: dropping the ``_apply_cli_overrides(config, cli_options)`` call on
+    Dropping the ``_apply_cli_overrides(config, cli_options)`` call on
     main.py line 1070 leaves the level at the file's ``INFO`` and the console sink on.
 
     Args:
@@ -1121,7 +1121,7 @@ def test_startup_loads_the_config_applies_overrides_and_starts_logging_and_the_p
 def test_final_cleanup_runs_the_process_manager_cleanup_and_closes_the_loop(process_manager: ProcessManager) -> None:
     """The final cleanup awaits the process manager's cleanup on the loop and then closes the loop.
 
-    Falsifiable: deleting the ``loop.run_until_complete`` call on main.py lines
+    Deleting the ``loop.run_until_complete`` call on main.py lines
     1038-1043 skips the cleanup, so the ``async_cleanup_started`` record never appears.
 
     Args:
@@ -1146,7 +1146,7 @@ def test_final_cleanup_survives_a_loop_that_is_already_closed(process_manager: P
     Running anything on a closed loop raises ``RuntimeError``; the two coroutines
     built for the call are then never awaited, which Python reports as warnings.
 
-    Falsifiable: removing ``RuntimeError`` from the ``except (OSError, RuntimeError)``
+    Removing ``RuntimeError`` from the ``except (OSError, RuntimeError)``
     tuple on main.py line 1046 lets the error escape.
 
     Args:
@@ -1172,7 +1172,7 @@ def test_a_failing_template_export_is_logged_as_a_partial_bootstrap() -> None:
     A directory is created where the first built-in template's JSON file would be
     written, so exporting it fails while the others succeed.
 
-    Falsifiable: replacing ``bootstrap_error_cls`` with ``ValueError`` on main.py line
+    Replacing ``bootstrap_error_cls`` with ``ValueError`` on main.py line
     1238 lets the bootstrap error escape instead of being logged.
     """
     hexcore = importlib.import_module("intellicrack_hexcore")
@@ -1210,7 +1210,7 @@ async def test_model_discovery_startup_loads_the_saved_cache(tmp_path: Path) -> 
     The cache is written by a first discovery object through its own save call and
     read back by the startup helper, which also reports the cache path.
 
-    Falsifiable: deleting the ``await load_cache(discovery_cache)`` on main.py line
+    Deleting the ``await load_cache(discovery_cache)`` on main.py line
     1272 leaves the new object's cache empty.
 
     Args:
@@ -1235,7 +1235,7 @@ async def test_model_discovery_startup_loads_the_saved_cache(tmp_path: Path) -> 
 def test_clearing_the_model_cache_empties_the_global_cache() -> None:
     """The shutdown helper empties the process-wide model cache and says so.
 
-    Falsifiable: deleting the ``clear_fn()`` call on main.py line 1342 leaves the
+    Deleting the ``clear_fn()`` call on main.py line 1342 leaves the
     cached model in place.
     """
     torch = importlib.import_module("torch")
@@ -1270,7 +1270,7 @@ def test_clearing_the_model_cache_empties_the_global_cache() -> None:
 def test_an_orchestrator_without_a_sandbox_accessor_wires_nothing(qapp: QApplication, tmp_path: Path, registry_kind: str) -> None:
     """Startup wiring is a silent no-op when the orchestrator has no tool registry or one without a sandbox accessor.
 
-    Falsifiable: replacing ``return`` with ``pass`` on main.py line 1405 makes the next
+    Replacing ``return`` with ``pass`` on main.py line 1405 makes the next
     line call ``None`` and raise ``TypeError``.
 
     Args:
@@ -1297,7 +1297,7 @@ def test_an_orchestrator_without_a_sandbox_accessor_wires_nothing(qapp: QApplica
 def test_a_registered_bridge_with_no_sandbox_instances_wires_nothing(qapp: QApplication, tmp_path: Path) -> None:
     """A sandbox bridge whose manager holds no instance leaves the window alone.
 
-    Falsifiable: deleting the ``if not instances: return`` guard on main.py lines
+    Deleting the ``if not instances: return`` guard on main.py lines
     1416-1417 makes the next line index an empty list and raise ``IndexError``.
 
     Args:
@@ -1324,7 +1324,7 @@ def test_a_registered_bridge_with_no_sandbox_instances_wires_nothing(qapp: QAppl
 def test_detaching_the_qt_log_handler_removes_it_from_the_root_logger(qapp: QApplication) -> None:
     """Shutdown detaches the Qt-signalling log handler and forgets it.
 
-    Falsifiable: deleting the ``uninstall()`` call on main.py line 1452 leaves the
+    Deleting the ``uninstall()`` call on main.py line 1452 leaves the
     handler installed.
 
     Args:
@@ -1349,7 +1349,7 @@ def test_detaching_the_qt_log_handler_removes_it_from_the_root_logger(qapp: QApp
 async def test_cancelling_bridge_tasks_lets_them_finish_their_cancellation() -> None:
     """Pending bridge coroutines are cancelled and given one loop turn to run their cleanup.
 
-    Falsifiable: deleting the ``await asyncio.sleep(0)`` on main.py line 1488 leaves
+    Deleting the ``await asyncio.sleep(0)`` on main.py line 1488 leaves
     the coroutine's cancellation handler unrun when the helper returns.
     """
     flags: list[str] = []
@@ -1385,7 +1385,7 @@ async def test_an_interrupted_cancellation_drain_is_logged_and_does_not_raise() 
 
     The helper runs as a task that is cancelled while it waits for its one loop turn.
 
-    Falsifiable: changing ``except asyncio.CancelledError`` to ``except ValueError`` on
+    Changing ``except asyncio.CancelledError`` to ``except ValueError`` on
     main.py line 1489 lets the cancellation escape and ``await task`` raise.
     """
     flags: list[str] = []
@@ -1426,7 +1426,7 @@ def test_the_bridge_loop_is_stopped_and_drained_workers_are_logged_only_when_the
     The expected count is read from the public drain function just before the call,
     so the test holds whether or not earlier tests left finished workers retained.
 
-    Falsifiable: logging ``bridge_workers_drained`` unconditionally on main.py line
+    Logging ``bridge_workers_drained`` unconditionally on main.py line
     1509 logs it when no worker was retained.
     """
     loop = ensure_loop()
@@ -1458,7 +1458,7 @@ async def test_shutdown_runs_every_stage_and_leaves_the_application_torn_down(
     cached model, an orchestrator, a session manager, the process manager, the Qt log
     handler and the bridge loop.
 
-    Falsifiable: deleting the ``await cast("Awaitable[None]", save_cache(discovery_cache))``
+    Deleting the ``await cast("Awaitable[None]", save_cache(discovery_cache))``
     statement on main.py line 1545 leaves no cache file, and deleting
     ``_drain_and_stop_bridge_loop(logger)`` on line 1576 leaves the bridge loop running.
 
@@ -1520,7 +1520,7 @@ async def test_a_stalled_stage_is_abandoned_after_its_timeout_and_shutdown_carri
     A provider whose disconnect never completes, an orchestrator whose shutdown never
     completes and a session manager whose close never completes are shut down in turn.
 
-    Falsifiable: removing ``TimeoutError`` from the ``except`` clause on main.py line
+    Removing ``TimeoutError`` from the ``except`` clause on main.py line
     1559 lets the stalled orchestrator's timeout escape and skips the session stage.
 
     Args:
@@ -1573,7 +1573,7 @@ def test_a_whole_launch_starts_the_interface_and_shuts_down_cleanly(tmp_path: Pa
     providers disabled; a watcher thread asks the application to quit once its event
     loop is running. The stage records are read back from the child's JSON log file.
 
-    Falsifiable: returning ``1`` instead of ``exit_code`` on main.py line 1694 changes
+    Returning ``1`` instead of ``exit_code`` on main.py line 1694 changes
     the child's reported status, and deleting ``logger.info("ui_started")`` on line
     1674 drops a stage from the log.
 
@@ -1615,7 +1615,7 @@ def test_a_whole_launch_starts_the_interface_and_shuts_down_cleanly(tmp_path: Pa
 def test_the_entry_point_exits_with_status_one_for_a_missing_config_file(tmp_path: Path) -> None:
     """``python -m intellicrack.main --config <missing file>`` reports the file and exits with status 1.
 
-    Falsifiable: returning ``0`` instead of ``1`` on main.py line 1108 changes the exit
+    Returning ``0`` instead of ``1`` on main.py line 1108 changes the exit
     status.
 
     Args:

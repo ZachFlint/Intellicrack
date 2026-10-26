@@ -91,7 +91,7 @@ class TestLoadLibraryButtonDrivesLoadLibraryRpc:
     ) -> None:
         """Clicking Load DLL must send ``loadlib "<path>"`` then read back ``$result``.
 
-        Falsifiable: if ``_on_load_library`` never called
+        If ``_on_load_library`` never called
         ``bridge.load_library``, or ``X64DbgBridge.load_library``
         (``bridges/x64dbg.py``) queued a different console command or
         skipped the ``$result`` readback, the recorded command sequence
@@ -157,7 +157,7 @@ class TestLoadLibraryButtonDrivesLoadLibraryRpc:
     ) -> None:
         """A ``$result`` of ``0x0`` after ``loadlib`` must surface as a real error.
 
-        Falsifiable: a naive implementation that returns ``{"success":
+        A naive implementation that returns ``{"success":
         True, ...}`` regardless of the ``$result`` readback would report
         success here even though x64dbg's own ``$result`` value (``0``)
         proves the load never took effect; this test only passes when

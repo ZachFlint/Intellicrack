@@ -878,7 +878,7 @@ class TestF0029Is64BitHeuristic:
         assert is_rizin_64bit(64, "x86", "PE") is True
 
     def test_64bit_arch_recognised(self) -> None:
-        """A 64-bit arch keeps a 32-bit-looking ``bits`` honest."""
+        """A 64-bit arch counts as 64-bit even when ``bits`` is 0."""
         assert is_rizin_64bit(0, "x86_64", "") is True
         assert is_rizin_64bit(0, "aarch64", "") is True
 
@@ -889,7 +889,7 @@ class TestF0029Is64BitHeuristic:
         assert is_rizin_64bit(0, "", "MACH064") is True
 
     def test_pure_32bit_negative(self) -> None:
-        """A genuine 32-bit triple stays False."""
+        """A 32-bit triple stays False."""
         assert is_rizin_64bit(32, "x86", "PE") is False
 
 

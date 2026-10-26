@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable test gates for the CutterBridge operations.
+"""Tests for the CutterBridge operations.
 
 Covers the nine CutterBridge operations:
 
@@ -16,7 +16,7 @@ Covers the nine CutterBridge operations:
 - hexdump_words(address, length)   — pxw command (distinct from px)
 - disassemble_function(address)    — pdf @ {addr} command + mnemonic content
 
-Every test drives the REAL bridge method through the _CommandRecorder fake
+Every test drives the bridge method through the _CommandRecorder fake
 transport.  Each gate asserts BOTH the exact rizin command string the bridge
 emits AND the exact parsed return value derived from an independently-specified
 oracle response.  Mutating a command verb or a response parser causes the gate

@@ -13,7 +13,7 @@ suite fails until somebody decides how the new operation should be driven. The
 table is indivisible for that reason, and lives apart from the fixtures that
 consume it.
 
-Every recipe genuinely invokes its operation. Nothing here is skipped for being
+Every recipe invokes its operation. Nothing here is skipped for being
 awkward to arrange, so the recipes that depend on their environment instead
 declare which failures still count as a documented outcome:
 :attr:`Recipe.tolerated` names the :class:`~hexbench.dispatch.DispatchError`
@@ -299,7 +299,7 @@ class Target(Enum):
     """The synthetic in-memory document built from :data:`SAMPLE`."""
 
     EXECUTABLE = "executable"
-    """A document opened over a copy of a genuine Windows PE image."""
+    """A document opened over a copy of an on-disk Windows PE image."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -491,8 +491,8 @@ class RecipeContext:
 
     Attributes:
         sample_handle: Handle of a document opened over :attr:`SampleLayout.data`.
-        executable_handle: Handle of a document opened over a copy of a genuine
-            PE image.
+        executable_handle: Handle of a document opened over a copy of an
+            on-disk PE image.
         executable_path: Filesystem path of that copy.
         scratch: Directory recipes may create files in, deleted with the session.
         pid: Identifier of this process, used by the process-memory recipes.
@@ -848,6 +848,7 @@ _RECIPES: Final[Mapping[str, Recipe]] = MappingProxyType({
     "copy_block": _constant(Target.SAMPLE, src_offset=_ORIGIN, length=_BLOCK_LENGTH, dst_offset=_BLOCK_DESTINATION),
     "decode_text": _constant(Target.SAMPLE, offset=_ORIGIN, length=_DECODE_LENGTH, encoding=TEXT_ENCODING),
     "delete_bytes": _constant(Target.SAMPLE, offset=_DELETE_OFFSET, length=_DELETE_LENGTH),
+    "detect_templates": _constant(Target.SAMPLE, offset=_ORIGIN),
     "diff_bytes": _constant(Target.NONE, data_a=SAMPLE.data.hex(), data_b=SAMPLE_VARIANT.hex()),
     "diff_files": _built(Target.NONE, _diff_files_arguments),
     "digram_matrix": _constant(Target.SAMPLE),

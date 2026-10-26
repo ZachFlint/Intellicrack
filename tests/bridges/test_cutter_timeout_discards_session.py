@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gate for the Cutter timeout pipe-poisoning containment.
+"""Tests for the Cutter timeout pipe-poisoning containment.
 
 When an ``_r2_cmd`` call times out, ``asyncio.wait_for`` abandons the coroutine
 but cannot stop the OS thread that ``asyncio.to_thread`` handed the blocking
@@ -18,7 +18,7 @@ The containment fix makes a timeout tear the session down
 command can touch the dirty pipe, terminates the rizin child by PID to unblock
 the orphaned worker, and leaves the bridge in a clean "reload required" state.
 
-These gates drive the real bridge through a genuine timeout:
+These tests drive the bridge through an actual timeout:
 
 * ``test_timeout_poisons_session_and_rejects_next_command`` -- a real blocking
   pipe double forces a timeout, then asserts the session is discarded

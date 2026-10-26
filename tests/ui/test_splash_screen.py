@@ -593,7 +593,7 @@ class TestSplashAssetGeneration:
     def test_wordmark_argument_drives_output(qapp: QApplication) -> None:
         """Different wordmark strings produce different pixel output.
 
-        Proves build_splash_image actually renders its ``wordmark`` argument
+        Checks that build_splash_image renders its ``wordmark`` argument
         rather than ignoring it: a regression that hardcoded the canonical
         frozen asset regardless of input would make this comparison spuriously
         equal.
@@ -622,7 +622,7 @@ class TestSplashAssetGeneration:
     def test_shipped_splash_png_matches_canonical_build(qapp: QApplication) -> None:
         """splash.png is pixel-exact-equal to build_splash_image(CANONICAL_WORDMARK).
 
-        Falsifiable: reverting splash.png to the old capital-C asset makes
+        Reverting splash.png to the old capital-C asset makes
         this comparison fail, since the shipped bytes would no longer match
         the deterministic canonical build.
 
@@ -1225,7 +1225,7 @@ class TestSplashImageCompositing:
         """Image-source selection follows the brain-icon-preferred precedence.
 
         The production rule is ``_splash_image = load(splash.png) if
-        _brain_icon is None else None``. Re-running that ladder would be tautological, so the
+        _brain_icon is None else None``. Rather than re-running that ladder, the
         expected outcome is derived independently: the shipped
         ``splash-icon.png`` is decoded straight from disk via its PNG header,
         proving it is a valid (loadable) image, so production must select the

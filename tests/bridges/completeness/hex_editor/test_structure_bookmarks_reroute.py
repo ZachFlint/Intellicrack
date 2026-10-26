@@ -21,7 +21,7 @@ a real ``HexEditorPanel`` against a real
 recording ``HexEditorBridge`` subclass (``RecordingHexEditorBridge`` in
 ``conftest.py``) that delegates to the real
 ``generate_structure_bookmarks`` after appending to its call ledger, so
-the resulting bookmarks tree reflects a genuine end-to-end
+the resulting bookmarks tree reflects an end-to-end
 detect-and-bookmark pass rather than a canned response.
 """
 
@@ -58,7 +58,7 @@ class TestAutoBookmarkStructureRoutesThroughBridge:
     def test_click_with_bridge_dispatches_bridge_and_renders_its_bookmark(qapp: QApplication) -> None:
         """Triggering auto-bookmark with a bridge attached must call the bridge and render its bookmark.
 
-        Falsifiable: if ``_on_auto_bookmark_structure`` were reverted to
+        If ``_on_auto_bookmark_structure`` were reverted to
         call ``self._auto_bookmark_structure_local()`` unconditionally
         (the unrouted behaviour),
         ``generate_structure_bookmarks_calls`` would stay at 0 even

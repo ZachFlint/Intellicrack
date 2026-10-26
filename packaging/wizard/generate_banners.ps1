@@ -351,7 +351,7 @@ function New-LightBanner {
         Render the light-theme welcome banner (light gradient, icon tile, subtitle).
     .DESCRIPTION
         The dark banner composites the app tile over dark brand artwork; under the
-        light Windows theme that reads as a near-black slab. This renders a genuine
+        light Windows theme that reads as a near-black slab. This renders a separate
         light variant on a soft light gradient with a dark-on-light subtitle, so
         WizardImageFileDynamicDark actually swaps a distinct image per theme.
     .PARAMETER OutFile
@@ -435,7 +435,7 @@ try {
 
     # The active wizard banners. modern-dynamic swaps light/dark by system theme,
     # so the dark slot gets the dark brand composite and the light slot gets a
-    # genuinely light render -- the two are distinct images, not the same file.
+    # light render -- the two are distinct images, not the same file.
     $selectedPath = Join-Path $BgDir $selected.File
     New-Banner -OutFile (Join-Path $Here 'banner-dark.png') -BackgroundPath $selectedPath -Icon $icon
     New-LightBanner -OutFile (Join-Path $Here 'banner-light.png') -Icon $icon

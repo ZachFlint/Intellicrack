@@ -82,7 +82,7 @@ class TestCoverageTraceButtonDrivesSelectedBridgeMethod:
     ) -> None:
         """Selecting "Beyond (into)" with an empty condition must send the bare two-argument command.
 
-        Falsifiable: if ``_on_trace_coverage`` always appended a trailing
+        If ``_on_trace_coverage`` always appended a trailing
         ``, "<condition>"`` regardless of whether a condition was typed,
         the recorded ``exec`` command would carry a spurious empty
         condition clause instead of matching
@@ -137,7 +137,7 @@ class TestCoverageTraceButtonDrivesSelectedBridgeMethod:
     ) -> None:
         """Selecting "Within (over)" with a condition must send the condition-first command.
 
-        Falsifiable: if the combo's userData mapped to the wrong bridge
+        If the combo's userData mapped to the wrong bridge
         method, or the bridge built the command with the step budget
         before the condition, the recorded ``exec`` command would not
         match ``TraceOverIntoTraceCoverage "eax==1", 50000`` exactly.
@@ -191,7 +191,7 @@ class TestSetLogFileButtonDrivesTraceSetLogFileRpc:
     ) -> None:
         """Clicking Set Log File must send ``TraceSetLogFile "<path>"`` with the typed path.
 
-        Falsifiable: if ``_on_set_trace_log_file`` read a different
+        If ``_on_set_trace_log_file`` read a different
         widget, dropped the quoting, or called a different bridge method,
         the recorded ``exec`` command would not match the expected
         quoted-path command exactly, and the trace output would not
@@ -240,7 +240,7 @@ class TestSetLogFileButtonDrivesTraceSetLogFileRpc:
     ) -> None:
         """An empty Log File field must be rejected locally without any RPC dispatch.
 
-        Falsifiable: if the empty-path guard in ``_on_set_trace_log_file``
+        If the empty-path guard in ``_on_set_trace_log_file``
         were removed, this would dispatch a malformed
         ``TraceSetLogFile ""`` command instead of leaving the fake pipe
         untouched.

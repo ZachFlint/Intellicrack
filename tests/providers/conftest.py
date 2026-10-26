@@ -248,7 +248,7 @@ def pytest_runtest_call() -> Generator[None]:
       :class:`httpx.HTTPError` / :class:`OSError` whose chain carries a
       DNS-resolution or connection-establishment failure.
 
-    Every other failure - including a genuine provider bug that surfaces as a
+    Every other failure - including a provider bug that surfaces as a
     connection or protocol error against a reachable host - propagates unchanged.
 
     Yields:

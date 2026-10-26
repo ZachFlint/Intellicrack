@@ -354,7 +354,7 @@ class McpServerEditor(QWidget):
     Emits ``changed()`` whenever a field is edited, so the dialog knows there is something unsaved.
     """
 
-    changed = pyqtSignal()
+    changed: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the editor with empty fields.
@@ -780,7 +780,7 @@ class McpToolToggleView(QWidget):
     Emits ``toggled()`` whenever a tool is switched on or off.
     """
 
-    toggled = pyqtSignal()
+    toggled: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize an empty view.
@@ -900,8 +900,8 @@ class McpConfigDialog(QDialog):
     Save writes every server's changes, not only the selected one's.
     """
 
-    resource_attached = pyqtSignal(str)
-    prompt_attached = pyqtSignal(str)
+    resource_attached: pyqtSignal = pyqtSignal(str)
+    prompt_attached: pyqtSignal = pyqtSignal(str)
     _server_log_arrived = pyqtSignal(object)
     _request_progressed = pyqtSignal(object)
 

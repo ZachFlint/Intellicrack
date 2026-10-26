@@ -216,7 +216,7 @@ class TlsFeedBridge(ScriptedBridge):
 class StubbornProcess(DesktopProcess):
     """Real hidden-desktop process whose ``terminate`` is ignored and whose ``kill`` can be made to fail.
 
-    It adopts the state of a genuinely spawned :class:`DesktopProcess`, so every handle, wait and exit-code
+    It adopts the state of a spawned :class:`DesktopProcess`, so every handle, wait and exit-code
     query is the real implementation; only ``terminate`` is a no-op until :meth:`end` is called.
     """
 

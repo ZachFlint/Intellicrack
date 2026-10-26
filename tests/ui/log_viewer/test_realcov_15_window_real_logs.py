@@ -7,7 +7,7 @@
 The existing window suite seeds the log file with hand-crafted JSON dicts.
 These tests instead emit real events through the application's configured
 ``structlog`` pipeline and then open a :class:`LogViewerWindow` pointed at the
-same on-disk log, proving the window's history backfill parses the genuine
+same on-disk log, proving the window's history backfill parses the
 field layout that :func:`intellicrack.core.logging.setup_logging` writes.
 """
 

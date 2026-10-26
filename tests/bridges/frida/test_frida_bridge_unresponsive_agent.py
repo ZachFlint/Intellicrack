@@ -144,7 +144,7 @@ def test_an_agent_call_that_is_never_answered_raises_by_name_and_later_agent_cal
 ) -> None:
     """A stuck agent ends a call at its limit with a named error; the next agent call is refused at once; device calls still run.
 
-    Falsifiable: without the bound the first call waits out Frida's own 25 second timeout, without the
+    Without the bound the first call waits out Frida's own 25 second timeout, without the
     unresponsive mark the second call waits just as long, and without the device/agent split the
     process listing would be refused too.
 
@@ -181,7 +181,7 @@ def test_shutdown_of_a_stuck_agent_returns_within_its_bound_and_leaves_a_reusabl
 ) -> None:
     """Shutdown cannot be held by an agent that never answers; the bridge it leaves behind holds nothing and works again.
 
-    Falsifiable: without the bounds the unload of the spinning script and the detach never return, so
+    Without the bounds the unload of the spinning script and the detach never return, so
     the call blows through the shutdown bound; without the final clear the registries would still list
     the dead session.
 
@@ -216,7 +216,7 @@ def test_attach_to_a_frozen_target_raises_by_name_and_leaves_the_bridge_unattach
     A first session is attached before the freeze, because attaching to an unfrozen or never-attached
     process still succeeds (the injected thread runs); the second session is the one that hangs.
 
-    Falsifiable: without the bound this attach never returns. Afterwards a bridge on a different,
+    Without the bound this attach never returns. Afterwards a bridge on a different,
     healthy target must still work, which shows the abandoned attach left nothing behind that
     poisons the process.
 
@@ -254,7 +254,7 @@ def test_detach_from_a_frozen_session_raises_by_name_and_forgets_the_session(
 ) -> None:
     """A detach the frozen target never answers raises, yet the bridge no longer claims a session or scripts.
 
-    Falsifiable: without the bound the detach never returns; without the ``finally`` the failed detach
+    Without the bound the detach never returns; without the ``finally`` the failed detach
     would leave ``process_attached`` true and the session reference set.
 
     Args:
@@ -278,7 +278,7 @@ def test_detach_from_a_frozen_session_raises_by_name_and_forgets_the_session(
 def test_unload_of_a_script_on_a_stuck_agent_raises_by_name_and_forgets_the_script(notepad_bridge: FridaBridge) -> None:
     """An unload the agent never answers raises, and the script is gone from the bridge's registry anyway.
 
-    Falsifiable: without the bound the unload waits out Frida's 25 seconds and the error would be
+    Without the bound the unload waits out Frida's 25 seconds and the error would be
     swallowed, so ``pytest.raises`` fails; without the ``finally`` the script id stays registered.
 
     Args:
@@ -297,7 +297,7 @@ def test_unload_of_a_script_on_a_stuck_agent_raises_by_name_and_forgets_the_scri
 def test_listing_threads_on_a_stuck_agent_raises_by_name_and_marks_the_agent(notepad_bridge: FridaBridge) -> None:
     """The thread-listing helper's reply that never comes ends at the agent limit with a named error.
 
-    Falsifiable: without the wait's bound the call hangs until the agent answers.
+    Without the wait's bound the call hangs until the agent answers.
 
     Args:
         notepad_bridge: Bridge attached to the private notepad.
@@ -324,7 +324,7 @@ def test_cancelling_a_waiting_call_cancels_the_frida_call_too(notepad_bridge: Fr
     raised at once, long before the bridge's own limit, and the bridge keeps no mark because it never
     concluded anything about the agent.
 
-    Falsifiable: a call that ignored cancellation would hold the loop for the bridge's own limit.
+    A call that ignored cancellation would hold the loop for the bridge's own limit.
 
     Args:
         notepad_bridge: Bridge attached to the private notepad.
@@ -345,7 +345,7 @@ def test_cancelling_a_waiting_call_cancels_the_frida_call_too(notepad_bridge: Fr
 def test_a_limit_the_caller_chose_is_reported_without_marking_the_agent(notepad_bridge: FridaBridge) -> None:
     """A script that runs for ever at load time hits the caller's own limit; that proves nothing about the agent.
 
-    Falsifiable: marking the session on a caller-chosen limit would refuse every later agent call
+    Marking the session on a caller-chosen limit would refuse every later agent call
     after one slow user script.
 
     Args:

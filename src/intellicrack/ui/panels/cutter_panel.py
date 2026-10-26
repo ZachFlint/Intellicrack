@@ -215,7 +215,7 @@ class CutterPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self.status_label = self._add_toolbar_label(toolbar, "Ready")
+        self.status_label: QLabel | None = self._add_toolbar_label(toolbar, "Ready")
 
     @override
     def _create_content(self) -> QWidget:
@@ -558,7 +558,7 @@ class CutterPanel(AnalysisPanelBase):
         console_label.setFont(fm.get_ui_font_bold(9))
         layout.addWidget(console_label)
 
-        self.console_output = QPlainTextEdit()
+        self.console_output: QPlainTextEdit = QPlainTextEdit()
         self.console_output.setFont(fm.get_code_font(9))
         self.console_output.setReadOnly(True)
         set_max_block_count(self.console_output, 10000)

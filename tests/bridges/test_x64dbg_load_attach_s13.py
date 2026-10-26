@@ -49,7 +49,7 @@ class TestLoadRegistersAttachedProcess:
     async def test_load_then_run_makes_inspection_commands_see_the_attached_process(self) -> None:
         """Load a real debuggee and confirm process-inspection RPCs succeed.
 
-        Falsifiable: if ``self._attached_pid`` stays ``None`` after ``load()``, for example because the single, unretried ``reg_get $pid`` issued immediately after ``InitDebug`` races the debug loop's process-creation event, then ``get_modules``, ``read_memory``, and ``get_threads`` each raise ``ToolError`` ("not attached") instead of returning the real, non-empty results asserted below.
+        If ``self._attached_pid`` stays ``None`` after ``load()``, for example because the single, unretried ``reg_get $pid`` issued immediately after ``InitDebug`` races the debug loop's process-creation event, then ``get_modules``, ``read_memory``, and ``get_threads`` each raise ``ToolError`` ("not attached") instead of returning the real, non-empty results asserted below.
         """
         if not _TARGET_EXE.exists():
             pytest.skip(f"debuggee target not present on this host: {_TARGET_EXE}")
@@ -93,7 +93,7 @@ class TestScanMemoryRejectsShortPatterns:
     async def test_hex_string_pattern_shorter_than_minimum_raises_tool_error(self) -> None:
         """A hex-string pattern under ``MIN_PATTERN_LENGTH`` bytes raises ``ToolError``.
 
-        Falsifiable: without the length guard, a short pattern would silently produce an empty match list instead of surfacing the requirement to the caller/UI.
+        Without the length guard, a short pattern would silently produce an empty match list instead of surfacing the requirement to the caller/UI.
         """
         bridge = X64DbgBridge()
         short_pattern = "48 8B 05 90"
@@ -105,7 +105,7 @@ class TestScanMemoryRejectsShortPatterns:
     async def test_raw_bytes_pattern_shorter_than_minimum_raises_tool_error(self) -> None:
         """A raw ``bytes`` pattern under ``MIN_PATTERN_LENGTH`` bytes raises ``ToolError``.
 
-        Falsifiable: mirrors the hex-string case for the ``bytes`` branch of
+        Mirrors the hex-string case for the ``bytes`` branch of
         ``scan_memory``'s ``pattern: str | bytes`` parameter so both input
         forms are covered by the same length guard.
         """
@@ -120,7 +120,7 @@ class TestScanMemoryRejectsShortPatterns:
     async def test_pattern_at_minimum_length_is_not_rejected_by_the_length_guard(self) -> None:
         """A pattern exactly ``MIN_PATTERN_LENGTH`` bytes long clears the length guard.
 
-        Falsifiable: an off-by-one in the guard (``<=`` instead of ``<``)
+        An off-by-one in the guard (``<=`` instead of ``<``)
         would reject this pattern with the same "too short" ``ToolError``
         that the short-pattern tests assert on; asserting a *different*
         failure mode here (no attached process) proves the length check

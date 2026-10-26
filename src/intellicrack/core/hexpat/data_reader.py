@@ -84,7 +84,7 @@ class DataReader:
     def from_document(document: HexDocumentLike) -> DataReader:
         """Create a DataReader from a HexDocument PyO3 object.
 
-        The document is expected to expose ``read(offset, length) -> list[int]``
+        The document is expected to expose ``read(offset, length) -> bytes``
         as provided by the Rust/PyO3 binding. ``length`` may be either a
         zero-argument callable returning ``int`` or a plain ``int`` attribute
         or property; both shapes are supported by :func:`_resolve_length`.
@@ -107,9 +107,9 @@ class DataReader:
                 length: Number of bytes to read.
 
             Returns:
-                bytes: Document bytes converted from the document's int list.
+                bytes: The requested document bytes.
             """
-            raw: list[int] = doc_read(offset, length)
+            raw: bytes = doc_read(offset, length)
             return bytes(raw)
 
         return DataReader(read_fn, total_length)

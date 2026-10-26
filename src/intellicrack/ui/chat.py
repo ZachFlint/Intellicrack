@@ -597,7 +597,7 @@ class ChatInput(QFrame):
         message_submitted: Qt signal for message submitted.
     """
 
-    message_submitted = pyqtSignal(str)
+    message_submitted: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the ChatInput widget.
@@ -678,8 +678,8 @@ class ChatPanel(QFrame):
             a way to cancel each one.
     """
 
-    message_submitted = pyqtSignal(str)
-    context_requested = pyqtSignal()
+    message_submitted: pyqtSignal = pyqtSignal(str)
+    context_requested: pyqtSignal = pyqtSignal()
     tool_activity: ToolActivityPanel
 
     def __init__(self, parent: QWidget | None = None) -> None:

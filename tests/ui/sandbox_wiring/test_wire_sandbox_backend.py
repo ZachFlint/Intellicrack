@@ -13,7 +13,7 @@ These tests exercise both the public ``MainWindow.wire_sandbox_backend``
 method (the plugin-facing surface) and the startup helper (the CLI/bootstrap
 surface) against a real ``MainWindow`` constructed against real
 ``Config``/``Orchestrator`` instances, with a real ``SandboxBase`` subclass
-driving the wiring. No mocks are used; only ``QMessageBox`` UI surfaces are
+driving the wiring. Only ``QMessageBox`` UI surfaces are
 monkey-patched away to keep the run headless.
 """
 
@@ -57,9 +57,9 @@ because ``intellicrack.__init__`` ships a lazy ``__getattr__`` that aliases
 
 
 class _InProcessSandbox(SandboxBase):
-    """Real ``SandboxBase`` subclass used to drive the wiring tests.
+    """In-process ``SandboxBase`` subclass used to drive the wiring tests.
 
-    The class is a concrete (not mocked) ``SandboxBase`` so the type checks
+    The class is a concrete ``SandboxBase`` so the type checks
     inside ``ToolOutputPanel.wire_sandbox_backend`` accept it. It performs
     no subprocess, network, or filesystem work because the wiring path only
     needs an identity-stable ``SandboxBase`` instance for registration.

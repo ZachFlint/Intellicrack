@@ -14,7 +14,7 @@ exhausted - both are unmet environment preconditions rather than defects.
 Crucially, the tests do NOT swallow ``AuthenticationError`` or generic
 ``ProviderError``: a rejected key, a retired/unknown model, or any other broken
 request propagates and fails the test, because those signal real breakage in the
-provider bridge or its configuration. Only the genuinely transient
+provider bridge or its configuration. Only the transient
 ``RateLimitError`` is treated as a skip.
 
 A deterministic, temperature-0 prompt is used so the assertions check semantic

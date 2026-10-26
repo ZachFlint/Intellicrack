@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates for the running-instance mutex marker.
+"""Gates for the running-instance mutex marker.
 
 Intellicrack creates a named Win32 mutex on startup so the Inno Setup installer,
 which declares the same name as its ``AppMutex``, can detect a live instance and
@@ -123,7 +123,7 @@ def test_acquire_creates_kernel_mutex_discoverable_by_name() -> None:
     """``acquire_instance_mutex`` creates a kernel mutex findable by its name.
 
     Exercises the real Win32 path: after acquiring, an independent
-    ``OpenMutexW`` for :data:`MUTEX_NAME` must succeed, proving a genuine named
+    ``OpenMutexW`` for :data:`MUTEX_NAME` must succeed, showing a named
     kernel object was created (not merely a handle value returned). The paired
     absent-name probe below shows this discovery can fail, so success here is
     meaningful.
@@ -147,8 +147,8 @@ def test_open_named_mutex_probe_returns_zero_for_absent_name() -> None:
     """The discovery probe returns ``0`` for a name that was never created.
 
     Without this, the create-test's ``OpenMutexW`` success could be vacuous (for
-    example if the probe always returned a handle); this pins the probe as a real
-    discriminator of mutex existence.
+    example if the probe always returned a handle); this shows the probe distinguishes
+    an existing mutex from an absent one.
     """
     absent = f"{MUTEX_NAME}_never_created_probe_marker"
     opened = _open_named_mutex(absent)

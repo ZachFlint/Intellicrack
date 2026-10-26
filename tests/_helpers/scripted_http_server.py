@@ -9,7 +9,7 @@ bytes on a real socket. This server listens on the loopback interface, records
 every request it receives (method, path, query, headers and body), and answers
 each one with the next scripted response for its route. A scripted response is
 written with ``Transfer-Encoding: chunked`` one chunk at a time, so a test can
-emit a genuine server-sent-event stream, pause between events, or gate a chunk
+emit a server-sent-event stream, pause between events, or gate a chunk
 on a :class:`threading.Event` to interleave two concurrent streams.
 
 A route's script can also be a callable, which lets a test answer the way the

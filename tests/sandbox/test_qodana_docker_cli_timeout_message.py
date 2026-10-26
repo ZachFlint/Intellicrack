@@ -23,7 +23,7 @@ private module internals -- see ``tests/bridges/test_process_bridge.py``)
 against a real stub ``docker`` executable placed first on ``PATH`` (the
 same real-subprocess technique used by
 ``tests/sandbox/test_docker_sandbox_force_stop.py``) that never returns, so
-the timeout is a genuine OS-level subprocess timeout, not a simulated one.
+the timeout is an OS-level subprocess timeout.
 """
 
 from __future__ import annotations
@@ -89,7 +89,7 @@ def test_timeout_message_reports_the_real_effective_timeout(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A genuine subprocess timeout must render ``exc.timeout``'s real value, not a stale one.
+    """An actual subprocess timeout must render ``exc.timeout``'s real value, not a stale one.
 
     Args:
         tmp_path: Pytest-provided scratch directory for the stub executable.
@@ -108,7 +108,7 @@ def test_timeout_without_check_returns_synthetic_124_with_real_timeout_in_stderr
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With ``check=False``, the synthetic result's return code is 124 on a genuine timeout.
+    """With ``check=False``, the synthetic result's return code is 124 on a subprocess timeout.
 
     Args:
         tmp_path: Pytest-provided scratch directory for the stub executable.

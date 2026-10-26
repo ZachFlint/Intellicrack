@@ -496,7 +496,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self.status_label = self._add_toolbar_label(toolbar, "Not loaded")
+        self.status_label: QLabel | None = self._add_toolbar_label(toolbar, "Not loaded")
         self._debug_buttons: list[QPushButton | QAction] = [
             self._run_btn,
             self._pause_btn,
@@ -571,7 +571,7 @@ class X64DbgPanel(AnalysisPanelBase):
         native_layout.addWidget(self._content_scroll_area)
         self._main_tabs.addTab(native_container, self.tr("Analysis"))
 
-        self.embed_host = QWidget()
+        self.embed_host: QWidget = QWidget()
         embed_layout = QVBoxLayout(self.embed_host)
         embed_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         self._embed_status_label = QLabel(self.tr("No debugger process active"))

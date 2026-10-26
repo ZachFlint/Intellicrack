@@ -16,7 +16,7 @@ the GUI layer (L3). The three panel modules covered are:
 
 Every test drives the real Qt widget's button-click handler (not a
 re-implementation of it) against a real ``CutterBridge`` backed by a
-recording r2pipe double -- the genuine external boundary a live rizin child
+recording r2pipe double -- the external boundary a live rizin child
 process would occupy in this sandbox -- then pumps the Qt event loop until
 the real background ``run_bridge_coroutine_logged`` worker thread delivers
 its result, and asserts the exact rizin command issued and/or the exact
@@ -239,7 +239,7 @@ class TestListAttachableProcesses:
     def test_discover_button_populates_table_and_double_click_fills_pid(qapp: QApplication) -> None:
         """Clicking Refresh must issue 'dplj' and populate the table; double-clicking a row must fill the PID input.
 
-        Falsifiable: if ``_on_discover_processes`` never called
+        If ``_on_discover_processes`` never called
         ``self._bridge.list_attachable_processes``, 'dplj' would never be
         recorded and the table would stay empty. Broken production line:
         the ``run_bridge_coroutine_logged(self._bridge.list_attachable_processes(), ...)``
@@ -280,7 +280,7 @@ class TestDebuggerTabAttachDetach:
     def test_attach_button_issues_dp_command_and_updates_status(qapp: QApplication) -> None:
         """Clicking Attach with a PID must issue rizin's ``dp <pid>`` and update the status label.
 
-        Falsifiable: if ``DebuggerTab._on_attach`` never called
+        If ``DebuggerTab._on_attach`` never called
         ``self._bridge.attach(pid)``, 'dp 4242' would never appear in the
         recorder and the status label would remain 'Not attached'. Broken
         production line: the ``run_bridge_coroutine_logged(self._bridge.attach(pid), ...)``
@@ -311,7 +311,7 @@ class TestDebuggerTabAttachDetach:
     def test_detach_button_issues_dp_dash_and_clears_tables(qapp: QApplication) -> None:
         """Clicking Detach must issue rizin's ``dp-`` and clear the register/breakpoint tables.
 
-        Falsifiable: if ``_on_detach`` never called ``self._bridge.detach()``,
+        If ``_on_detach`` never called ``self._bridge.detach()``,
         'dp-' would never appear in the recorder and the tables would keep
         their prior rows. Broken production line: the
         ``run_bridge_coroutine_logged(self._bridge.detach(), ...)`` call in
@@ -351,7 +351,7 @@ class TestDebuggerTabBreakpoints:
     def test_add_breakpoint_issues_db_command_and_refreshes_table(qapp: QApplication) -> None:
         """Clicking Add with an address must issue rizin's ``db <addr>`` and populate the breakpoints table.
 
-        Falsifiable: if ``_on_add_breakpoint`` never called
+        If ``_on_add_breakpoint`` never called
         ``self._bridge.set_breakpoint``, 'db 4096' would never appear in the
         recorder and the breakpoints table would remain empty after the
         refresh. Broken production line: the
@@ -386,7 +386,7 @@ class TestDebuggerTabBreakpoints:
     def test_remove_breakpoint_issues_db_dash_command(qapp: QApplication) -> None:
         """Clicking Remove with an address must issue rizin's ``db- <addr>``.
 
-        Falsifiable: if ``_on_remove_breakpoint`` never called
+        If ``_on_remove_breakpoint`` never called
         ``self._bridge.remove_breakpoint``, 'db- 4096' would never appear in
         the recorder.
 
@@ -416,7 +416,7 @@ class TestDebuggerTabSteppingAndContinue:
     def test_step_into_issues_ds_and_updates_pc_status(qapp: QApplication) -> None:
         """Clicking Step Into must issue rizin's ``ds`` and reflect the returned PC in the status label.
 
-        Falsifiable: if ``_on_step_into`` called ``step_over`` instead of
+        If ``_on_step_into`` called ``step_over`` instead of
         ``step_into``, 'dso' would appear instead of 'ds', and this
         assertion (checking 'ds' is issued and 'dso' is not) would fail.
         Broken production line: ``self._bridge.step_into()`` call in
@@ -444,7 +444,7 @@ class TestDebuggerTabSteppingAndContinue:
     def test_step_over_issues_dso(qapp: QApplication) -> None:
         """Clicking Step Over must issue rizin's ``dso``, not the step-into ``ds``.
 
-        Falsifiable: same production line reasoning as step-into, mirrored
+        Same production line reasoning as step-into, mirrored
         for ``_on_step_over``/``step_over()``.
 
         Args:
@@ -466,7 +466,7 @@ class TestDebuggerTabSteppingAndContinue:
     def test_continue_issues_dc_and_sets_stopped_status(qapp: QApplication) -> None:
         """Clicking Continue must issue rizin's ``dc`` and set the status label to 'Stopped'.
 
-        Falsifiable: if ``_on_continue`` never called ``self._bridge.run()``,
+        If ``_on_continue`` never called ``self._bridge.run()``,
         'dc' would never be recorded and the status label would not read
         'Stopped'.
 
@@ -519,7 +519,7 @@ class TestSendSignal:
     def test_send_signal_button_issues_dk(qapp: QApplication) -> None:
         """Typing a signal number and clicking Send must issue rizin's 'dk <signal>'.
 
-        Falsifiable: if ``_on_send_signal`` never called
+        If ``_on_send_signal`` never called
         ``self._bridge.send_signal``, 'dk 11' would never appear in the
         recorder. Broken production line: the
         ``run_bridge_coroutine_logged(self._bridge.send_signal(signal), ...)``
@@ -552,7 +552,7 @@ class TestDebuggerTabRegisters:
     def test_refresh_registers_calls_drj_and_populates_table(qapp: QApplication) -> None:
         """The register table must issue rizin's ``drj`` and render the real rax value.
 
-        Falsifiable: if ``_refresh_registers`` never called
+        If ``_refresh_registers`` never called
         ``self._bridge.get_registers()``, 'drj' would never be recorded and
         the table would stay empty.
 
@@ -580,7 +580,7 @@ class TestDebuggerTabRegisters:
     def test_edit_register_cell_issues_dr_set_command(qapp: QApplication) -> None:
         """Editing a register value cell must issue rizin's ``dr <reg>=<value>``.
 
-        Falsifiable: if ``_on_register_edited`` never called
+        If ``_on_register_edited`` never called
         ``self._bridge.set_register``, 'dr rax=291' would never be recorded.
         Broken production line: the
         ``run_bridge_coroutine_logged(self._bridge.set_register(reg_name, value), ...)``
@@ -617,7 +617,7 @@ class TestDebuggerTabMemory:
     def test_read_memory_issues_p8_and_renders_hex_dump(qapp: QApplication) -> None:
         """Clicking Read must issue rizin's ``p8 <size> @ <addr>`` and render a hex dump containing the real bytes.
 
-        Falsifiable: if ``_on_read_memory`` never called
+        If ``_on_read_memory`` never called
         ``self._bridge.read_memory``, 'p8 4 @ 4096' would never be recorded
         and the dump view would stay empty.
 
@@ -647,7 +647,7 @@ class TestDebuggerTabMemory:
     def test_write_memory_issues_wx_and_rereads(qapp: QApplication) -> None:
         """Clicking Write must issue rizin's ``wx <hex> @ <addr>`` and then re-read the region.
 
-        Falsifiable: if ``_on_write_memory`` never called
+        If ``_on_write_memory`` never called
         ``self._bridge.write_memory``, 'wx 90909090 @ 4096' would never be
         recorded. Broken production line: the
         ``run_bridge_coroutine_logged(self._bridge.write_memory(address, data), ...)``
@@ -684,7 +684,7 @@ class TestDebuggerTabRegionsThreadsModules:
     def test_refresh_regions_calls_dmj_and_populates_table(qapp: QApplication) -> None:
         """The memory-regions table must issue rizin's ``dmj`` and render the real base address.
 
-        Falsifiable: if ``_refresh_regions`` never called
+        If ``_refresh_regions`` never called
         ``self._bridge.get_memory_regions()``, 'dmj' would never be recorded.
 
         Args:
@@ -710,7 +710,7 @@ class TestDebuggerTabRegionsThreadsModules:
     def test_refresh_threads_calls_dptj_and_populates_table(qapp: QApplication) -> None:
         """The threads table must issue rizin's ``dptj`` and render the real thread id.
 
-        Falsifiable: if ``_refresh_threads`` never called
+        If ``_refresh_threads`` never called
         ``self._bridge.get_threads()``, 'dptj' would never be recorded.
 
         Args:
@@ -735,7 +735,7 @@ class TestDebuggerTabRegionsThreadsModules:
     def test_refresh_modules_calls_dmmj_and_populates_table(qapp: QApplication) -> None:
         """The modules table must issue the backend's ``dmmj`` and render the real module name.
 
-        Falsifiable: if ``_refresh_modules`` never called
+        If ``_refresh_modules`` never called
         ``self._bridge.get_modules()``, 'dmmj' would never be recorded.
 
         Args:
@@ -766,7 +766,7 @@ class _SideEffectingSaveRecorder(CommandRecorder):
     disk, because rizin's ``Ps`` silently no-ops on some failure modes instead of reporting an error through its command output. The base
     :class:`CommandRecorder` only records the command string and returns a canned response -- it never touches the filesystem -- so a save
     driven against it alone would always fail that disk-existence check. This subclass stays faithful to the real external tool by writing
-    the target file whenever it sees a ``Ps <path>`` command, so the verification step it feeds exercises genuine on-disk behaviour instead
+    the target file whenever it sees a ``Ps <path>`` command, so the verification step it feeds exercises on-disk behavior instead
     of vacuously failing or being bypassed.
     """
 
@@ -793,13 +793,13 @@ class TestProjectTabSaveOpenList:
     def test_save_button_issues_ps_command_and_refreshes_list(qapp: QApplication, tmp_path: Path) -> None:
         """Clicking Save must issue rizin's fully-qualified ``Ps <dir>/<name>.rzdb`` and then re-list real projects.
 
-        Falsifiable: if ``_on_save`` never called ``self._bridge.save_project``, the fully-qualified ``Ps`` command below would never be
+        If ``_on_save`` never called ``self._bridge.save_project``, the fully-qualified ``Ps`` command below would never be
         recorded. Broken production line: the ``run_bridge_coroutine_logged(self._bridge.save_project(name), ...)`` call in
-        ``ProjectTab._on_save`` (``cutter_project_tab.py``). This also falsifies ``CutterBridge.save_project`` itself (``cutter.py``): it
+        ``ProjectTab._on_save`` (``cutter_project_tab.py``). This also covers ``CutterBridge.save_project`` itself (``cutter.py``): it
         resolves ``dir.projects`` to a real directory and builds an explicit ``<dir>/<name>.rzdb``
         path rather than the bare ``Ps <name>`` form that rizin rejects, then verifies that exact
         file exists on disk before reporting success --
-        :class:`_SideEffectingSaveRecorder` mimics that real disk write so the verification step is genuinely exercised rather than
+        :class:`_SideEffectingSaveRecorder` mimics that real disk write so the verification step is exercised rather than
         trivially satisfied by a double that never touches the filesystem.
 
         Args:
@@ -829,7 +829,7 @@ class TestProjectTabSaveOpenList:
     def test_open_button_issues_po_command(qapp: QApplication) -> None:
         """Clicking Open with a project name must issue rizin's ``Po <name>``.
 
-        Falsifiable: if ``_on_open`` never called
+        If ``_on_open`` never called
         ``self._bridge.open_project``, 'Po license_analysis' would never be
         recorded.
 
@@ -857,7 +857,7 @@ class TestProjectTabSaveOpenList:
     def test_refresh_lists_real_multiple_projects(qapp: QApplication, tmp_path: Path) -> None:
         """Refresh must scan the real ``dir.projects`` directory and list every real ``.rzdb`` file found there.
 
-        Falsifiable: if ``CutterBridge.list_projects`` mis-scanned or mis-parsed the directory (it
+        If ``CutterBridge.list_projects`` mis-scanned or mis-parsed the directory (it
         does not issue rizin's ``Pl`` command. It globs ``*.rzdb`` files with
         ``_list_rzdb_project_names`` over the ``_resolve_projects_dir``-resolved directory, both in
         ``cutter.py``), or ``ProjectTab._on_refresh`` failed to dispatch ``list_projects`` at all,
@@ -886,7 +886,7 @@ class TestProjectTabSaveOpenList:
     def test_double_click_project_opens_it(qapp: QApplication, tmp_path: Path) -> None:
         """Double-clicking a real listed project must open it via rizin's ``Po <name>``.
 
-        Falsifiable: if ``_on_item_double_clicked`` never invoked ``_open_project``, 'Po beta_target' would never be recorded. The listed
+        If ``_on_item_double_clicked`` never invoked ``_open_project``, 'Po beta_target' would never be recorded. The listed
         entry itself comes from a real ``beta_target.rzdb`` file pre-created on disk below and discovered by the same directory-scan
         ``CutterBridge.list_projects`` uses in production, not from a ``Pl`` command.
 
@@ -922,7 +922,7 @@ class TestSearchTabByteModes:
     def test_bytes_mode_issues_xj_with_clean_hex(qapp: QApplication) -> None:
         """Bytes mode must issue rizin's ``/xj`` with the exact hex pattern and render the matched address.
 
-        Falsifiable: if ``_on_search`` dispatched a different bridge method
+        If ``_on_search`` dispatched a different bridge method
         for Bytes mode, '/xj 4889e5' would never be recorded and the result
         table would stay empty. Broken production line: the
         ``self._bridge.search_bytes(pattern)`` branch of
@@ -957,7 +957,7 @@ class TestSearchTabByteModes:
     def test_wildcard_mode_translates_question_marks_to_dots(qapp: QApplication) -> None:
         """Wildcard Bytes mode must translate '??' into rizin's '..' wildcard syntax before issuing ``/xj``.
 
-        Falsifiable: if the wildcard mode called plain ``search_bytes``
+        If the wildcard mode called plain ``search_bytes``
         (which does not translate wildcards) instead of
         ``search_bytes_wildcard``, the literal string '4889????' would be
         sent instead of '4889....', and this assertion would fail.
@@ -993,7 +993,7 @@ class TestSearchTabStringAssemblyModes:
     def test_string_mode_encodes_text_as_utf8_hex(qapp: QApplication) -> None:
         """String mode must UTF-8-hex-encode the pattern before issuing ``/xj`` (injection-safe path).
 
-        Falsifiable: if String mode dispatched the regex-based
+        If String mode dispatched the regex-based
         ``search_strings`` (``izj``) instead of ``search_string_live``
         (``/xj`` on encoded bytes), the exact hex-encoded command below
         would never be issued.
@@ -1026,7 +1026,7 @@ class TestSearchTabStringAssemblyModes:
     def test_assembly_mode_issues_aj_with_raw_pattern(qapp: QApplication) -> None:
         """Assembly mode must issue rizin's ``/aj <pattern>`` verbatim.
 
-        Falsifiable: if Assembly mode dispatched ``search_bytes`` instead of
+        If Assembly mode dispatched ``search_bytes`` instead of
         ``search_assembly_pattern``, '/aj mov eax, ebx' would never be
         recorded (a '/xj ...' command would appear instead).
 
@@ -1059,7 +1059,7 @@ class TestSearchTabCryptoMagicValueModes:
     def test_crypto_mode_issues_cj_with_no_pattern_required(qapp: QApplication) -> None:
         """Crypto Constants mode must issue rizin's ``/cj`` even with the pattern field disabled/empty.
 
-        Falsifiable: if Crypto mode required a non-empty pattern before
+        If Crypto mode required a non-empty pattern before
         dispatching (like Bytes mode does), '/cj' would never be issued for
         an empty pattern field.
 
@@ -1088,7 +1088,7 @@ class TestSearchTabCryptoMagicValueModes:
     def test_magic_mode_issues_mj(qapp: QApplication) -> None:
         """Magic Signatures mode must issue rizin's ``/mj``.
 
-        Falsifiable: if Magic mode dispatched ``search_crypto_constants``
+        If Magic mode dispatched ``search_crypto_constants``
         instead of ``search_magic``, '/mj' would never appear (only '/cj'
         would).
 
@@ -1114,7 +1114,7 @@ class TestSearchTabCryptoMagicValueModes:
     def test_value_mode_issues_vj_sized_by_the_size_combo(qapp: QApplication) -> None:
         """Numeric Value mode must issue rizin's ``/vj<size> <value>`` using the selected value-size combo entry.
 
-        Falsifiable: if the value-size combo box selection were not
+        If the value-size combo box selection were not
         threaded through to ``search_value``'s ``size`` argument, '/vj8'
         (8-byte) would never be issued when '8' is selected -- the default
         '/vj4' would appear instead.
@@ -1153,7 +1153,7 @@ class TestSearchTabCompare:
     def test_compare_bytes_issues_c_command_and_renders_output(qapp: QApplication) -> None:
         """Clicking Compare Bytes must issue rizin's ``c <hex> @ <addr>`` and render the returned diff text.
 
-        Falsifiable: if ``_on_compare_bytes`` never called
+        If ``_on_compare_bytes`` never called
         ``self._bridge.compare_bytes``, 'c 90909090 @ 4096' would never
         appear and the compare output view would stay empty.
 
@@ -1184,7 +1184,7 @@ class TestSearchTabCompare:
     def test_compare_disassembly_issues_disasm_and_json_diff_commands(qapp: QApplication, tmp_path: Path) -> None:
         """Clicking Compare Disasm must issue rizin's ``cD`` and ``cCj`` with the selected file path and address.
 
-        Falsifiable: if ``_on_compare_disassembly`` never called
+        If ``_on_compare_disassembly`` never called
         ``self._bridge.compare_disassembly``, neither 'cD' nor 'cCj' would
         appear with the real file path substituted in.
 
@@ -1223,7 +1223,7 @@ class TestSearchTabCompare:
 class TestConditionalContinue:
     """L1/L2/L3 gate: conditional continue (rizin 'dcs'/'dcc'/'dcu') must be real and reachable.
 
-    Falsified by: changing the "address" branch to issue ``f"dc {resolved_address}"`` instead of
+    Changing the "address" branch to issue ``f"dc {resolved_address}"`` instead of
     ``f"dcu {resolved_address}"`` turns ``test_address_mode_issues_dcu`` red immediately, because
     ``"dcu 4198400"`` no longer appears in ``recorder.commands``. Independently, deleting the
     ``mode == "address" and target is None`` guard makes ``test_address_mode_without_target_raises``
@@ -1301,7 +1301,7 @@ class TestConditionalContinue:
     def test_continue_until_button_issues_dcc_in_call_mode(qapp: QApplication) -> None:
         """Selecting 'call' mode and clicking Continue Until must issue rizin's 'dcc'.
 
-        Falsifiable: if ``_on_continue_until`` ignored the mode combo or
+        If ``_on_continue_until`` ignored the mode combo or
         never called ``self._bridge.continue_until``, 'dcc' would never
         appear in the recorder. Broken production line: the
         ``run_bridge_coroutine_logged(self._bridge.continue_until(mode, target), ...)``
@@ -1337,7 +1337,7 @@ class TestConditionalContinue:
     def test_continue_until_address_mode_requires_valid_target(qapp: QApplication) -> None:
         """Selecting 'address' mode with an unparseable target must not issue 'dcu' or crash.
 
-        Falsifiable: if ``_on_continue_until`` forwarded the raw, unparsed
+        If ``_on_continue_until`` forwarded the raw, unparsed
         target text straight to the bridge instead of validating it via
         ``_parse_address`` first, a malformed target would either raise an
         uncaught exception or silently issue a bogus 'dcu' command.
@@ -1372,7 +1372,7 @@ class TestGetBacktrace:
     async def test_issues_dbtj_and_parses_frames() -> None:
         """``get_backtrace`` must issue rizin's 'dbtj' and parse the real returned frames.
 
-        Falsifiable: if the issued command dropped the 'j' JSON-output
+        If the issued command dropped the 'j' JSON-output
         suffix (issuing plain 'dbt' instead), the recorder's JSON payload
         would never be returned and ``_extract_rizin_json`` would fail to
         parse rizin's plain human-readable backtrace text.
@@ -1407,7 +1407,7 @@ class TestGetBacktrace:
     def test_refresh_backtrace_populates_table(qapp: QApplication) -> None:
         """The Backtrace tab's refresh must issue 'dbtj' and render the real function name.
 
-        Falsifiable: if ``_refresh_backtrace`` never called
+        If ``_refresh_backtrace`` never called
         ``self._bridge.get_backtrace()``, 'dbtj' would never be recorded
         and the table would stay empty. Broken production line: the
         ``self._bridge.get_backtrace()`` call in
@@ -1438,7 +1438,7 @@ class TestGetBacktrace:
     def test_detach_clears_backtrace_table(qapp: QApplication) -> None:
         """Detaching must clear the backtrace table along with the other debugger views.
 
-        Falsifiable: if ``_on_detach_success`` omitted the
+        If ``_on_detach_success`` omitted the
         ``self._backtrace_table.setRowCount(0)`` line, the backtrace rows
         populated before detach would still be visible afterward.
 
@@ -1467,7 +1467,7 @@ class TestGetBacktrace:
 class TestRemoveFlag:
     """L1/L2/L3 gate: flag removal (rizin 'f-') must be real and reachable.
 
-    Falsifiable: changing the issued command from ``"f- {name}"`` to ``"f
+    Changing the issued command from ``"f- {name}"`` to ``"f
     {name}"`` (a plausible one-character typo that would instead try to
     *add* a flag named ``name`` with no size/address) turns
     ``test_issues_f_dash_command`` red immediately.
@@ -1497,7 +1497,7 @@ class TestRemoveFlag:
     def test_context_menu_remove_action_issues_f_dash(qapp: QApplication) -> None:
         """Triggering the flag table's "Remove" context-menu action must issue rizin's 'f- <name>'.
 
-        Falsifiable: if ``_ctx_remove_flag`` never called
+        If ``_ctx_remove_flag`` never called
         ``self._bridge.remove_flag(name)``, 'f- my_flag' would never appear
         in the recorder and the flags table would not shrink back to zero
         rows. Broken production line: the
@@ -1531,7 +1531,7 @@ class TestRemoveFlag:
 class TestRenameFlag:
     """L1/L2/L3 gate: flag rename (rizin 'fr') must be real and reachable.
 
-    Falsifiable: swapping the argument order (``f"fr {new_name}
+    Swapping the argument order (``f"fr {new_name}
     {old_name}"``) turns ``test_issues_fr_command_with_correct_order`` red
     immediately, because the recorded command becomes ``"fr new_flag
     old_flag"`` instead of the asserted ``"fr old_flag new_flag"``.
@@ -1567,7 +1567,7 @@ class TestRenameFlag:
         ``QInputDialog.getText`` patched to supply a deterministic new name
         instead of blocking on a real modal dialog.
 
-        Falsifiable: if ``_ctx_rename_flag`` never called
+        If ``_ctx_rename_flag`` never called
         ``self._bridge.rename_flag(old_name, new_name)``, 'fr old_flag
         new_flag' would never appear in the recorder and the flags table
         would keep showing the old name. Broken production line: the
@@ -1617,7 +1617,7 @@ class TestRenameFlag:
 class TestFlagspaceManagement:
     """L1/L2/L3 gate: flagspace create/list/remove (rizin 'fs'/'fslj'/'fs-') must be real and reachable.
 
-    Falsifiable: each test below asserts a distinct exact command string
+    Each test below asserts a distinct exact command string
     (``"fs my_space"``, ``"fslj"``, ``"fs- my_space"``), so a regression in
     any one of ``add_flagspace``/``list_flagspaces``/``remove_flagspace`` is
     caught by exactly one test, not silently masked by the other two.
@@ -1671,7 +1671,7 @@ class TestFlagspaceManagement:
     def test_refresh_populates_flagspace_combo(qapp: QApplication) -> None:
         """Opening the flags tab must query 'fslj' and populate the flagspace combo box in order.
 
-        Falsifiable: if ``_on_refresh_flagspaces`` never called
+        If ``_on_refresh_flagspaces`` never called
         ``self._bridge.list_flagspaces()``, 'fslj' would never appear in
         the recorder and the combo box would stay empty. Broken production
         line: the
@@ -1701,7 +1701,7 @@ class TestFlagspaceManagement:
 class TestAddXref:
     """L1/L2/L3 gate: manually adding a cross-reference (rizin 'axc'/'axC'/'axd') must be real and reachable.
 
-    Falsifiable: each L1 test below asserts a distinct exact command for a
+    Each L1 test below asserts a distinct exact command for a
     distinct ``xref_type`` branch, so confusing ``axc``/``axC``/``axd`` with
     one another, or dropping the mandatory seek-first step, is caught by a
     specific assertion rather than a generic "some ax command ran" check.
@@ -1757,7 +1757,7 @@ class TestAddXref:
         patched to supply a deterministic target address instead of blocking
         on a real modal dialog.
 
-        Falsifiable: if ``_ctx_add_xref`` never called
+        If ``_ctx_add_xref`` never called
         ``self._bridge.add_xref(from_address, to_address, xref_type)``,
         'axC 4202496' would never appear in the recorder. Broken production
         line: the ``run_bridge_coroutine_logged(self._bridge.add_xref(...), ...)``
@@ -1807,7 +1807,7 @@ class TestAddXref:
 class TestRemoveXref:
     """L1/L2/L3 gate: removing a cross-reference (rizin 'ax-') must be real and reachable.
 
-    Falsifiable: the scoped-removal test asserts the exact two-argument
+    The scoped-removal test asserts the exact two-argument
     command string, so dropping ``from_address`` from the issued command
     when it was supplied is caught directly rather than by a looser
     "some ax- command ran" check.
@@ -1851,7 +1851,7 @@ class TestRemoveXref:
         real direction bookkeeping rather than asserting a fixed argument
         order.
 
-        Falsifiable: if ``_ctx_remove_xref`` swapped ``to_address``/
+        If ``_ctx_remove_xref`` swapped ``to_address``/
         ``from_address`` for the "To" direction branch, the recorder would
         see 'ax- 4194304 4198400' instead of the asserted 'ax- 4198400
         4194304'. Broken production line: the
@@ -1898,7 +1898,7 @@ class TestRemoveXref:
 class TestSeekRelative:
     """L1/L2/L3 gate: relative seek stepping (rizin 'sd') must be real and reachable.
 
-    Falsifiable: both L1 tests assert the exact signed delta in the issued
+    Both L1 tests assert the exact signed delta in the issued
     command, so a sign error (e.g. always issuing a positive delta) is
     caught directly rather than by a looser "some sd command ran" check.
     """
@@ -1927,7 +1927,7 @@ class TestSeekRelative:
     def test_back_button_issues_sd_with_negated_delta(qapp: QApplication) -> None:
         """Typing "16" and clicking the back button must issue rizin's 'sd -16', negating the typed delta.
 
-        Falsifiable: if ``_do_seek_relative`` ignored the ``negate`` flag (or
+        If ``_do_seek_relative`` ignored the ``negate`` flag (or
         applied it to the wrong sign), 'sd -16' would never appear in the
         recorder -- either the unnegated 'sd 16' would appear instead, or no
         'sd' command at all. Broken production line: the
@@ -1958,7 +1958,7 @@ class TestSeekRelative:
 class TestSeekHistory:
     """L1/L2/L3 gate: seek-history navigation (rizin 'sh'/'shu'/'shr') must be real and reachable.
 
-    Falsifiable: ``test_seek_undo_issues_shu`` and ``test_seek_redo_issues_shr``
+    ``test_seek_undo_issues_shu`` and ``test_seek_redo_issues_shr``
     assert direction-specific exact command strings, so swapping the two
     (undo issuing 'shr', redo issuing 'shu') fails both immediately rather
     than being masked by a single generic "some history command ran" check.

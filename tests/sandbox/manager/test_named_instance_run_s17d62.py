@@ -14,7 +14,7 @@ needs two runs in two different instances - must be able to name it.
 
 These tests drive the real :class:`SandboxManager` against the real
 :class:`~tests.sandbox.conftest.LocalProcessSandbox` backend. Each managed
-instance owns a genuinely separate temporary work directory, and the binary
+instance owns a separate temporary work directory, and the binary
 under test is a real interpreter process that really writes a file into the
 directory it was started in. Where the run landed is therefore read back off
 the filesystem, not from anything the test arranged.
@@ -135,7 +135,7 @@ def test_a_named_instance_receives_the_run() -> None:
 
     first, second, used_id = _run(_go())
 
-    assert first.id != second.id, "the two managed instances must be genuinely distinct"
+    assert first.id != second.id, "the two managed instances must have distinct ids"
     assert used_id == second.id, f"run_binary reported instance {used_id}, but {second.id} was named"
 
     first_marker = _workdir(first) / _MARKER_NAME
@@ -202,7 +202,7 @@ def test_reuse_without_a_name_still_collapses_onto_one_instance() -> None:
     assert not (_workdir(instances[1]) / _MARKER_NAME).exists()
 
 
-def test_naming_an_unknown_instance_fails_loudly() -> None:
+def test_naming_an_unknown_instance_raises_sandbox_error() -> None:
     """A directed run at an instance that does not exist must raise, not silently create one."""
     manager = _LocalBackendManager()
 
@@ -220,7 +220,7 @@ def test_naming_an_unknown_instance_fails_loudly() -> None:
     assert _run(_go()) == 1, "a failed directed run must not register an extra sandbox"
 
 
-def test_naming_a_busy_instance_fails_loudly() -> None:
+def test_naming_a_busy_instance_raises_sandbox_error() -> None:
     """A directed run at an instance already executing a binary must raise."""
     manager = _LocalBackendManager()
 

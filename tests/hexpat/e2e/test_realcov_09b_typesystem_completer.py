@@ -249,9 +249,9 @@ class _RecordingReflectionProvider:
 
     ``BuiltinFunctions.set_reflection_provider`` duck-types any object exposing
     the documented reflection callbacks, so this concrete provider exercises
-    the genuine dispatch path while capturing the exact pattern and value each
+    the dispatch path while capturing the exact pattern and value each
     ``std::core`` builtin forwarded. The recorded values are what the tests
-    assert against, so nothing about the dispatch itself is faked.
+    assert against.
     """
 
     def __init__(self) -> None:

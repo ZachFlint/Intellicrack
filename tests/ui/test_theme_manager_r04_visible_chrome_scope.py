@@ -25,7 +25,7 @@ installed as ``QApplication.style()`` (the same technique already established in
 flaky under the sandbox's shared load, while counting exactly which widgets the style was
 consulted for is deterministic and pinpoints the actual mechanism.
 
-Falsifiable: reverting ``ThemeManager._repolish_chrome`` to sweep ``QApplication.allWidgets()``
+Reverting ``ThemeManager._repolish_chrome`` to sweep ``QApplication.allWidgets()``
 (dropping the visible-top-level scoping and the lazy show-time deferral) makes every assertion
 below fail at once. The distinct-widget polish count jumps from ~23 to the hundreds, because every
 scroll area and role-frame across every hidden tab is polished (474 chrome candidates against

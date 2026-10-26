@@ -156,7 +156,7 @@ class _RecordingBridge:
     relying on wall-clock sleeps.
 
     The coroutine is real async so ``run_bridge_coroutine_logged`` receives
-    a genuine awaitable and the ``BridgeCallWorker`` thread executes it on
+    an awaitable and the ``BridgeCallWorker`` thread executes it on
     the persistent background event loop.  The bridge success callback
     (``_on_disassemble_success``) fires on the Qt main thread after the
     worker emits ``call_finished``.

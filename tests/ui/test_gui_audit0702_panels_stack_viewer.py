@@ -218,7 +218,7 @@ def test_m30_set_x64dbg_bridge_does_not_refresh_inactive_source(panel: StackView
     """Attaching an x64dbg bridge while Frida is active does not spuriously dispatch a refresh.
 
     The follow-up refresh is guarded by ``self._active_source == "x64dbg"``. This asserts that
-    guard is genuinely conditional rather than an unconditional refresh call.
+    guard is conditional rather than an unconditional refresh call.
 
     Args:
         panel: The StackViewerPanel under test.

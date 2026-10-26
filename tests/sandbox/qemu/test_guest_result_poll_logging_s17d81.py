@@ -442,7 +442,7 @@ class TestAnIdlePollSliceIsNotAnIncident:
             await client.disconnect()
             await channel.stop()
 
-        assert channel.reset_sent.is_set(), "the endpoint never reset the channel, so no genuine failure was staged"
+        assert channel.reset_sent.is_set(), "the endpoint never reset the channel, so no failure was staged"
         assert channel.commands == [_COMMAND], (
             f"the command reached the guest {len(channel.commands)} times; a dispatched command is never re-sent"
         )

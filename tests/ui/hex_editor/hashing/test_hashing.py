@@ -580,7 +580,7 @@ class TestRepairPeChecksumFiresNotify:
     """``_on_repair_pe_checksum`` must call ``notify_data_modified``.
 
     These tests use a minimal but valid PE32 image so the stub's real checksum
-    algorithm runs on genuine PE structure rather than an arbitrary byte buffer.
+    algorithm runs on a valid PE structure rather than an arbitrary byte buffer.
     """
 
     @staticmethod

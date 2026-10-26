@@ -15,8 +15,8 @@ accumulated text on every streamed chunk.
 All tests build a real :class:`~intellicrack.ui.chat.MessageBubble` and
 :class:`~intellicrack.ui.chat.ChatPanel` under the shared offscreen
 ``QApplication`` fixture and inspect the actual rendered
-``QTextBrowser.toHtml()``/``toPlainText()`` output -- no mocks or stubs stand
-in for the widget-construction or rendering logic.
+``QTextBrowser.toHtml()``/``toPlainText()`` output; the widget-construction
+and rendering logic run unpatched.
 """
 
 from __future__ import annotations

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-r"""Falsifiable gates for the Inno Setup hardening pass on ``intellicrack.iss``.
+r"""Tests for the Inno Setup hardening pass on ``intellicrack.iss``.
 
 The installer hardening changes are invisible to the existing
 stage/``.iss`` agreement gates because none of them touches a ``[Files]`` entry:
@@ -269,7 +269,7 @@ def directive_lines_outside_conditionals(iss_text: str, directive: str) -> list[
     return found
 
 
-# Parser falsifiability proofs
+# Parser self-checks
 
 
 def test_call_argument_splitter_respects_strings_and_nesting() -> None:
@@ -303,10 +303,10 @@ def test_pascal_code_section_extraction_stops_at_the_next_section() -> None:
 
 
 def test_iss_refuses_to_compile_on_an_older_inno_setup() -> None:
-    """Real gate: the script carries an ISPP floor of 6.6.0 or newer with an ``#error``.
+    """The script carries an ISPP floor of 6.6.0 or newer with an ``#error``.
 
-    Falsifiable by deleting the guard, by lowering ``EncodeVer`` below 6.6.0, or
-    by replacing the ``#error`` with a warning: the ``.iss`` uses directives that
+    Fails if the guard is deleted, if ``EncodeVer`` is lowered below 6.6.0, or
+    if the ``#error`` is replaced with a warning: the ``.iss`` uses directives that
     do not exist before 6.6.0, so without a hard stop the failure a packager sees
     is an unknown-directive error with no explanation.
     """
@@ -357,7 +357,7 @@ def test_readme_documents_the_compiler_floor() -> None:
 
 
 def test_signing_directives_live_inside_the_signtoolname_ifdef() -> None:
-    """Real gate: ``SignTool`` and ``SignedUninstaller`` are emitted only when opted in.
+    """``SignTool`` and ``SignedUninstaller`` are emitted only when opted in.
 
     Both must sit inside ``#ifdef SignToolName``. Hoisting ``SignedUninstaller``
     out is the specific regression this catches: with no ``SignTool`` bound, ISCC
@@ -403,7 +403,7 @@ def test_readme_documents_both_halves_of_the_signing_opt_in() -> None:
 
 
 def test_uninstall_tool_cache_prompt_defaults_to_keeping_the_cache() -> None:
-    """Real gate: the tool-cache prompt is suppressible and its silent default is NO.
+    """The tool-cache prompt is suppressible and its silent default is NO.
 
     Two independent regressions are caught. Reverting to a plain ``MsgBox`` fails
     the kind assertion (a plain ``MsgBox`` is not suppressed by
@@ -435,7 +435,7 @@ def test_tool_cache_deletion_is_the_only_deltree_in_the_uninstaller() -> None:
 
 
 def test_unsupported_windows_refusal_is_suppressible() -> None:
-    """Real gate: the fatal Windows-version dialog can be suppressed and defaults to OK.
+    """The fatal Windows-version dialog can be suppressed and defaults to OK.
 
     ``InitializeSetup`` returns ``False`` either way, so the message is advisory
     -- but as a plain ``MsgBox`` it is one of the boxes ``/SUPPRESSMSGBOXES``
@@ -464,7 +464,7 @@ def test_readme_records_the_unattended_safety_contract() -> None:
 
 
 def test_wizardsilent_is_never_reached_from_the_uninstall_path() -> None:
-    """Real gate: the Setup-only ``WizardSilent`` sits inside the ``Add`` branch.
+    """The Setup-only ``WizardSilent`` sits inside the ``Add`` branch.
 
     ``SetDefenderExclusion`` is shared: Setup calls it with ``'Add'`` and the
     uninstaller with ``'Remove'``. ``WizardSilent`` is a Setup-only function, so
@@ -489,7 +489,7 @@ def test_wizardsilent_is_never_reached_from_the_uninstall_path() -> None:
 
 
 def test_windows_floor_is_declared_in_setup_and_enforced_in_code() -> None:
-    """Real gate: ``MinVersion`` and the ``[Code]`` build guard describe one floor.
+    """``MinVersion`` and the ``[Code]`` build guard describe one floor.
 
     The guard comment claims build 10240, so the code must test the build number, not only
     ``Major < 10``. A Windows 10 build below RTM has to be refused. The build test must
@@ -511,7 +511,7 @@ def test_windows_floor_is_declared_in_setup_and_enforced_in_code() -> None:
 
 
 def test_architecture_refusal_is_declared_once_in_setup_not_twice_in_code() -> None:
-    """Real gate: the 64-bit refusal lives in ``[Setup]``, and ``[Code]`` does not repeat it.
+    """The 64-bit refusal lives in ``[Setup]``, and ``[Code]`` does not repeat it.
 
     ``ArchitecturesAllowed=x64os`` rejects a 32-bit host before ``InitializeSetup``
     ever runs, so an ``Is64BitInstallMode`` branch in [Code] would be unreachable. Removing
@@ -533,7 +533,7 @@ def test_architecture_refusal_is_declared_once_in_setup_not_twice_in_code() -> N
 
 
 def test_setup_declares_both_an_app_mutex_and_a_setup_mutex() -> None:
-    r"""Real gate: a second Setup process cannot race the first on the same ``{app}``.
+    r"""A second Setup process cannot race the first on the same ``{app}``.
 
     ``AppMutex`` only detects a running *application*; it does nothing about two
     Setup processes both running ``[InstallDelete]`` over the same tree. The
@@ -554,7 +554,7 @@ def test_setup_declares_both_an_app_mutex_and_a_setup_mutex() -> None:
 
 
 def test_dism_output_is_routed_through_the_logging_callback() -> None:
-    """Real gate: DISM output drives the gauge instead of being discarded to ``nil``.
+    """DISM output drives the gauge instead of being discarded to ``nil``.
 
     Passing ``nil`` as the last ``ExecAndLogOutput`` argument -- which
     leaves the bar at 0% for the whole enable -- turns this red.
@@ -669,7 +669,7 @@ def enable_hyperv_procedure(code: str) -> str:
 
 
 def test_dism_invocation_is_wrapped_in_a_try_except_that_logs_the_failure() -> None:
-    """Real gate: an exception from the DISM call is caught, logged, and made graceful.
+    """An exception from the DISM call is caught, logged, and made graceful.
 
     ``ExecAndLogOutput`` raises -- not returns ``False`` -- when the child cannot
     be created at all (for example a redirected or missing ``dism.exe``), and the
@@ -678,7 +678,7 @@ def test_dism_invocation_is_wrapped_in_a_try_except_that_logs_the_failure() -> N
     procedure falls through to its ``if not Launched`` recovery instead of letting
     the exception unwind through Setup.
 
-    Falsifiable three ways: dropping the nested handler so the innermost ``try``
+    Fails three ways: dropping the nested handler so the innermost ``try``
     guarding the call becomes a bare ``try``/``finally`` makes ``except`` no longer
     the first handler after the call; removing the ``GetExceptionMessage`` log
     empties the handler; and deleting the ``if not Launched`` branch removes the
@@ -743,7 +743,7 @@ def test_try_except_detection_distinguishes_except_from_finally() -> None:
 
 
 def test_build_info_stamp_is_packaged_into_the_app_directory() -> None:
-    """Real gate: ``build-info.json`` is an installed file, not a stage-only artifact.
+    """``build-info.json`` is an installed file, not a stage-only artifact.
 
     The stamp is what lets a support request name the exact commit an installed
     tree came from. Staging it without a ``[Files]`` entry -- the state to avoid

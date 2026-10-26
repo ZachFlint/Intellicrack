@@ -5,7 +5,7 @@
 """Coverage for the bridge wiring, guards, file pickers, run and report display, snapshot, capture and analysis slots of ``SandboxPanel``.
 
 Every test drives a real ``SandboxPanel`` against a real ``SandboxBridge``. Slots that dispatch a bridge call are given a sandbox id the real
-manager does not know, so the genuine bridge answers with the genuine ``ToolError`` that the real error handlers then display. Result
+manager does not know, so the bridge answers with its own ``ToolError`` that the real error handlers then display. Result
 handlers are fed dictionaries built the way the bridge builds them: ``SandboxBridge._report_to_dict`` over a real ``ExecutionReport`` for run
 results, and the literal result shapes of the bridge methods for everything else. Backend objects are real, unstarted ``WindowsSandbox`` and
 ``QEMUSandbox`` instances. Expected values come from the schemas in ``intellicrack.sandbox.base`` and ``log_helpers``, never from the panel.

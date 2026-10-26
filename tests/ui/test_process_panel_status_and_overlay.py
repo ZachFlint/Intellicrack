@@ -77,7 +77,7 @@ class TestStatusBarHeightDerivedFromFontMetrics:
         Sets the application default font to a large point size before
         constructing the panel (so the status bar's own font reflects it),
         then asserts the built status bar is at least as tall as that font's
-        own line height, with genuine headroom above it. A restored
+        own line height, with headroom above it. A restored
         ``_STATUS_HEIGHT = 24`` fixed height fails this outright once the
         enlarged font's line height alone exceeds 24px.
 

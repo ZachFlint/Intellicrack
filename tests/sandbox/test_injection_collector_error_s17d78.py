@@ -9,7 +9,7 @@
 report that its ETW trace session died, so several of its failure paths call
 ``Write-InjectionRecord`` with ``-SourceName 'tracer'`` and
 ``-InjectionType 'ERROR'``. :func:`parse_injection_log` must not hand those
-rows to the report as genuine injection events, and :func:`match_behaviors`
+rows to the report as injection events, and :func:`match_behaviors`
 turned each one into a *critical* ``T1055`` "Process Injection" finding
 against whatever the sandbox happened to be running. On the live Windows 11
 QEMU guest that produced a critical injection finding for a sample that had
@@ -57,7 +57,7 @@ _RECORD_WRITER: Final[str] = "Write-InjectionRecord"
 # collector-error marker all come out of the script text these two prefixes
 # find. Both extractions are asserted non-empty, so renaming a call site in
 # the script fails the gate rather than quietly emptying it.
-_GENUINE_CALL_PREFIX: Final[str] = f"{_RECORD_WRITER} -Timestamp $ts -SourcePid $sourcePid"
+_INJECTION_CALL_PREFIX: Final[str] = f"{_RECORD_WRITER} -Timestamp $ts -SourcePid $sourcePid"
 _TRACER_CALL_PREFIX: Final[str] = f"{_RECORD_WRITER} -Timestamp $ts -SourcePid 0 -SourceName 'tracer'"
 _INJECTION_TYPE_ASSIGNMENT: Final[re.Pattern[str]] = re.compile(r"\$injType = '([A-Za-z_]+)'")
 _INJECTION_TYPE_ARGUMENT: Final[re.Pattern[str]] = re.compile(r"-InjectionType '([^']+)'")
@@ -66,7 +66,7 @@ _SOURCE_PID: Final[int] = 4321
 _SOURCE_NAME: Final[str] = "loader.exe"
 _TARGET_PID: Final[int] = 8765
 _TARGET_NAME: Final[str] = "explorer.exe"
-_GENUINE_TIMESTAMP: Final[str] = "2026-08-09T11:04:18.4412207+00:00"
+_INJECTION_TIMESTAMP: Final[str] = "2026-08-09T11:04:18.4412207+00:00"
 _ERROR_TIMESTAMP: Final[str] = "2026-08-09T11:04:19.8830115+00:00"
 _TRACE_FAILURE_MESSAGE: Final[str] = "The trace session could not be started"
 _MITRE_PROCESS_INJECTION: Final[str] = "T1055"
@@ -199,8 +199,8 @@ def _emit_records(shared: Path, *, with_tracer_errors: bool) -> _Emission:
     """
     lines = _script_lines()
     writer = _extract_function(lines, _RECORD_WRITER)
-    genuine = _extract_statements(lines, _GENUINE_CALL_PREFIX)
-    assert genuine, f"{_SCRIPT_PATH.name} no longer records a resolved remote-thread start"
+    injection_calls = _extract_statements(lines, _INJECTION_CALL_PREFIX)
+    assert injection_calls, f"{_SCRIPT_PATH.name} no longer records a resolved remote-thread start"
     tracer = _extract_statements(lines, _TRACER_CALL_PREFIX)
     assert tracer, f"{_SCRIPT_PATH.name} no longer records its own trace-session failure"
 
@@ -216,14 +216,14 @@ def _emit_records(shared: Path, *, with_tracer_errors: bool) -> _Emission:
         "$ErrorActionPreference = 'Stop'",
         f"$script:logPathRef = '{quoted_log_path}'",
         writer,
-        f"$ts = '{_GENUINE_TIMESTAMP}'",
+        f"$ts = '{_INJECTION_TIMESTAMP}'",
         f"$sourcePid = {_SOURCE_PID}",
         f"$sourceName = '{_SOURCE_NAME}'",
         f"$evtPid = {_TARGET_PID}",
         f"$targetName = '{_TARGET_NAME}'",
         f"$injType = '{injection_type}'",
         "$unique = @('KernelTrace/ThreadStart', 'KernelTrace/VirtualAlloc')",
-        genuine[0],
+        injection_calls[0],
     ]
     if with_tracer_errors:
         driver.extend([f"$ts = '{_ERROR_TIMESTAMP}'", f"$msg = '{_TRACE_FAILURE_MESSAGE}'", *tracer])
@@ -296,7 +296,7 @@ class TestTheCollectorsOwnErrorRowIsNotAnInjection:
 
     @pytest.mark.asyncio
     async def test_no_tracer_error_row_survives_parsing(self, tmp_path: Path) -> None:
-        """Confirm only the genuine injection is parsed out of the log.
+        """Confirm only the remote-thread injection is parsed out of the log.
 
         Args:
             tmp_path: pytest-provided temporary directory fixture.
@@ -332,11 +332,10 @@ class TestTheCollectorsOwnErrorRowIsNotAnInjection:
         assert all("tracer" not in match["description"] for match in injections)
 
     @pytest.mark.asyncio
-    async def test_a_genuine_injection_is_still_reported(self, tmp_path: Path) -> None:
+    async def test_a_remote_thread_injection_is_still_reported(self, tmp_path: Path) -> None:
         """Confirm the filter costs nothing: a real injection still lands.
 
-        This is the control. It keeps the gate honest about what it proves -
-        without it, a parser that dropped every row would pass the two tests
+        This is the control: without it, a parser that dropped every row would pass the two tests
         above.
 
         Args:

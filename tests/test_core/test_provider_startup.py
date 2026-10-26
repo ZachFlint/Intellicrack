@@ -48,7 +48,7 @@ def _loader_without_credentials(env_path: Path, monkeypatch: pytest.MonkeyPatch)
     alias - sourced directly from ``CredentialLoader.PROVIDER_MAPPINGS`` so the
     set cannot drift - from the process environment. The sandbox runner injects
     real provider keys into ``os.environ``; without these deletions the loader's
-    genuine ``os.environ`` fallback would surface live keys, causing keyed
+    ``os.environ`` fallback would surface live keys, causing keyed
     providers to attempt real network connections at startup instead of
     registering credential-less.
 

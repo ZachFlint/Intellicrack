@@ -172,7 +172,7 @@ class TestHashAlgorithms:
         """Verify the distinct BLAKE2b and BLAKE2s algorithms produce different 256-bit digests.
 
         Both yield 64 hex characters, so a length-only check could not tell them apart; this
-        asserts the two algorithm arms are wired to genuinely different primitives.
+        asserts the two algorithm arms are wired to different primitives.
 
         Args:
             sample_doc_from_bytes: HexDocument created from sample_bytes.

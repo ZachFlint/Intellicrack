@@ -9,10 +9,12 @@ import asyncio
 import struct
 from typing import TYPE_CHECKING, Any
 
+import pefile
 import pytest
 
 
 if TYPE_CHECKING:
+    import types
     from collections.abc import Coroutine
     from pathlib import Path
 
@@ -284,3 +286,82 @@ class TestPEChecksumAlgorithm:
         oracle_checksum: int = _pe_checksum_oracle(raw, _ORACLE_CHECKSUM_OFFSET)
         assert oracle_checksum == _ORACLE_CALCULATED
         assert e_lfanew == 0x80
+
+
+def _pefile_checksum(data: bytes) -> tuple[int, int, int]:
+    """Read a PE's stored checksum, its field offset and its recomputed checksum with ``pefile``.
+
+    ``pefile`` is an independent PE implementation, so its ``generate_checksum`` is an oracle the
+    engine's checksum shares no code with.
+
+    Args:
+        data: PE image bytes.
+
+    Returns:
+        tuple[int, int, int]: The stored CheckSum, the CheckSum field's file offset, and the
+            checksum ``pefile`` computes for ``data``.
+    """
+    pe = pefile.PE(data=data, fast_load=True)
+    try:
+        return pe.OPTIONAL_HEADER.CheckSum, pe.OPTIONAL_HEADER.get_file_offset() + 64, pe.generate_checksum()
+    finally:
+        pe.close()
+
+
+class TestRepairUndo:
+    """Undoing a checksum repair restores the stored field byte for byte."""
+
+    @staticmethod
+    def test_repair_then_undo_restores_the_stored_bytes_exactly(hexcore: types.ModuleType, pe_binary_full: Path) -> None:
+        """The repair writes the checksum little-endian and its undo puts back the four bytes that were there.
+
+        The stored field is set to an asymmetric value first, so a repair record that saved the old
+        checksum in the wrong byte order restores the bytes reversed.
+
+        Args:
+            hexcore: The imported native module.
+            pe_binary_full: A PE32 image whose checksum field sits at offset 216.
+        """
+        stored = bytes([0x44, 0x33, 0x22, 0x11])
+        doc = hexcore.HexDocument.open_bytes(pe_binary_full.read_bytes())
+        doc.write_bytes(_ORACLE_CHECKSUM_OFFSET, stored)
+
+        doc.repair_pe_checksum()
+        assert doc.read(_ORACLE_CHECKSUM_OFFSET, 4) == _ORACLE_CALCULATED.to_bytes(4, "little")
+
+        assert doc.undo() is True
+        assert doc.read(_ORACLE_CHECKSUM_OFFSET, 4) == stored
+
+
+class TestGenuinePEChecksum:
+    """``verify_pe_checksum`` agrees with ``pefile`` on genuine linker-built DLLs."""
+
+    @staticmethod
+    def test_system_dll_checksums_match_pefile(hexcore: types.ModuleType, real_pe_dlls: list[Path]) -> None:
+        """Every system DLL's nonzero stored checksum is recomputed exactly, at the field ``pefile`` locates.
+
+        Args:
+            hexcore: The imported native module.
+            real_pe_dlls: Genuine System32 DLLs.
+        """
+        for dll in real_pe_dlls:
+            data = dll.read_bytes()
+            stored, offset, calculated = _pefile_checksum(data)
+            info = hexcore.HexDocument.open_bytes(data).verify_pe_checksum()
+            assert stored != 0, dll.name
+            assert info == {"stored": stored, "calculated": calculated, "offset": offset, "valid": True}, dll.name
+
+    @staticmethod
+    def test_flipped_code_byte_is_detected_with_the_pefile_value(hexcore: types.ModuleType, real_pe_dll: Path) -> None:
+        """A one-byte change deep in a genuine DLL invalidates the checksum by exactly the value ``pefile`` computes.
+
+        Args:
+            hexcore: The imported native module.
+            real_pe_dll: A genuine System32 DLL.
+        """
+        data = bytearray(real_pe_dll.read_bytes())
+        data[len(data) // 2] ^= 0x01
+        stored, offset, calculated = _pefile_checksum(bytes(data))
+        info = hexcore.HexDocument.open_bytes(bytes(data)).verify_pe_checksum()
+        assert calculated != stored
+        assert info == {"stored": stored, "calculated": calculated, "offset": offset, "valid": False}

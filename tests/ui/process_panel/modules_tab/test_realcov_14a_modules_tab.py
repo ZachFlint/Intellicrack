@@ -7,7 +7,7 @@
 The module tree is checked against the real ``ProcessBridge.get_modules``
 enumeration rather than hand-built module dicts. These tests attach a real
 :class:`ProcessBridge` to the running interpreter and drive
-``ModulesTab._refresh_modules`` so the module tree renders genuine loaded
+``ModulesTab._refresh_modules`` so the module tree renders the loaded
 Win32 modules. Assertions check real, verifiable values: every Python
 process on Windows loads ``ntdll.dll`` and ``kernel32.dll`` with non-zero
 base addresses and sizes, and the rendered base address must match the real
@@ -133,7 +133,7 @@ def test_module_tree_lists_real_system_dlls(qapp: QApplication, tab: _ModulesTab
 
     Every Win32 process loads ``ntdll.dll`` and (for a normal user-mode
     process) ``kernel32.dll``; the rendered tree must contain both with
-    non-zero base addresses, proving genuine module enumeration drives the UI.
+    non-zero base addresses, showing that module enumeration drives the UI.
 
     Args:
         qapp: Qt application driving the event loop.

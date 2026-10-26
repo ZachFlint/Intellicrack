@@ -4,7 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Gates on reasoning replay, multi-part tool results and external dispatch.
 
-Three contracts, none of which fails loudly when broken.
+Three contracts, none of which raises an error when broken.
 
 A reasoning block carries a provider-opaque payload -- an Anthropic
 ``signature``, a Responses item id, an encrypted body -- that has to come back

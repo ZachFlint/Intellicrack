@@ -72,8 +72,7 @@ def test_delete_script_retains_entry_when_backing_file_cannot_be_unlinked(tmp_pa
 
     Marks the saved file read-only, which on Windows makes ``DeleteFile``
     fail with access-denied regardless of the calling process's own
-    ownership of the file - a genuine Windows delete failure mode, not a
-    mock. The failure must be reported via the return value, and the in-memory
+    ownership of the file. The failure must be reported via the return value, and the in-memory
     entry must be retained so the user can retry (for example after clearing the
     read-only attribute), rather than leaving the list entry gone while the file
     whose deletion failed still exists.

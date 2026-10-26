@@ -42,7 +42,7 @@ _POLL_S: Final[float] = 0.05
 def test_a_change_waits_out_a_lock_held_longer_than_the_c_runtime_would(tmp_path: Path) -> None:
     """A change made while another process holds the lock for thirteen seconds is applied once the lock is free.
 
-    Falsifiable: taken with the C runtime's blocking lock, the lock is given
+    With the C runtime's blocking lock, the lock is given
     up after ten seconds and the change raises "Resource deadlock avoided".
 
     Args:

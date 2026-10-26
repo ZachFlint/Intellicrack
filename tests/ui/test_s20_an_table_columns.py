@@ -38,7 +38,7 @@ def test_empty_table_columns_still_respect_a_readable_floor(qapp: QApplication) 
     ``ResizeToContents`` ones -- to at least the given width, regardless of
     how little content (here, no rows at all) a column has to size itself
     from. The Sections table's two-character "VA" header is the shortest in
-    the panel, making it the tightest real-world case.
+    the panel, making it the tightest case the panel produces.
 
     Args:
         qapp: QApplication fixture required by Qt widgets.

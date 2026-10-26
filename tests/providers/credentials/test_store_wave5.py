@@ -80,7 +80,7 @@ def _clear_ollama_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
     The test sandbox container ships provider keys in os.environ, and the
     CredentialLoader falls back to os.environ; clearing OLLAMA_API_KEY makes
-    the "no credential" precondition genuinely hold.
+    the "no credential" precondition hold.
 
     Args:
         monkeypatch: pytest monkeypatch fixture used to delete the variables.

@@ -100,7 +100,7 @@ check(
 check(
   'bytesEditor (finding #1): editing the textarea keeps the canonical value in sync',
   /area\.addEventListener\('input', \(\) => \{\s*try \{\s*canonicalHex = mode\.value === 'hex' \? normaliseHex\(area\.value, parameter\.name\) : asciiToHex\(area\.value\);/.test(bytesEditorBody),
-  'a genuine user edit to the textarea no longer updates canonicalHex, so an edit made while viewing ascii would be '
+  'a user edit to the textarea no longer updates canonicalHex, so an edit made while viewing ascii would be '
     + 'lost the next time the mode is toggled',
 );
 check(

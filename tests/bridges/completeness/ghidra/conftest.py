@@ -36,7 +36,7 @@ def priv(obj: object, name: str, typ: type[object] | tuple[type[object], ...]) -
     ``reportPrivateUsage`` diagnostic, and the explicit ``typ`` argument
     both keeps the result statically typed (instead of falling back to
     ``Any``) and is verified against the live attribute at runtime, so a
-    stale/renamed widget type fails loudly here rather than surfacing as
+    stale/renamed widget type raises ``TypeError`` here rather than surfacing as
     a confusing ``AttributeError`` deeper in the test body. The overload
     pair mirrors ``isinstance``'s own single-type/tuple-of-types split so
     callers can narrow to one of several acceptable widget types.
@@ -107,7 +107,7 @@ class FakeGhidraBridge:
     Ghidra-side return value that ``_execute_remote`` delivers back to
     the production method body under test. This is the only test double
     in this package, and it stands in solely for the external Ghidra
-    RPC transport (a genuine boundary that cannot run headless Ghidra in
+    RPC transport (an external boundary that cannot run headless Ghidra in
     the sandbox) -- every bridge method under test still executes for
     real against this fake wire.
     """

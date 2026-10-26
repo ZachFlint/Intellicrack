@@ -7,7 +7,7 @@
 
 Each parser is exercised by writing a real on-disk log file under a
 temporary shared-folder root (``<tmp_path>/logs/<name>``), then calling
-the parser and asserting on its return value. No mocking is used; the
+the parser and asserting on its return value. The
 parsers read the same files the in-guest agents write at runtime.
 """
 

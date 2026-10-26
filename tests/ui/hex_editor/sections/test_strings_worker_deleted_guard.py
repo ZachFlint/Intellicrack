@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gate: re-arming the strings scan must not crash on a deleted prior worker.
+"""Re-arming the strings scan must not crash on a deleted prior worker.
 
 ``SectionsMixin._populate_strings`` (``ui/panels/hex_editor/sections.py``) is
 invoked from ``HexEditorPanel._load_file_impl`` (``panel.py:826``) on every file
@@ -17,11 +17,10 @@ with ``isRunning()`` raises ``RuntimeError`` -- the C/C++ object has been delete
 -- rather than returning ``False``, crashing ``_populate_strings`` and, with it,
 the next file load.
 
-This test drives the real, unmodified worker against a real
-``intellicrack_hexcore`` document backed by a real System32 PE: it loads a file,
-lets the strings worker finish, forces its ``deleteLater`` to destroy the C++
-object while the panel still holds the wrapper, proves the dangling state is real
-(``isRunning`` raises), and then asserts a second ``_populate_strings`` neither
+This test drives the strings worker against an ``intellicrack_hexcore``
+document backed by a System32 PE: it loads a file, lets the strings worker
+finish, forces its ``deleteLater`` to destroy the C++ object while the panel
+still holds the wrapper, confirms the wrapper is dangling (``isRunning`` raises), and then asserts a second ``_populate_strings`` neither
 raises nor reuses the dead worker.
 
 Reverting the ``try/except RuntimeError`` guard in ``_populate_strings`` turns
@@ -55,13 +54,13 @@ _EVENT_PUMP_ITERATIONS: Final[int] = 50
 
 
 def _copy_to_writable(source: Path, dest_dir: Path) -> Path:
-    """Copy a real binary fixture into a writable temp directory.
+    """Copy a System32 binary fixture into a writable temp directory.
 
     The System32 originals are read-only; loading operates on a private
     writable copy so nothing touches the shared fixture.
 
     Args:
-        source: Real binary fixture to copy.
+        source: Binary fixture to copy.
         dest_dir: Writable destination directory (a pytest ``tmp_path``).
 
     Returns:

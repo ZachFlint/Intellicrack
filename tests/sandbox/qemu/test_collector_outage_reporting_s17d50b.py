@@ -16,7 +16,7 @@ drive :func:`intellicrack.sandbox.log_parsers.parse_collector_lifecycle`
 directly against the exact ``timestamp|collector|state|detail`` lines
 ``Write-TraceLifecycle`` (``api_trace.ps1``) and ``Write-InjectionLifecycle``
 (``injection_monitor.ps1``) emit. The end-to-end test reproduces the live
-failure for real: it stages the genuine bundled scripts into a guest monitor
+failure for real: it stages the bundled scripts into a guest monitor
 directory *without* the vendored ETW assemblies - the exact provisioning gap
 closes - launches both under a real ``powershell.exe``, and reads
 the resulting shared folder back through the real
@@ -321,7 +321,7 @@ class TestARealDeadRecorderIsReportedAsAnOutageNotARecord:
     async def test_unprovisioned_recorders_surface_as_outages_in_collect_monitoring_logs(self, tmp_path: Path) -> None:
         """Both real ETW-based scripts, run without their DLL, must surface as outages.
 
-        This drives the whole path for real: the genuine bundled
+        This drives the whole path for real: the bundled
         scripts are staged without the vendored assemblies - the exact
         provisioning gap - launched under the real
         ``powershell.exe``, and the resulting shared folder is read back

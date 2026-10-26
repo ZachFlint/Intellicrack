@@ -156,7 +156,7 @@ class TestDirectShowMessageIsPainted:
         non-background pixels (the text was painted at all) and that the two
         renders differ (the *new* message reached the paint pipeline, not a
         stale default). If ``showMessage`` did not update ``self._status_message``, both renders would
-        paint the identical ``"Initializing..."`` text and be pixel-for-pixel equal, falsifying this gate.
+        paint the identical ``"Initializing..."`` text and be pixel-for-pixel equal, failing this test.
 
         Args:
             qapp: QApplication fixture required by Qt widgets.

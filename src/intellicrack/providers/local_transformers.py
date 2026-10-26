@@ -382,7 +382,7 @@ class LocalTransformersProvider(LLMProviderBase):
         else:
             self._logger.info("cpu_selected_no_accelerator", device_type="cpu")
 
-        self.connected = True
+        self.connected: bool = True
         self._logger.info(
             "local_transformers_connected",
             device_type=self._device_type,

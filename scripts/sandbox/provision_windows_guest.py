@@ -229,7 +229,7 @@ WINPE_DRIVER_FAMILY_PREFERENCE: Final[tuple[str, ...]] = (
 """Which family of a driver to stage, newest first, when the guest edition
 cannot be resolved to one of its own.
 
-The medium carries a genuinely different set of families per driver, so the
+The medium carries a different set of families per driver, so the
 choice is made per driver against what is really there rather than hardwired:
 whichever of these the medium has for the guest's architecture is taken, and
 anything unrecognised sorts after all of them. This tuple itself is only the
@@ -1198,7 +1198,7 @@ def enumerate_virtio_driver_subpaths(medium_root: Path, architecture: str) -> tu
     r"""Enumerate the driver package directories WinPE can really be pointed at.
 
     The medium lays its packages out as ``<driver>\\<family>\\<arch>``, and the
-    families genuinely differ per driver: on virtio-win 0.1.285 ``viostor``
+    families differ per driver: on virtio-win 0.1.285 ``viostor``
     ships fifteen families, ``w11`` has no ``x86`` at all, and most server
     families are ``amd64`` only. Naming one fixed family therefore emits paths
     that exist on no medium for most guests, and WinPE loads no ``viostor`` at

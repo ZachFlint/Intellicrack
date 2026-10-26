@@ -153,8 +153,8 @@ def bridge() -> X64DbgBridge:
 
 
 @pytest.mark.asyncio
-class TestTraceStartLogAndConditionGenuinelyApply:
-    """``trace_start`` must genuinely apply a supplied condition/log, or raise."""
+class TestTraceStartAppliesLogAndCondition:
+    """``trace_start`` must apply a supplied condition/log to the trace, or raise."""
 
     async def test_no_params_opens_a_real_run_trace_file(self, bridge: X64DbgBridge) -> None:
         """No condition/log still issues a valid, argument-complete ``StartRunTrace``.
@@ -209,7 +209,7 @@ class TestTraceStartLogAndConditionGenuinelyApply:
         assert result["log_text"] == _TRACE_LOG_TEXT
         assert result["log_condition"] is None
 
-    async def test_condition_with_log_text_genuinely_applies_as_log_condition(self, bridge: X64DbgBridge) -> None:
+    async def test_condition_with_log_text_is_sent_as_trace_set_log_condition(self, bridge: X64DbgBridge) -> None:
         """An operator-typed condition with log text reaches x64dbg.
 
         The condition takes effect as ``TraceSetLog``'s second (log-condition) argument, the documented role a condition plays alongside log text. It is never sent as a ``TraceSetCondition`` command, which x64dbg does not register.

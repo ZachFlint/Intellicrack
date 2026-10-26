@@ -6,7 +6,7 @@
 
 Everything here starts or configures a real server: a stdio child launched by
 the connection under test, or a loopback HTTP or SSE server run as a separate
-process. Nothing is simulated.
+process.
 """
 
 from __future__ import annotations

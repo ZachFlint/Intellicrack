@@ -11,8 +11,8 @@ watch expressions, breakpoint-property configuration, cross-references,
 handle enumeration, the script engine, and the plugin manager -- each of
 whose handlers dispatches to an :class:`X64DbgBridge` method.
 
-Every gate here drives the REAL ``X64DbgAdvancedTab`` widget wired to a
-REAL ``X64DbgBridge`` and substitutes only the single genuine external
+Every gate here drives the ``X64DbgAdvancedTab`` widget wired to an
+``X64DbgBridge`` and substitutes only the single external
 boundary the sandbox cannot cross: the named-pipe transport to the x64dbg
 plugin (see :mod:`conftest`). Handlers whose bridge method routes through
 ``_send_pipe_command`` (the vast majority) are gated with the pipe pattern:
@@ -169,7 +169,7 @@ def _dismiss_stray_modal() -> None:
     This sandbox's pytest invocation collects every test node twice in the
     same process (a known, out-of-scope harness quirk); on a test's second,
     duplicate occurrence that guard has been observed to not be re-applied,
-    letting the real, blocking ``QMessageBox.warning`` construct a genuine
+    letting the real, blocking ``QMessageBox.warning`` construct a
     modal that never returns under the headless offscreen Qt platform --
     hanging the test, and, when the stray dialog is instead delivered via a
     queued cross-thread signal after a later test's guard has torn down,
@@ -277,7 +277,7 @@ class TestModuleInfoDispatch:
     ) -> None:
         """The Imports button must send ``mod_imports`` with the entered module name.
 
-        Falsifiable: reverting the ``self._bridge.get_module_imports(module_name)``
+        Reverting the ``self._bridge.get_module_imports(module_name)``
         call in ``_on_get_module_imports`` (or the ``mod_imports`` RPC in
         ``X64DbgBridge.get_module_imports``) stops the recorded command/params
         from appearing and leaves the table empty.
@@ -311,7 +311,7 @@ class TestModuleInfoDispatch:
     ) -> None:
         """A blank module field must skip the ``mod_imports`` dispatch entirely.
 
-        Falsifiable: dropping the ``if module_name is None: return`` guard in
+        Dropping the ``if module_name is None: return`` guard in
         ``_on_get_module_imports`` would let a blank field dispatch a bogus
         ``mod_imports`` request, which this assertion forbids.
 
@@ -338,7 +338,7 @@ class TestModuleInfoDispatch:
     ) -> None:
         """The PE Directories button must send ``pe_directories`` with the module name.
 
-        Falsifiable: reverting the ``self._bridge.get_pe_directories(module_name)``
+        Reverting the ``self._bridge.get_pe_directories(module_name)``
         call in ``_on_get_pe_directories`` (or the ``pe_directories`` RPC in the
         bridge) stops the command from being recorded and the table from filling.
 
@@ -370,7 +370,7 @@ class TestModuleInfoDispatch:
     ) -> None:
         """A blank module field must skip the ``pe_directories`` dispatch.
 
-        Falsifiable: dropping the ``if module_name is None: return`` guard in
+        Dropping the ``if module_name is None: return`` guard in
         ``_on_get_pe_directories`` would dispatch a bogus request.
 
         Args:
@@ -401,7 +401,7 @@ class TestModuleInfoDispatch:
         sequence of memory-read RPCs, so this handler is gated with the
         coroutine-capture pattern rather than a single-response responder.
 
-        Falsifiable: rewiring the button to any other bridge method, or
+        Rewiring the button to any other bridge method, or
         dropping the ``module_name`` argument in ``_on_get_entry_point``, makes
         the captured coroutine no longer ``get_entry_point``'s return value or
         the recorded call arguments wrong.
@@ -440,7 +440,7 @@ class TestProcessStructuresDispatch:
     ) -> None:
         """The Read PEB button must send ``peb_read`` and render the returned fields.
 
-        Falsifiable: reverting ``self._bridge.read_peb()`` in ``_on_read_peb``
+        Reverting ``self._bridge.read_peb()`` in ``_on_read_peb``
         (or the ``peb_read`` RPC in ``X64DbgBridge.read_peb``) removes the
         recorded command and leaves the structure table empty.
 
@@ -473,7 +473,7 @@ class TestProcessStructuresDispatch:
     ) -> None:
         """A parseable TID must be forwarded as ``teb_read`` ``{"tid": <int>}``.
 
-        Falsifiable: dropping the ``if tid is not None: params["tid"] = tid``
+        Dropping the ``if tid is not None: params["tid"] = tid``
         framing in ``X64DbgBridge.read_teb`` (or the ``int(tid_text, 0)`` parse
         in ``_on_read_teb``) changes the recorded params away from the exact TID.
 
@@ -505,7 +505,7 @@ class TestProcessStructuresDispatch:
     ) -> None:
         """A blank TID must send ``teb_read`` with ``None`` params (current thread).
 
-        Falsifiable: if ``_on_read_teb`` sent an empty ``{}`` or a spurious tid
+        If ``_on_read_teb`` sent an empty ``{}`` or a spurious tid
         for a blank field, the ``("teb_read", None)`` record would be absent.
 
         Args:
@@ -535,7 +535,7 @@ class TestProcessStructuresDispatch:
     ) -> None:
         """A non-numeric TID must warn and skip the ``teb_read`` dispatch.
 
-        Falsifiable: removing the ``except ValueError`` guard in ``_on_read_teb``
+        Removing the ``except ValueError`` guard in ``_on_read_teb``
         (which returns before dispatch) would let an unparseable TID reach the
         bridge, contradicting this assertion.
 
@@ -562,7 +562,7 @@ class TestProcessStructuresDispatch:
     ) -> None:
         """The SEH Chain button must send ``seh_chain`` and render handler/next rows.
 
-        Falsifiable: reverting ``self._bridge.get_seh_chain()`` in
+        Reverting ``self._bridge.get_seh_chain()`` in
         ``_on_get_seh_chain`` (or the ``seh_chain`` RPC in the bridge) removes
         the recorded command and the handler/next rows.
 
@@ -599,7 +599,7 @@ class TestWatchesDispatch:
     ) -> None:
         """The Refresh button must send ``watch_list`` and render the returned rows.
 
-        Falsifiable: reverting ``self._bridge.get_watches()`` in
+        Reverting ``self._bridge.get_watches()`` in
         ``_on_refresh_watches`` (or the ``watch_list`` RPC in the bridge) leaves
         the record absent and the table empty.
 
@@ -632,7 +632,7 @@ class TestWatchesDispatch:
     ) -> None:
         """The Add button must send ``watch_add`` with the entered expression.
 
-        Falsifiable: reverting ``self._bridge.add_watch(expression)`` in
+        Reverting ``self._bridge.add_watch(expression)`` in
         ``_on_add_watch`` (or the ``watch_add`` RPC framing in the bridge)
         removes the recorded command.
 
@@ -665,7 +665,7 @@ class TestWatchesDispatch:
     ) -> None:
         """A blank expression must skip the ``watch_add`` dispatch.
 
-        Falsifiable: dropping the ``if not expression: return`` guard in
+        Dropping the ``if not expression: return`` guard in
         ``_on_add_watch`` would dispatch an empty watch.
 
         Args:
@@ -691,7 +691,7 @@ class TestWatchesDispatch:
     ) -> None:
         """Removing a selected watch must send ``watch_remove`` with its index.
 
-        Falsifiable: reverting ``self._bridge.remove_watch(index)`` in
+        Reverting ``self._bridge.remove_watch(index)`` in
         ``_on_remove_watch`` (or the ``watch_remove`` RPC in the bridge), or the
         index parse from the selected row, removes the recorded command.
 
@@ -727,7 +727,7 @@ class TestWatchesDispatch:
     ) -> None:
         """Removing with no selected row must skip the ``watch_remove`` dispatch.
 
-        Falsifiable: dropping the ``if row < 0: return`` guard in
+        Dropping the ``if row < 0: return`` guard in
         ``_on_remove_watch`` would dispatch a removal with no selection.
 
         Args:
@@ -756,7 +756,7 @@ class TestBreakpointConfigDispatch:
     ) -> None:
         """Applying config must issue the condition/log/command/fast-resume scripts.
 
-        Falsifiable: reverting any of the four conditional
+        Reverting any of the four conditional
         ``await self._send_command(...)`` lines in
         ``X64DbgBridge.configure_breakpoint`` (or the field reads in
         ``_on_configure_breakpoint``) removes the matching ``exec`` script.
@@ -798,7 +798,7 @@ class TestBreakpointConfigDispatch:
     ) -> None:
         """A non-numeric address must warn and skip every breakpoint-config script.
 
-        Falsifiable: removing the ``except ValueError`` guard in
+        Removing the ``except ValueError`` guard in
         ``_bpcfg_address`` (which returns ``None`` before dispatch) would let a
         bad address reach the bridge.
 
@@ -826,7 +826,7 @@ class TestBreakpointConfigDispatch:
     ) -> None:
         """The logging-BP button must set the BP, its log text, and fast-resume.
 
-        Falsifiable: reverting any of the ``bp`` / ``SetBreakpointLog`` /
+        Reverting any of the ``bp`` / ``SetBreakpointLog`` /
         ``SetBreakpointFastResume`` sends in
         ``X64DbgBridge.set_logging_breakpoint`` removes the matching ``exec``
         script.
@@ -862,7 +862,7 @@ class TestBreakpointConfigDispatch:
     ) -> None:
         """A blank log-text field must warn and skip the logging-BP dispatch.
 
-        Falsifiable: dropping the ``if not log_text: ...; return`` guard in
+        Dropping the ``if not log_text: ...; return`` guard in
         ``_on_set_logging_breakpoint`` would dispatch a logging BP with no text.
 
         Args:
@@ -889,7 +889,7 @@ class TestBreakpointConfigDispatch:
     ) -> None:
         """The DLL-BP button (load) must issue ``LibrarianSetBreakPoint``.
 
-        Falsifiable: reverting the ``LibrarianSetBreakPoint`` send in
+        Reverting the ``LibrarianSetBreakPoint`` send in
         ``X64DbgBridge.set_dll_breakpoint`` removes the recorded script.
 
         Args:
@@ -921,7 +921,7 @@ class TestBreakpointConfigDispatch:
     ) -> None:
         """Selecting the unload event must append ``, unload`` to the librarian script.
 
-        Falsifiable: reverting the ``if event == "unload": cmd += ", unload"``
+        Reverting the ``if event == "unload": cmd += ", unload"``
         branch in ``X64DbgBridge.set_dll_breakpoint`` (or the combo read in
         ``_on_set_dll_breakpoint``) drops the ``, unload`` suffix.
 
@@ -953,7 +953,7 @@ class TestBreakpointConfigDispatch:
     ) -> None:
         """A blank DLL name must skip the librarian dispatch.
 
-        Falsifiable: dropping the ``if not dll_name: return`` guard in
+        Dropping the ``if not dll_name: return`` guard in
         ``_on_set_dll_breakpoint`` would dispatch a nameless librarian command.
 
         Args:
@@ -983,7 +983,7 @@ class TestCrossReferencesDispatch:
     ) -> None:
         """The Find References button must send ``ref_search`` typed ``reference``.
 
-        Falsifiable: reverting ``self._bridge.find_references(address)`` in
+        Reverting ``self._bridge.find_references(address)`` in
         ``_on_find_references`` (or the ``{"type": "reference"}`` framing in the
         bridge) removes the recorded command and the reference rows.
 
@@ -1015,7 +1015,7 @@ class TestCrossReferencesDispatch:
     ) -> None:
         """A non-numeric address must warn and skip the ``ref_search`` dispatch.
 
-        Falsifiable: removing the ``except ValueError`` guard in
+        Removing the ``except ValueError`` guard in
         ``_xref_address`` would let a bad address reach the bridge.
 
         Args:
@@ -1041,7 +1041,7 @@ class TestCrossReferencesDispatch:
     ) -> None:
         """The Function CFG button must send ``cfg`` with address and max_blocks.
 
-        Falsifiable: reverting ``self._bridge.get_function_cfg(address)`` in
+        Reverting ``self._bridge.get_function_cfg(address)`` in
         ``_on_get_function_cfg`` (or the ``cfg`` RPC framing in the bridge)
         removes the recorded command and the rendered block/edge rows.
 
@@ -1075,7 +1075,7 @@ class TestCrossReferencesDispatch:
     ) -> None:
         """The String References button must send ``ref_search`` typed ``string``.
 
-        Falsifiable: reverting ``self._bridge.find_string_references(module)`` in
+        Reverting ``self._bridge.find_string_references(module)`` in
         ``_on_find_string_references`` (or the ``{"type": "string"}`` framing in
         the bridge) removes the recorded command.
 
@@ -1106,7 +1106,7 @@ class TestCrossReferencesDispatch:
     ) -> None:
         """A blank module must skip the string ``ref_search`` dispatch.
 
-        Falsifiable: dropping the ``if not module: return`` guard in
+        Dropping the ``if not module: return`` guard in
         ``_on_find_string_references`` would dispatch a moduleless search.
 
         Args:
@@ -1132,7 +1132,7 @@ class TestCrossReferencesDispatch:
     ) -> None:
         """The Intermodular Calls button must send ``ref_search`` typed ``intermodular``.
 
-        Falsifiable: reverting ``self._bridge.find_intermodular_calls(module)``
+        Reverting ``self._bridge.find_intermodular_calls(module)``
         in ``_on_find_intermodular_calls`` (or the ``{"type": "intermodular"}``
         framing in the bridge) removes the recorded command.
 
@@ -1173,7 +1173,7 @@ class TestHandlesDispatch:
         rather than a pipe round-trip, so this handler is gated with the
         coroutine-capture pattern.
 
-        Falsifiable: rewiring the button, or dropping the
+        Rewiring the button, or dropping the
         ``self._bridge.get_handles()`` call in ``_on_refresh_handles``, makes
         the captured coroutine no longer ``get_handles``'s return value.
 
@@ -1207,12 +1207,12 @@ class TestHandlesDispatch:
     ) -> None:
         """The Close Handle button must issue the ``handleclose`` console script.
 
-        Falsifiable: reverting ``await self._send_command(f"handleclose ...")``
+        Reverting ``await self._send_command(f"handleclose ...")``
         in ``X64DbgBridge.close_handle`` (or the value parse in
         ``_on_close_handle``) removes the recorded ``exec`` script.
 
         A successful close makes ``_on_handle_closed`` immediately re-invoke
-        ``_on_refresh_handles``, which issues a REAL, unmocked
+        ``_on_refresh_handles``, which issues a live
         ``self._bridge.get_handles()`` call (this handler is not gated behind
         the pipe responder). Against a ``wired_tab`` bridge that was never
         attached to a process, that call fails on the background bridge-worker
@@ -1269,7 +1269,7 @@ class TestHandlesDispatch:
     ) -> None:
         """A non-numeric handle value must warn and skip the ``handleclose`` dispatch.
 
-        Falsifiable: removing the ``except ValueError`` guard in
+        Removing the ``except ValueError`` guard in
         ``_on_close_handle`` would let a bad handle reach the bridge.
 
         Args:
@@ -1299,7 +1299,7 @@ class TestScriptEngineDispatch:
     ) -> None:
         """The Load button must issue ``scriptload "<path>"``.
 
-        Falsifiable: reverting ``await self._send_command(f'scriptload ...')``
+        Reverting ``await self._send_command(f'scriptload ...')``
         in ``X64DbgBridge.script_load`` (or the path read in ``_on_script_load``)
         removes the recorded ``exec`` script.
 
@@ -1332,7 +1332,7 @@ class TestScriptEngineDispatch:
     ) -> None:
         """A blank script path must skip the ``scriptload`` dispatch.
 
-        Falsifiable: dropping the ``if not path: return`` guard in
+        Dropping the ``if not path: return`` guard in
         ``_on_script_load`` would dispatch an empty load.
 
         Args:
@@ -1358,7 +1358,7 @@ class TestScriptEngineDispatch:
     ) -> None:
         """The Run button must issue ``scriptrun``.
 
-        Falsifiable: reverting ``await self._send_command("scriptrun")`` in
+        Reverting ``await self._send_command("scriptrun")`` in
         ``X64DbgBridge.script_run`` removes the recorded ``exec`` script.
 
         Args:
@@ -1390,7 +1390,7 @@ class TestScriptEngineDispatch:
     ) -> None:
         """The Execute button must issue ``scriptcmd "<line>"``.
 
-        Falsifiable: reverting ``await self._send_command(f'scriptcmd ...')`` in
+        Reverting ``await self._send_command(f'scriptcmd ...')`` in
         ``X64DbgBridge.script_cmd`` (or the line read in ``_on_script_cmd``)
         removes the recorded ``exec`` script.
 
@@ -1423,7 +1423,7 @@ class TestScriptEngineDispatch:
     ) -> None:
         """A blank command line must skip the ``scriptcmd`` dispatch.
 
-        Falsifiable: dropping the ``if not line: return`` guard in
+        Dropping the ``if not line: return`` guard in
         ``_on_script_cmd`` would dispatch an empty command.
 
         Args:
@@ -1449,7 +1449,7 @@ class TestScriptEngineDispatch:
     ) -> None:
         """The Abort button must issue the ``script_abort`` RPC.
 
-        Falsifiable: reverting ``X64DbgBridge.script_abort`` to
+        Reverting ``X64DbgBridge.script_abort`` to
         ``await self._send_command("scriptabort")`` records an ``exec``
         carrying ``scriptabort`` and no ``script_abort`` RPC, failing
         both assertions. ``scriptabort`` is not a registered x64dbg
@@ -1492,7 +1492,7 @@ class TestPluginManagerDispatch:
     ) -> None:
         """The Load button must issue ``plugload`` and verify presence via ``plugin_list``.
 
-        Falsifiable: reverting ``await self._send_command(f'plugload ...')`` in
+        Reverting ``await self._send_command(f'plugload ...')`` in
         ``X64DbgBridge.plugin_load``, or its ``plugin_list`` presence check,
         removes the recorded commands and leaves the plugin table empty.
 
@@ -1527,7 +1527,7 @@ class TestPluginManagerDispatch:
     ) -> None:
         """A blank plugin path must skip the ``plugload`` dispatch.
 
-        Falsifiable: dropping the ``if not path: return`` guard in
+        Dropping the ``if not path: return`` guard in
         ``_on_plugin_load`` would dispatch an empty load.
 
         Args:
@@ -1553,7 +1553,7 @@ class TestPluginManagerDispatch:
     ) -> None:
         """The Unload button must issue ``plugunload "<name>"``.
 
-        Falsifiable: reverting ``await self._send_command(f'plugunload ...')`` in
+        Reverting ``await self._send_command(f'plugunload ...')`` in
         ``X64DbgBridge.plugin_unload`` (or the name read in ``_on_plugin_unload``)
         removes the recorded ``exec`` script.
 
@@ -1585,7 +1585,7 @@ class TestPluginManagerDispatch:
     ) -> None:
         """A blank plugin name must skip the ``plugunload`` dispatch.
 
-        Falsifiable: dropping the ``if not name: return`` guard in
+        Dropping the ``if not name: return`` guard in
         ``_on_plugin_unload`` would dispatch a nameless unload.
 
         Args:
@@ -1611,7 +1611,7 @@ class TestPluginManagerDispatch:
     ) -> None:
         """The Refresh List button must send ``plugin_list`` and render the plugins.
 
-        Falsifiable: reverting ``self._bridge.plugin_list()`` in
+        Reverting ``self._bridge.plugin_list()`` in
         ``_on_refresh_plugins`` (or the ``plugin_list`` RPC in the bridge)
         removes the recorded command and leaves the table empty.
 

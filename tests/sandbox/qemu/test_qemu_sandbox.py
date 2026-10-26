@@ -407,7 +407,7 @@ class TestF0002AgentConnectCalled:
     These tests exercise the real production method ``_ensure_agent_connected``
     (the single code path that ``start`` -> ``_start_impl`` -> ``_attach_qemu_agents``
     uses to await ``agent.connect``) against a *real* ``GuestAgentClient`` and a
-    *real* loopback TCP server. Nothing in the connect path is mocked: a genuine
+    *real* loopback TCP server, so a
     socket is opened end to end. If production stopped awaiting ``agent.connect``
     the agent would never reach ``is_connected == True`` and
     the failure path would not raise, so both tests would go red.
@@ -444,7 +444,7 @@ class TestF0002AgentConnectCalled:
         """``_ensure_agent_connected`` surfaces a ``SandboxError`` when nothing listens.
 
         A free loopback port is reserved and then released so no server is
-        listening. Driving the real connect path against it must fail loudly:
+        listening. Driving the real connect path against it must fail:
         ``connect`` returns ``False`` and the production helper raises
         ``SandboxError`` rather than silently leaving the agent disconnected.
         """
@@ -947,8 +947,8 @@ class TestF0009AgentScriptNoPsUsing:
     def test_windows_agent_script_binds_and_reads_log_path_via_messagedata(self) -> None:
         """The log path must be bound via ``-MessageData`` and read via ``$Event.MessageData``.
 
-        Accepting either ``-MessageData`` or ``$Global:`` anywhere would not
-        prove the log path is actually carried into the ``-Action`` block.
+        Accepting either ``-MessageData`` or ``$Global:`` anywhere would pass
+        even when the log path is not carried into the ``-Action`` block.
         PowerShell's
         ``Register-ObjectEvent ... -MessageData <value> -Action { ... }`` exposes
         the bound value only as ``$Event.MessageData`` inside the action block;
@@ -1047,8 +1047,8 @@ class TestF0022F0029AntiEvasion:
     def test_anti_evasion_profile_drives_real_smbios_argv(self, tmp_path: Path) -> None:
         """The launch profile drives the actual ``-smbios`` manufacturer in the QEMU argv.
 
-        Echoing the ``profile`` argument back from ``apply_anti_evasion`` would
-        prove nothing, so this gate drives the real ``_build_qemu_command``
+        Rather than checking the ``profile`` argument echoed back from
+        ``apply_anti_evasion``, this test drives ``_build_qemu_command``
         with a ``workstation`` launch config and verifies the observable side
         effect: the SMBIOS
         ``-smbios`` arguments carry the workstation vendor identity

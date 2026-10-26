@@ -7,13 +7,12 @@
 Covers section list population, import/export rendering, file-type
 auto-detection, and string extraction navigation.
 
-These tests open a REAL Windows PE (``kernel32.dll`` from System32) through the
-real :class:`HexEditorBridge`, parse it with the real backend, then render the
-genuine results through the production :class:`SectionsMixin` callbacks. They
-assert on real, verifiable artifacts: the ``.text``/``.rdata``/``.reloc``
-section names, a real imported symbol (``RtlCompareMemory``-style ``api-ms-*``
-imports), a real exported symbol (``AcquireSRWLockExclusive``), and the real
-format-detection result for the MZ magic.
+These tests open a Windows PE (``kernel32.dll`` from System32) through
+:class:`HexEditorBridge`, parse it with the backend, then render the
+parsed results through the production :class:`SectionsMixin` callbacks. They
+assert on the ``.text``/``.rdata``/``.reloc`` section names, an imported
+symbol (``RtlCompareMemory``-style ``api-ms-*`` imports), an exported symbol
+(``AcquireSRWLockExclusive``), and the format-detection result for the MZ magic.
 """
 
 from __future__ import annotations

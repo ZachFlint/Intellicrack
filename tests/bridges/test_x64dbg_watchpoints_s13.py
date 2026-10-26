@@ -50,7 +50,7 @@ class TestGetWatchpointsListsAddedHardwareWatchpoint:
     async def test_get_watchpoints_after_set_watchpoint_includes_the_new_address(self) -> None:
         """Set a hardware watchpoint on a loaded debuggee, then list it back.
 
-        Falsifiable: if ``get_watchpoints`` relied on the dedicated ``wp_list`` command, it would raise ``ToolError("Failed to get watchpoint list")`` once the plugin's handler observed zero or more hardware breakpoints. The ``DbgGetBpList`` return value is a count rather than a boolean, so its C++ ``!`` check misfires on the near-universal empty or any-count case. This test would fail with that ``ToolError`` even after ``set_watchpoint`` genuinely installed the hardware breakpoint in the debuggee.
+        If ``get_watchpoints`` relied on the dedicated ``wp_list`` command, it would raise ``ToolError("Failed to get watchpoint list")`` once the plugin's handler observed zero or more hardware breakpoints. The ``DbgGetBpList`` return value is a count rather than a boolean, so its C++ ``!`` check misfires on the near-universal empty or any-count case. This test would fail with that ``ToolError`` even after ``set_watchpoint`` installed the hardware breakpoint in the debuggee.
         """
         if not _TARGET_EXE.exists():
             pytest.skip(f"debuggee target not present on this host: {_TARGET_EXE}")
@@ -91,7 +91,7 @@ class TestGetWatchpointsListsAddedHardwareWatchpoint:
     async def test_get_watchpoints_on_fresh_debuggee_returns_empty_without_raising(self) -> None:
         """A freshly loaded debuggee with no watchpoints lists an empty set rather than raising.
 
-        This is the strongest falsifiable gate for this behaviour. The plugin's ``wp_list`` command is backed by ``DbgGetBpList(bp_hardware, ...)``, whose return value is the hardware-breakpoint count. The deployed plugin's ``if (!DbgGetBpList(...))`` check misreads the near-universal zero-count case as a hard failure, so ``get_watchpoints`` raised ``ToolError`` on every fresh Load or Attach before any watchpoint was set. The set-then-list test does not catch this, because a non-zero count keeps the broken command's return value truthy. The ``bp_list``-based implementation returns an empty list for zero hardware breakpoints instead of raising.
+        The plugin's ``wp_list`` command is backed by ``DbgGetBpList(bp_hardware, ...)``, whose return value is the hardware-breakpoint count. The deployed plugin's ``if (!DbgGetBpList(...))`` check misreads the near-universal zero-count case as a hard failure, so ``get_watchpoints`` raised ``ToolError`` on every fresh Load or Attach before any watchpoint was set. The set-then-list test does not catch this, because a non-zero count keeps the broken command's return value truthy. The ``bp_list``-based implementation returns an empty list for zero hardware breakpoints instead of raising.
         """
         if not _TARGET_EXE.exists():
             pytest.skip(f"debuggee target not present on this host: {_TARGET_EXE}")

@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Falsifiable gates: a callable worker must outlive the widget that dispatched it.
+"""Gates: a callable worker must outlive the widget that dispatched it.
 
 No ``GenericCallableWorker`` dispatch site may hand the calling widget to the worker as its Qt parent. Qt destroys a parent's
 children along with it, and destroying a ``QThread`` whose OS thread is still running aborts the process with a native access violation and
@@ -16,7 +16,7 @@ extractor and the process-region lister), whose callbacks capture the worker ins
 
 The gates below come in three layers:
 
-* the dispatch helper, driven against a real HTTP request over a loopback socket the server holds open, so the worker is genuinely blocked
+* the dispatch helper, driven against a real HTTP request over a loopback socket the server holds open, so the worker is still blocked
   mid-call when the widget is deleted,
 * a source gate over the whole package, so no present or future site can quietly re-parent a worker,
 * and the real widgets behind the longest-running scans - the hex editor's entropy scan, the statistics mixin's byte statistics and the
@@ -283,7 +283,7 @@ def _fetch_held(url: str) -> str:
     """Fetch ``url`` over a real HTTP connection and return the response body.
 
     This is the synchronous callable under dispatch: it blocks inside a real socket read for as long as the server withholds its response,
-    which is what keeps the worker genuinely in flight while the test deletes its owner.
+    which is what keeps the worker in flight while the test deletes its owner.
 
     Args:
         url: Loopback URL served by :class:`_HeldResponseServer`.
@@ -515,7 +515,7 @@ def test_a_live_owner_receives_the_result_on_the_main_thread(
 ) -> None:
     """A result must still reach a live widget, and reach it on the GUI thread.
 
-    The delivery guard wraps the caller's callback, so this gate holds it honest in both directions: the wrapper must pass a real result
+    The delivery guard wraps the caller's callback, so this test checks it in both directions: the wrapper must pass a result
     through to a live widget, and it must not move that delivery off the thread the widget lives on.
 
     Args:

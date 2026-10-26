@@ -101,8 +101,8 @@ export const ERROR_KIND_LABELS = new Map([
  * The short tag a failure kind is displayed as.
  *
  * An unrecognised kind is uppercased rather than rejected: a slug from a newer
- * server should still read as a tag, and the enumeration test is what keeps the
- * known list honest.
+ * server should still read as a tag, and the enumeration test checks that the
+ * known list covers every kind the server produces.
  *
  * @param {string} kind Failure kind slug, as carried by DispatchError.
  * @returns {string} The display tag.

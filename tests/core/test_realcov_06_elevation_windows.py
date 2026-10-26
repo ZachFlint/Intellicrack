@@ -5,8 +5,8 @@
 
 """Real Windows-token coverage for :mod:`intellicrack.core.elevation`.
 
-On Windows these tests drive the genuine Win32 elevation surface with no
-mocking: ``is_elevated`` is cross-checked against an independent real token
+On Windows these tests drive the Win32 elevation surface directly:
+``is_elevated`` is cross-checked against an independent token
 query (``OpenProcessToken`` + ``GetTokenInformation(TokenElevation)``), and
 ``maybe_elevate`` is exercised over the real process token through the
 decision paths that do not raise a UAC prompt. The relaunch builder is
@@ -209,12 +209,11 @@ def test_maybe_elevate_when_already_elevated_returns_false(monkeypatch: pytest.M
 
     Monkeypatches ``elevation.is_elevated`` to return ``True`` so the
     already-elevated guard in :func:`elevation.maybe_elevate` is exercised
-    unconditionally, without requiring a genuinely elevated OS process or
+    unconditionally, without requiring an elevated OS process or
     triggering a real UAC prompt. Also monkeypatches the UAC transport boundary
     ``elevation._relaunch_elevated`` to record whether it was reached.
 
-    The falsifiability gate is that ``_relaunch_elevated`` must NOT have been
-    called: if the ``if is_elevated(): return False`` guard at production line 234
+    ``_relaunch_elevated`` must NOT have been called: if the ``if is_elevated(): return False`` guard at production line 234
     were deleted (or changed to ``if False:``), ``_relaunch_elevated`` would be
     invoked and the second assertion would fail, turning this test red.
 
@@ -268,8 +267,8 @@ def _frozen_executable(executable: str) -> Generator[None]:
 
     Sets the real ``sys.frozen`` marker and ``sys.executable`` that
     :func:`elevation._build_relaunch_command` reads, restoring both afterwards
-    so other tests observe the genuine interpreter state. This drives real
-    state into the production code, it does not stub the code under test.
+    so other tests observe the original interpreter state. The code under test
+    reads this state and runs unpatched.
 
     Args:
         executable: Absolute path that ``sys.executable`` reports while frozen.

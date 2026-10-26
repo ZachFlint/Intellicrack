@@ -116,7 +116,7 @@ def _reserved_result_label_width(font: QFont, sample_text: str) -> int:
     narrower than the label will need once real call results arrive, so the
     label is left to be compressed below a readable size by the row's later
     layout passes. Reserving width for a representative worst-case value up
-    front keeps the frozen snapshot honest.
+    front keeps the frozen snapshot wide enough for the results that arrive later.
 
     Args:
         font: The font the label will render its text in.

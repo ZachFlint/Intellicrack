@@ -11,7 +11,7 @@ derived path (``.env`` credential file, ``.intellicrack`` config directory, and
 the tools/logs/data directories the bridges discover external engines through)
 tracks that root. A build that reverted the frozen branch would resolve these
 paths inside the read-only extraction directory or the wrong ancestor of the
-bundle, so each assertion below fails loudly on that regression.
+bundle, so each assertion below fails on that regression.
 """
 
 from __future__ import annotations

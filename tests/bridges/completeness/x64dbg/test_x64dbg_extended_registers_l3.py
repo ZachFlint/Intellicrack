@@ -106,7 +106,7 @@ class TestGetExtendedRegistersSurfacesRealData:
     def test_xmm0_and_x87control_surfaced_unchanged() -> None:
         """A ``reg_extended`` response's ``xmm[0]`` and ``x87control`` must come back verbatim.
 
-        Falsifiable: if ``get_extended_registers`` returned ``{}``
+        If ``get_extended_registers`` returned ``{}``
         instead of the parsed plugin response, neither value would be
         present.
         """
@@ -166,7 +166,7 @@ class TestExtendedRegisterTableWiring:
     ) -> None:
         """``_refresh_state()`` must render ``xmm0`` with the plugin's real hex value.
 
-        Falsifiable: if ``_refresh_extended_registers`` were never wired
+        If ``_refresh_extended_registers`` were never wired
         into ``_refresh_state`` (an unwired table), the FPU/SIMD
         table would stay empty forever and this assertion would time out.
 
@@ -206,7 +206,7 @@ class TestExtendedRegisterTableWiring:
     ) -> None:
         """Editing the ``xmm3`` cell to a full-width hex string must dispatch the exact write.
 
-        Falsifiable: if ``_on_extended_register_edited`` dropped the
+        If ``_on_extended_register_edited`` dropped the
         ``value`` key (or mis-keyed ``name``), the recorded
         ``reg_set_extended`` params would not equal
         ``{"name": "xmm3", "value": _XMM3_NEW_HEX}`` exactly.
@@ -263,7 +263,7 @@ class TestExtendedRegisterTableWiring:
 
         A short write silently truncated (rather than rejected) would
         write a meaningless partial register value through
-        ``SetThreadContext``. Falsifiable: if the width check in
+        ``SetThreadContext``. If the width check in
         ``_on_extended_register_edited`` were removed, a
         ``reg_set_extended`` command would be sent for the undersized
         value and the cell would keep the short text.

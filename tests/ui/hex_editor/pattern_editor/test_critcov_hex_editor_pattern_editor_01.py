@@ -6,7 +6,7 @@
 
 Every test drives the production mixin through a small concrete widget host that combines ``PatternEditorMixin`` with the real
 ``TemplatesMixin`` and a real ``HexEditorWidget``. The panes are the real Qt widgets built by ``_build_pattern_editor``, the document is a
-genuine ``intellicrack_hexcore.HexDocument`` holding known bytes, the compiler and interpreter are the production HexPat pipeline, and the
+``intellicrack_hexcore.HexDocument`` holding known bytes, the compiler and interpreter are the production HexPat pipeline, and the
 asynchronous apply worker is the real ``GenericCallableWorker``. Expected values come from byte arithmetic, the Python standard library,
 the documented HexPat syntax, or the hexcore template engine's own answer for the same input.
 """

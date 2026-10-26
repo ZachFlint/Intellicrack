@@ -11,8 +11,8 @@ must deterministically select the ``win-64`` resolution, since this project
 targets Windows as a priority and its CI runs on ``windows-latest`` -- not
 whichever platform happens to be listed last in the lockfile.
 
-These tests exercise the real functions against real, on-disk YAML/TOML
-fixtures (no mocks) and fail loudly if platform selection regresses to the
+These tests exercise the real functions against on-disk YAML/TOML
+fixtures and fail if platform selection regresses to the
 old "last one wins" behavior, or if the ambiguous-platform guard stops
 raising.
 """
@@ -210,7 +210,7 @@ def test_package_name_and_version_rejects_incomplete_entries(gr: ModuleType) -> 
 def test_load_lock_pypi_packages_selects_windows_version_not_linux(gr: ModuleType, tmp_path: Path) -> None:
     """ast-serialize must resolve to the win-64 version.
 
-    Falsifiable: iterating the flat ``packages`` list in ``_load_lock_pypi_packages``
+    Iterating the flat ``packages`` list in ``_load_lock_pypi_packages``
     (last entry wins) would
     make this assert ``0.11.2`` (the Linux entry, which appears last in the
     fixture's ``packages`` list) instead of ``0.6.0`` (the Windows entry).
@@ -246,7 +246,7 @@ def test_load_lock_pypi_packages_falls_back_without_environments_section(gr: Mod
 def test_generate_requirements_writes_windows_resolved_versions(gr: ModuleType, tmp_path: Path) -> None:
     """End-to-end: generate_requirements() must write the win-64 versions to requirements.txt.
 
-    Falsifiable: if platform selection regressed, this would write
+    If platform selection regressed, this would write
     ``ast-serialize==0.11.2`` (the Linux version) instead of ``0.6.0``.
     """
     project_root = tmp_path
@@ -270,7 +270,7 @@ def test_generate_requirements_writes_windows_resolved_versions(gr: ModuleType, 
 
 
 def test_generate_requirements_fails_when_declared_dep_missing_from_lock(gr: ModuleType, tmp_path: Path) -> None:
-    """A pypi-dependency declared in pyproject.toml but absent from the lock must fail loudly."""
+    """A pypi-dependency declared in pyproject.toml but absent from the lock must exit 1 and write no file."""
     project_root = tmp_path
     (project_root / "pixi.lock").write_text(_SINGLE_PLATFORM_LOCK, encoding="utf-8")
     (project_root / "pyproject.toml").write_text(

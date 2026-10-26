@@ -448,7 +448,7 @@ def worker_is_running(worker: QThread | None) -> bool:
     ``finished -> deleteLater``, so once it has finished, its underlying C++
     object may already be destroyed while a Python reference lingers. Probing
     ``isRunning`` on that dangling sip wrapper raises ``RuntimeError``. Re-arm
-    guards only need to know whether a *genuinely in-flight* worker exists
+    guards only need to know whether an *in-flight* worker exists
     before starting a replacement, so both ``None`` and a deleted wrapper are
     reported as "not running" instead of crashing the caller.
 

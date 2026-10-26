@@ -169,7 +169,7 @@ def test_build_schema_property_basic() -> None:
 
     The independent oracle is the jsonschema Draft7Validator: it validates the
     property dict against the JSON Schema meta-schema via ``check_schema`` and
-    then uses the produced schema as a validator for real inputs.  If
+    then uses the produced schema as a validator for sample instances.  If
     ``build_schema_property`` emits a structurally invalid schema (wrong key
     names, wrong type string encoding, missing required keys) the meta-schema
     check raises ``SchemaError`` or the instance validation raises
@@ -716,7 +716,7 @@ def test_openrouter_matches_openai() -> None:
 def test_get_schema_for_provider_all(provider: str) -> None:
     """Verify schema generation works for every provider and routes to the correct format.
 
-    The format discriminators mirror the dispatch logic in ``get_schema_for_provider``:
+    The per-format checks mirror the dispatch logic in ``get_schema_for_provider``:
     ANTHROPIC → ``input_schema`` key (Anthropic format, no ``type: function``);
     GOOGLE → ``parameters.type == 'OBJECT'`` (Google format, uppercase type);
     all others → ``type == 'function'`` (OpenAI-compatible format). The explicit

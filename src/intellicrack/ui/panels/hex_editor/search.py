@@ -1037,7 +1037,7 @@ class SearchMixin:
         ``encode_text`` round-trips before the replace, so those are folded into the single :func:`_replace_all_text_bytes` coroutine
         dispatched the same non-blocking way. Regex mode has no fixed-width byte pattern to hand the bridge, so it instead replaces every
         cached search-result offset directly via ``document.write_bytes`` -- this requires the replacement to be the exact same byte
-        length as each match (a genuine constraint of in-place replacement, since resizing per-match would invalidate subsequent offsets),
+        length as each match (an inherent constraint of in-place replacement, since resizing per-match would invalidate subsequent offsets),
         and the user is warned and the operation aborted if it is not.
         """
         document: Any = getattr(self, "document", None)

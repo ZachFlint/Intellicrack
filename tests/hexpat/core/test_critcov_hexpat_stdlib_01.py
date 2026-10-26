@@ -343,7 +343,7 @@ class TestReflectionWiring:
         assert _bound(evaluator, "text") == "0x7"
 
     def test_none_provider_unwires_reflection(self) -> None:
-        """Passing ``None`` removes the provider, so reflection built-ins fail loudly."""
+        """Passing ``None`` removes the provider, so reflection built-ins raise ``HexPatRuntimeError``."""
         evaluator, program, stdlib = _wire("u8 v @ 0;\nauto text = std::core::formatted_value(v);", bytes([7]))
         stdlib.set_reflection_provider(None)
         with pytest.raises(HexPatRuntimeError) as excinfo:

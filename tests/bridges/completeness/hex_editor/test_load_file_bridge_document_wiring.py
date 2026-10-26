@@ -21,10 +21,10 @@ shared ``HexDocumentState`` -- which would otherwise re-enter
 from ``_load_file_impl`` immediately after the panel opens its own document,
 before any of the auto-refresh sub-features fire.
 
-Every test here drives the REAL, unmodified ``HexEditorPanel.load_file`` entry
-point (the actual GUI open path, not a manual
+Every test here drives the ``HexEditorPanel.load_file`` entry
+point (the GUI open path, not a manual
 ``panel.document = bridge.document`` workaround used elsewhere in this
-package) against a real ``HexEditorBridge`` and a real System32 DLL, and
+package) against a ``HexEditorBridge`` and a System32 DLL, and
 cross-validates the bridge's section/import data against the independent
 ``pefile`` oracle.
 """
@@ -88,7 +88,7 @@ class TestLoadFileAdoptsBridgeDocument:
     def test_bridge_document_is_the_same_object_after_real_load(qapp: QApplication, real_pe_dll: Path) -> None:
         """After ``load_file``, ``bridge.document`` must be the panel's own document.
 
-        Falsifiable: if ``_load_file_impl`` never calls
+        If ``_load_file_impl`` never calls
         ``HexEditorBridge.adopt_document`` (the unwired state), ``bridge.document``
         stays ``None`` and this assertion fails.
 
@@ -112,7 +112,7 @@ class TestLoadFileAdoptsBridgeDocument:
     def test_get_pe_sections_returns_real_sections_matching_pefile(qapp: QApplication, real_pe_dll: Path) -> None:
         """``bridge.get_pe_sections`` must succeed and match the pefile oracle after a real GUI load.
 
-        Falsifiable: without the fix, ``bridge.document`` is ``None`` and this
+        Without the fix, ``bridge.document`` is ``None`` and this
         raises ``RuntimeError("no document open")`` instead of returning data.
 
         Args:
@@ -176,7 +176,7 @@ class TestLoadFileGuiAutoRefreshPopulatesFromBridge:
     def test_sections_tree_populates_with_real_section_names(qapp: QApplication, real_pe_dll: Path) -> None:
         """The sections tree must show real section rows after ``load_file``, with no lingering failure.
 
-        Falsifiable: without the fix, ``_populate_sections`` (fired from
+        Without the fix, ``_populate_sections`` (fired from
         inside ``_load_file_impl`` itself) dispatches ``bridge.get_pe_sections()``
         against a bridge whose document is ``None``; the worker fails and the
         tree is never populated.

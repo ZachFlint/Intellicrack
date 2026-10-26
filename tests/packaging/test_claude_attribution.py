@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Falsifiable gates on ``scripts/check_claude_attribution.py`` and its wiring.
+"""Tests for ``scripts/check_claude_attribution.py`` and its wiring.
 
 Claude attribution reached the history three ways: ``Co-Authored-By: Claude``
 trailers, ``Claude-Session:`` links, and whole commits authored as

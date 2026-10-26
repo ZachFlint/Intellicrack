@@ -13,7 +13,7 @@ off the socket, leaving the chunk-framed bytes unread in the connection's receiv
 buffer. Because the connection is kept alive for another request, that leftover
 framing would corrupt the *next* request parsed off the same socket.
 
-This is exercised over a genuine loopback socket, not the in-process
+This is exercised over a loopback socket, not the in-process
 :class:`~hexbench.api.Application` shortcut every other suite uses, because
 the defect only exists at the byte level: it is about what the handler reads
 off ``self.rfile``, not about routing.

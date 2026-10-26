@@ -34,7 +34,7 @@ from intellicrack.core.xml_gen import (
 )
 
 
-# The re-exported XML primitives must be the genuine, fully functional
+# The re-exported XML primitives must be the fully functional
 # stdlib ``xml.etree.ElementTree`` objects. The behavioural property that
 # matters -- regardless of how the import is spelled in source -- is that the
 # module's factories produce byte-for-byte identical XML to the stdlib
@@ -67,7 +67,7 @@ def test_f0011_subelement_links_into_stdlib_tree() -> None:
     """``xml_gen.SubElement`` must attach children exactly as the stdlib oracle does.
 
     Oracle: the directly-imported stdlib ``SubElement`` on an equivalent
-    tree. Falsifiable: a wrapper that failed to append the child, or
+    tree. A wrapper that failed to append the child, or
     appended in a different order, would not match the stdlib byte stream.
     """
     produced_root = _StdlibElement("Networking")
@@ -88,7 +88,7 @@ def test_f0011_indent_matches_stdlib_indent() -> None:
     """``xml_gen.indent`` must apply whitespace identically to the stdlib oracle.
 
     Oracle: ``xml.etree.ElementTree.indent`` imported directly on an
-    equivalent tree. Falsifiable: a re-export pointing at a different
+    equivalent tree. A re-export pointing at a different
     indenter (or a no-op) would produce different whitespace than the
     stdlib oracle and fail the byte comparison.
     """

@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-r"""Falsifiable tests for the pixi runtime/build environment split.
+r"""Tests for the pixi runtime/build environment split.
 
 The installer stages its runtime from the dedicated ``runtime`` pixi environment
 instead of the all-in-one ``default`` environment. The split is expressed in

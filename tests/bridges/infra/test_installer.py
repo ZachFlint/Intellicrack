@@ -476,8 +476,8 @@ class TestPEVersionForGUITools:
         """get_version(X64DBG) returns the exact version read from the PE VERSIONINFO.
 
         An independent pefile oracle reads the same binary and resolves the
-        expected version triple.  The assertion is falsifiable: a regression
-        that makes _get_pe_version return None or a different version fails.
+        expected version triple.  A regression that makes _get_pe_version
+        return None or a different version fails the assertion.
         """
         sys_exe = _system_pe_for_version_probe()
         if sys_exe is None:

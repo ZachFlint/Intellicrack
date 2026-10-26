@@ -3,6 +3,10 @@
 //
 // This file is part of Intellicrack. See LICENSE for details.
 
+//! The template evaluator: walks a template's fields over a byte buffer,
+//! resolving conditions, arrays, pointers, nested structures and computed
+//! values, within depth, field-count and output-size limits.
+
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
@@ -79,6 +83,9 @@ pub struct TemplateEvaluator<'a> {
 }
 
 impl<'a> TemplateEvaluator<'a> {
+    /// An evaluator over `data` for a structure starting at `base_offset`,
+    /// reading fields with no byte order of their own as `default_endian` and
+    /// resolving struct references and pointers through `registry`.
     #[must_use]
     pub fn new(
         data: &'a [u8],

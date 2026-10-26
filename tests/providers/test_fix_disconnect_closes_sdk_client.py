@@ -149,7 +149,7 @@ _PROVIDER_IDS: Final[tuple[str, ...]] = ("anthropic", "openai", "grok", "google"
 async def test_disconnect_closes_the_sdk_client(endpoint_server: ProviderEndpointServer, factory: Callable[[], LLMProviderBase]) -> None:
     """Disconnecting closes the client the provider connected with, rather than only forgetting it.
 
-    Falsifiable: a provider that sets its client attribute to ``None`` leaves
+    A provider that sets its client attribute to ``None`` leaves
     the client's connection pool open.
 
     Args:
@@ -206,7 +206,7 @@ async def test_a_rejected_key_closes_the_openai_client_that_was_built(
 ) -> None:
     """A connect the endpoint rejects closes the client it built for the attempt.
 
-    Falsifiable: a failed connect that sets the client attribute to ``None``
+    A failed connect that sets the client attribute to ``None``
     leaves the client it built with its connection pool open.
 
     Args:
@@ -234,7 +234,7 @@ async def test_a_rejected_key_closes_the_anthropic_client_that_was_built(
 ) -> None:
     """A connect Anthropic's endpoint rejects closes the client it built for the attempt.
 
-    Falsifiable: a failed connect that keeps or forgets the client without
+    A failed connect that keeps or forgets the client without
     closing it leaves its connection pool open.
 
     Args:

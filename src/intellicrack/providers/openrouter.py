@@ -254,7 +254,7 @@ class OpenRouterProvider(LLMProviderBase):
         else:
             self._credentials = credentials
             self._client_loop = asyncio.get_running_loop()
-            self.connected = True
+            self.connected: bool = True
             self._logger.info(
                 "openrouter_connected",
                 has_custom_base=credentials.api_base is not None,
