@@ -298,7 +298,7 @@ class ProviderEndpointServer:
                 body_builder=_openai_models_body,
             )
         if path == ANTHROPIC_MODELS_PATH:
-            accepted = self.accepted_key in {headers.get("x-api-key"), headers.get("authorization", "").removeprefix("Bearer ")}
+            accepted = headers.get("x-api-key") == self.accepted_key or headers.get("authorization") == f"Bearer {self.accepted_key}"
             return self._authorized(accepted=accepted, body_builder=_anthropic_models_body)
         if path == GEMINI_MODELS_PATH:
             return self._authorized(accepted=headers.get("x-goog-api-key") == self.accepted_key, body_builder=_gemini_models_body)
