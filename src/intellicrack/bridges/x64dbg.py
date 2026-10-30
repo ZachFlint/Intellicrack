@@ -1873,9 +1873,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 ),
                 ToolFunction(
                     name="x64dbg.trace_start",
-                    description=(
-                        "Start a run-trace recording session in x64dbg (see trace_into/trace_over for a conditional trace)"
-                    ),
+                    description="Start a run-trace recording session in x64dbg (see trace_into/trace_over for a conditional trace)",
                     parameters=[
                         ToolParameter(
                             name="address",

@@ -26,7 +26,12 @@ from intellicrack.mcp.validation import pattern_hazard, validate_against_schema
 _DEEP: Final[int] = 6000
 _BEYOND_C_RECURSION: Final[int] = 12_000
 _UNIQUE_ITEMS: Final[int] = 10_000
-_UNIQUE_BUDGET_S: Final[float] = 1.0
+# Ten times the items should take about ten times as long when the check is
+# linear and about a hundred times when it is quadratic. The bound sits between
+# the two, so it holds on a slow or loaded host where a wall-clock budget does not.
+_UNIQUE_SCALE: Final[int] = 10
+_UNIQUE_MAX_GROWTH: Final[float] = 30.0
+_UNIQUE_REPEATS: Final[int] = 3
 
 
 def _nested_arrays(levels: int) -> list[object]:
@@ -105,14 +110,22 @@ class TestUniqueItems:
     """``uniqueItems`` is linear, deep-safe and exact about JSON equality."""
 
     def test_ten_thousand_items_are_checked_quickly(self) -> None:
-        """Ten thousand distinct objects are checked in well under a second, and one duplicate is found."""
+        """The check grows linearly from one to ten thousand distinct objects, and one duplicate is found."""
+        schema = {"type": "array", "uniqueItems": True}
+        small: list[object] = [{"id": index, "tags": [index, str(index)]} for index in range(_UNIQUE_ITEMS // _UNIQUE_SCALE)]
         items: list[object] = [{"id": index, "tags": [index, str(index)]} for index in range(_UNIQUE_ITEMS)]
-        started = time.perf_counter()
-        clean = validate_against_schema(items, {"type": "array", "uniqueItems": True})
-        elapsed = time.perf_counter() - started
 
-        assert clean == []
-        assert elapsed < _UNIQUE_BUDGET_S
+        def best_time(array: list[object]) -> float:
+            timings: list[float] = []
+            for _ in range(_UNIQUE_REPEATS):
+                started = time.perf_counter()
+                assert validate_against_schema(array, schema) == []
+                timings.append(time.perf_counter() - started)
+            return min(timings)
+
+        growth = best_time(items) / best_time(small)
+
+        assert growth < _UNIQUE_MAX_GROWTH, f"10x the items took {growth:.1f}x as long; the check is not linear"
         assert validate_against_schema([*items, {"tags": [7, "7"], "id": 7}], {"uniqueItems": True}) != []
 
     @pytest.mark.parametrize(
