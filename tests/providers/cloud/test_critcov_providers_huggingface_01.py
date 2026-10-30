@@ -804,8 +804,8 @@ async def test_stream_rejects_model_missing_from_served_catalog() -> None:
 @pytest.mark.parametrize(
     ("operation", "error_type", "fragment"),
     [
-        ("chat", TimeoutError, "HuggingFace inference timeout: Inference call timed out"),
-        ("stream", TimeoutError, "HuggingFace inference timeout: Inference call timed out"),
+        ("chat", TimeoutError, "HuggingFace inference timeout: peer reset"),
+        ("stream", TimeoutError, "HuggingFace inference timeout: peer reset"),
         ("chat", ConnectionResetError, "HuggingFace API error: peer reset"),
         ("stream", ConnectionResetError, "HuggingFace stream failed: peer reset"),
     ],
