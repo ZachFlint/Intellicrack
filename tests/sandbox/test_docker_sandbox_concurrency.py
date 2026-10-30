@@ -756,6 +756,38 @@ def test_reaper_derives_live_runs_from_running_containers(
     assert docker_sandbox.host_spec_path(own).is_file(), "the reaper deleted this run's own spec file"
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="drives a Windows .cmd stub for the Windows container driver")
+def test_reaper_deletes_nothing_when_docker_ps_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed ``docker ps`` leaves every control file in place.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory holding reports and the stub CLI.
+        monkeypatch: Fixture used to redirect the reports root and stub ``docker``.
+    """
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    monkeypatch.setattr(docker_sandbox, "_REPORTS_ROOT", reports)
+    own = _spec("tests/sandbox", run_id="p1-aaaaaa")
+    sibling = _spec("tests/test_core", run_id="p2-bbbbbb")
+    for spec in (own, sibling):
+        _write_control_files(spec, 0)
+        _age_file(docker_sandbox.host_spec_path(spec), 172800.0)
+        _age_file(docker_sandbox.host_exit_code_path(spec), 172800.0)
+    stub_dir = tmp_path / "bin"
+    stub_dir.mkdir()
+    (stub_dir / "docker.cmd").write_text("@echo off\r\nexit /b 1\r\n", encoding="utf-8")
+    monkeypatch.setenv("PATH", f"{stub_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+
+    removed = _reap_orphaned_control_files(own_token=run_token(own))
+
+    assert removed == (), f"the reaper deleted files without knowing which runs are live: {removed!r}"
+    assert docker_sandbox.host_spec_path(sibling).is_file(), "the reaper deleted a sibling's spec file"
+    assert docker_sandbox.host_exit_code_path(sibling).is_file()
+
+
 def test_selection_never_targets_a_running_sibling() -> None:
     """A container Docker reports as running is never selected for removal."""
     sibling = "intellicrack-sandbox-module_08-06-2026_14-22_p999-ffffff"
