@@ -121,6 +121,7 @@ ProcessWow64Information: Final[int] = 26
 
 ThreadBasicInformation: Final[int] = 0
 ThreadQuerySetWin32StartAddress: Final[int] = 9
+ThreadSuspendCount: Final[int] = 35
 
 # Context flags (AMD64)
 CONTEXT_AMD64: Final[int] = 0x00100000

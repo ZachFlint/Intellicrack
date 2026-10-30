@@ -213,7 +213,7 @@ def test_fix_fully_reverts_a_prune_via_the_committed_head_baseline(tmp_path: Pat
     (repo / "pyproject.toml").write_text(
         '[project]\nname = "synthetic"\nversion = "0"\n'
         'dependencies = [\n  "capstone",\n  "gone>=1,<2",\n  "psutil>=7.2.2,<8",\n]\n\n'
-        '[tool.pixi]\n'
+        "[tool.pixi]\n"
         'pypi-dependencies.capstone = "*"\n'
         'pypi-dependencies.gone = ">=1, <2"\n'
         'pypi-dependencies.psutil = ">=7.2.2, <8"\n',
@@ -234,8 +234,8 @@ def test_fix_fully_reverts_a_prune_via_the_committed_head_baseline(tmp_path: Pat
     # by also removing it from the pixi manifest.
     (repo / "pyproject.toml").write_text(
         '[project]\nname = "synthetic"\nversion = "0"\n'
-        'dependencies = [\n]\n\n'
-        '[tool.pixi]\n'
+        "dependencies = [\n]\n\n"
+        "[tool.pixi]\n"
         'pypi-dependencies.capstone = "*"\n'
         'pypi-dependencies.psutil = ">=7.2.2, <8"\n',
         encoding="utf-8",

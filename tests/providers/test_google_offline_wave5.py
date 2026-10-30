@@ -791,7 +791,7 @@ class TestExtractUsage:
         assert isinstance(result, UsageInfo)
 
 
-# _convert_messages_to_provider_format: tool_calls and tool_results
+# Message conversion to the provider format, covering tool calls and tool results
 
 
 class TestConvertMessagesToProviderFormat:
