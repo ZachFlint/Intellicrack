@@ -443,7 +443,7 @@ class TestCancelRequest:
         assert getattr(provider, "_cancel_requested") is True
 
 
-# _convert_messages_to_provider_format (HuggingFace)
+# Message conversion to the provider format for HuggingFace
 
 
 class TestConvertMessagesHF:
@@ -483,7 +483,7 @@ class TestConvertMessagesHF:
         assert result[2] == {"role": "assistant", "content": "Decompiled."}
 
 
-# _convert_tools_to_provider_format (HuggingFace)
+# Tool conversion to the provider format for HuggingFace
 
 
 class TestConvertToolsHF:
@@ -517,7 +517,7 @@ class TestConvertToolsHF:
         assert "path" in required
 
 
-# _fetch_model_config (local_transformers.py)
+# Model config fetching in the local Transformers provider
 
 
 class TestFetchModelConfig:
@@ -1190,7 +1190,7 @@ class TestIterLocalGenerationLoop:
         assert multinomial_calls == [True]
 
 
-# _convert_tools_to_provider_format (LocalTransformers)
+# Tool conversion to the provider format for local Transformers
 
 
 class TestConvertToolsLT:
