@@ -2349,7 +2349,7 @@ mod tests {
         doc.add_va_mapping(usize::MAX, 0x1000, 1);
         // The only offset that satisfies `offset >= usize::MAX` is `usize::MAX`
         // itself; a `file_off + length` sum overflows while testing it.
-        // It is genuinely the first byte of this one-byte mapping, so it
+        // It is the first byte of this one-byte mapping, so it
         // resolves to the base VA rather than panicking.
         assert_eq!(doc.file_offset_to_va(usize::MAX), Some(0x1000));
 

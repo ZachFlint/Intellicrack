@@ -6,7 +6,7 @@
 
 These tests drive every documented hash/checksum algorithm of
 :mod:`intellicrack.ui.panels.hex_editor.base` and the parametric CRC engine
-over a REAL Windows PE binary
+over a Windows PE binary
 (``C:/Windows/System32/kernel32.dll``) and assert the produced digests
 against independent reference implementations (Python's :mod:`hashlib`,
 :mod:`zlib`, and the canonical CRC catalogue check values).
@@ -321,7 +321,7 @@ class TestStreamingCrcMatchesInMemory:
         Uses CRC-32/BZIP2-style parameters with ``ref_in=False`` /
         ``ref_out=False`` so the standard zlib short-circuit in
         ``_crc_over_chunks`` is NOT taken and the production table-driven,
-        mmap-chunked streaming engine is genuinely exercised.  The independent
+        mmap-chunked streaming engine is exercised. The independent
         oracle is :meth:`_bitserial_crc_unreflected`, a bit-at-a-time CRC that
         shares no code with the production byte-at-a-time engine, so any
         regression in the CRC table, the chunk boundaries, or the streaming
@@ -350,7 +350,7 @@ class TestStreamingCrcMatchesInMemory:
         This complements
         :meth:`test_streaming_file_path_matches_bitserial_reference` by
         confirming the standard (reflected) CRC-32 path agrees with the
-        independent ``zlib.crc32`` implementation over the real binary.
+        independent ``zlib.crc32`` implementation over the PE binary.
 
         Args:
             real_pe_dll: Real PE DLL fixture path.
@@ -372,9 +372,9 @@ class TestStreamingCrcMatchesInMemory:
         """Verify the mmap file path and the document path agree on a real PE.
 
         Uses CRC-16/ARC parameters so the standard zlib short-circuit is not
-        taken and the table-driven streaming engine is genuinely exercised.
+        taken and the table-driven streaming engine is exercised.
         The mmap-backed and ``document.read``-backed code paths must produce
-        the identical CRC for the same real binary.
+        the identical CRC for the same binary.
 
         Args:
             real_pe_dll: Real PE DLL fixture path.

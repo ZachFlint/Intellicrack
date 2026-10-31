@@ -562,7 +562,7 @@ class X64DbgPanel(AnalysisPanelBase):
         # push the bottom tabs, and their Add-Breakpoint row, below the
         # visible window at normal sizes; this floor keeps both panes'
         # essential controls in view while still growing to fill more
-        # room, and only a genuinely undersized window falls back to the
+        # room, and only an undersized window falls back to the
         # scrollbar this area is wrapped in.
         self._content_scroll_area = self._make_scrollable(
             main_splitter,
@@ -1679,7 +1679,7 @@ class X64DbgPanel(AnalysisPanelBase):
         desktop-scoped, so this periodically renders the window's live
         content into a ``QImage`` via
         :func:`intellicrack.ui.win32_embed.capture_window_image` and paints
-        it into the "x64dbg Window" tab, which is the closest genuine
+        it into the "x64dbg Window" tab, which is the closest
         equivalent of embedding available for a window that can never be
         reparented across desktops. The debug session itself is driven
         entirely over the named-pipe bridge, so this view is read-only by
@@ -3961,7 +3961,7 @@ class X64DbgPanel(AnalysisPanelBase):
         The Condition/Log fields only take effect once ``trace_start``
         returns ``log_text``/``log_condition`` back (see
         ``X64DbgBridge.trace_start``), so surfacing them here confirms to
-        the operator that a typed condition genuinely applied instead of
+        the operator that a typed condition applied instead of
         being silently dropped.
 
         Args:

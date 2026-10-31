@@ -1264,7 +1264,7 @@ class JavaScriptSyntaxHighlighter(_ThemedSyntaxHighlighter):
         *,
         start_in_block_comment: bool,
     ) -> int:
-        """Return the index of the next backtick that genuinely opens a template literal.
+        """Return the index of the next backtick that opens a template literal.
 
         Scans ``text`` from ``offset`` treating ``//`` line comments, ``/*``
         ``*/`` block comments, and double/single-quoted string literals

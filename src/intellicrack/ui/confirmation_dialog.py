@@ -8,7 +8,7 @@ This module provides a dialog for confirming tool calls before execution, allowi
 destructive operations.
 
 A remembered answer is keyed by ``(tool_name, function_name, generation)``.
-The generation is what makes the answer honest for an externally-sourced tool:
+The generation keeps the answer current for an externally-sourced tool:
 a third-party server can change what a tool does between one turn and the
 next, so an answer given about the old definition must not silently carry over
 to the new one. Bridge tools ship with the application and carry no

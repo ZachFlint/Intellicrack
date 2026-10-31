@@ -11,7 +11,7 @@ own also serialise the read-only analyses that could safely overlap.
 
 The class is ``frozen`` with a ``RwLock`` inside, so these tests assert both
 halves of that claim: that concurrent access does not raise, and that reads
-genuinely run at the same time rather than merely queueing politely.
+run at the same time rather than queueing behind one another.
 
 The remaining tests cover the accessors added alongside it -- the little-endian
 buffer variants, the windowed read, and the generation counter -- each checked
@@ -143,10 +143,10 @@ _CALIBRATION_CAP: Final = 1 << 20
 
 @pytest.fixture
 def engine_binary(hexcore: types.ModuleType) -> str:
-    """Locate a real compiled binary that is always present.
+    """Locate a compiled binary that is always present.
 
-    The extension module itself is a genuine multi-megabyte PE, which makes it a
-    real target for the analyses under test without committing a fixture. Which
+    The extension module itself is a multi-megabyte PE, which makes it usable as
+    input for the analyses under test without committing a fixture. Which
     file ``__file__`` names depends on how the wheel was installed: an editable
     install points straight at the ``.pyd``, while a packaged one can point at a
     few-hundred-byte package ``__init__.py``. Analysing that instead leaves the
@@ -276,7 +276,7 @@ def test_concurrent_readers_and_writers_share_one_document(
 
     Args:
         hexcore: The imported native module.
-        engine_binary: A real binary to analyse.
+        engine_binary: Path to the compiled extension binary to analyze.
     """
     doc = hexcore.HexDocument.open(engine_binary)
 
@@ -294,8 +294,8 @@ def _measurable_serial_run(doc: HexDocument) -> tuple[int, float]:
 
     The count is calibrated rather than fixed because how long one scan takes
     depends on the machine and on how large the located binary is. A count that
-    is generous on one machine is noise on another, and noise here does not fail
-    honestly: four threads each doing half a millisecond of work take about as
+    is generous on one machine is noise on another, and noise here passes
+    regardless of overlap: four threads each doing half a millisecond of work take about as
     long as four threads starting, whether or not they overlapped.
 
     Args:
@@ -323,14 +323,14 @@ def test_reads_of_one_document_overlap(
     """Concurrent reads finish far sooner than the same reads run back to back.
 
     Not raising would also be satisfied by a lock that serialised every call, so
-    this measures that readers genuinely proceed together. ``byte_statistics``
+    this measures that readers proceed together. ``byte_statistics``
     is the instrument because it is a sequential scan inside the engine that
     releases the GIL, so any speed-up comes from the reads overlapping and not
     from the engine's own use of rayon.
 
     Args:
         hexcore: The imported native module.
-        engine_binary: A real binary to analyse.
+        engine_binary: Path to the compiled extension binary to analyze.
     """
     available = os.cpu_count() or 1
     if available < _MIN_CPUS:
@@ -640,7 +640,7 @@ def _sample_paired(doc: HexDocument, stop: threading.Event, sampling: threading.
 
     Sampling continues past :data:`_SKEW_SAMPLES` until the byte has changed
     :data:`_SKEW_MIN_CHANGES` times, so a clean result always comes from a run
-    the writer genuinely overlapped, up to :data:`_SKEW_SAMPLE_CAP` samples.
+    the writer overlapped, up to :data:`_SKEW_SAMPLE_CAP` samples.
 
     Args:
         doc: The shared document.

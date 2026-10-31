@@ -104,6 +104,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Changed
 
+- **hexcore:** Optimize document operations and clean typings (`266a8e3`)
+
 - Harden hexcore concurrency, diff engine, and test suites (`04be5a9`)
 
 - Apply small Python modernizations across MCP, providers and tests (`11103d2`)
@@ -113,8 +115,6 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - Apply linter cleanups and prune legacy launcher (`3bcf562`)
 
 - **mcp:** Remove every suppression and the type errors behind them (`5835d3c`)
-
-- **hexcore:** Optimize document operations and clean typings (``)
 
 
 ### Documentation

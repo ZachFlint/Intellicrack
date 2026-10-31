@@ -81,7 +81,7 @@ class _EventLog:
 class _SyncSandboxBridge(HexEditorBridge):
     """Bridge subclass whose sandbox ``create`` and ``copy_to`` hooks are plain synchronous callables.
 
-    ``copy_to`` performs a genuine file copy so a test can assert that the instance
+    ``copy_to`` performs a file copy on disk so a test can assert that the instance
     identifier returned by ``create`` reached the copy step and that the bytes arrived.
     """
 

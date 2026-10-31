@@ -124,7 +124,7 @@ class TestGilReleasedDuringHeavyWork:
     def test_extract_strings_releases_gil() -> None:
         """String extraction over 128 MiB lets another Python thread run.
 
-        Falsifiable: if ``extract_strings`` scanned with the GIL held, the probe thread
+        If ``extract_strings`` scanned with the GIL held, the probe thread
                 would make no progress during the call.
         """
         doc = HexDocument.open_bytes(b"ABCD\x00" * (128 * 1024 * 1024 // 5))
@@ -134,8 +134,8 @@ class TestGilReleasedDuringHeavyWork:
     def test_verify_pe_checksum_releases_gil() -> None:
         """PE checksum verification over 192 MiB lets another thread run.
 
-        Falsifiable: if the whole-image copy and word sum ran with
-        the GIL held.
+        If the whole-image copy and word sum ran with the GIL held, the
+        probe thread would make no progress during the call.
         """
         doc = HexDocument.open_bytes(_large_pe(192 * 1024 * 1024))
         _assert_releases_gil(doc.verify_pe_checksum)
@@ -156,7 +156,7 @@ class TestGilReleasedDuringHeavyWork:
     def test_fill_block_releases_gil() -> None:
         """Filling 128 MiB lets another Python thread run during the copy.
 
-        Falsifiable: if ``fill_block`` built its pattern and overwrote the range
+        If ``fill_block`` built its pattern and overwrote the range
         with the GIL held, the probe thread would make no progress for the whole
         call.
         """

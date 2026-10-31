@@ -5,7 +5,7 @@
 
 """Gates for image-cache probing in the Docker sandbox driver.
 
-``docker image inspect`` exits non-zero both when an image is genuinely absent
+``docker image inspect`` exits non-zero both when an image is absent
 and when the probe simply could not tell -- a timeout while the engine is
 saturated, a daemon still warming up, an invalid reference. Treating those
 alike made the driver conclude a present 45 GB image was missing and start a
@@ -23,9 +23,9 @@ finished step behind as a dangling image; the next successful build removes
 those leftovers, but only ones built from the sandbox Dockerfile, and never
 while another build may still be using its own intermediate steps.
 
-These tests drive the real driver functions in a subprocess against a **stub**
-Docker CLI on ``PATH`` whose ``image inspect`` behaviour is controlled, so the
-tests observe genuine subprocess behaviour rather than a mocked return value.
+These tests drive the driver functions in a subprocess against a **stub**
+Docker CLI on ``PATH`` whose ``image inspect`` behavior is controlled, so the
+tests observe how the driver handles each exit code and stderr text.
 If the classification collapses back to ``returncode == 0``, the timeout and
 daemon-error cases report ``ABSENT`` and those tests fail.
 """
@@ -131,7 +131,7 @@ def test_probe_reports_present_when_inspect_succeeds(tmp_path: Path) -> None:
     """A clean ``docker image inspect`` must resolve to ``PRESENT``.
 
     This pins the positive case so a change that made every probe inconclusive
-    (which would refuse to build even on a genuinely first run) is caught.
+    (which would refuse to build even on a first run) is caught.
 
     Args:
         tmp_path: Pytest-provided temporary directory.
@@ -144,7 +144,7 @@ def test_probe_reports_present_when_inspect_succeeds(tmp_path: Path) -> None:
 def test_probe_reports_absent_only_on_no_such_image(tmp_path: Path) -> None:
     """Docker's explicit "No such image" response must resolve to ``ABSENT``.
 
-    This is the one failure that genuinely warrants a build, and it must keep
+    This is the one failure that warrants a build, and it must keep
     working so a first run still builds the image.
 
     Args:
@@ -270,7 +270,7 @@ def test_build_image_refuses_to_rebuild_on_inconclusive_probe(tmp_path: Path) ->
     )
 
 
-def test_build_image_still_builds_when_image_is_genuinely_absent(tmp_path: Path) -> None:
+def test_build_image_still_builds_when_image_is_absent(tmp_path: Path) -> None:
     """A definitive absence must still trigger a build.
 
     This guards the opposite failure: refusing to build on the first ever run.
@@ -283,7 +283,7 @@ def test_build_image_still_builds_when_image_is_genuinely_absent(tmp_path: Path)
     _write_stub_docker(tmp_path, inspect_exit=1, inspect_stderr=_ABSENT_STDERR)
     result = _run_driver(tmp_path, _build_body(tmp_path))
     assert "RESULT=built:intellicrack-sandbox:latest" in result.stdout, (
-        f"a genuinely absent image must still build; stdout={result.stdout} stderr={result.stderr}"
+        f"an absent image must still build; stdout={result.stdout} stderr={result.stderr}"
     )
 
 

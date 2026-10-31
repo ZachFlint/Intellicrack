@@ -1181,7 +1181,7 @@ mod tests {
     /// recomputed exactly, at the `CheckSum` field the PE headers locate.
     #[cfg(windows)]
     #[test]
-    fn test_verify_pe_checksum_accepts_genuine_system_dlls() {
+    fn test_verify_pe_checksum_accepts_system32_dlls() {
         for name in ["kernel32.dll", "ntdll.dll", "user32.dll"] {
             let path = std::path::Path::new(r"C:\Windows\System32").join(name);
             let data = std::fs::read(&path).unwrap();

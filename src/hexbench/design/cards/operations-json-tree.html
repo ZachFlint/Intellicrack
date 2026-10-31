@@ -433,10 +433,9 @@ svg {
 /* The dark palette is declared twice on purpose. Section 3 answers the system
    setting and this block answers an explicit choice, and neither can be
    expressed as the other without a preprocessor or a second stylesheet, which
-   this app does not have. What keeps the two copies honest is not discipline:
-   tests/stylesheet_tokens.test.mjs parses both blocks and fails on the first
-   token they disagree about, and holds the light attribute block to :root the
-   same way. */
+   this app does not have. tests/stylesheet_tokens.test.mjs keeps the two copies
+   in step: it parses both blocks and fails on the first token they disagree
+   about, and holds the light attribute block to :root the same way. */
 
 :root[data-theme="dark"],
 [data-theme="dark"] {

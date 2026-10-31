@@ -310,7 +310,7 @@ def _draw_live_wordmark(painter: QPainter, wordmark: str, size: int) -> None:
 
     Not used for the canonical wordmark: live glyph shaping is not guaranteed
     pixel-identical across machines or font environments, so this path exists
-    only to prove that :func:`build_splash_image` output actually depends on
+    only to check that :func:`build_splash_image` output depends on
     its ``wordmark`` argument.
 
     Args:

@@ -1396,7 +1396,7 @@ mod tests {
         let eight = [1u8, 2, 3, 4, 5, 6, 7, 8];
         assert_eq!(decode_uint(&eight, 8, true), 0x0102_0304_0506_0708);
         assert_eq!(decode_uint(&eight, 8, false), 0x0807_0605_0403_0201);
-        // Widths 5/6/7 are genuinely decoded (not silently zeroed).
+        // Widths 5/6/7 are decoded (not silently zeroed).
         assert_eq!(decode_uint(&[1, 2, 3, 4, 5], 5, false), 0x05_0403_0201);
         assert_eq!(decode_uint(&[1, 2, 3, 4, 5], 5, true), 0x01_0203_0405);
         assert_eq!(decode_uint(&[1, 2, 3, 4, 5, 6], 6, false), 0x0605_0403_0201);
@@ -1420,7 +1420,7 @@ mod tests {
         assert_eq!(sign_extend(0x80_0000, 3), -8_388_608);
         assert_eq!(sign_extend(0xFFFF_FFFF, 4), -1);
         assert_eq!(sign_extend(u64::MAX, 8), -1);
-        // Widths 5/6/7 are genuinely sign-extended from their own top bit.
+        // Widths 5/6/7 are sign-extended from their own top bit.
         assert_eq!(sign_extend(0xFF_FFFF_FFFF, 5), -1);
         assert_eq!(sign_extend(0x80_0000_0000, 5), -549_755_813_888);
         assert_eq!(sign_extend(0x7F_FFFF_FFFF, 5), 549_755_813_887);
@@ -1584,7 +1584,7 @@ mod tests {
     #[test]
     fn test_search_numeric_range_unsigned_u64_large_values_not_falsely_matched() {
         // A true u64 value above i64::MAX must not be lossily clamped into matching
-        // a range capped at i64::MAX; only the genuinely in-range value matches.
+        // a range capped at i64::MAX; only the in-range value matches.
         let mut data = vec![0u8; 32];
         data[0..8].copy_from_slice(&5000u64.to_le_bytes());
         data[8..16].copy_from_slice(&0xFFFF_FFFF_FFFF_FFFFu64.to_le_bytes());

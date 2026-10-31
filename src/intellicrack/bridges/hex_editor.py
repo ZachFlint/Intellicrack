@@ -4159,7 +4159,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         target agree at the current output position, ``SourceCopy`` for
         runs that appear at any source offset, ``TargetCopy`` for runs
         that repeat earlier in the target (RLE-style and self-similar
-        regions), and ``TargetRead`` for genuinely novel bytes. Source
+        regions), and ``TargetRead`` for bytes matched nowhere else. Source
         and target offset hash tables index the longest match starting
         at each ``_BPS_HASH_WORD``-byte word, so the encoder finds
         non-trivial repeats in ``O(target_len * _BPS_HASH_WORD)`` time

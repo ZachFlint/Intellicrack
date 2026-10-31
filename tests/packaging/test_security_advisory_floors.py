@@ -22,13 +22,21 @@ Several PyPI distributions carried Dependabot advisories:
   injection, conflicting ``Content-Length``/``Transfer-Encoding``, and streaming
   decompression amplification (CVE-2026-84378 through CVE-2026-84382). ``httpx2``
   is fully patched by ``2.12.0`` and ``httpcore2`` clears its half of
-  CVE-2026-84381 by ``2.10.0``.
+  CVE-2026-84381 by ``2.10.0``;
+* **certifi** (shipped at runtime via ``requests``/``httpx``) bundled the emSign
+  roots whose intermediate CA keys were compromised (GHSA-6q48-6c7w-9gw2),
+  removed in ``2026.10.19``;
+* **opentelemetry-api** (shipped at runtime via ``mcp``/``anthropic``) parsed
+  ``tracestate`` without bounds (GHSA-xcq7-p3pf-p88h), fixed in ``1.45.1``; and
+* **virtualenv** (pulled by ``tox``/``nox``/``pre-commit``/``poetry`` in the dev
+  toolchain) had a run of activation-script injection, seeding verification and
+  link-following advisories, all fixed by ``21.14.9``.
 
 Each gets a minimum-version floor in ``pyproject.toml`` --
-``pyasn1``, ``httpx2`` and ``httpcore2`` in the default (runtime)
-``[tool.pixi].pypi-dependencies`` and ``gitpython`` in
-``[tool.pixi.feature.dev.pypi-dependencies]`` so it stays out of the shipped
-runtime environment. These gates hold that fix at three layers:
+``pyasn1``, ``httpx2``, ``httpcore2``, ``certifi`` and ``opentelemetry-api`` in
+the default (runtime) ``[tool.pixi].pypi-dependencies``, and ``gitpython`` and
+``virtualenv`` in ``[tool.pixi.feature.dev.pypi-dependencies]`` so they stay out
+of the shipped runtime environment. These gates hold that fix at three layers:
 
 * the declared specifier in ``pyproject.toml`` must admit the patched version
   and reject the representative still-vulnerable version;
@@ -36,14 +44,22 @@ runtime environment. These gates hold that fix at three layers:
 * the pin exported to ``requirements.txt`` -- the exact manifest Dependabot
   scans -- must be at or above the floor.
 
+The npm transitive **katex** (``markdownlint-cli2 -> micromark-extension-math ->
+katex``) let existing prototype pollution bypass its trust restrictions
+(GHSA-238p-pmpm-9mq7), fixed in ``0.18.2``. Its parent caps it at ``^0.16.0``, so
+``package.json`` forces it through both ``resolutions`` (Yarn) and ``overrides``
+(npm), and every ``yarn.lock`` entry for it must resolve at or above the floor.
+
 Removing or weakening a pin, a re-solve that regresses a package below its floor,
-or a stale ``requirements.txt`` each reddens a gate. ``pyproject.toml``,
-``pixi.lock`` and ``requirements.txt`` all live at the repository root, which is
-not mounted into the test container, so these run in the host-native pass.
+or a stale ``requirements.txt`` or ``yarn.lock`` each reddens a gate.
+``pyproject.toml``, ``pixi.lock``, ``requirements.txt``, ``package.json`` and
+``yarn.lock`` all live at the repository root, which is not mounted into the
+test container, so these run in the host-native pass.
 """
 
 from __future__ import annotations
 
+import json
 import re
 import tomllib
 from pathlib import Path
@@ -59,6 +75,8 @@ _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[2]
 _PYPROJECT: Final[Path] = _REPO_ROOT / "pyproject.toml"
 _PIXI_LOCK: Final[Path] = _REPO_ROOT / "pixi.lock"
 _REQUIREMENTS: Final[Path] = _REPO_ROOT / "requirements.txt"
+_PACKAGE_JSON: Final[Path] = _REPO_ROOT / "package.json"
+_YARN_LOCK: Final[Path] = _REPO_ROOT / "yarn.lock"
 
 # Canonical distribution name -> (first patched version, a representative
 # version still covered by the advisories). The patched floor must be admitted
@@ -67,12 +85,21 @@ _GITPYTHON: Final[str] = str(canonicalize_name("GitPython"))
 _PYASN1: Final[str] = str(canonicalize_name("pyasn1"))
 _HTTPX2: Final[str] = str(canonicalize_name("httpx2"))
 _HTTPCORE2: Final[str] = str(canonicalize_name("httpcore2"))
+_CERTIFI: Final[str] = str(canonicalize_name("certifi"))
+_OPENTELEMETRY_API: Final[str] = str(canonicalize_name("opentelemetry-api"))
+_VIRTUALENV: Final[str] = str(canonicalize_name("virtualenv"))
 _FLOORS: Final[dict[str, tuple[Version, Version]]] = {
     _GITPYTHON: (Version("3.1.59"), Version("3.1.58")),
     _PYASN1: (Version("0.6.4"), Version("0.6.3")),
     _HTTPX2: (Version("2.13.0"), Version("2.9.1")),
     _HTTPCORE2: (Version("2.13.0"), Version("2.9.1")),
+    _CERTIFI: (Version("2026.10.19"), Version("2026.7.22")),
+    _OPENTELEMETRY_API: (Version("1.45.1"), Version("1.45.0")),
+    _VIRTUALENV: (Version("21.14.9"), Version("21.14.8")),
 }
+
+_KATEX: Final[str] = "katex"
+_KATEX_FLOOR: Final[Version] = Version("0.18.2")
 
 _REQUIREMENT_LINE: Final[re.Pattern[str]] = re.compile(r"^\s*([A-Za-z0-9._-]+)\s*==\s*([^\s;#]+)")
 
@@ -224,17 +251,57 @@ def test_pyproject_declares_httpx_stack_runtime_security_floor() -> None:
     admitted.
     """
     for dist, cves in ((_HTTPX2, "CVE-2026-84378..84382"), (_HTTPCORE2, "CVE-2026-84381")):
-        floor, vulnerable = _FLOORS[dist]
-        spec = _declared_specifier(dist, "tool", "pixi", "pypi-dependencies")
-        assert str(spec), f"{dist} is not declared in [tool.pixi].pypi-dependencies"
-        lower_bound = _declared_lower_bound(spec)
-        assert lower_bound is not None, f"{dist} spec {spec} has no lower bound, so it admits every vulnerable release ({cves})"
-        assert lower_bound >= floor, f"{dist} spec {spec} admits releases below the patched floor {floor} ({cves})"
-        assert not spec.contains(vulnerable), f"{dist} spec {spec} still admits the vulnerable {vulnerable} ({cves})"
-        shipped = _lock_versions(dist)
-        assert shipped, f"{dist} is not resolved in pixi.lock"
-        rejected = sorted(str(version) for version in shipped if not spec.contains(version))
-        assert not rejected, f"{dist} spec {spec} rejects the version pixi.lock ships: {rejected}"
+        _assert_declared_floor(dist, cves, "tool", "pixi", "pypi-dependencies")
+
+
+def _assert_declared_floor(dist: str, advisories: str, *table_path: str) -> None:
+    """Assert a declared pixi pin clears its advisory floor and admits the locked release.
+
+    Args:
+        dist: Canonical distribution name from ``_FLOORS``.
+        advisories: Advisory identifiers named in failure messages.
+        *table_path: Keys navigating from the parsed document root to the
+            ``pypi-dependencies`` sub-table that must declare ``dist``.
+    """
+    floor, vulnerable = _FLOORS[dist]
+    table = ".".join(table_path)
+    spec = _declared_specifier(dist, *table_path)
+    assert str(spec), f"{dist} is not declared in [{table}]"
+    lower_bound = _declared_lower_bound(spec)
+    assert lower_bound is not None, f"{dist} spec {spec} has no lower bound, so it admits every vulnerable release ({advisories})"
+    assert lower_bound >= floor, f"{dist} spec {spec} admits releases below the patched floor {floor} ({advisories})"
+    assert not spec.contains(vulnerable), f"{dist} spec {spec} still admits the vulnerable {vulnerable} ({advisories})"
+    shipped = _lock_versions(dist)
+    assert shipped, f"{dist} is not resolved in pixi.lock"
+    rejected = sorted(str(version) for version in shipped if not spec.contains(version))
+    assert not rejected, f"{dist} spec {spec} rejects the version pixi.lock ships: {rejected}"
+
+
+def test_pyproject_declares_certifi_and_opentelemetry_runtime_security_floors() -> None:
+    """The certifi and opentelemetry-api pins must be runtime floors that reject the vulnerable releases.
+
+    Both pins live in the default-feature ``[tool.pixi].pypi-dependencies`` so the
+    patched CA bundle (used by requests and httpx) and the patched tracing API
+    (used by mcp and anthropic) ship in the runtime environment. Each declared
+    lower bound must be at least the advisory floor, the last vulnerable release
+    must be rejected, and the release ``pixi.lock`` resolves must be admitted.
+    """
+    for dist, advisories in ((_CERTIFI, "GHSA-6q48-6c7w-9gw2"), (_OPENTELEMETRY_API, "GHSA-xcq7-p3pf-p88h")):
+        _assert_declared_floor(dist, advisories, "tool", "pixi", "pypi-dependencies")
+
+
+def test_pyproject_declares_virtualenv_dev_security_floor() -> None:
+    """The virtualenv pin must be a dev-feature floor that stays out of the runtime table.
+
+    tox, nox, pre-commit and poetry pull virtualenv into the dev toolchain only,
+    so its pin lives in ``[tool.pixi.feature.dev.pypi-dependencies]``. The
+    declared lower bound must clear 21.14.9 (the release fixing every open
+    virtualenv advisory), reject 21.14.8, admit the locked release, and the
+    default-feature table must not declare it.
+    """
+    _assert_declared_floor(_VIRTUALENV, "virtualenv activation/seeding advisories", "tool", "pixi", "feature", "dev", "pypi-dependencies")
+    runtime_spec = _declared_specifier(_VIRTUALENV, "tool", "pixi", "pypi-dependencies")
+    assert not str(runtime_spec), "virtualenv is declared in the default-feature pypi-dependencies, leaking it into the runtime env"
 
 
 def test_pyproject_declares_gitpython_dev_security_floor() -> None:
@@ -245,16 +312,12 @@ def test_pyproject_declares_gitpython_dev_security_floor() -> None:
     without dragging it into the shipped runtime environment. It must also not be
     declared in the default-feature table, which would leak it into the runtime.
 
-    The shipped pin is deliberately stricter than the advisory first-patched
-    version, so this asserts the declared floor is *at least* the advisory floor
-    (by rejecting the last vulnerable release) rather than admitting that exact
-    version, and that the pin still admits ongoing 3.1.x patch releases.
+    The shipped pin tracks the locked release and is stricter than the advisory
+    first-patched version, so this asserts the declared lower bound is *at least*
+    the advisory floor, that the last vulnerable release is rejected, and that
+    the release ``pixi.lock`` resolves is admitted.
     """
-    floor, vulnerable = _FLOORS[_GITPYTHON]
-    spec = _declared_specifier(_GITPYTHON, "tool", "pixi", "feature", "dev", "pypi-dependencies")
-    assert str(spec), "gitpython is not declared in [tool.pixi.feature.dev.pypi-dependencies]"
-    assert not spec.contains(vulnerable), f"gitpython spec {spec} still admits the vulnerable {vulnerable} (fixed in {floor})"
-    assert spec.contains(Version("3.1.99")), f"gitpython spec {spec} admits no ongoing 3.1.x patched release"
+    _assert_declared_floor(_GITPYTHON, "GHSA-284h-m62q-gf8w", "tool", "pixi", "feature", "dev", "pypi-dependencies")
     runtime_spec = _declared_specifier(_GITPYTHON, "tool", "pixi", "pypi-dependencies")
     assert not str(runtime_spec), "gitpython is declared in the default-feature pypi-dependencies, leaking it into the runtime env"
 
@@ -283,3 +346,55 @@ def test_requirements_txt_pins_patched_versions() -> None:
         pinned = _requirements_pin(dist)
         assert pinned is not None, f"{dist} is not pinned in requirements.txt"
         assert pinned >= floor, f"requirements.txt pins {dist}=={pinned}, below the patched floor {floor}"
+
+
+def _yarn_lock_versions(package: str) -> list[Version]:
+    """Return every resolved version of an npm ``package`` recorded in ``yarn.lock``.
+
+    Args:
+        package: Exact npm package name to collect.
+
+    Returns:
+        list[Version]: One entry per lockfile record whose ``resolution`` names
+            ``package`` from the npm registry.
+    """
+    with _YARN_LOCK.open("rb") as handle:
+        document = _as_str_mapping(cast("object", yaml.safe_load(handle)))
+    prefix = f"{package}@npm:"
+    versions: list[Version] = []
+    for entry in document.values():
+        fields = _as_str_mapping(entry)
+        resolution = fields.get("resolution")
+        version = fields.get("version")
+        if isinstance(resolution, str) and resolution.startswith(prefix) and isinstance(version, str):
+            versions.append(Version(version))
+    return versions
+
+
+def test_package_json_forces_patched_katex() -> None:
+    """package.json must force katex to a patched release for both Yarn and npm.
+
+    micromark-extension-math declares ``katex: ^0.16.0``, which only admits
+    releases covered by GHSA-238p-pmpm-9mq7. The ``resolutions`` (Yarn) and
+    ``overrides`` (npm) entries must each pin an exact katex version at or above
+    0.18.2.
+    """
+    manifest = _as_str_mapping(cast("object", json.loads(_PACKAGE_JSON.read_text(encoding="utf-8"))))
+    for field in ("resolutions", "overrides"):
+        pinned = _as_str_mapping(manifest.get(field)).get(_KATEX)
+        assert isinstance(pinned, str), f"package.json {field} does not pin {_KATEX}"
+        version = Version(pinned)
+        assert version >= _KATEX_FLOOR, f"package.json {field} pins {_KATEX} {version}, below the patched floor {_KATEX_FLOOR}"
+
+
+def test_yarn_lock_resolves_patched_katex() -> None:
+    """Every katex record in yarn.lock must resolve at or above the patched floor.
+
+    ``yarn.lock`` is the npm manifest Dependabot scans, so a stale lock that still
+    resolves 0.16.x keeps GHSA-238p-pmpm-9mq7 open even with the package.json
+    override in place.
+    """
+    resolved = _yarn_lock_versions(_KATEX)
+    assert resolved, f"{_KATEX} is not resolved in yarn.lock"
+    below = sorted(str(version) for version in resolved if version < _KATEX_FLOOR)
+    assert not below, f"yarn.lock resolves {_KATEX} below the patched floor {_KATEX_FLOOR}: {below}"

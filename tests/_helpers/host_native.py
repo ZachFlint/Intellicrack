@@ -244,14 +244,18 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_PRECOMMIT_RUFF_PIN, "test_the_pinned_ruff_can_parse_the_project_ruff_configuration"),
         (_PRECOMMIT_RUFF_PIN, "test_the_pinned_ruff_formatter_can_parse_the_project_ruff_configuration"),
         (_PRECOMMIT_RUFF_PIN, "test_mixed_line_ending_hook_skips_every_lf_only_path"),
-        # pyproject.toml, pixi.lock and requirements.txt live at the repo root,
-        # which is not mounted into the container, so the dependency security
-        # floor gates run on the host.
+        # pyproject.toml, pixi.lock, requirements.txt, package.json and
+        # yarn.lock live at the repo root, which is not mounted into the
+        # container, so the dependency security floor gates run on the host.
         (_SECURITY_FLOORS, "test_pyproject_declares_pyasn1_runtime_security_floor"),
         (_SECURITY_FLOORS, "test_pyproject_declares_httpx_stack_runtime_security_floor"),
+        (_SECURITY_FLOORS, "test_pyproject_declares_certifi_and_opentelemetry_runtime_security_floors"),
+        (_SECURITY_FLOORS, "test_pyproject_declares_virtualenv_dev_security_floor"),
         (_SECURITY_FLOORS, "test_pyproject_declares_gitpython_dev_security_floor"),
         (_SECURITY_FLOORS, "test_pixi_lock_resolves_patched_versions"),
         (_SECURITY_FLOORS, "test_requirements_txt_pins_patched_versions"),
+        (_SECURITY_FLOORS, "test_package_json_forces_patched_katex"),
+        (_SECURITY_FLOORS, "test_yarn_lock_resolves_patched_katex"),
         (_REPO_URL_CONSISTENCY, "test_every_github_project_url_points_at_the_canonical_repository"),
         (_REPO_URL_CONSISTENCY, "test_metadata_url_matches_the_pyproject_homepage"),
         (_REPO_URL_CONSISTENCY, "test_installer_appurl_points_at_the_canonical_repository"),

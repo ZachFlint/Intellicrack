@@ -68,7 +68,7 @@ def _pe_checksum_oracle(data: bytes, checksum_offset: int) -> int:
 
     This is an independent oracle used only in tests to produce the expected
     value against which the bridge output is compared. It is NOT the production
-    code path; it is a standalone reference to make tests falsifiable.
+    code path; it is a standalone reference implementation.
 
     Args:
         data: Full file bytes.
@@ -150,13 +150,12 @@ class TestVerifyPEChecksum:
     def test_no_document_raises(self, bridge: HexEditorBridge, pe_binary_full: Path) -> None:
         """Verify verify_pe_checksum raises RuntimeError without a document.
 
-        The pre-condition is earned by a real open-then-close cycle so that
-        the ``bridge.document is None`` assertion is falsifiable: if
+        The pre-condition comes from an open-then-close cycle so that
+        the ``bridge.document is None`` assertion covers ``close_file()``: if
         ``close_file()`` ever failed to reset ``self.document`` to ``None``,
         this assertion would turn red and immediately surface the regression.
-        Relying on construction-time ``None`` alone would make it a
-        cannot-fail assertion; the open-then-close cycle makes it a genuine
-        gate over the close path as well.
+        Relying on construction-time ``None`` alone would leave the close
+        path unchecked.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -173,8 +172,8 @@ class TestVerifyPEChecksum:
     def test_no_document_repair_raises(self, bridge: HexEditorBridge, pe_binary_full: Path) -> None:
         """Verify repair_pe_checksum raises RuntimeError without a document.
 
-        The pre-condition is earned by a real open-then-close cycle so that
-        the ``bridge.document is None`` assertion is falsifiable: if
+        The pre-condition comes from an open-then-close cycle so that
+        the ``bridge.document is None`` assertion covers ``close_file()``: if
         ``close_file()`` ever failed to reset ``self.document`` to ``None``,
         this assertion would turn red, exposing the regression before the
         ``pytest.raises`` body is reached.
@@ -333,8 +332,8 @@ class TestRepairUndo:
         assert doc.read(_ORACLE_CHECKSUM_OFFSET, 4) == stored
 
 
-class TestGenuinePEChecksum:
-    """``verify_pe_checksum`` agrees with ``pefile`` on genuine linker-built DLLs."""
+class TestSystemDllPEChecksum:
+    """``verify_pe_checksum`` agrees with ``pefile`` on linker-built System32 DLLs."""
 
     @staticmethod
     def test_system_dll_checksums_match_pefile(hexcore: types.ModuleType, real_pe_dlls: list[Path]) -> None:
@@ -342,7 +341,7 @@ class TestGenuinePEChecksum:
 
         Args:
             hexcore: The imported native module.
-            real_pe_dlls: Genuine System32 DLLs.
+            real_pe_dlls: System32 DLLs.
         """
         for dll in real_pe_dlls:
             data = dll.read_bytes()
@@ -353,11 +352,11 @@ class TestGenuinePEChecksum:
 
     @staticmethod
     def test_flipped_code_byte_is_detected_with_the_pefile_value(hexcore: types.ModuleType, real_pe_dll: Path) -> None:
-        """A one-byte change deep in a genuine DLL invalidates the checksum by exactly the value ``pefile`` computes.
+        """A one-byte change deep in a System32 DLL invalidates the checksum by exactly the value ``pefile`` computes.
 
         Args:
             hexcore: The imported native module.
-            real_pe_dll: A genuine System32 DLL.
+            real_pe_dll: A System32 DLL.
         """
         data = bytearray(real_pe_dll.read_bytes())
         data[len(data) // 2] ^= 0x01

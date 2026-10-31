@@ -107,7 +107,7 @@ _DOCKER_DAEMON_POLL_INTERVAL = 3.0
 _DOCKER_PROBE_TIMEOUT_SECONDS = 20.0
 _NETWORK_QUERY_TIMEOUT_SECONDS = 20.0
 
-# ``docker image inspect`` reports a genuinely missing image as exit 1 with
+# ``docker image inspect`` reports a missing image as exit 1 with
 # "No such image: <tag>" on stderr. Every other failure -- a probe timeout, a
 # busy or restarting daemon, an invalid reference -- also exits non-zero, so the
 # exit code alone cannot distinguish "absent" from "could not tell". Only this
@@ -1001,7 +1001,7 @@ def _build_docker_run_argv(
     ]
     # Mount the committed vendor corpus when present so real-data tests that
     # drive the shipped ``.hexpat`` pattern files (and other vendored fixtures)
-    # exercise genuine inputs instead of skipping. Mounting conditionally keeps
+    # exercise those files instead of skipping. Mounting conditionally keeps
     # sparse checkouts that omit the submodules working.
     vendor_dir = _PROJECT_ROOT / "vendor"
     if vendor_dir.is_dir():

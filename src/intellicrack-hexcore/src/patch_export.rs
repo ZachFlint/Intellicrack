@@ -704,7 +704,7 @@ mod tests {
     #[test]
     fn test_ips_collision_unresolved_returns_error() {
         // Record starts exactly at the terminator offset and no original
-        // byte is available -- must fail loudly instead of fabricating 0x00.
+        // byte is available -- must return an error instead of fabricating 0x00.
         let patches = vec![PatchRecord {
             offset: IPS_TERMINATOR_OFFSET,
             data: vec![0x11, 0x22, 0x33],

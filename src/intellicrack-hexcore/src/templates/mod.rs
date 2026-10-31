@@ -854,11 +854,11 @@ mod tests {
         assert!(matches!(result, Err(TemplateError::NotFound(n)) if n == "NONEXISTENT"));
     }
 
-    /// Every built-in that declares a magic declares the genuine format
+    /// Every built-in that declares a magic declares the published format
     /// signature at offset 0, and these are exactly the built-ins that do:
     /// MZ, `\x7FELF`, the five Mach-O and fat magics, and the ZIP `PK` records.
     #[test]
-    fn test_builtin_magic_bytes_are_the_genuine_signatures() {
+    fn test_builtin_magic_bytes_are_the_format_signatures() {
         let expected: [(&str, &[u8]); 15] = [
             ("Elf32_Ehdr", &[0x7F, 0x45, 0x4C, 0x46]),
             ("Elf64_Ehdr", &[0x7F, 0x45, 0x4C, 0x46]),
@@ -917,11 +917,11 @@ mod tests {
         assert_eq!(reg.detect(b"\x00\x00\x00\x00"), Vec::<String>::new());
     }
 
-    /// A genuine linker-built DLL's first bytes are recognized as a DOS
-    /// header and as nothing else.
+    /// The first bytes of the linker-built System32 `kernel32.dll` are
+    /// recognized as a DOS header and as nothing else.
     #[cfg(windows)]
     #[test]
-    fn test_detect_recognizes_a_genuine_system_dll() {
+    fn test_detect_recognizes_kernel32_as_a_dos_header() {
         let dll = std::fs::read(r"C:\Windows\System32\kernel32.dll").unwrap();
         assert_eq!(
             TemplateRegistry::new().detect(&dll[..64]),

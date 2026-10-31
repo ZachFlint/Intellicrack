@@ -1460,7 +1460,7 @@ class FridaPanel(AnalysisPanelBase):
         A device previously connected through :meth:`connect_device` with
         ``"remote"`` carries a Frida-assigned id of the form
         ``"<label>@<host>"`` (e.g. ``"socket@10.0.0.9:27042"``), and the
-        ``<host>`` half is still a genuine, DNS-resolvable endpoint worth
+        ``<host>`` half is still a DNS-resolvable endpoint worth
         reconnecting to directly. A device Frida enumerates on its own -
         such as the built-in Local Socket provider, whose id is the bare
         token ``"socket"`` with no ``"@"`` - is *not* a hostname at all, so

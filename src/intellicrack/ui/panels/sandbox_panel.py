@@ -121,7 +121,7 @@ def _format_file_change_detail(change: dict[str, object]) -> str:
 
     Describes a rename via its previous path when known, otherwise falls
     back to the recorded file size so the "Details" column always shows
-    genuinely descriptive content rather than a mislabeled duplicate of
+    descriptive content rather than a mislabeled duplicate of
     another field.
 
     Args:
