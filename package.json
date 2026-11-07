@@ -10,10 +10,12 @@
   },
   "resolutions": {
     "katex": "0.19.1",
+    "re2js": "2.8.7",
     "underscore": "1.13.8"
   },
   "overrides": {
     "katex": "0.19.1",
+    "re2js": "2.8.7",
     "underscore": "1.13.8"
   }
 }
