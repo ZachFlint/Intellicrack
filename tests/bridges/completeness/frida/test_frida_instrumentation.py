@@ -55,6 +55,7 @@ from intellicrack.core.types import ModuleInfo, SymbolInfo, SystemCallResult, To
 
 
 _KERNEL32: Final[str] = "kernel32.dll"
+_KERNELBASE: Final[str] = "kernelbase.dll"
 _ATTACH_WAIT_S: Final[float] = 5.0
 _WORKER_BACKSTOP_S: Final[float] = 30.0
 _FLUSH_WORKER_CALLS: Final[int] = 50
@@ -1170,9 +1171,7 @@ class TestQueryMemoryProtectionC5:
 
         after = _run_async(self_attached_bridge.query_memory_protection(addr))
         assert after == "r--", f"query must reflect the real change just made, got {after!r}"
-        assert after != before or before == "r--", (
-            f"before/after must differ when the protection was changed: {before!r} -> {after!r}"
-        )
+        assert after != before or before == "r--", f"before/after must differ when the protection was changed: {before!r} -> {after!r}"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only bridge integration tests")
@@ -1508,8 +1507,16 @@ class TestFindExportByNameE10:
         scoped = _run_async(self_attached_bridge.find_export_by_name("CreateFileW", _KERNEL32))
         assert scoped == create_file_w.address
 
+        # A global lookup returns the first loaded module that exports the name, and both kernel32 and kernelbase
+        # export CreateFileW, so which one answers depends on module order.
+        exporters = {
+            export.address
+            for module in (_KERNEL32, _KERNELBASE)
+            for export in _run_async(self_attached_bridge.enumerate_exports(module))
+            if export.name == "CreateFileW"
+        }
         unscoped = _run_async(self_attached_bridge.find_export_by_name("CreateFileW"))
-        assert unscoped == create_file_w.address
+        assert unscoped in exporters
 
     @staticmethod
     def test_unknown_export_returns_none_not_an_exception(self_attached_bridge: FridaBridge) -> None:

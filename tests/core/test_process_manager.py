@@ -92,7 +92,21 @@ def _sync_cleanup(pm: ProcessManager) -> None:
 EXPECTED_EXIT_CODE_FAILURE = 1
 EXPECTED_EXIT_CODE_42 = 42
 EXPECTED_CONCURRENT_RESULTS = 2
-CONCURRENT_MAX_ELAPSED = 1.5
+RENDEZVOUS_BUDGET_SECONDS = 30.0
+RENDEZVOUS_MISSED_EXIT_CODE = 3
+RENDEZVOUS_SCRIPT = """\
+import pathlib
+import sys
+import time
+
+own, other = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+deadline = time.monotonic() + float(sys.argv[3])
+own.touch()
+while not other.exists():
+    if time.monotonic() > deadline:
+        sys.exit(int(sys.argv[4]))
+    time.sleep(0.02)
+"""
 TEST_PID_UNKNOWN = 12345
 PROCESS_WAIT_TIMEOUT = 5
 CLEANUP_WAIT_TIMEOUT = 10
@@ -489,30 +503,45 @@ class TestRunTrackedAsync:
     @pytest.mark.asyncio
     async def test_run_tracked_async_concurrent_execution(
         process_manager: ProcessManager,
+        tmp_path: Path,
     ) -> None:
-        """Verify multiple async processes can run concurrently.
+        """Verify two async processes are alive at the same time.
+
+        Each child announces itself with a marker file and exits 0 only once it
+        sees the other child's marker, so the child that starts first succeeds
+        only if the second starts while it is still running. A child left to
+        run alone gives up after the rendezvous budget, which makes the result
+        independent of how loaded the host is.
 
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
+            tmp_path: Pytest temporary directory holding the marker files.
         """
-        start_time = time.time()
+        marker_a = tmp_path / "a.started"
+        marker_b = tmp_path / "b.started"
 
         results = await asyncio.gather(
-            process_manager.run_tracked_async(
-                [sys.executable, "-c", "import time; time.sleep(0.5); print('a')"],
-                name="test-concurrent-a",
-            ),
-            process_manager.run_tracked_async(
-                [sys.executable, "-c", "import time; time.sleep(0.5); print('b')"],
-                name="test-concurrent-b",
+            *(
+                process_manager.run_tracked_async(
+                    [
+                        sys.executable,
+                        "-c",
+                        RENDEZVOUS_SCRIPT,
+                        str(own),
+                        str(other),
+                        str(RENDEZVOUS_BUDGET_SECONDS),
+                        str(RENDEZVOUS_MISSED_EXIT_CODE),
+                    ],
+                    name=f"test-concurrent-{label}",
+                )
+                for label, own, other in (("a", marker_a, marker_b), ("b", marker_b, marker_a))
             ),
         )
 
-        elapsed = time.time() - start_time
-
         assert len(results) == EXPECTED_CONCURRENT_RESULTS
-        assert all(r.returncode == 0 for r in results)
-        assert elapsed < CONCURRENT_MAX_ELAPSED
+        assert [r.returncode for r in results] == [0, 0], (
+            f"a child exiting {RENDEZVOUS_MISSED_EXIT_CODE} never saw the other child start while it was running"
+        )
 
 
 class TestExternalPidRegistration:
