@@ -340,7 +340,7 @@ tomli==2.5.0
 tomli-w==1.2.0
 tomlkit==0.15.1
 torch==2.15.0+xpu
-tornado==6.6
+tornado==6.6.1
 tox==4.67.13
 tqdm==4.70.1
 traitlets==5.16.1
