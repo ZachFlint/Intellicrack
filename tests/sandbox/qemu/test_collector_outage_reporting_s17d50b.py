@@ -68,6 +68,11 @@ _LIFECYCLE_STOPPED: Final[str] = "stopped"
 _UNGUARDED_STAGE: Final[str] = "session"
 
 _PROCESS_EXIT_WAIT_S: Final[float] = 30.0
+# An unprovisioned api_trace.ps1 exits on its own within seconds, but a loaded CI
+# runner can stall powershell.exe start-up well past the default wait, and
+# killing the script before it records its exit reads back as "never reported
+# starting". Waiting longer costs nothing when the script exits promptly.
+_EARLY_EXIT_WAIT_S: Final[float] = 120.0
 _PROCESS_KILL_GRACE_S: Final[float] = 5.0
 
 
@@ -221,13 +226,20 @@ def _terminate(proc: Popen[str]) -> tuple[str, str]:
     return stdout or "", stderr or ""
 
 
-async def _run_to_completion(powershell: str, script_path: Path, logs_dir: Path) -> tuple[str, str]:
+async def _run_to_completion(
+    powershell: str,
+    script_path: Path,
+    logs_dir: Path,
+    *,
+    wait_s: float = _PROCESS_EXIT_WAIT_S,
+) -> tuple[str, str]:
     """Run a bundled monitor script to completion under real ``powershell.exe``.
 
     Args:
         powershell: Path to ``powershell.exe``.
         script_path: Monitor script to run.
         logs_dir: ``-LogDir`` argument.
+        wait_s: Seconds to wait for the script to exit before terminating it.
 
     Returns:
         tuple[str, str]: Captured ``(stdout, stderr)``.
@@ -247,7 +259,7 @@ async def _run_to_completion(powershell: str, script_path: Path, logs_dir: Path)
     proc = Popen(argv, stdout=PIPE, stderr=PIPE, text=True, encoding="utf-8", errors="replace")
     try:
         with contextlib.suppress(TimeoutExpired):
-            await asyncio.to_thread(proc.wait, timeout=_PROCESS_EXIT_WAIT_S)
+            await asyncio.to_thread(proc.wait, timeout=wait_s)
     finally:
         stdout, stderr = _terminate(proc)
     return stdout, stderr
@@ -347,6 +359,7 @@ class TestARealDeadRecorderIsReportedAsAnOutageNotARecord:
             powershell,
             share / _MONITOR_DIR_NAME / _API_TRACE_SCRIPT_NAME,
             logs_dir,
+            wait_s=_EARLY_EXIT_WAIT_S,
         )
         injection_stdout, injection_stderr = await _run_to_completion(
             powershell,

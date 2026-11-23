@@ -16,7 +16,8 @@ Endpoints, relative to the server origin:
 
 * ``/api/v1/models`` -- OpenAI-compatible listing (OpenAI, Grok, OpenRouter and
   gateways such as Venice), authenticated with ``Authorization: Bearer <key>``.
-* ``/anthropic/v1/models`` -- Anthropic listing, authenticated with ``x-api-key``.
+* ``/anthropic/v1/models`` -- Anthropic listing, authenticated with ``x-api-key``
+  or, as the 2.x SDK sends an API key, ``Authorization: Bearer <key>``.
 * ``/gemini/v1beta/models`` -- Gemini listing, authenticated with ``x-goog-api-key``.
 * ``/ollama/api/tags`` -- Ollama local model tags, unauthenticated.
 
@@ -297,7 +298,8 @@ class ProviderEndpointServer:
                 body_builder=_openai_models_body,
             )
         if path == ANTHROPIC_MODELS_PATH:
-            return self._authorized(accepted=headers.get("x-api-key") == self.accepted_key, body_builder=_anthropic_models_body)
+            accepted = headers.get("x-api-key") == self.accepted_key or headers.get("authorization") == f"Bearer {self.accepted_key}"
+            return self._authorized(accepted=accepted, body_builder=_anthropic_models_body)
         if path == GEMINI_MODELS_PATH:
             return self._authorized(accepted=headers.get("x-goog-api-key") == self.accepted_key, body_builder=_gemini_models_body)
         return _HTTP_NOT_FOUND, json.dumps({"error": {"message": f"no route for {path}"}}).encode()

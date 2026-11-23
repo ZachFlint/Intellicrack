@@ -124,6 +124,7 @@ from intellicrack.bridges.win32_types import (
     THREAD_BASIC_INFORMATION,
     THREAD_GET_CONTEXT,
     THREAD_QUERY_INFORMATION,
+    THREAD_QUERY_LIMITED_INFORMATION,
     THREAD_SET_CONTEXT,
     THREAD_SUSPEND_RESUME,
     THREADENTRY32,
@@ -155,6 +156,7 @@ from intellicrack.bridges.win32_types import (
     SystemExtendedHandleInformation,
     ThreadBasicInformation,
     ThreadQuerySetWin32StartAddress,
+    ThreadSuspendCount,
     decode_protection,
     get_advapi32,
     get_dbghelp,
@@ -3638,6 +3640,9 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         value so the -1 error sentinel is detected instead of being
         treated as a 32-bit unsigned count of 4294967295.
 
+        A thread of this process is never suspended, see
+        :meth:`_thread_in_own_process`.
+
         Args:
             tid: Thread ID.
 
@@ -3660,17 +3665,49 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             return "unknown"
 
         try:
-            return self._probe_thread_state(handle, tid)
+            return self._probe_thread_state(handle, tid, in_own_process=self._thread_in_own_process(handle))
         finally:
             self._kernel32.CloseHandle(handle)
 
-    def _probe_thread_state(self, handle: int, tid: int) -> str:
+    def _thread_in_own_process(self, handle: int) -> bool:
+        """Tell whether an opened thread belongs to the process running this bridge.
+
+        A thread of this process must never be suspended from Python. The
+        suspended thread may hold the GIL, and the suspending thread needs the
+        GIL back before it can call ``ResumeThread``, so both stop for good.
+        The owner is read from the open handle rather than taken from a
+        snapshot, because a snapshotted thread can exit and its ID be reused
+        by a thread of this process before it is opened. When the owner cannot
+        be read the thread is treated as this process's, so it is not suspended.
+
+        Args:
+            handle: Open thread handle with at least
+                ``THREAD_QUERY_LIMITED_INFORMATION`` access.
+
+        Returns:
+            bool: True when the thread belongs to this process or its owner
+                cannot be determined.
+        """
+        if self._kernel32 is None:
+            return True
+        get_process_id_of_thread = self._kernel32.GetProcessIdOfThread
+        get_process_id_of_thread.argtypes = [wintypes.HANDLE]
+        get_process_id_of_thread.restype = wintypes.DWORD
+        get_current_process_id = self._kernel32.GetCurrentProcessId
+        get_current_process_id.argtypes = []
+        get_current_process_id.restype = wintypes.DWORD
+        owner_pid = int(get_process_id_of_thread(handle))
+        return owner_pid == 0 or owner_pid == int(get_current_process_id())
+
+    def _probe_thread_state(self, handle: int, tid: int, *, in_own_process: bool = False) -> str:
         """Probe an opened thread handle for its current execution state.
 
         Args:
             handle: Open thread handle with
                 ``THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME`` access.
             tid: Thread ID (used for logging only).
+            in_own_process: Whether the thread belongs to this process, in which
+                case the suspend count is read instead of suspending it.
 
         Returns:
             str: ``'terminated'`` if the thread has exited, ``'suspended'``
@@ -3680,7 +3717,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         if self._ntdll is None or self._kernel32 is None:
             return "unknown"
         try:
-            return self._probe_thread_state_inner(handle)
+            return self._probe_thread_state_inner(handle, in_own_process=in_own_process)
         except (OSError, ctypes.ArgumentError) as exc:
             _logger.warning(
                 "thread_state_probe_failed",
@@ -3690,12 +3727,14 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             )
         return "unknown"
 
-    def _probe_thread_state_inner(self, handle: int) -> str:
+    def _probe_thread_state_inner(self, handle: int, *, in_own_process: bool = False) -> str:
         """Issue ``NtQueryInformationThread`` and derive the execution state.
 
         Args:
             handle: Open thread handle with
                 ``THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME`` access.
+            in_own_process: Whether the thread belongs to this process, in which
+                case ``ThreadSuspendCount`` is queried instead of suspending it.
 
         Returns:
             str: ``'terminated'`` if the thread has exited, ``'suspended'``
@@ -3716,6 +3755,19 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             return "unknown"
         if tbi.ExitStatus != _STILL_ACTIVE:
             return "terminated"
+
+        if in_own_process:
+            suspend_count = wintypes.ULONG()
+            status = self._ntdll.NtQueryInformationThread(
+                handle,
+                ThreadSuspendCount,
+                ctypes.byref(suspend_count),
+                ctypes.sizeof(suspend_count),
+                None,
+            )
+            if status < 0:
+                return "unknown"
+            return "suspended" if suspend_count.value > 0 else "running"
 
         raw_count: int = self._kernel32.SuspendThread(handle)
         signed_count = ctypes.c_long(raw_count).value
@@ -3895,9 +3947,11 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
     def _query_thread_current_pc(self, tid: int, owner_pid: int | None = None) -> int:
         """Query the current program counter of a thread via GetThreadContext.
 
-        Opens the thread with THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME,
-        suspends it, reads Rip (x64) or Eip (x86 / WOW64), then resumes
-        in a finally block so the thread is never left suspended on error.
+        Opens the thread with THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME |
+        THREAD_QUERY_LIMITED_INFORMATION, suspends it, reads Rip (x64) or
+        Eip (x86 / WOW64), then resumes in a finally block so the thread is
+        never left suspended on error. A thread of this process is read
+        without being suspended.
 
         WOW64 status is determined from ``owner_pid`` when supplied (so the
         correct CONTEXT struct is selected when enumerating threads of a
@@ -3920,7 +3974,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
 
         inherit_handle = False
         handle = self._kernel32.OpenThread(
-            THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME,
+            THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME | THREAD_QUERY_LIMITED_INFORMATION,
             inherit_handle,
             tid,
         )
@@ -3968,9 +4022,15 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
     def _suspend_and_read_pc(self, handle: int, owner_pid: int | None) -> int:
         """Suspend the thread, read the instruction pointer, then resume.
 
+        A thread of this process is not suspended (see
+        :meth:`_thread_in_own_process`). Its context is read while it runs,
+        which gives a recent instruction pointer rather than an exact one;
+        that is all a thread listing needs.
+
         Args:
-            handle: Open thread handle with
-                ``THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME`` access.
+            handle: Open thread handle with ``THREAD_GET_CONTEXT |
+                THREAD_SUSPEND_RESUME | THREAD_QUERY_LIMITED_INFORMATION``
+                access.
             owner_pid: PID that owns the thread (forwarded to
                 :meth:`_read_pc_via_context`).
 
@@ -3980,6 +4040,8 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         """
         if self._kernel32 is None:
             return 0
+        if self._thread_in_own_process(handle):
+            return self._read_pc_via_context(handle, owner_pid)
         raw_count: int = self._kernel32.SuspendThread(handle)
         signed_count = ctypes.c_long(raw_count).value
         if signed_count < 0:

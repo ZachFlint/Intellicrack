@@ -6,7 +6,7 @@
 
 The inference client follows the provider's own ``api_base``, so it is pointed at a loopback listener that accepts the TCP connection,
 reads the request and stays silent. The client's request timeout then fires inside ``httpx2`` as a read timeout, which the Hugging Face
-client does not translate into its own timeout error. The identity probe of ``connect`` goes through the synchronous Hub client, which is
+client wraps in its own ``InferenceTimeoutError``. The identity probe of ``connect`` goes through the synchronous Hub client, which is
 pointed at a loopback server through ``huggingface_hub``'s public ``set_client_factory`` hook. Nothing leaves the machine and no real
 token is used.
 """
@@ -20,7 +20,7 @@ from urllib.parse import urlsplit
 
 import httpx2
 import pytest
-from huggingface_hub import set_client_factory
+from huggingface_hub import InferenceTimeoutError, set_client_factory
 
 from intellicrack.core.types import Message, ProviderCredentials, ProviderError
 from intellicrack.providers.huggingface import HuggingFaceProvider
@@ -116,7 +116,8 @@ async def test_chat_reports_an_httpx2_read_timeout_as_a_provider_timeout() -> No
 
     assert type(info.value) is ProviderError
     assert str(info.value).startswith(_TIMEOUT_PREFIX)
-    assert isinstance(info.value.__cause__, httpx2.TimeoutException)
+    assert isinstance(info.value.__cause__, InferenceTimeoutError)
+    assert isinstance(info.value.__cause__.__cause__, httpx2.TimeoutException)
     assert accepted >= 1
 
 
@@ -130,5 +131,6 @@ async def test_stream_reports_an_httpx2_read_timeout_as_a_provider_timeout() -> 
 
     assert type(info.value) is ProviderError
     assert str(info.value).startswith(_TIMEOUT_PREFIX)
-    assert isinstance(info.value.__cause__, httpx2.TimeoutException)
+    assert isinstance(info.value.__cause__, InferenceTimeoutError)
+    assert isinstance(info.value.__cause__.__cause__, httpx2.TimeoutException)
     assert accepted >= 1

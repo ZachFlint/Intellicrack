@@ -1085,15 +1085,16 @@ def _build_docker_run_argv(
     return argv
 
 
-def _container_names_by_status(status: str) -> frozenset[str]:
+def _query_container_names_by_status(status: str) -> frozenset[str] | None:
     """List sandbox-labeled container names Docker reports in a given status.
 
     Args:
         status: Docker status filter value (``running``, ``exited``, ``dead``).
 
     Returns:
-        frozenset[str]: Container names carrying the sandbox label in that
-            status; empty when the query fails.
+        frozenset[str] | None: Container names carrying the sandbox label in
+            that status, or ``None`` when the query fails or times out, so a
+            caller can tell "no containers" apart from "Docker did not answer".
     """
     proc = _run_docker(
         [
@@ -1110,8 +1111,22 @@ def _container_names_by_status(status: str) -> frozenset[str]:
         timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
     )
     if proc.returncode != 0:
-        return frozenset()
+        return None
     return frozenset(line.strip() for line in proc.stdout.splitlines() if line.strip())
+
+
+def _container_names_by_status(status: str) -> frozenset[str]:
+    """List sandbox-labeled container names Docker reports in a given status.
+
+    Args:
+        status: Docker status filter value (``running``, ``exited``, ``dead``).
+
+    Returns:
+        frozenset[str]: Container names carrying the sandbox label in that
+            status; empty when the query fails.
+    """
+    names = _query_container_names_by_status(status)
+    return frozenset() if names is None else names
 
 
 def _container_exists(name: str) -> bool:
@@ -1342,15 +1357,29 @@ def _control_file_token(path: Path) -> str | None:
     return None
 
 
+def _query_live_run_tokens() -> frozenset[str] | None:
+    """Return the identity tokens of runs whose container is currently running.
+
+    Returns:
+        frozenset[str] | None: Tokens recovered from the names of running
+            sandbox containers, or ``None`` when Docker could not be queried.
+    """
+    running = _query_container_names_by_status("running")
+    if running is None:
+        return None
+    prefix = f"{_CONTAINER_NAME_PREFIX}-"
+    return frozenset(name.removeprefix(prefix) for name in running if name.startswith(prefix))
+
+
 def _live_run_tokens() -> frozenset[str]:
     """Return the identity tokens of runs whose container is currently running.
 
     Returns:
         frozenset[str]: Tokens recovered from the names of running sandbox
-            containers; empty when Docker reports none.
+            containers; empty when Docker reports none or cannot be queried.
     """
-    prefix = f"{_CONTAINER_NAME_PREFIX}-"
-    return frozenset(name.removeprefix(prefix) for name in _container_names_by_status("running") if name.startswith(prefix))
+    tokens = _query_live_run_tokens()
+    return frozenset() if tokens is None else tokens
 
 
 def _select_reapable_control_files(
@@ -1400,7 +1429,9 @@ def _reap_orphaned_control_files(*, own_token: str) -> tuple[Path, ...]:
     A driver killed abruptly never reaches its own cleanup, so its spec and
     exit-code files would otherwise accumulate in ``reports/tests/`` forever.
     This runs at startup alongside the stale-container reaping and never
-    touches a file belonging to a live sibling.
+    touches a file belonging to a live sibling. When Docker cannot say which
+    containers are running, nothing is deleted, because an empty answer from
+    a failed query would otherwise mark every sibling's files as orphaned.
 
     Args:
         own_token: This run's own identity token, always spared.
@@ -1410,9 +1441,13 @@ def _reap_orphaned_control_files(*, own_token: str) -> tuple[Path, ...]:
     """
     if not _REPORTS_ROOT.is_dir():
         return ()
+    live_tokens = _query_live_run_tokens()
+    if live_tokens is None:
+        _LOGGER.warning("sandbox_orphaned_control_files_reap_skipped", reason="docker ps failed")
+        return ()
     targets = _select_reapable_control_files(
         _REPORTS_ROOT.iterdir(),
-        _live_run_tokens(),
+        live_tokens,
         own_token=own_token,
         now=time.time(),
         retention_seconds=_CONTROL_FILE_RETENTION_SECONDS,

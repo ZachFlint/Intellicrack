@@ -295,7 +295,9 @@ jobs:
             }
           }
           $targets = $env:SHARD_TARGETS -split ' '
-          pixi run pytest @targets -v -n logical --dist loadfile --instafail -m "not host_native" --cov=src/intellicrack --cov-report= --cov-fail-under=0 "--junitxml=test-results-${env:SHARD}.xml"
+          # scripts/ is a Sonar source too (sonar-project.properties), so it is measured
+          # here; a file missing from coverage.xml counts as entirely uncovered.
+          pixi run pytest @targets -v -n logical --dist loadfile --instafail -m "not host_native" --cov=src/intellicrack --cov=scripts --cov-report= --cov-fail-under=0 "--junitxml=test-results-${env:SHARD}.xml"
           $code = $LASTEXITCODE
           Stop-Job $sampler
           if (Test-Path .coverage) { Rename-Item .coverage ".coverage.${env:SHARD}" }
